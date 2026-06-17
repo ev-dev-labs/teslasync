@@ -1,0 +1,186 @@
+=== P4 Shared surface 0144 Toast (Apple) ===
+Surface: apps/apple/TeslaSync/shared-surfaces/Toast.*
+Web source: web/src/components/feedback/Toast.tsx
+Runner: Darwin arm64 (Mac Studio), Xcode 26.5 (17F42), Apple Swift 6.3.2, iOS 26.5 sims
+Date: 2026-06-14
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+The Toast shared surface is implemented complete + production-polished, at parity
+with the web ToastProvider/useToast/useOptionalToast/useMutationToast + the
+presentational stack. It is verified GREEN in isolation (swiftlint --strict 0/9,
+swiftformat --lint 0/9, placeholder gate PLACEHOLDER_COUNT=0, pure-core Swift 6
+strict-concurrency typecheck 0/0, and an in-module app-target build that
+type-checks + SILGens all 9 Toast sources with ZERO Toast-attributed errors).
+
+The full-app `xcodebuild build test` (iOS + macOS) is RED for PRE-EXISTING,
+SURFACE-INDEPENDENT reasons only:
+  (1) iOS: a swift-frontend IRGen capacity crash (report_at_maximum_capacity ->
+      llvm::report_fatal_error, "While emitting IR SIL function
+      @$sSbScA_pSgIeAghyg_SbIeAghn_TR") at IR Generation for
+      feature-views/AppearanceSettings.Controls.swift, at the monorepo's
+      ~5000-file whole-module scale. PROVEN surface-independent this run: a
+      baseline `xcodebuild build` with all 10 Toast.* files removed + `xcodegen`
+      regenerated crashed IDENTICALLY (BASELINE_EXIT=65, same thunk, same file).
+      This is the same signature recorded in apps/macos-pending-verifications.md
+      for 0079-DataFreshness, 0143-TimeMachineBanner, 0205-CommandPalette,
+      0007-WidgetGaugeHero.
+  (2) macOS: 0 valid codesigning identities on this runner; the macOS scheme
+      fails at the development-signing/entitlements gate BEFORE compiling.
+
+Per the prompt acceptance criteria ("EXIT=0 / STATUS=DONE (or STATUS=BLOCKED with
+platform-capability evidence in the log)") this is STATUS=BLOCKED with the
+platform-capability evidence below. Honesty covenant #1 (no red-as-green) forbids
+claiming DONE while the full-app gate is RED.
+
+--------------------------------------------------------------------------------
+FILES (xcodegen generate -> all 10 enumerated; 114 pbxproj refs across targets)
+--------------------------------------------------------------------------------
+Toast.Adapter.swift     pure Foundation core (variant/icon/role, action resolve,
+                        ToastData, duration, queue reducer slice(-4)+new cap 5,
+                        toast-N sequence, a11y label)
+Toast.Model.swift       telemetry seam (view.opened slug "Toast"), connection /
+                        load-status / update / resolved / projection (leaf
+                        contract), ToastCenterModel state holder + imperative API,
+                        ToastStrings i18n facade
+Toast.Seams.swift       ToastSource protocol (P1/S8), StaticToastSource,
+                        InMemoryToastSource
+Toast.States.swift      loading skeleton / empty / error chrome
+Toast.Views.swift       ToastView single toast + aria-live announcer + freshness chip
+Toast.swift             ToastStack surface + state switch; Environment provider/hooks
+                        (useToast/useOptionalToast); ToastMutationReporter
+                        (useMutationToast)
+Toast.Previews.swift    previews: every variant, action toasts, all states
+Toast.Tests.swift       adapter + projection coverage
+Toast.ModelTests.swift  state-holder + mutation-bridge coverage
+Toast.strings           P1/S10 i18n keys (12)
+
+--------------------------------------------------------------------------------
+STEP 1 — swiftlint --strict (9 Toast Swift files)
+--------------------------------------------------------------------------------
+$ swiftlint lint --strict --no-cache TeslaSync/shared-surfaces/Toast.*.swift Toast.swift
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 2 — swiftformat --lint (9 Toast Swift files)
+--------------------------------------------------------------------------------
+$ swiftformat --lint <9 Toast files>
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 3 — placeholder gate (ADR-011 definition of done)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Toast
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+# Real scan over the actual Toast .swift sources (copied to a temp dir):
+$ ./apps/tools/check-placeholders.ps1 -Path <tmp with 9 Toast sources> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+# Direct grep over all 10 Toast.* files for TODO/FIXME/XXX/Coming soon/Placeholder/
+# Lorem ipsum/not implemented/fatalError("unimpl|not): 0 hits.
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 4 — surface compiles GREEN (Swift 6, real SDK)
+--------------------------------------------------------------------------------
+# Pure core, isolated, strict concurrency:
+$ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+    -strict-concurrency=complete -target arm64-apple-ios18.0-simulator \
+    TeslaSync/shared-surfaces/Toast.Adapter.swift
+ADAPTER_TYPECHECK_EXIT=0   (0 errors / 0 warnings)
+
+# In-module: iOS app-target build (Shared.xcframework staged) type-checked +
+# SILGen'd the whole TeslaSync module (EmitSwiftModule PASS) including all 7 Toast
+# non-test sources before reaching whole-module IRGen.
+TOAST_ATTRIBUTED_ERRORS_OR_WARNINGS=0
+
+# Test files type-check against the real Adapter/Model/Seams (Swift 6, iOS sim SDK;
+# faithful shims for the 2 SwiftUI-surface symbols, themselves proven in-module):
+$ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+    Toast.Adapter.swift Toast.Model.swift Toast.Seams.swift \
+    Toast.Tests.swift Toast.ModelTests.swift _Shim.swift
+TEST_TYPECHECK_EXIT=0   (0 errors / 0 warnings)
+
+# Tests EXECUTED via an isolated SwiftPM package over the REAL core sources:
+$ swift test    # Sources/ToastCore = real Toast.Adapter+Model+Seams
+Test Suite 'All tests' passed.
+   Executed 36 tests, with 0 failures (0 unexpected)
+SWIFT_TEST_EXIT=0   (36/36 — adapter + projection + state-holder + mutation bridge)
+
+--------------------------------------------------------------------------------
+STEP 5 — iOS full-app `xcodebuild build test` (PRE-EXISTING IRGen crash)
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+** BUILD FAILED **
+Please submit a bug report (...) and include the crash backtrace.
+4.  While evaluating request IRGenRequest(IR Generation for file
+    ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+    swift-frontend ... report_at_maximum_capacity(unsigned long) + 0
+IOS_EXIT=65
+# 0 Toast-attributed errors. Crash is in AppearanceSettings.Controls.swift IRGen.
+
+--------------------------------------------------------------------------------
+STEP 5b — BASELINE proof: crash is SURFACE-INDEPENDENT
+--------------------------------------------------------------------------------
+# All 10 Toast.* files moved out of the tree, xcodegen regenerated, rebuilt:
+$ (mv Toast.* away; xcodegen generate; xcodebuild -scheme TeslaSync ... build)
+remaining Toast in tree: 0
+Please submit a bug report (...) and include the crash backtrace.
+4.  While evaluating request IRGenRequest(IR Generation for file
+    ".../feature-views/AppearanceSettings.Controls.swift")
+5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+    swift-frontend ... report_at_maximum_capacity(unsigned long) + 0
+BASELINE_EXIT=65
+# IDENTICAL crash (same thunk, same file) WITHOUT any Toast file present =>
+# the Toast surface does NOT cause the red. Files restored (10/10), project
+# regenerated (RESTORE_GEN_EXIT=0).
+
+--------------------------------------------------------------------------------
+STEP 6 — macOS full-app `xcodebuild build test` (no signing identity)
+--------------------------------------------------------------------------------
+$ security find-identity -p codesigning
+0 valid identities found
+$ xcodebuild -scheme TeslaSync-macOS build test
+Testing failed:
+  "TeslaSync-macOS" has entitlements that require signing with a development
+  certificate. Enable development signing in the Signing & Capabilities editor.
+** TEST FAILED **
+MAC_EXIT=65
+# Fails at the signing/entitlements gate before compiling Toast.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all web states: 4 variants (success/error/info/warning) x
+    message? x action(navigate/callback, navigation-wins)? x reduce-motion, plus
+    the P4 leaf states loading/empty/error/data/stale/offline.
+[x] Hooks bind to the shared P1/S8 state-holder (ToastCenterModel <- ToastSource);
+    no direct HTTP in the view. useToast/useOptionalToast -> \.toastCenter env;
+    useMutationToast -> ToastMutationReporter; useMotionPreference ->
+    \.accessibilityReduceMotion.
+[x] Every i18n key resolves through the P1/S10 facade (ToastStrings, table "Toast",
+    12 keys); no English literals in Swift chrome (caller-supplied toast titles/
+    messages are data, as in the web source).
+[x] Accessibility: aria-live parity via AccessibilityNotification.Announcement
+    (alert=.high / status=.default); action + dismiss controls individually
+    labelled; combined VoiceOver label on the toast body.
+[x] Tests: adapter unit tests + projection per-branch tests + model/state-holder
+    tests + a11y label test + mutation-bridge tests — 36/36 EXECUTED GREEN via
+    isolated SwiftPM `swift test` over the real core sources; all 9 Toast Swift
+    files type-check (in-module EmitSwiftModule + isolated Swift 6 typecheck).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] Full-app EXIT=0 NOT achievable on this runner: pre-existing swift-frontend
+    IRGen capacity crash (surface-independent, proven) + 0 macOS signing
+    identities. Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest
+    with signing identities + a runner whose swift-frontend does not hit the
+    whole-module IRGen capacity limit), per apps/macos-pending-verifications.md.
+
+EXIT=65
+STATUS=BLOCKED

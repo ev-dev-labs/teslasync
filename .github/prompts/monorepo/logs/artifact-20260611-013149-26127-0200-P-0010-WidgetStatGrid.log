@@ -1,0 +1,163 @@
+=== P4 Widget primitive 0010 WidgetStatGrid (Apple) ===
+Artifact : apps/apple/TeslaSync/widget-primitives/WidgetStatGrid.*  (7 .swift + 1 .strings)
+Web src  : web/src/features/dashboard/widgets/shared/WidgetStatGrid.tsx
+Host     : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1
+           · xcodegen 2.45.4 · pwsh present
+Date     : 2026-06-12
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint / swiftformat / pwsh / xcodegen -> all present
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0); iPhone 16 simulator available.
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  The web `WidgetStatGrid` is a PURE presentational widget primitive (a shared widget building block): it
+  takes `stats: StatGridItem[]` + optional `compact` / `cols` and renders a responsive grid of `<StatCard>`s.
+  Each StatCard = a muted label + optional icon, the bold value with an optional muted unit affix, and an
+  optional direction-aware trend chip (web `↑`/`↓`/`—` glyph + value; colored green when `positive`
+  (= `trend === 'up'`), muted when `flat`, else red). The column count is `compact ? 1 : (cols ??
+  autoCols(stats.length))`, where `autoCols` = `len % 3 → 3 / len % 4 → 4 / else 2`; the inter-item gap is
+  `compact ? gap-2 (8) : gap-3 (12)`. Its only own branch is `stats.length === 0 -> <EmptyState
+  message="No stats available" />`.
+  There is NO fetch / React-Query / Promise in the source, so it has NO loading/error/stale/offline branch
+  (the host widget that owns the query renders those). Per the sibling presentational-primitive precedent
+  (Delta 0081, MetricCard 0095, WidgetComparisonCard 0003) this surface reproduces ONLY the source's REAL
+  branches — inventing loading/error/stale/offline chrome would fabricate states the source does not have:
+    • populated grid   (one cell per stat, laid out in the resolved column count; web stats.map(...))
+    • compact collapse  (single column + condensed gap; web `compact ? 1` / `gap-2`)
+    • explicit cols     (web `cols ?? autoCols`); auto column table (web autoCols)
+    • empty leaf        (friendly "never a blank box" peer of web <EmptyState message="No stats available"/>)
+  The web `valueColor?: string` className passthrough is modeled as a theme-aware semantic `StatValueTone`
+  (no Tailwind ports), exactly as MetricCard (0095) maps the web `neonColorMap[color]` to design tokens.
+  Files: WidgetStatGrid.Adapter/Model/.swift/Views/Previews/AdapterTests/Tests.swift + .strings.
+  Bindings : P1/S8 WidgetStatGridModel @Observable holder (props + projection; no HTTP in the view);
+             P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius) — no Tailwind ports, no raw hex;
+             P1/S10 NSLocalizedString facade (table "WidgetStatGrid"); P1/S11 view.opened telemetry
+             (slug "WidgetStatGrid", emitted once + idempotent across appear/disappear).
+  i18n     : web source has 0 t() keys (anonymous; its only literal "No stats available" is reproduced via
+             widgetStatGrid.empty). Native a11y/HIG additions: emptyHint, cellLabel, valueUnit, trend,
+             cellTrend, trendUp/trendDown/trendFlat. 0 dead keys; 0 hardcoded English in Swift.
+  a11y     : each cell folds label+value(+unit)+trend into one VoiceOver element ("{label}, {value}{unit},
+             {direction} {magnitude}"); the trend arrow + icon are decorative and hidden from VoiceOver
+             (direction spoken as a word); empty leaf is one combined element; Dynamic Type via tokens;
+             high-contrast via the dynamic token colors.
+
+----------------------------------------------------------------------------------------
+BUILD WIRING — none required
+----------------------------------------------------------------------------------------
+  TeslaSync/widget-primitives already exists and is wired into project.yml (TeslaSync iOS + TeslaSync-macOS
+  app sources excludes *Tests.swift; TeslaSyncTests + TeslaSync-macOSTests bundles include *Tests.swift) and
+  into .swiftlint.yml `included`. The 8 new files are picked up automatically — no project/lint edits.
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint
+      surface (TeslaSync/widget-primitives/WidgetStatGrid*, 7 .swift)  -> 0/7 files require formatting
+      tree-wide (apps/apple)                                           -> 0/5124 files require formatting,
+                                                                          2 files skipped
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict
+      surface (the 7 WidgetStatGrid .swift)  -> Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_LINT_EXIT=0
+      tree-wide (apps/apple)                 -> Found 3 violations, 3 serious in 4826 files.
+        ALL 3 are PRE-EXISTING + UNRELATED, in a sibling's file outside this prompt's allowed scope:
+          TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54
+            identifier_name — variable names 'a' / 'b' / 'c' (owned by P4 0002 WidgetChartSummary).
+        grep "WidgetStatGrid" of the violation list -> 0. ZERO WidgetStatGrid violations.
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1)
+      NOTE: the prompt's literal `-Path …/widget-primitives/WidgetStatGrid` has no extension and matches no
+      on-disk path (files are WidgetStatGrid.*); the script treats a non-existent path as a clean no-op
+      (EXIT=0). To make the 0 MEANINGFUL it was also run against the real directory:
+        -Path apps/apple/TeslaSync/widget-primitives -Language swift -> PLACEHOLDER_ALLOWED=0
+                                                                        PLACEHOLDER_COUNT=0  EXIT=0
+        -Path apps/apple/TeslaSync/widget-primitives/WidgetStatGrid (literal gate path) -> EXIT=0
+      Independent grep of the 8 files for TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/stub/mock -> 0.
+      PLACEHOLDER_EXIT=0
+
+[4] isolated SwiftPM build + test  (Foundation-pure layer: Adapter + Model; Package swift-tools 6.0,
+    macOS v15, Swift 6 language mode; library target named TeslaSync so `@testable import TeslaSync` resolves)
+      swift test -> Executed 28 tests, with 0 failures (0 unexpected) in 0.005s
+      Suites: WidgetStatGridAdapterTests(1), WidgetStatGridAutoColsTests(3), WidgetStatGridResolveColumnsTests(3),
+              WidgetStatGridCellsTests(2), WidgetStatGridResolveTests(3), WidgetStatGridValueTypeTests(6),
+              WidgetStatGridModelTests(5), WidgetStatGridStringsTests(5)
+      SPM_TEST_EXIT=0  (28/28 — adapter state->projection, model once-only view.opened + update re-derivation,
+                        i18n/a11y facade)
+
+[4b] full SwiftPM build + test  (the SAME package extended with Tokens.swift + WidgetStatGrid.swift +
+     WidgetStatGrid.Views.swift in the target and WidgetStatGrid.Tests.swift in the test bundle — i.e. the
+     SwiftUI views are COMPILED and the view-composition + a11y tests are EXECUTED on macOS)
+      swift test -> Executed 35 tests, with 0 failures (0 unexpected) in 0.006s
+      Adds: WidgetStatGridViewTests(4)  — surface composes in every real branch (auto 2/3/4-up, explicit
+              cols, compact single column, single cell, empty) via prop init + injected-model seam; subviews
+              (StatGridLayoutView / StatGridCell / WidgetStatGridEmptyState) compose; direction tokens cover.
+            WidgetStatGridAccessibilityTests(3) — the cell's composed VoiceOver label folds value+unit+trend.
+      SPM_FULL_EXIT=0  (35/35)
+
+[5] dual-SDK swiftc -typecheck  (FULL shipped surface: Adapter + Model + .swift + Views + Previews compiled
+    against the REAL design system ../design/generated/apple/Tokens.swift; -module-name TeslaSync
+    -swift-version 6 -D DEBUG)
+      iOS 18    (-target arm64-apple-ios18.0-simulator, --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)         -> 0 errors  MAC_TYPECHECK_EXIT=0
+      (Includes WidgetStatGrid.Previews.swift, which the SwiftPM run excludes — the #Preview macros expand
+      cleanly under -D DEBUG on both SDKs.)
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 8 files (file-ref + build-files across iOS/macOS app + iOS/macOS test
+      bundles): WidgetStatGrid.{Adapter,Model,swift,Views,Previews,AdapterTests,Tests}.swift +
+      WidgetStatGrid.strings  (48 refs total; 6 each).
+
+----------------------------------------------------------------------------------------
+FULL-APP xcodebuild (the prompt gate) — RED, DEFERRED (NOT a WidgetStatGrid failure)
+----------------------------------------------------------------------------------------
+  The KMP Shared.xcframework WAS staged for this run (it is not checked in):
+    apps/shared/gradlew :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 15m 16s (cold Kotlin/Native
+    download on this fresh slot) -> staged apps/apple/Frameworks/Shared.xcframework
+    (ios-arm64 + ios-arm64-simulator + macos-arm64). [Frameworks/Shared.xcframework is git-ignored.]
+
+  [iOS]  xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -arch arm64
+         -configuration Debug build CODE_SIGNING_ALLOWED=NO   (target build avoids re-running the 15m
+         framework pre-action; links the freshly-staged Shared.xcframework)
+         => ** BUILD FAILED **   IOS_BUILD_EXIT=65
+         The TeslaSync module reached the Swift compile phase. grep "\.swift:[0-9]+:[0-9]+: error:" =>
+         exactly 1 distinct compiler error, PRE-EXISTING and unrelated to this surface (another agent's
+         parallel-merged + committed file, commit 441cd2538, outside this prompt's allowed scope):
+           TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+             error: escaping closure captures non-escaping parameter 'content'
+         grep "error:" | grep WidgetStatGrid => 0   (ZERO surface errors)
+         (This is the same error CLASS the sibling 0003 documented in AIGeofenceAwareAutomationSuggestions.)
+
+  [macOS] Same TeslaSync module + the same pre-existing AISignalExplorerNlFilter compile error; additionally
+          `security find-identity -p codesigning -v` => 0 valid identities found, so the macOS app +
+          widget entitlements cannot be signed. Both walls are pre-existing/environmental.
+
+  Concrete deferral causes on THIS host (pre-existing / environmental, unrelated to this surface):
+    • 1 pre-existing compile error in another agent's committed surface (AISignalExplorerNlFilter.swift)
+      that fails the shared TeslaSync module emit. Fixing it is outside this prompt's allowed-files scope
+      (apps/apple/TeslaSync/widget-primitives/WidgetStatGrid.*).
+    • macOS development-signing — 0 valid codesigning identities (entitlements need a dev cert).
+  Per apps/macos-pending-verifications.md this full-app gate is owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner (with sibling surfaces green).
+
+----------------------------------------------------------------------------------------
+VERDICT
+----------------------------------------------------------------------------------------
+  Surface WidgetStatGrid is COMPLETE and verified GREEN by every host-runnable + surface-scoped gate:
+    FORMAT_EXIT=0  SURFACE_LINT_EXIT=0 (0 WidgetStatGrid violations)  PLACEHOLDER_EXIT=0
+    SPM_TEST_EXIT=0 (28/28)  SPM_FULL_EXIT=0 (35/35)
+    IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+  The full-app xcodebuild is RED only for pre-existing, unrelated reasons (one other agent's committed
+  AISignalExplorerNlFilter compile error + macOS dev-signing) — ZERO WidgetStatGrid errors in the iOS
+  app-target compile, and the full surface (incl. SwiftUI views + Previews) type-checks clean on BOTH the
+  iOS-18 and macOS-15 SDKs and executes 35/35 tests under Swift 6 — and is deferred to the P99 acceptance
+  gate, recorded against apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

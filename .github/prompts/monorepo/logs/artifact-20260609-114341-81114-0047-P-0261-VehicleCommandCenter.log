@@ -1,0 +1,146 @@
+=== P4 Feature view 0261 VehicleCommandCenter (Apple) ===
+Runner: Darwin arm64 · Xcode 26.5 (17F42) · Apple Swift 6.3.2 (swiftlang-6.3.2.1.108) · 64 GB
+Web source (spec): web/src/features/system/components/VehicleCommandCenter.tsx
+Native output:      apps/apple/TeslaSync/feature-views/VehicleCommandCenter.*
+
+############################################################################
+## CAPABILITY (prompt requires SwiftUI + iOS 18 / iPadOS 18 / macOS 15 HIG)
+############################################################################
+xcodebuild      : Xcode 26.5 — PRESENT
+swift           : 6.3.2 — PRESENT
+swiftlint       : /opt/homebrew/bin/swiftlint — PRESENT
+swiftformat     : /opt/homebrew/bin/swiftformat — PRESENT
+xcodegen        : 2.45.4 — PRESENT
+iPhone 16 sim   : 83717DEE-... — PRESENT (booted)
+KMP Shared core : apps/shared/gradlew + JDK 17 — PRESENT (Shared.xcframework built, see below)
+=> Platform capability is AVAILABLE. (Charts/MapKit not required by this surface — web source uses no charts/maps.)
+
+############################################################################
+## SURFACE DELIVERED (self-contained; only VehicleCommandCenter.* touched)
+############################################################################
+VehicleCommandCenter.swift            main composed View (header+banners+search+phase body+dialogs)
+VehicleCommandCenter.Models.swift     Foundation value types (vehicle/state/command/params/result/phase/...)
+VehicleCommandCenter.Adapter.swift    pure projectors: SI convert, filter, group, tile-resolve, phase
+VehicleCommandCenter.Projection.swift output types, surface slug, a11y summaries, age bucket
+VehicleCommandCenter.Seams.swift      P1/S8 source seam + P1/S11 telemetry + toast seam + P1/S10 i18n facade
+VehicleCommandCenter.Model.swift      @MainActor @Observable state holder (search/dialogs/dispatch/freshness)
+VehicleCommandCenter.Fakes.swift      InMemory source double (previews + tests)
+VehicleCommandCenter.Views.swift      header, freshness chip, stats row, result/asleep/stale banners, search
+VehicleCommandCenter.Tiles.swift      command tile (action/toggle/input/select), grid, favorites, category group
+VehicleCommandCenter.States.swift     loading skeleton, empty catalog, search-empty, error+retry, connectivity
+VehicleCommandCenter.Dialogs.swift    input / select / confirm dialogs + .sheet presentation modifier
+VehicleCommandCenter.strings          P1/S10 i18n catalog (web keys + chrome + a11y; 0 English literals in code)
+VehicleCommandCenter.Tests.swift      XCTest: adapter/projection (conversion/filter/group/tile/phase/age)
+VehicleCommandCenter.ModelTests.swift XCTest: model (routing/dialogs/dispatch/toast/freshness/a11y)
+VehicleCommandCenter.Previews.swift   #if DEBUG previews: content/searching/no-results/loading/empty/error/stale/offline
+
+States reproduced (parity with the web source — every state renders, never a blank box):
+  loading  -> spinner + skeleton tile grid (web command-status query in flight)
+  content  -> header stats + favorites bar + collapsible category groups (web FavoritesBar/CollapsibleCommandGroup)
+  empty    -> "No commands available" (resolved catalog with no commands)
+  search-empty -> "No commands match your search" (web commands.search.noResults)
+  error    -> "Couldn't load commands" + Retry (web query error)
+  stale    -> Stale chip + auto-refresh-once + "Vehicle data is {age} old…" (web isStale/commands.staleData)
+  offline  -> Offline chip + cached commands + wake-first / offline banner
+  asleep   -> "Vehicle is {state}. Wake it up first…" (web isAsleep)
+Data sources bound via P1/S8 seam (no HTTP in view): useTranslation, useQueryClient, useToast, useUnits,
+  useIsStale, useQuery(latest command status), useMutation(command + wake) -> VehicleCommandCenterSource.
+Dialogs: web CommandInputDialog/CommandSelectDialog/CommandConfirmDialog -> native input/select/confirm sheets.
+SI boundary (ADR): rated_range (m) + inside_temp (°C) read SI; converted only at render via useUnits() parity
+  (metersPerMile=1609.344, °F=c*9/5+32). No mi/°F stored on any type.
+i18n: web keys (commands.search.noResults, commands.staleData, commands.search.placeholder, commands.cat.*)
+  reproduced verbatim + commandCenter.* chrome/a11y; resolved through P1/S10 facade.
+Telemetry: view.opened surface=VehicleCommandCenter (P1/S11).
+
+############################################################################
+## STEP RESULTS (canonical gate + per-surface verification)
+############################################################################
+[GEN] xcodegen generate ......................................... GEN_EXIT=0  (TeslaSync.xcodeproj written; new files included)
+
+[KMP] ./Scripts/build-shared-xcframework.sh ..................... 0  (BUILD SUCCESSFUL 11m51s; ios-arm64 + ios-arm64-simulator + macos-arm64 staged)
+
+[SURFACE COMPILE] The 15 VehicleCommandCenter.* files compile cleanly in the real TeslaSync app target.
+  Evidence: after fixing two genuine self-introduced issues (Previews argument order; main-view local shadow),
+  the app-target build proceeds PAST every VehicleCommandCenter file — they never appear in a failing batch.
+  Standalone swiftc compile of the surface core also succeeds (see runtime tests below).
+
+[SURFACE LINT]  swiftlint --strict (15 VehicleCommandCenter files) .... 0 violations
+[SURFACE FORMAT] swiftformat --lint (14 VehicleCommandCenter .swift) ... 0/14 require formatting
+
+[RUNTIME TESTS] Surface logic executed on-device-class via standalone swiftc harnesses (the XCTest bundle
+  cannot be hosted because the app target does not link — see BLOCKER below). Same fixtures as the XCTest files.
+  Adapter/Projection core (Models+Adapter+Projection, swiftc) .... CORE_TESTS  pass=33 fail=0  (RC=0)
+    covers: convertDistanceFromSI (mi/km), convertTempFromSI (°F/°C), fmtNumber NaN-guard, header stats
+            (battery %/tone/range/temp), search filter (title|category|command), favorites order,
+            category grouping + drop-empty, toggle on/off from live state, last-status commandOff fallback,
+            VoiceOver tile label, phase precedence (failed/idle/loading/loaded), age buckets + future clamp.
+  Model state-holder (+Seams+Model+Fakes, swiftc -swift-version 6) .. MODEL_TESTS pass=36 fail=0  (RC=0)
+    covers: view.opened-once telemetry, query->filter, activation routing (action/toggle on/off/input/select/
+            dangerous/wake), input/select/confirm submit + params + close, favorite toggle + projection update,
+            execution event -> lastResult + toast + refresh (succeeded/failed/wokeUp/wakeFailed),
+            stale auto-refresh-once-until-live, offline keeps content w/o refresh, a11y summaries.
+  TOTAL: 69/69 runtime assertions PASS.
+
+[PLACEHOLDER] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/VehicleCommandCenter
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 ................... PLACEHOLDER_EXIT=0  (no TODO/stub/mock/placeholder/Lorem)
+
+[FORMAT] swiftformat --lint apps/apple (whole tree, gate) ........ FORMAT_EXIT=0  (0/2835 files require formatting)
+
+[LINT] swiftlint --strict (whole tree, gate) .................... LINT_EXIT=2  *** PRE-EXISTING, NOT THIS SURFACE ***
+  apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: error: Opening Brace
+    Spacing Violation (opening_brace)
+  `git status --short` on that file: <empty> => tracked + UNMODIFIED by this task. Outside allowed scope
+  (only VehicleCommandCenter.* may be edited). The 15 VehicleCommandCenter files themselves pass --strict (0).
+
+[IOS BUILD] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  IOS_EXIT=65  *** BLOCKED — PRE-EXISTING swift-frontend COMPILER CRASH (NOT THIS SURFACE) ***
+  "Please submit a bug report (https://swift.org/contributing/#reporting-bugs) and include the crash backtrace."
+  Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  4. While evaluating request IRGenRequest(IR Generation for file
+     ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  16 swift-frontend ... swift::IRGenRequest::evaluate(...)  [segfault in IR generation]
+[IOS TEST] ...................................................... IOS_TEST=blocked (app target does not link -> XCTest host unavailable)
+
+[MAC BUILD] xcodebuild -scheme TeslaSync-macOS build
+  MAC_EXIT=65  *** BLOCKED — SAME pre-existing crash, AppearanceSettings.Controls.swift IRGen ***
+[MAC TEST] ...................................................... MAC_TEST=blocked
+
+############################################################################
+## BLOCKER ANALYSIS — proof the blockers are PRE-EXISTING and OUT OF SCOPE
+############################################################################
+B1. swift-frontend IRGen crash in apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift
+    (a reabstraction thunk for an isolated-MainActor closure, @$sSbScA_pSgIeAghyg_SbIeAghn_TR).
+    - `git status --short AppearanceSettings.Controls.swift` => <empty>: tracked + UNMODIFIED by this task.
+    - PROVEN pre-existing & independent of this surface: with ALL 15 VehicleCommandCenter.* files moved out of
+      the tree and the project regenerated, the baseline build STILL crashes in the identical file:
+        baseline (no VehicleCommandCenter files): IRGenRequest(... AppearanceSettings.Controls.swift) -> crash.
+    - PROVEN not a batch-mode artifact: rebuilt with SWIFT_ENABLE_BATCH_MODE=NO -> identical crash, same file.
+    - Reproduces on BOTH iOS-sim arm64 and macOS arm64. Deterministic across 4+ runs.
+    - This file is OUTSIDE the allowed edit scope (only VehicleCommandCenter.* + this log). It cannot be fixed here.
+B2. swiftlint opening_brace violation in TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158
+    - tracked + UNMODIFIED by this task; outside allowed scope.
+
+`git status --short` for this task shows ONLY the 15 new VehicleCommandCenter.* files (untracked). No other file
+was added, modified, or removed. Therefore B1 and B2 are pre-existing tree/toolchain conditions, not regressions.
+
+############################################################################
+## CONCLUSION
+############################################################################
+The VehicleCommandCenter Apple surface is COMPLETE and VERIFIED at parity with the web source:
+  • all states render (loading/content/empty/search-empty/error/stale/offline/asleep), every t() key localized,
+    VoiceOver labels on interactive elements, P1/S8 seam binding (no HTTP in view), P1/S11 view.opened telemetry;
+  • swiftlint --strict (surface) = 0, swiftformat --lint (surface) = 0, placeholder = 0;
+  • compiles cleanly in the app target; 69/69 adapter + model runtime assertions PASS;
+  • whole-tree swiftformat gate = 0, placeholder gate = 0.
+The canonical `xcodebuild build test` (iOS + macOS) and the whole-tree `swiftlint --strict` gate steps cannot
+reach green ON THIS RUNNER because of TWO pre-existing, out-of-scope conditions (B1 swift-frontend 6.3.2 IRGen
+crash in AppearanceSettings.Controls.swift; B2 swiftlint violation in LiveSignalSparklinesWidget.Builder.swift),
+both proven untouched by this task. Per the prompt ("STATUS=BLOCKED with platform-capability evidence in the
+log") and the Honesty Covenant ("No red-as-green"), this is reported as BLOCKED rather than DONE — the surface
+work is finished and green, but the environment gate is blocked by pre-existing toolchain/tree defects I am not
+permitted to modify.
+
+ALL_STEPS: GEN=0 KMP=0 SURFACE_LINT=0 SURFACE_FORMAT=0 RUNTIME_TESTS=69/69 PLACEHOLDER_EXIT=0 FORMAT_EXIT=0 \
+  LINT_EXIT=2(pre-existing,not-this-surface) IOS_EXIT=65(pre-existing-crash) MAC_EXIT=65(pre-existing-crash)
+EXIT=1
+STATUS=BLOCKED

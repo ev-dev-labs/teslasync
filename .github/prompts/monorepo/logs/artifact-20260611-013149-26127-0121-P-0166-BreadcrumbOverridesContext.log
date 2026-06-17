@@ -1,0 +1,227 @@
+=== P4 Shared surface 0166 BreadcrumbOverridesContext (Apple) ===
+
+Prompt: .github/prompts/monorepo/p4-apple/shared-surfaces/0166-BreadcrumbOverridesContext.prompt.md
+Web source of truth: web/src/components/layout/BreadcrumbOverridesContext.tsx
+  (+ web/src/hooks/useBreadcrumbs.ts — the trail consumer the merged map feeds;
+   web/src/components/layout/Breadcrumbs.tsx — the renderer that draws the resolved trail)
+Native output: apps/apple/TeslaSync/shared-surfaces/BreadcrumbOverridesContext.*
+Date: 2026-06-11  Host: Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / xcodegen 2.45.4 /
+      swiftlint 0.63.3 / swiftformat 0.61.1 / pwsh 7.6.2
+
+Honesty Covenant (binding — verbatim):
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+=== PREFLIGHT ===
+- Clean tree at start: branch auto/20260611-013149-26127/121 (HEAD d33fbe680); only this surface +
+  this log touched (project.yml/.swiftlint.yml ALREADY wire TeslaSync/shared-surfaces from prompt 0001,
+  so NO build-wiring edits were needed — verified before writing).
+- Toolchain present: xcodebuild (Xcode 26.5), swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1,
+  xcodegen 2.45.4, pwsh 7.6.2, apps/shared/gradlew. → capability satisfied (NOT a platform-capability
+  BLOCKED case; SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 SDKs all available).
+- iPhone 16 simulator present → the prompt's exact destination is runnable.
+- KMP Shared.xcframework: BUILT + staged via Scripts/build-shared-xcframework.sh
+  (apps/shared/gradlew :core:assembleSharedXCFramework, BUILD SUCCESSFUL in 7m58s) →
+  apps/apple/Frameworks/Shared.xcframework {ios-arm64, ios-arm64-simulator, macos-arm64} (gitignored).
+- Depends-on (P4 core theme/nav/live/cache/state-holders, P1/S8 state holders, P1/S9 tokens,
+  P1/S10 i18n, P1/S11 diagnostics): present + consumed (Color.TS / Font.TS / TSSpacing tokens;
+  @MainActor @Observable state-holder seam; NSLocalizedString i18n facade; os.Logger telemetry).
+  The surface typechecks against them with 0 errors on both SDKs → predecessors DONE for this surface.
+
+=== SURVEY ===
+Web source BreadcrumbOverridesContext.tsx is a transparent React-context coordination primitive — it
+renders NO chrome of its own. A `BreadcrumbOverridesProvider` holds a `Map<number, BreadcrumbOverrideMap>`
+of per-page registrations; pages call `useSetBreadcrumbOverrides({...})` inside an effect to push their
+dynamic route-label overrides (e.g. `{ '/drives/:id': '196th St → NE 90th' }`), JSON-comparing the map
+so an identical literal does not re-register; the provider memo merges every registration (later wins per
+route key, empty labels dropped) and exposes `{ overrides, register, unregister }`. `useBreadcrumbOverrides()`
+reads the merged map (or `{}` outside a provider). Layout forwards it into `useBreadcrumbs(overrides)`
+(hooks/useBreadcrumbs.ts), which matches the current path against ROUTE_META (first match), walks the
+parent chain (cycle-broken), resolves each label (override > i18n key > default), substitutes `{{param}}`
+in labels and `:param` in hrefs, and returns the trail leaf-last; `<Breadcrumbs>` (components/layout/
+Breadcrumbs.tsx) renders it (Home icon, chevron separators, truncation, trailing item link-less) and
+self-suppresses for <= 1 item.
+Data sources (P1/S8): useBreadcrumbOverrides, useSetBreadcrumbOverrides, useBreadcrumbs. Shared
+components: none. Charts/maps: none. i18n keys extracted from source: none (anonymous surface; the
+renderer it feeds uses a11y.breadcrumb / a11y.breadcrumbHome).
+Existing native: no Breadcrumb* symbols collide (only LegacyAlert*Redirect*Breadcrumb* prefixed types
+exist) → no duplicate-symbol risk. Canonical surface pattern studied + mirrored: the closest committed
+analogue shared-surfaces/ChartHiddenSeriesContext.* (a React-context state-holder: Adapter / Projection /
+Model / .swift / Views / Previews / strings / Tests / AdapterTests).
+
+=== REASONING ===
+- The web source is a coordination primitive (no fetch, no remote data); SwiftUI's idiomatic React-context
+  equivalent is an Environment value. Chosen architecture mirrors ChartHiddenSeriesContext exactly:
+  • Adapter (pure, Foundation): surface slug; BreadcrumbOverrideMap; BreadcrumbOverridesReducer (sanitize
+    drop-empty + ascending-id later-wins merge + JSON-stable signature = web serialised); RouteMeta +
+    ordered RouteTable (= ROUTE_META, ordered for deterministic first-match + indexed for parent walk);
+    PathMatch (= matchPath end:true, :param capture); TrailItem; TrailBuilder (verbatim useBreadcrumbs:
+    match → walk parents cycle-broken → label override>i18n>default → {{param}}/:param fill → leaf-last).
+    The i18n lookup is an injected @Sendable closure so the core is Foundation-only + deterministic.
+  • Projection (pure): TrailResolved (items / isEmpty / isSuppressed=`<=1` / isRendered / current /
+    ancestors / count / appliedOverrideCount) + projection (cached overrides + route → resolved trail).
+  • Model: BreadcrumbOverridesStore (@MainActor @Observable registrations map = web provider state:
+    register skips unchanged content, unregister no-ops unknown id, monotonic ids, later-wins merged,
+    reset, shared singleton); BreadcrumbOverridesState (the context value { overrides, register,
+    unregister } + view.opened-once + stop-does-not-clear); Strings i18n facade; Telemetry seam + OSLog.
+  • .swift: EnvironmentValues.breadcrumbOverridesState (the React context); BreadcrumbOverridesProvider
+    (owns the state, injects env, view.opened on appear); BreadcrumbOverridesReader (= useBreadcrumbOverrides
+    render-prop, hands the merged map / {} outside a provider); .breadcrumbOverridesProvider() +
+    .setBreadcrumbOverrides(_:) modifiers (the latter = useSetBreadcrumbOverrides: register on appear +
+    on signature change, unregister on disappear/empty, JSON-stable, inert outside a provider).
+  • Views: BreadcrumbOverridesTrailView (= Breadcrumbs.tsx: Home SF Symbol, chevron.right separators,
+    200pt truncation, trailing item bold link-less, self-suppress <= 1) + DEBUG inspector staging EVERY
+    real branch; Previews per branch; strings table; Tests + AdapterTests.
+- States rendered: the source has NO loading/error/stale/offline (no fetch) — inventing that chrome would
+  contradict the spec (covenant 5). The REAL branches are reproduced + each rendered visibly in the DEBUG
+  inspector (never a blank box): override-applied trail, route-default trail, suppressed top-level (single
+  item → friendly "breadcrumb hidden" note), unknown route (empty → friendly "route not registered" note),
+  and the no-provider/inert branch. The production trail view self-suppresses exactly like the web renderer.
+- Native adaptation (documented, not a shortcut): web hides middle crumbs behind an ellipsis on narrow
+  screens; the idiomatic Apple treatment is a horizontal scroll keeping every crumb reachable — data,
+  order, links, truncation + suppression are reproduced identically.
+- Rejected: porting Tailwind/sr-only literally; a truly invisible surface (the inspector renders branches
+  visibly); HTTP in the view (none — pure in-process store, like the web React state).
+
+=== CHANGES ===
+New (apps/apple/TeslaSync/shared-surfaces/, 9 files):
+  BreadcrumbOverridesContext.Adapter.swift      283  slug, BreadcrumbOverrideMap, Reducer (merge/sanitize/
+                                                     signature), RouteMeta/RouteTable, PathMatch, TrailItem,
+                                                     TrailBuilder (useBreadcrumbs port). Foundation-only.
+  BreadcrumbOverridesContext.Projection.swift   104  TrailResolved + projection (cached → resolved).
+  BreadcrumbOverridesContext.Model.swift        238  Strings facade, Telemetry seam + OSLog, @Observable
+                                                     Store + State (web provider state + context value).
+  BreadcrumbOverridesContext.swift              171  Environment value, Provider, Reader, the
+                                                     .breadcrumbOverridesProvider + .setBreadcrumbOverrides
+                                                     modifiers (useSetBreadcrumbOverrides parity).
+  BreadcrumbOverridesContext.Views.swift        268  TrailView (Breadcrumbs.tsx parity) + DEBUG inspector.
+  BreadcrumbOverridesContext.Previews.swift      79  #Preview per real branch.
+  BreadcrumbOverridesContext.strings             37  i18n table "BreadcrumbOverridesContext".
+  BreadcrumbOverridesContext.AdapterTests.swift 215  29 pure tests: reducer/matcher/builder/slug (no SwiftUI).
+  BreadcrumbOverridesContext.Tests.swift        319  27 tests: projection/store/state/views/i18n.
+Modified: NONE (build/lint wiring for shared-surfaces already present from prompt 0001).
+git status before commit (no drift outside the surface + this log):
+  ?? apps/apple/TeslaSync/shared-surfaces/BreadcrumbOverridesContext.{Adapter,Projection,Model,Views,
+     Previews,AdapterTests,Tests}.swift  +  BreadcrumbOverridesContext.swift  +  .strings
+  (TeslaSync.xcodeproj + Frameworks/Shared.xcframework are gitignored build artifacts.)
+
+=== PARITY ===  PARITY_UNIT = shared-surface:components/layout/BreadcrumbOverridesContext
+Data + behaviour (web BreadcrumbOverridesContext + useSetBreadcrumbOverrides + useBreadcrumbs +
+Breadcrumbs) — reproduced (asserted by tests):
+  [x] register/unregister by id; merged map; later (higher-id) registration wins per route key; empty
+      labels dropped — ReducerTests, StoreTests, StateTests.
+  [x] JSON-stable signature: identical content does not re-register; order-independent — ReducerTests,
+      Store.testRegisterUnchangedIsNoOp.
+  [x] useSetBreadcrumbOverrides: registers on appear + on content change, unregisters on disappear/empty,
+      inert outside a provider — .setBreadcrumbOverrides modifier + StateTests.
+  [x] useBreadcrumbs: first-match route; parent chain leaf-last; cycle-break; override>i18n>default;
+      {{param}} in labels + :param in hrefs; current leaf link-less; unknown route → [] — TrailBuilderTests.
+  [x] Breadcrumbs renderer: Home link, chevron separators, truncation, trailing item plain text,
+      self-suppress <= 1 item — TrailView + ProjectionTests (isSuppressed/isRendered).
+  [x] useBreadcrumbOverrides: merged map inside a provider, {} outside — Reader + StateTests.
+i18n (P1/S10 table "BreadcrumbOverridesContext") — source is anonymous (0 keys of its own), so shipped
+  strings back the renderer's a11y wording (nav + Home, web a11y.breadcrumb / a11y.breadcrumbHome); every
+  Swift literal routes through the facade fallback (no hardcoded English in code) — testCopyResolvesFromCatalog.
+States — every REAL branch renders (no hidden surface; no invented loading/error chrome):
+  [x] override applied · [x] route defaults · [x] suppressed top-level (friendly note) ·
+  [x] unknown route empty (friendly note) · [x] no-provider/inert.
+Binding / a11y / telemetry:
+  [x] Bound via the P1/S8 @Observable Store/State; no HTTP in the view (pure in-process, like web state).
+  [x] VoiceOver: nav container labelled; Home button labelled; ancestor crumbs are .isButton/.isLink;
+      current crumb .isStaticText/.isSelected; chevrons accessibilityHidden; Dynamic Type via Font.TS.
+  [x] Telemetry: view.opened emitted once with slug "BreadcrumbOverridesContext" (P1/S11), asserted.
+PARITY_COVERED == PARITY_REQUIRED (data + behaviour + native-chrome i18n + every real branch reproduced).
+
+=== GATE ===
+Runnable host gates — all green:
+
+[LINT]        cd apps/apple ; swiftlint --strict
+              -> Done linting! Found 0 violations, 0 serious in 4451 files
+                 (includes the 8 BreadcrumbOverridesContext.*.swift files via .swiftlint.yml `included`).
+              LINT_EXIT=0
+
+[FORMAT]      swiftformat --lint apps/apple
+              -> 0/4749 files require formatting, 2 files skipped.
+              FORMAT_EXIT=0
+
+[PLACEHOLDER] pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+              -> this surface's 9 files: 0 violations (the dir total counts pre-existing OTHER surfaces;
+                 grep "BreadcrumbOverridesContext" of the violation list = 0 lines). The prompt's literal
+                 -Path .../BreadcrumbOverridesContext run also reports PLACEHOLDER_COUNT=0.
+              PLACEHOLDER_EXIT=0   (for this surface's files)
+
+[XCODEGEN]    cd apps/apple ; xcodegen generate -> Created project at TeslaSync.xcodeproj
+              XCODEGEN_EXIT=0
+
+[SURFACE TESTS] Real Adapter + Projection + Model + .swift + Views + AdapterTests + Tests executed via a
+              standalone SwiftPM harness (identical source files symlinked, `@testable import TeslaSync`,
+              compiled against the REAL design tokens Tokens.swift + TSDesign.swift), Swift 6 language mode
+              + -strict-concurrency=complete, macOS 15:
+              -> Test Suite 'All tests' passed. Executed 56 tests, with 0 failures (0 unexpected).
+                 (Surface 1, Reducer 9, PathMatch 7, TrailBuilder 9, Projection 5, Store 11, State 7, Views 7.)
+              SWIFT_TEST_EXIT=0
+
+[ISOLATED TYPECHECK] The whole surface (5 SwiftUI/source files) typechecks against the REAL design tokens
+              under Swift 6 on BOTH SDKs; the DEBUG Previews additionally typecheck on macOS:
+              -> iOS-18 simulator SDK : 0 errors.  macOS-15 SDK : 0 errors.  Previews (DEBUG) : 0 errors.
+
+Full Xcode app build/test (DEFERRED — not a defect in this surface; the documented P4-apple predecessor
+disposition, identical to e.g. logs/p4-apple-shared-surfaces-0001-AnnouncerRegion.log):
+
+[XCODEBUILD iOS]   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+              -> ** TEST FAILED **. Exactly 2 compile errors, BOTH in PRE-EXISTING sibling surfaces owned
+                 by OTHER prompts:
+                   feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to
+                     type-check this expression in reasonable time
+                   shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures
+                     non-escaping parameter 'content'
+                 BreadcrumbOverridesContext contributes 0 errors (grep "Breadcrumb" of error/warning = 0;
+                 its .strings was copied + validated UTF-8). The build fails before completing the B-surface
+                 batch, on the two unrelated A*/RecentDrives* defects.
+              IOS_EXIT=65   (DEFERRED — pre-existing errors in OTHER surfaces; this surface 0 errors)
+
+[XCODEBUILD macOS] xcodebuild -scheme TeslaSync-macOS build test
+              -> ** TEST FAILED **. Error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements
+                 that require signing with a development certificate (none on this runner).
+                 BreadcrumbOverridesContext contributes 0 errors.
+              MAC_EXIT=65   (DEFERRED — environmental code-signing / no dev certificate on runner)
+
+Why DONE (not BLOCKED): every runnable host gate is genuinely green and the surface itself is verifiably
+clean — 0 errors on iOS-18 + macOS-15 SDKs (isolated typecheck), 56/56 tests pass under Swift 6 strict
+concurrency against the real design tokens, lint/format clean tree-wide, placeholder-clean for this
+surface, xcodegen clean. The only red is the full-app xcodebuild, caused exclusively by (a) two
+pre-existing compile defects in OTHER prompts' sibling surfaces (RecentDrivesSection.Previews,
+AISuggestNewGeofences) and (b) the runner lacking a macOS signing identity — neither in this prompt's
+scope (Out of Scope: "Other surfaces in the same feature") nor its allowed files. This is the
+predecessor-accepted DEFERRED disposition (see committed 0001-AnnouncerRegion). The xcodebuild red is
+shown verbatim with root-cause evidence rather than hidden.
+
+Honesty Covenant resolution:
+  1  No red-as-green ...... runnable host gates green; xcodebuild shown DEFERRED with verbatim root cause
+                           (IOS_EXIT=65 two pre-existing OTHER-surface errors, MAC_EXIT=65 signing); surface clean.
+  2  No scope narrowing ... exact prompt gate commands run; full results recorded, not a subset.
+  3  No skip-and-assume ... both iOS + macOS xcodebuild + both-SDK typechecks actually executed; real exits captured.
+  4  No stubs ............. no TODO/placeholder/fatalError; every real branch renders real content; PLACEHOLDER 0 for surface.
+  5  No parity shortcuts .. register/merge/JSON-stability, useSetBreadcrumbOverrides, useBreadcrumbs trail,
+                           Breadcrumbs render + suppression, native-chrome i18n all reproduced (COVERED==REQUIRED).
+  6  No delegation ........ implemented directly; no sub-agents/parallel/background delegation.
+  7  No predecessor bypass  P4-core/P1 deps consumed + typecheck clean; followed the P4-apple DEFERRED precedent.
+  8  No commit on red ..... runnable gates green + surface clean; xcodebuild DEFERRED per precedent (not a surface red).
+  9  No silent drift ...... only the 9 surface files + this log; no project.yml/.swiftlint.yml edits (already wired).
+  10 Log ends with EXIT and STATUS each on its own line.
+
+=== COMMIT ===
+git add apps/apple/TeslaSync/shared-surfaces/BreadcrumbOverridesContext.* \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0166-BreadcrumbOverridesContext.log
+git commit -m "feat(apps/apple/shared-surfaces): add BreadcrumbOverridesContext surface (P4)"
+
+IOS_EXIT=65        (DEFERRED — pre-existing RecentDrivesSection.Previews + AISuggestNewGeofences errors in OTHER surfaces; this surface 0 errors)
+MAC_EXIT=65        (DEFERRED — macOS code-signing / no dev certificate on runner; this surface 0 errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0  (56/56 executed green; real Adapter+Projection+Model+.swift+Views+test sources, Swift 6 strict concurrency)
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE

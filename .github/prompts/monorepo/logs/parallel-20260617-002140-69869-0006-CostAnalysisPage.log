@@ -1,0 +1,216 @@
+I'll start by exploring the repository structure to understand the task scope — the web source page, the Apple app layout, and the parity infrastructure.
+
+The web page composes many sub-components. Let me explore the cost-analysis components, the Apple app structure, the parity manifest, and check for an Xcode toolchain — all in parallel.
+
+Xcode 26.5, Swift 6.3.2, and SwiftLint are all available — the gate can run. The Apple `Charging` directory doesn't exist yet. Let me explore the Apple app structure and an existing feature page for patterns.
+
+There are two feature trees: `apps/apple/TeslaSync/Features/` and `apps/apple/Sources/Features/`. The target path is the former, but `Sources/Features/Charging` already exists. I need to understand the Xcode project layout precisely. Let me investigate.
+
+No `.xcodeproj` is checked in — it's generated from `project.yml` (XcodeGen). The target root `TeslaSync/Features/` already has Trips, which is the ideal template since it's the same root. Let me read the project config, the Trips template feature, and the parity infrastructure.
+
+Strong template established. Now I need to understand how Apple pages bind to the KMP core / shared facade and how the `useChargingSessionsPaginated` / `useCostForecast` hooks are named at Swift call sites. Let me search the Apple codebase and read the web hooks + remaining components.
+
+The `ChargingListPageModel` is an excellent template. Since both feature roots compile into one module, I must **reuse** existing `ChargingSession`/`ChargingVehicle`/`ChargingDateRange` types, not redefine them. Let me read the charging models, the web hooks, and the cost-forecast widget model + remaining web components.
+
+The CostForecastWidget already models the forecast data shapes. Now let me read all the web cost-analysis components and hooks to capture full parity. Batching reads.
+
+Now let me read all remaining web cost-analysis components and the forecast type to capture full panel/section parity.
+
+Let me read the forecast type and the remaining chart/section components in a batch.
+
+Let me read the remaining components: SavingsCalculator, MonthlyCostTable, TimeOfUseAnalysis, CostForecastSection, ForecastDetails, LifetimeSummary, EnvironmentalImpact, LoadingSkeleton.
+
+Let me read the final four components and the loading skeleton.
+
+Let me read the final three components plus the web hooks file header for the paginated hook signature.
+
+I now have the full web page. Let me study the concrete Apple Charging UI patterns (page scaffold, sections, charts, formatting) to mirror tokens and shared components precisely.
+
+Now I understand the chart wrappers and tokens. Let me discover the full shared component + chart catalog (pie/donut/area chart wrappers, stat cards, formatting helpers) I'll need for parity.
+
+Comprehensive component catalog found. Let me read the key component + token definitions and the charging formatter.
+
+Let me read the data-display metrics, the line/area charts, the charging formatter, and design tokens.
+
+I have the design system mapped. Now let me check tooling (xcodegen, pwsh), the parity infra (manifest record, ledger, README gate, placeholder scanner, logs dir), and the localization catalog + units env.
+
+All tooling present. Let me read the gate contract (README), the placeholder scanner, the manifest record, the ledger entry, and an existing charging page log to mirror the format.
+
+Let me read the placeholder patterns, the manifest record for this page, the ledger entry, and an existing page log for format reference.
+
+Now let me extract the exact manifest record for this page to confirm the 7 parity items and data sources.
+
+Confirmed: 7 parity items (3 states + 4 strings). Let me read the localization catalog, units environment + SI converters, design tokens, and the route registration pattern.
+
+Let me locate the units environment + SI converters, the design token definitions, and the core UI primitives (GlassPanel, EmptyState, ErrorDisplay, Select, Input, typography).
+
+Let me read the units formatters, SI facade, and the core UI primitive files.
+
+Let me read the Units facade, typography, states, and pickers primitives.
+
+Let me read the feedback states, pickers, the glass-panel/theme modifiers, and critically check the Shared.xcframework build situation (KMP dependency).
+
+Critical finding: `Shared.xcframework` doesn't exist yet (only `.gitkeep`) — the build depends on it via a KMP build script. Let me check whether it can be built (gradle/Kotlin availability) and read the build script.
+
+`apps/shared/gradlew` exists and Java 17 is present, so the KMP `Shared.xcframework` can be built — but it's the long pole (Kotlin/Native toolchain). Let me kick it off in the background now while I write code, then read the remaining patterns I need.
+
+Gradle build started in the background. Let me set up the plan and todos, then continue reading the remaining patterns.
+
+Let me set up todos and read the remaining patterns: buttons, input/number-field components, the ChargingDetail nav+units wiring, sample data source, and aggregation helpers.
+
+Let me check for text-input components and read the ChargingDetail wiring, sample data pattern, aggregation helpers, and navigation registration.
+
+Now I understand nav registration via `AppRouteHostRegistry`. Let me read the AppRoute enum, the metric/imperial unit presets, TSButton, input fields, sample data, and aggregation helpers.
+
+Let me check for any cost-analysis route, and read the unit presets, sample data source, and aggregation helpers.
+
+I have all the patterns I need. Let me check the gradle build progress, then read TSDataTable, the generated tokens, the glass-panel modifier, and theme helper.
+
+`TSDataTable`/`TSColumn` confirmed. Gradle is still compiling the KMP framework. Let me confirm token names (Font.TS roles, Color.TS, TSSpacing, TSRadius) and the glass-panel/theme modifiers while it builds.
+
+Let me read the tone/iconbox/badge component and the chart palette, then I'll start writing code while gradle builds.
+
+Complete design system understanding. Let me verify no type-name collisions for my planned `CostAnalysis*` types, then check gradle progress.
+
+Major finding: the P3 component library already ported the cost-analysis sub-components as adapters in `TeslaSync/feature-views/`, and `CostForecastData` already exists. My P7 page should **compose these existing P3 components** (the intended architecture), not re-implement them. Let me map all cost-analysis adapters and their public APIs.
+
+All 11 sub-components have full P3 adapters — my page is an orchestrator composing them. Let me read the public View APIs of each component (the main `.swift` files), in two batches.
+
+Each P3 component binds through its own `Source`/`Model`. I need to understand that seam to compose them. Let me deeply read one component (CostSummaryCards: Model + Adapter + Views) to learn the Source/Update/in-memory pattern and convenience initializers.
+
+I now fully understand the P3 component seam (Source → Update → Model → View, each with an `InMemory*Source`). My page is an orchestrator that derives data and feeds each component. The Previews files show exact construction. Let me check gradle progress and read several Previews to learn construction patterns.
+
+The construction pattern is clear: derived data → `*Update` → `InMemory*Source` → `*Model` → View. Let me read the remaining component Previews to learn each Update shape (batch 1 of 2).
+
+Patterns vary per component (some Source/Model, some direct `state:`/`localize:`). Let me read the remaining 5 Previews plus check the localizer types.
+
+Excellent — these components define all the input types I need (`MonthlyCostBucket`, `LifetimeMetrics`, `EnvironmentalImpactData`, etc.), so I'll reuse them and just write derivations. Let me read the forecast components' construction, the SavingsCalculator production init, and the EnvironmentalImpact localizer.
+
+I have all construction patterns. Let me confirm three things: the SavingsCalculator production init, the EnvironmentalImpact localizer/telemetry defaults, and whether CostForecastSection embeds ForecastDetails. Also checking gradle.
+
+Let me confirm the forecast type field names and whether CostForecastSection embeds ForecastDetails, plus check the gradle build.
+
+Confirmed: my page renders both CostForecastSection AND ForecastDetails. Let me read the web `distanceAddedM`/`durationMinutes` helper (used by coreStats) to port the distance derivation correctly.
+
+Gradle finished. `distanceAddedM` needs odometer fields the Apple `ChargingSession` doesn't have, so distance-derived figures are 0 (faithful to the no-odometer case) — the required 7 parity items don't depend on them. Let me confirm the xcframework built, then start writing code.
+
+The `Shared.xcframework` built successfully (release + debug). It's not staged yet — the scheme preAction will stage it. Let me stage it manually now, generate the Xcode project, and kick off a baseline iOS build in the background while I write code.
+
+Project generated; simulators available. Let me kick off a baseline iOS build in the background to confirm the existing project compiles, then write all the code while it runs.
+
+Baseline build running. Let me de-risk a few type details before writing: confirm `ChargingDateRange`, `CostForecast`/`ForecastUpdate` shapes/Sendable, and the `SavingsCalculatorData` fields.
+
+Baseline build succeeded and all types are Sendable/Equatable. Let me confirm the baseline result and read the precise init signatures for the component Update/input types I'll construct.
+
+Baseline build SUCCEEDED. Let me read the final batch of init signatures (Lifetime, MonthlyTable, samples, EnvironmentalImpactData, and Update/status enums) so I can write correct construction code.
+
+I have every type signature confirmed and the baseline builds clean. Let me mark exploration done and start writing the foundational files (forecast DTO, format helpers, derivations, data source, page model).
+
+`AICostForecastNarration` needs `CostNarrationModel(source:, locale:)`. Let me read its input/ready shapes to decide whether to include it cleanly.
+
+`AICostForecastNarration` is cleanly constructible with `CostNarrationInput()` defaults — I'll include it for full region fidelity. I have everything. Let me write the foundational files now.
+
+Now the data source seam and the page model.
+
+Now the sample/empty/failing data sources with a realistic year of sessions and a populated forecast.
+
+Now let me verify a couple of component signatures I'll use in the skeleton/layout (TSSkeleton, adaptive grid helpers) before writing the page and sections.
+
+TSSkeleton confirmed. Now the main page view + skeleton + previews.
+
+I have a typo (`.accessibilitylabel`). Let me fix it, then write the sections composition.
+
+Now the core orchestration — the sections composition that builds every P3 surface from the projection.
+
+Now the navigation registration (mirroring the in-repo `TripsReplay` typed-destination pattern).
+
+All 8 files written. Let me verify the model init signatures (telemetry defaults) and `CostNarrationModel.start()` before regenerating and building.
+
+All models have telemetry defaults and `CostNarrationModel.start()` exists. Let me regenerate the project (to include new files) and build the iOS target.
+
+Files included. Now let me build the iOS target and capture any compile errors.
+
+The build failed on a **pre-existing** duplicate filename (`ScheduledExportsPanel.swift` in two dirs) — not my files. My earlier baseline used `| tail` which masked xcodebuild's real exit. Let me confirm this duplicate is pre-existing in committed git and understand the two files.
+
+Confirmed: a **pre-existing committed duplicate** filename collision (`ScheduledExportsPanel.swift` in two dirs, different content) breaks the entire iOS target build — unrelated to my work, and it's the only such collision. My earlier "baseline pass" was masked by `| tail`. The `feature-views` copy is even misnamed (its own header says `ScheduledExportsPanelView.swift`). Let me confirm the type name, then rename that misnamed file to unblock the build and validate my code.
+
+The `feature-views` file contains `struct ScheduledExportsPanelView` and its header says it should be `ScheduledExportsPanelView.swift` — it's simply misnamed (a parallel-gen artifact the dedup commit missed). Renaming it to match its own type/header is the clean, intent-preserving fix. Let me rename, regenerate, and rebuild with proper exit capture.
+
+No duplicate basenames remain. Now let me build the iOS target with proper exit-code capture (writing full output to a file).
+
+The duplicate is resolved, but now a **widespread pre-existing `ambiguous use of 'Preview'`** error appears across hundreds of `.Previews.swift` and core component files I never touched. This target was never actually built before (the `Shared.xcframework` was an empty `.gitkeep`). Let me see the two ambiguous candidates to find the root cause.
+
+The ambiguity is `SwiftUI.Preview` vs `UIKit.Preview` (both vend a `#Preview` macro on iOS) — appearing module-wide in files I don't own, on a target that was never built before (empty `Shared.xcframework`). If a single `@_exported import UIKit` re-exports UIKit module-wide, one fix could clear all 227. Let me find the root cause.
+
+A SwiftUI-only file sees `UIKit.Preview` — so UIKit is being re-exported module-wide. Let me find where, checking all imports including the design tokens and any `@_exported`.
+
+Found a strong lead: the generated `Tokens.swift` imports `UIKit` and `AppKit`. Let me see its exact import structure and search the whole tree for `@_exported`, since the ambiguity is module-wide.
+
+Key insight: **zero errors reference my CostAnalysis files** — my code compiles. All 227 errors are a pre-existing module-wide `#Preview` (SwiftUI vs UIKit) ambiguity in `#if DEBUG` preview blocks across files I don't own, on a target never built before. `Tokens.swift` uses a proper `canImport` guard, so it's a toolchain-level interaction. Let me build **Release** (which excludes `#if DEBUG` previews) to validate my code and get a clean build.
+
+Release reveals deeper pre-existing breakage: `ambiguous use of 'md'`/`'sm'`/`'opacity'`/`accessibilityAddTraits` plus **Swift compiler crashes** ("failed to produce diagnostic… submit a bug report"). This points to duplicate type definitions from parallel generation. Let me check for duplicate `TSSpacing`/`TSRadius`/token definitions.
+
+**Root cause found**: `TeslaSync/Features/System/StatusApiDocsPage.swift` redefines its own `enum TSSpacing` and `enum TSRadius`, colliding with the canonical generated tokens — making `.md`/`.sm`/etc. ambiguous module-wide and crashing the type-checker. Another un-deduped parallel-generation artifact. Let me inspect the extent of that file's duplicate definitions.
+
+The fix for #1 is clear: remove the duplicate `TSSpacing`/`TSRadius` enums from `StatusApiDocsPage.swift` (they shadow the canonical generated tokens — `TSSpacing` values are identical, `TSRadius` differs only cosmetically). This is another parallel-gen artifact. Let me systematically find **all** duplicate type definitions across the target to gauge scope before fixing.
+
+There are several parallel-gen duplicate types, but `TSSpacing`/`TSRadius` are the build-breaking ones (used in every view). Let me remove those duplicates from `StatusApiDocsPage.swift` (values are identical/cosmetic vs canonical tokens) and rebuild Release to measure impact.
+
+Removed the duplicate tokens. Let me rebuild Release to measure how many errors that cleared.
+
+After the token fix the compiler reaches further (393 errors now visible). The biggest remaining bucket is `ambiguous use of 'x…'` (150) plus more duplicate families (`TirePressureUnit`, `HeroStatus`, …). This is repo-wide parallel-generation breakage. Let me identify the `'x…'` ambiguity source and the duplicate locations to gauge whether a few more single-file dedups clear it.
+
+The breakage is systemic and pre-existing: a second `TSSpacing` redefinition in `TeslaAccountPageViews.swift` (150 errors), plus duplicate `TirePressure*`/`HeroStatus` types with **divergent shapes** (`normalMinPa`, `startTs` API mismatches), access-level errors, and compiler crashes — concentrated in `Features/System/` and other pages I don't own. This is a repo-wide parallel-generation repair, explicitly **out of scope** ("Other pages — reject"), and Debug additionally has a module-wide `#Preview` SDK ambiguity.
+
+My CostAnalysis code shows **zero attributed errors** across both builds. Let me revert my 2 out-of-scope diagnostic edits (scope discipline) and validate my code via the scoped lint + placeholder gates, which don't require the broken module to compile.
+
+Clean — only my Charging dir is new. Now let me run the scoped gates that don't require the broken module to compile: SwiftLint `--strict` and the placeholder scan on my files.
+
+Two scoped-gate issues to fix in my files: the placeholder scanner flagged the literal word "Placeholder" (my `chartPlaceholder` naming/comments), and SwiftLint reports 1 violation. Let me locate both precisely.
+
+5 SwiftLint violations and the `chartPlaceholder` naming trip the scanner — all in my files, all fixable. Let me refactor `CostAnalysisDerivations.swift` (bundle params into a context struct, replace 3-tuples with a named accumulator, split the long function) and rename `chartPlaceholder`.
+
+The `create` can't overwrite and I had a savings-logic slip. Let me delete and recreate the derivations file cleanly with correct gas-price-based savings.
+
+Now update the page model's `derive()` for the new context-based signature, and rename `chartPlaceholder` (which trips the placeholder scanner).
+
+Let me re-run the scoped placeholder scan and SwiftLint on my files to confirm they're clean.
+
+Placeholder scan passes (EXIT=0). 3 SwiftLint `empty_count` violations remain in `lifetimeMetrics` (`totals.count > 0`). Let me fix those.
+
+Both scoped gates pass on my files (SwiftLint `--strict`: 0 violations; placeholder: EXIT=0). Now, to validate my refactored code actually **type-checks** within the module, let me temporarily resolve just the build-blocking token/filename dups (in others' files), build, grep for any errors in MY files, then revert. Let me locate the second `TSSpacing` dup.
+
+`TeslaAccountPageViews.swift` adds `extension TSSpacing { static let x2xl ... }` duplicating the canonical token — the source of the 150 `x2xl` errors. Let me apply temporary dedup fixes (filename + both token dups), build Release, and check specifically whether **my** files type-check.
+
+**Validation success**: with just the 2 token dedups, total errors dropped 393→135 (confirming those were the root cascade), and **zero errors are in my CostAnalysis files** — my refactored code type-checks cleanly within the module. Let me confirm the residual 135 are all pre-existing/non-mine, then revert the temp fixes.
+
+The grep exit code broke the `&&` chain, so the revert didn't run. Let me verify state and revert the temp fixes cleanly.
+
+All temp fixes reverted — only my Charging dir remains as new. Now let me add the 4 required i18n strings to `Localizable.xcstrings`. Let me inspect its structure and check if the keys already exist.
+
+The 4 required keys are missing (the 103 are sub-component keys). Let me view an existing `costAnalysis.*` entry to match the exact catalog format, then add the 4 keys.
+
+The catalog keys are prefixed with `translation.` (e.g., `translation.costAnalysis.charts.noData`). I need to understand the key convention so my page's strings actually resolve. Let me check how existing pages' keys are stored vs referenced.
+
+Two namespaces exist: un-prefixed keys (e.g., `charging.list.title`, used by `Text("…")` in pages) and `translation.`-prefixed keys. My page uses un-prefixed keys like ChargingListPage, so I add the 4 un-prefixed `costAnalysis.*` keys. Let me view the exact format of an un-prefixed entry.
+
+Format understood. Let me verify `"loading"` already exists (used by my skeleton), then insert the 4 un-prefixed `costAnalysis.*` keys via a safe textual insertion preserving the file's formatting.
+
+The 4 keys are added and JSON validates (`loading` already exists). Now let me write the evidence log. My implementation and parity items are complete and validated (SwiftLint `--strict` clean, placeholder clean, 0 type-check errors in my files), but the full-target `build`/`test` gate is **BLOCKED** by pre-existing, out-of-scope, repo-wide parallel-generation collisions. Let me write the honest log.
+
+Let me update my task tracking and check the ledger schema to decide how to honestly handle the ledger row (covered would be red-as-green while BLOCKED).
+
+The schema allows `status: "blocked"` — so I can honestly record the row as **blocked** (parity covered 7/7, but gate not green), which is accurate and not red-as-green. Let me add both platform rows. First let me see the ledger's closing structure.
+
+Ledger rows added (honestly `blocked`, 7/7). Let me verify the full git status (ensuring generated artifacts are ignored) before committing the intended files.
+
+All changes are within allowed files; generated artifacts are correctly gitignored. Let me commit with a transparent message.
+
+Committed. Let me verify the committed file set and do a final sanity check on my deliverable.
+
+Everything is committed and the working tree is clean. Final scoped gates re-confirmed green. Let me update tracking and finalize.
+
+Let me clean up the temporary build logs, then finalize.
+
+I've completed the implementation and committed it. Here is the honest, final summary.
+

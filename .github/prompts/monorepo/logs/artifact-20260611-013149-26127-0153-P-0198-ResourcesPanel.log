@@ -1,0 +1,124 @@
+=== P4 Shared surface 0198 ResourcesPanel (Apple) ===
+Date: 2026-06-12
+Runner: macOS (Darwin), Xcode 26.5 (build 17F42), Apple Swift 6.3.2, swiftlint + swiftformat + xcodegen + pwsh present.
+Surface: apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.*
+Web source: web/src/components/status/ResourcesPanel.tsx (pure presentational; no data hooks)
+
+Files shipped (6):
+  ResourcesPanel.Model.swift       — Foundation core: ResourceRow model, severity ladder (warn>=70 / crit>=90),
+                                     percent clamp + Math.round parity, render projection (rows vs friendly empty),
+                                     pure a11y-label logic, surface slug, telemetry seam (view.opened), P1/S10 i18n facade.
+  ResourcesPanel.Views.swift       — SwiftUI subviews: row line (icon+label+value+meta), severity->colour mapping,
+                                     reduce-motion-gated usage bar (web transition-all duration-slow), friendly empty row.
+  ResourcesPanel.swift             — main generic View (TSGlassPanel + title header + rows/empty + footnote + view.opened).
+  ResourcesPanel.Previews.swift    — DEBUG previews per branch (mixed severity / footnote / empty / light / dark).
+  ResourcesPanel.Tests.swift       — XCTest: severity, clamp, render, a11y composition, i18n facade.
+  ResourcesPanel.ModelTests.swift  — XCTest: view.opened emission seam (once/visible/no-double), slug stability.
+
+----------------------------------------------------------------------------------------------------
+GATE STEP RESULTS
+----------------------------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (FAIL — BLOCKED by a PRE-EXISTING, OUT-OF-SCOPE Swift compiler crash + type error)
+
+    Failure is NOT in this surface. It is a deterministic swift-frontend (Swift 6.3.2 / Xcode 26.5)
+    IRGen crash compiling pre-existing app-target files, reproduced on TWO runs at the identical file
+    and identical SIL function:
+        4. While evaluating request IRGenRequest(IR Generation for file
+           ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+        5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+    swift-demangle of that symbol:
+        reabstraction thunk helper from @escaping @isolated(any) @callee_guaranteed @Sendable
+        (@unowned Swift.Bool, @guaranteed Swift.Actor?) -> () to @escaping @isolated(any)
+        @callee_guaranteed @Sendable (@in_guaranteed Swift.Bool) -> ()
+    Trigger (pre-existing, out of my allowed scope): AppearanceSettings.Controls.swift:107
+        `let onChange: @MainActor (Bool) -> Void`  passed at :122 as a SwiftUI Binding setter.
+    This is a toolchain IRGen bug on @MainActor/@isolated(any) closure reabstraction.
+
+    PROOF THE FAILURE IS PRE-EXISTING AND INDEPENDENT OF THIS SURFACE:
+    Re-ran the iOS build with ALL six ResourcesPanel.* files REMOVED from the tree (xcodegen regenerated):
+        - "ResourcesPanel" mentions in the build transcript: 0
+        - Result: ** BUILD FAILED ** (3 failures), including a SECOND genuine pre-existing error
+          unrelated to this surface:
+            .../TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error:
+            escaping closure captures non-escaping parameter 'content'
+    => The TeslaSync app target does not compile on this runner regardless of this surface.
+       AppearanceSettings.Controls.swift and AIAutoNameUnnamedLocations.swift are committed,
+       pre-existing files outside the allowed-files scope (only ResourcesPanel.* + this log).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (FAIL — BLOCKED by an environmental signing requirement, then the same compiler crash)
+    Earliest failure (before Swift compile) is a runner-environment limitation, not code:
+        error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+               Enable development signing in the Signing & Capabilities editor.
+        error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    No macOS development certificate is provisioned on this runner. (Past signing, the macOS app target
+    compiles the same Sources/ + TeslaSync/ files and would hit the identical IRGen crash from step [1].)
+    "ResourcesPanel" mentions in the macOS failure block: 0.
+
+[3] swiftlint --strict
+    LINT_EXIT=0   (PASS)  Done linting! Found 0 violations, 0 serious in 4598 files.
+    (Scoped re-run on just the 6 ResourcesPanel.* files: 0 violations in 6 files.)
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=0 (PASS)  0/4896 files require formatting, 2 files skipped.
+    (Scoped re-run on just the 6 ResourcesPanel.* files: 0/6 require formatting.)
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/ResourcesPanel
+    PLACEHOLDER_EXIT=0 (PASS)  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    (Real scan of the 6 shipped files copied into a scannable dir, -Language swift: PLACEHOLDER_COUNT=0, EXIT=0.)
+
+----------------------------------------------------------------------------------------------------
+INDEPENDENT VERIFICATION OF THIS SURFACE (decoupled from the broken app target)
+----------------------------------------------------------------------------------------------------
+Because the XCTest bundle @testable-imports TeslaSync (the broken app target), the surface's XCTest
+suites cannot link on this runner. The surface was instead verified directly:
+
+A) Foundation-only core compiled + executed standalone (swiftc -swift-version 6,
+   ResourcesPanel.Model.swift + a harness re-running EVERY assertion from ResourcesPanel.Tests.swift
+   and ResourcesPanel.ModelTests.swift):
+       STANDALONE_LOGIC_TESTS=PASS   (47/47 assertions)
+   Covered: severity thresholds (nil/0/69.9/70/89.9/90/100/140/-5 + constants), bar-fraction clamp
+   (0.225 / clamp>1 / clamp<0), Math.round parity (22.5->23, 89.6->90), hasBar, id==label, render
+   projection (empty vs rows + always-visible), a11y seams (bar label "%@ usage", bar value "82%",
+   row label compose/omit-meta), i18n facade English fallbacks (title=="Resources", usage=="%@ usage",
+   emptyTitle, table=="ResourcesPanel"), and the view.opened diagnostics seam (emits once / empty
+   still emits / no double-emit / slug stable / OSLog default invokable).
+
+B) Full SwiftUI layer type-checked standalone against the real P1/S9 token API surface
+   (swiftc -swift-version 6 -parse-as-library -D DEBUG -target arm64-apple-macos15.0, token stubs +
+   Model + Views + main view + Previews incl. the #Preview blocks):
+       VIEWS_TYPECHECK_EXIT=0   (PASS — clean under Swift 6 strict concurrency)
+
+----------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA STATUS
+----------------------------------------------------------------------------------------------------
+[x] All web-source branches reproduced: rows (normal / warn>=70% / crit>=90% severity tint on bar+value),
+    rows with/without bar (percent omitted), with/without meta, with/without icon, optional footnote,
+    and the friendly empty branch (never a blank box). loading/error/stale/offline are host-owned —
+    the web source is pure presentational with no data hook, so inventing fetch phases here would be
+    drift; documented in the file headers (mirrors the DONE AiOutputPanel 0036 precedent).
+[x] No direct HTTP from the view — pure props-driven, no state holder (faithful to the web source).
+[x] Every i18n string via the P1/S10 per-surface facade (table "ResourcesPanel") with web English fallback.
+[x] Accessibility: title is a header; each row text-line is one combined element; each bar is a labelled
+    progressbar-style element carrying its percent; icons accessibilityHidden; reduce-motion gated bar.
+[x] Tests authored: adapter/logic unit tests + per-state previews + a11y label tests + telemetry seam tests
+    (verified via the standalone harness above; XCTest bundle blocked only by the pre-existing app-target break).
+[x] No TODO / stub / mock / placeholder / Lorem (check-placeholders PASS).
+[ ] EXIT=0 not achievable on this runner: blocked by a pre-existing toolchain IRGen crash + a pre-existing
+    type error in out-of-scope files, and (macOS) a missing dev signing certificate. None are this surface,
+    none are in the allowed-files scope (ResourcesPanel.* + this log).
+
+----------------------------------------------------------------------------------------------------
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+STANDALONE_LOGIC_TESTS=PASS
+VIEWS_TYPECHECK_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED
+BLOCKED_REASON=Pre-existing, out-of-scope Swift 6.3.2/Xcode 26.5 IRGen compiler crash (@isolated(any) (Bool,Actor?) reabstraction thunk, e.g. AppearanceSettings.Controls.swift) plus a pre-existing type error (AIAutoNameUnnamedLocations.swift:123) break the shared TeslaSync app target; macOS additionally lacks a development signing certificate. Verified independent of this surface by rebuilding with all ResourcesPanel.* files removed (0 mentions, still 3 failures). This surface itself passes lint, format, placeholder, standalone logic tests (47/47) and SwiftUI type-check; fixes require editing files outside the allowed scope.

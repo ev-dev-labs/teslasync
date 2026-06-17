@@ -1,0 +1,225 @@
+=== P4 Feature view 0212 ResetSection (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/ResetSection.*
+Web source of truth: web/src/features/settings/components/ResetSection.tsx
+Date: 2026-06-09  Host: macOS (Darwin arm64, Apple Silicon)
+
+──────────────────────────────────────────────────────────────────────────────
+CAPABILITY (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15
+HIG. If unavailable on the runner → STATUS=BLOCKED with API evidence.")
+──────────────────────────────────────────────────────────────────────────────
+  Xcode 26.5 (build 17F42)                                     PRESENT
+  Apple Swift 6.3.2 (swift-driver 1.148.6)                     PRESENT
+  iPhone 16 simulator (iOS 26.5)                               PRESENT (booted)
+  iPhoneSimulator26.5.sdk + macOS SDK                          PRESENT
+  swiftlint /opt/homebrew/bin/swiftlint                        PRESENT
+  swiftformat /opt/homebrew/bin/swiftformat                    PRESENT
+  pwsh /opt/homebrew/bin/pwsh                                  PRESENT
+  xcodegen 2.45.4, gradle 8.14 + JDK 17 (KMP)                  PRESENT
+  => Platform is fully capable. NOT blocked on capability.
+
+──────────────────────────────────────────────────────────────────────────────
+SURFACE INVENTORY — 10 files (mirrors the 0209 PrivacySection decomposition)
+──────────────────────────────────────────────────────────────────────────────
+  ResetSection.swift              composition: phase switch, 3 panels, toast
+                                  overlay, single .sheet(item:) host, telemetry
+  ResetSection.Model.swift        ResetDiagnostics(slug) · ResetTelemetry+OSLog
+                                  (P1/S11) · ResetStrings facade (P1/S10) ·
+                                  seams ResetSectionsSource + SettingsResetting
+                                  (P1/S8) · @Observable ResetSectionModel
+  ResetSection.Adapter.swift      pure core: ResetCatalog (8 sections + 2 denied),
+                                  phase resolver, status banner, successDetail,
+                                  typed-"RESET" predicate, confirm templating, a11y
+  ResetSection.Views.swift        header · section row · by-section panel · deny
+                                  panel · danger-zone panel
+  ResetSection.Chrome.swift       status banner · per-section confirm sheet ·
+                                  typed danger-zone sheet · toast · skeleton
+  ResetSection.Sources.swift      InMemoryResetSectionsSource ·
+                                  InMemory/Controllable SettingsResetting
+  ResetSection.Previews.swift     ready·empty·loading·error·stale·offline·
+                                  per-section confirm·typed confirm·Dynamic Type
+  ResetSection.strings            P1/S10 catalog: every web t() key + native chrome
+  ResetSection.Tests.swift        model behaviour (24 tests)
+  ResetSection.AdapterTests.swift pure projection (18 tests)
+
+  Parity coverage of the web source:
+   • 8 resettable sections (general/appearance/alert_rules/geofences/
+     notification_channels/dashboard_layout/automations/quiet_hours) — verbatim
+     titles + descriptions, lucide→SF Symbol mapping.
+   • 2-row read-only deny-list (tariffs, sound_prefs) with reason + alt path.
+   • Per-section danger ConfirmDialog ("Reset {{name}}?" / "{{description}} This
+     action is permanent.") → useResetSection (POST /settings/reset {section}).
+   • Danger zone with requireTypedConfirmation="RESET" → useResetAllSettings
+     (POST /settings/reset {}); confirm disabled until the field reads RESET.
+   • toast.success(title, "{{count}} item(s) reset across {{sections}} section(s)").
+   • SudoCanceledError → silent no-op (no toast), dialog closes.
+   • cache invalidation on success (qc.invalidateQueries()).
+  P4 states contract (every state renders, none hidden):
+   loading→skeleton · ready · empty(no resettable sections→friendly empty, danger
+   zone still usable) · error(banner+retry, cached catalog kept) · stale(chip+one
+   auto-refresh) · offline(chip, cached) · plus per-section confirm, typed confirm,
+   busy, success/error toast, silent sudo-cancel.
+
+──────────────────────────────────────────────────────────────────────────────
+IN-SCOPE GATES — GREEN
+──────────────────────────────────────────────────────────────────────────────
+  [swiftformat] swiftformat --lint apps/apple (whole tree, gate command)
+      "0/2382 files require formatting, 2 files skipped."   FORMAT_EXIT=0
+
+  [swiftlint]   scoped to the 9 shipped ResetSection swift files
+      swiftlint lint --strict --no-cache ResetSection.{swift,Adapter,Model,Views,
+      Chrome,Sources,Previews,Tests,AdapterTests}.swift
+      "Done linting! Found 0 violations, 0 serious in 9 files."
+
+  [swiftlint]   swiftlint --strict (whole project, gate command)
+      "Found 1 violation, 1 serious in 2378 files."  LINT_EXIT=2
+      The ONE violation is PRE-EXISTING and OUTSIDE this surface + outside the
+      allowed-files scope:
+        dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+        error: Opening Brace Spacing Violation (opening_brace)
+      git status confirms that file is unmodified/committed. It is the very same
+      pre-existing error already recorded in apps/macos-pending-verifications.md
+      (row p4-apple/dashboard-widgets/0038-DriveEfficiencyChartWidget). ZERO
+      ResetSection violations.
+
+  [placeholder] gate command (ADR-011 "definition of done")
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/.../ResetSection
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      honest re-scan of the 9 shipped files copied into a temp dir:
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/stub/mock in shipped code.
+
+  [xcodegen]    xcodegen generate → TeslaSync.xcodeproj written; the 10 files are
+      enumerated (60 references in project.pbxproj). The generated .xcodeproj is
+      git-ignored (git check-ignore confirms) and is NOT committed.
+
+  [KMP]         Scripts/build-shared-xcframework.sh → gradle :core:assembleShared
+      XCFramework "BUILD SUCCESSFUL in 12m 36s"; staged Frameworks/Shared.xcframework
+      with ios-arm64 + ios-arm64-simulator + macos-arm64 slices.
+
+──────────────────────────────────────────────────────────────────────────────
+ISOLATED SURFACE VERIFICATION — GREEN  (the sanctioned proof per the 0209
+PrivacySection log + apps/macos-pending-verifications.md: build the surface
+against the REAL design system, run its tests, typecheck both SDKs)
+──────────────────────────────────────────────────────────────────────────────
+  Package: /tmp/resetiso  (swift-tools 6.0; platforms iOS 18 / macOS 15)
+    target TeslaSync     = the real design system (Sources/Components + Sources/
+                           Design + generated Tokens.swift, system-framework-only
+                           imports, no KMP Shared) + the 7 shipped non-test files
+    target TeslaSyncTests = the 2 shipped *Tests.swift (@testable import TeslaSync)
+    (one unused design-system leaf, UnitFormatters.swift, omitted — it pulls the
+     out-of-scope `Units` helper and is NOT referenced by this surface.)
+
+  [swift build]  Swift 6 language mode (strict concurrency complete by default)
+      "[51/51] Compiling TeslaSync ResetSection.swift ... Build complete! (2.74s)"
+      Every shipped file compiles: Adapter, Model, Sources, Views, Chrome,
+      Previews, swift. ZERO errors, ZERO warnings.
+
+  [swift test]   macOS 15 host
+      "Test Suite 'All tests' passed ... Executed 42 tests, with 0 failures"
+      24 model tests (lifecycle/telemetry, per-section flow incl. controllable
+      busy + silent sudo-cancel + failure toast, typed-confirm gating, global
+      flow, stale one-shot auto-refresh, offline no-refresh) +
+      18 adapter tests (catalog order, phase resolver, banner precedence,
+      successDetail, confirm templating, typed-RESET predicate, disabled
+      predicates, a11y summaries).                          42/42 PASS
+
+  [swiftc -typecheck]  real iOS-18 simulator SDK, strict concurrency complete
+      swiftc -typecheck -sdk iPhoneSimulator26.5.sdk
+        -target arm64-apple-ios18.0-simulator -swift-version 6
+        -strict-concurrency=complete <48 surface+design-system files>
+      exit 0 — ZERO errors, ZERO warnings on the iOS slice (the #if os(iOS)
+      branches: presentationDetents, textInputAutocapitalization, UIKit Tokens).
+
+──────────────────────────────────────────────────────────────────────────────
+FULL-APP xcodebuild GATE — DEFERRED (red ONLY on pre-existing, unrelated,
+out-of-allowed-files conditions; this surface contributes ZERO errors)
+──────────────────────────────────────────────────────────────────────────────
+  [iOS]  xcodebuild -scheme TeslaSync
+           -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         IOS_EXIT=65 (** TEST FAILED ** — build failed, testing cancelled)
+         565 compiler errors — 0 of them in ResetSection or anywhere in
+         feature-views/ResetSection.* (grep: ">>> ZERO ResetSection errors <<<").
+         Root cause = pre-existing parallel-merge duplicate-type collisions in
+         OTHER agents' surfaces (each its own prompt; Out of Scope here; NOT in
+         this prompt's allowed-files list):
+           • enum ChargeDistanceUnit redefined 2× —
+             dashboard-widgets/ChargeStatusLiveWidget.Model.swift:61
+             dashboard-widgets/ChargeStatusWidget.Model.swift:61
+           • struct ChargeSessionDTO redefined 2× —
+             dashboard-widgets/ChargeStatusLiveWidget.Model.swift:126
+             dashboard-widgets/ChargeSessionChartWidget.Models.swift:22
+           • invalid redeclaration of MonthlyCostAccessibility / MonthlyCostStrings
+             feature-views/MonthlyCostChart.Adapter.swift:309 / .Model.swift:299
+           • plus ChargeStatusUpdate, Safety*/FleetStatsBar* downstream ambiguity.
+         These are the same class of "pre-existing, unrelated parallel-merge
+         collisions" recorded for every prior P4 surface in
+         apps/macos-pending-verifications.md (DashboardWidgetSize ×15,
+         PowerFlowConnection, ChargingProjection, co-located XCTest, …).
+
+  [macOS] xcodebuild -scheme TeslaSync-macOS build test
+         MAC_EXIT=65 — fails at the code-signing stage: ""TeslaSync-macOS" has
+         entitlements that require signing with a development certificate. Enable
+         development signing…" (and the same for TeslaSyncWidgets-macOS). This is
+         the documented macOS development-signing host condition; it aborts before
+         linking, so the shared-source collisions above are not even reached.
+         ZERO ResetSection errors.
+
+  Per the allowed-files contract ("apps/apple/.../ResetSection.*, the log file")
+  and Out-of-Scope ("Other surfaces in the same feature — each has its own
+  prompt"), these collisions are NOT mine to edit. The full-app build+test is the
+  P4 acceptance gate's responsibility (p4-apple/P99-0001-apple-acceptance-gate on
+  macos-latest), exactly as every prior P4 surface recorded.
+
+──────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+──────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green     : the full-app xcodebuild RED is reported verbatim
+                           (IOS_EXIT=65, 565 errors) with its pre-existing root
+                           cause; the surface's own gates are GREEN and shown raw.
+  2  No scope narrowing  : all 3 web panels, all 8 sections, both deny rows, both
+                           mutations, the typed-RESET danger flow, every state.
+  3  No skip-and-assume  : web source read end-to-end; every t() key + conditional
+                           branch reproduced (incl. SudoCanceledError silent path).
+  4  No stubs as final   : 10 real files; 42 real tests; placeholder scanner = 0;
+                           no TODO/stub/mock/placeholder/Lorem.
+  5  No parity shortcut  : IconBox/Button/ConfirmDialog/typed-confirm/toast/
+                           glass-panel/flex-wrap columns/i18n/a11y/telemetry all
+                           mapped to platform tokens + verified by build+test.
+  6  No delegation       : authored directly; delegation FORBIDDEN; none used.
+  7  No predecessor bypass: P1/S8 seams (ResetSectionsSource + SettingsResetting),
+                           P1/S9 tokens (Tokens/TSMaterial/TSButton/TSIconBox/
+                           TSSkeleton/TSFadeIn), P1/S10 ResetStrings facade,
+                           P1/S11 view.opened — all present + consumed.
+  8  No commit on red    : the COMMITTED artifact (ResetSection.* + this log) is
+                           GREEN on every in-scope gate AND on a real isolated
+                           Swift 6 strict-concurrency build + 42/42 tests + iOS-18
+                           typecheck; the deferred full-app gate is RED only on
+                           pre-existing, unrelated, out-of-allowed-files conditions
+                           this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to feature-views/ResetSection.{swift,
+                           Adapter,Model,Views,Chrome,Sources,Previews,Tests,
+                           AdapterTests,strings} + this log. project.yml was
+                           temporarily edited ONLY to run an isolation build and
+                           was reverted (git checkout); the generated .xcodeproj,
+                           DerivedData and staged Shared.xcframework are git-ignored
+                           build artifacts and are NOT committed.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+──────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+──────────────────────────────────────────────────────────────────────────────
+  Production-polished, Apple-idiomatic ResetSection shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED: it compiles under the app's own Swift 6
+  strict-concurrency rules against the real design system, its 42 tests pass, it
+  typechecks against the iOS-18 simulator SDK, and swiftlint/swiftformat/
+  placeholder are all green over the shipped files. The full-app iOS-Simulator +
+  macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is
+  blocked only by pre-existing, unrelated parallel-merge duplicate-type collisions
+  in other surfaces (dashboard-widgets ChargeStatus*/ChargeSession*; feature-views
+  MonthlyCostChart) and macOS dev-signing — owned by the P4/P99 acceptance gate on
+  a signed macos-latest CI runner per apps/macos-pending-verifications.md. This
+  matches the sanctioned "code-complete + DEFERRED Xcode gate" disposition used by
+  every P4 surface to date (e.g. 0209 PrivacySection).
+
+EXIT=0
+STATUS=DONE

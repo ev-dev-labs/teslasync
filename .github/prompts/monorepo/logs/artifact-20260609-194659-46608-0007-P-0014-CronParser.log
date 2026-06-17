@@ -1,0 +1,219 @@
+=== P4 Feature view 0014 CronParser (Apple) ===
+Prompt:  P4/feature-views/0014 — Feature view: CronParser
+Web src: web/src/features/admin/components/devtools/tools/CronParser.tsx
+         (+ helpers describeCron / getNextCronRuns in
+          web/src/features/admin/components/devtools/helpers.ts)
+Native:  apps/apple/TeslaSync/feature-views/CronParser.*
+Host:    Darwin arm64 · Xcode 26.5 (Build 17F42) · Apple Swift 6.3.2 ·
+         swiftlint + swiftformat (Homebrew) · pwsh · OpenJDK 17 · iPhone 16 sim (booted)
+Date:    2026-06-09
+
+────────────────────────────────────────────────────────────────────────────
+SUMMARY
+────────────────────────────────────────────────────────────────────────────
+The CronParser surface is COMPLETE and verified green by every host-runnable
+gate: swiftformat --lint 0/6, swiftlint --strict 0 violations, placeholder gate
+PLACEHOLDER_COUNT=0, an executed Foundation adapter harness 21/21, an isolated
+SwiftPM XCTest run 30/30 under Swift 6 strict concurrency, and real iOS-18 +
+macOS-15 `swiftc -typecheck` = 0 errors against the REAL generated Tokens.swift +
+the REAL shared components (TSGlassPanel/TSButton/…). `xcodegen generate`
+enumerates all 7 files. The surface is collision-free with the rest of the module.
+
+The prompt's full-app `xcodebuild build test` gate is BLOCKED by PRE-EXISTING,
+UNRELATED platform-capability issues — NOT by any CronParser code:
+  • iOS:   a `swift-frontend` (Swift 6.3.2) IRGen crash
+           (llvm::report_fatal_error → report_at_maximum_capacity) while
+           batch-compiling UNRELATED files (AnomalyInlineRow / AppCommands /
+           AppearanceSettings). Zero CronParser files in the crashing batch;
+           zero CronParser diagnostics anywhere in the 21,363-line log.
+  • macOS: code-signing — "TeslaSync-macOS / TeslaSyncWidgets-macOS has
+           entitlements that require signing with a development certificate"
+           (`security find-identity -p codesigning` → 0 valid identities).
+This is the exact class of block that apps/macos-pending-verifications.md defers
+to `p4-apple/P99-0001-apple-acceptance-gate` (runs on macos-latest w/ signing).
+
+────────────────────────────────────────────────────────────────────────────
+SURFACE INVENTORY  (apps/apple/TeslaSync/feature-views/CronParser.*)
+────────────────────────────────────────────────────────────────────────────
+  CronParser.swift                229   composed view: ToolCard header (green
+                                        timer icon), expression Input, preset
+                                        flow, content state switch
+  CronParser.Views.swift          190   description panel, run row + numbered
+                                        info chip, friendly hint, wrap Layout
+  CronParser.Model.swift          241   @Observable state holder (P1/S8) +
+                                        i18n facade (P1/S10) + telemetry (P1/S11)
+  CronParser.Adapter.swift        398   pure logic: field split, describeCron,
+                                        getNextCronRuns (matchField+schedule),
+                                        formatDateTime, run projection, presets
+  CronParser.Previews.swift        58   empty / every-5-min / weekly / no-runs
+  CronParser.Tests.swift          331   adapter parity + model phases + a11y
+  CronParser.strings               59   i18n catalog (table "CronParser")
+  TOTAL_LINES = 1506   (web source = 62 lines; native is a full HIG port with
+                        the describeCron/getNextCronRuns helpers reproduced,
+                        every state, tests, previews, and i18n)
+
+States rendered (parity with the web conditional renders, never a blank box):
+  empty    — input is not 5 whitespace fields → guidance hint
+  content  — 5 fields → human-readable Description (web text-emerald-300) +
+             Next Runs list (web Badge index + mono formatDateTime)
+  content/no-runs — valid expr that never fires within a year → "no upcoming
+             runs" hint (web hides the list; native shows a state)
+  (loading/error/stale/offline are N/A — this is a synchronous client-side tool
+   whose only web hook is useTranslation, identical to the sibling devtools
+   surfaces ByteSizeConverter (0012) and TimestampTool (0021).)
+
+────────────────────────────────────────────────────────────────────────────
+[1] swiftformat --lint            → 0/6 files require formatting   FORMAT_EXIT=0
+────────────────────────────────────────────────────────────────────────────
+$ swiftformat --lint TeslaSync/feature-views/CronParser.{swift,Views.swift,Model.swift,Adapter.swift,Previews.swift,Tests.swift}
+  SwiftFormat completed. 0/6 files require formatting.
+  FORMAT_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────
+[2] swiftlint --strict            → 0 violations in 6 files          LINT_EXIT=0
+────────────────────────────────────────────────────────────────────────────
+$ swiftlint lint --strict --no-cache TeslaSync/feature-views/CronParser.*.swift
+  Done linting! Found 0 violations, 0 serious in 6 files.
+  LINT_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────
+[3] placeholder gate (ADR-011)    → PLACEHOLDER_COUNT=0         PLACEHOLDER_EXIT=0
+────────────────────────────────────────────────────────────────────────────
+$ pwsh apps/tools/check-placeholders.ps1 -Path <CronParser files> -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+$ pwsh apps/tools/check-placeholders.ps1 -SelfTest
+  [PASS] dirty tree → PLACEHOLDER_COUNT=4   [PASS] clean tree → 0
+  SELFTEST_EXIT=0          (scanner proven to detect stubs — the 0 is meaningful)
+  No TODO / FIXME / stub / mock / Placeholder / Lorem / "not implemented" in shipped code.
+
+────────────────────────────────────────────────────────────────────────────
+[4] Foundation adapter harness    → 21/21 value-parity oracles PASS
+────────────────────────────────────────────────────────────────────────────
+Compiled CronParser.Adapter.swift standalone (swiftc) and executed; every output
+matches the web describeCron / getNextCronRuns / matchField byte-for-byte:
+  describe("* * * * *")        = "Every minute"
+  describe("0 0 * * 0")        = "At 00:00 on Sun"
+  describe("*/5 * * * *")      = "At minute */5 of every hour"
+  describe("* 14 * * *")       = "Every minute of hour 14"
+  describe("0 12 15 6 *")      = "At 12:00 on day 15 in month 6"
+  describe("0 0 * * 7")        = "At 00:00 on 7"   (parseInt(7) out of 0..6 → raw)
+  nextRunDates("* * * * *",3)  = [1704067260, 1704067320, 1704067380]  (next-minute start)
+  nextRunDates("0 * * * *",2)  = [1704070800, 1704074400]
+  nextRunDates("0 0 * * *",1)  = [1704153600]
+  nextRunDates("0 0 * * 0",1)  = [1704585600]   (next Sunday 00:00Z)
+  nextRunDates("0 0 30 2 *")   = []              (impossible → empty)
+  matchField precedence quirks (* / , - then exact) reproduced:
+    "1-5/2"@4=T "1-5/2"@3=F   (/ wins over -, left side ignored)
+    "1-5,7"@7=T "1-5,7"@3=F   (, wins over -, "1-5"→NaN)
+
+────────────────────────────────────────────────────────────────────────────
+[5] Isolated SwiftPM XCTest       → 30/30 PASS (Swift 6, module "TeslaSync")
+────────────────────────────────────────────────────────────────────────────
+Adapter + Model compiled as module "TeslaSync"; CronParser.Tests.swift run via
+`@testable import TeslaSync` under `swift test` (Swift 6 language mode):
+  CronInputTests              3   CronNumberTests            2
+  CronDescriptorTests         4   CronMatchFieldTests        4
+  CronScheduleTests           6   CronFormatterTests         2
+  CronParserStringsTests      2   CronParserModelTests       5
+  CronAccessibilityTests      2
+  Executed 30 tests, with 0 failures (0 unexpected) in 0.082s — ALL PASS
+Covers: adapter→projection parity, per-state phase resolution, preset apply,
+run gating, `view.opened` telemetry emitted exactly once, a11y summaries, and the
+i18n facade reproducing the web describeCron default verbatim.
+
+────────────────────────────────────────────────────────────────────────────
+[6] Real SDK swiftc -typecheck    → iOS-18 = 0 errors · macOS-15 = 0 errors
+────────────────────────────────────────────────────────────────────────────
+View + model + adapter + previews type-checked together against the REAL
+generated Tokens.swift AND the REAL shared components (TSMaterial / Buttons /
+Badges / Typography / Cards), Swift 6, -strict-concurrency=complete, -D DEBUG:
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+    -target arm64-apple-ios18.0-simulator   -sdk <iPhoneSimulator26.5> <files>   → IOS_TYPECHECK_EXIT=0
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+    -target arm64-apple-macos15.0           -sdk <MacOSX26.5>         <files>   → MAC_TYPECHECK_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────
+[7] xcodegen generate + coexistence + i18n parity
+────────────────────────────────────────────────────────────────────────────
+$ xcodegen generate   → XCODEGEN_EXIT=0; pbxproj enumerates all 7 files:
+    CronParser.swift  CronParser.Views.swift  CronParser.Model.swift
+    CronParser.Adapter.swift  CronParser.Previews.swift  CronParser.Tests.swift
+    CronParser.strings
+Coexistence: every public/internal type is Cron*-prefixed and unique across the
+  module (the existing `CronExpression` in TriggerConfigurator was deliberately
+  avoided — this surface uses CronInput); grep for duplicate definitions → none.
+i18n parity: all 10 web t() keys present in the catalog
+  (Cron Parser, Cron Parser Desc, Cron Expression, Every Minute/Hour/Day/Week/
+   Month, Description, Next Runs) + native-chrome keys for the describeCron
+   fragments, the day-of-week abbreviations, the empty/no-runs hints, and a11y.
+Accessibility: every interactive element labelled (the expression TextField has
+  accessibilityLabel + accessibilityValue; each of the 5 preset buttons has an
+  accessibilityLabel); description/run-list expose VoiceOver summaries.
+
+────────────────────────────────────────────────────────────────────────────
+[8] FULL-APP GATE ATTEMPT  (the prompt's `xcodebuild build test`)
+────────────────────────────────────────────────────────────────────────────
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
+    -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ▸ Pre-action build-shared-xcframework.sh: KMP/Kotlin-Native Gradle assembled
+    and STAGED apps/apple/Frameworks/Shared.xcframework (ios-arm64 +
+    ios-arm64-simulator + macos-arm64).  [framework dependency RESOLVED this run]
+  ▸ "EmitSwiftModule normal arm64 … for TeslaSync" SUCCEEDED — the whole module
+    (including all CronParser files) type-checked.
+  ▸ Build then FAILED in a later per-file IRGen batch with a compiler crash:
+        Please submit a bug report … include the crash backtrace.
+        Stack dump:
+        1.  Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+        4.  While evaluating request IRGenRequest(IR Generation for file "…")
+        7  swift-frontend … llvm::report_fatal_error(llvm::Twine const&, bool)
+        8  swift-frontend … report_at_maximum_capacity(unsigned long)
+    Crashing batch = AnomalyInlineRow.* / AppCommands.* / AppearanceSettings.*
+    (NO CronParser file present).  2 swift-frontend crashes total.
+  IOS_EXIT=65            (** TEST FAILED **; testing cancelled because build failed)
+  grep 'CronParser' over the full 21,363-line log → 0 errors / 0 warnings / 0 crashes.
+
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
+    -scheme TeslaSync-macOS build test
+  ▸ FAILED at signing validation (before compile):
+        error: "TeslaSync-macOS" has entitlements that require signing with a
+               development certificate. Enable development signing …
+        error: "TeslaSyncWidgets-macOS" has entitlements that require signing …
+  $ security find-identity -p codesigning  →  0 valid identities found
+  MAC_EXIT=65            (** TEST FAILED **)
+  grep 'CronParser' over the macOS log → clean (0 errors / 0 warnings).
+
+Both blockers are pre-existing + unrelated to this surface:
+  - the Swift 6.3.2 IRGen `report_at_maximum_capacity` crash is a toolchain
+    resource-capacity failure compiling the ~2,200-file app target on this
+    runner (independent of CronParser), and
+  - macOS development-signing identities are absent on this runner.
+These are deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest with
+signing identities) per apps/macos-pending-verifications.md.
+
+────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────────
+ 1 No red-as-green ....... the full-app xcodebuild steps are reported RED
+                           (IOS_EXIT=65 / MAC_EXIT=65); not claimed green.
+ 2 No scope narrowing .... every web state + helper (describeCron,
+                           getNextCronRuns, formatDateTime, presets) reproduced.
+ 3 No skip-and-assume .... both gates were executed first-hand; blocker
+                           backtraces/messages captured verbatim above.
+ 4 No stubs as final ..... PLACEHOLDER_COUNT=0; self-test proves the scanner.
+ 5 No parity shortcuts ... 21/21 adapter oracles + 30/30 XCTests pin web parity.
+ 6 No delegation ......... authored directly; no sub-agent.
+ 7 No predecessor bypass . follows the ByteSizeConverter/TimestampTool sibling
+                           pattern + the macos-pending-verifications methodology.
+ 8 No commit on red ...... the surface gates are green; the full-app gate is a
+                           pre-existing/unrelated platform block (documented).
+ 9 No silent drift ....... only CronParser.* + this log touched (allowed files).
+10 Log ends with EXIT/STATUS below.
+
+CronParser surface verification: GREEN (format/lint/placeholder/typecheck/tests).
+Full-app xcodebuild gate: BLOCKED by pre-existing toolchain IRGen crash on
+unrelated files (iOS) + absent code-signing identities (macOS).
+
+EXIT=65
+STATUS=BLOCKED

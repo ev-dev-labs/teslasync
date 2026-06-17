@@ -1,0 +1,166 @@
+=== P4 Widget primitive 0012 WidgetTipCards (Apple) ===
+Artifact : apps/apple/TeslaSync/widget-primitives/WidgetTipCards.*  (7 .swift + 1 .strings)
+Web src  : web/src/features/dashboard/widgets/shared/WidgetTipCards.tsx
+Host     : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh · xcodegen 2.45.4
+Date     : 2026-06-12
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint / swiftformat / pwsh / xcodegen -> all present (versions above)
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0); iPhone 16 simulator (iOS 26.5) booted.
+  SwiftUI + Swift Charts + MapKit available. (This surface uses only SwiftUI + shared UI components; it has
+  no chart and no map — see scope.)
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  The web `WidgetTipCards` is a PURE presentational widget primitive (a shared widget building block): it
+  takes `tips: TipItem[]` + optional `maxTips` / `compact` / `emptyMessage` / `emptyIcon` and renders a
+  scrollable list of tip cards, each = an optional leading glyph + a title row (the medium title with an
+  optional trailing impact `<Badge>`) over a muted description. It caps the list at
+  `maxTips ?? (compact ? 1 : 3)` (web `tips.slice(0, limit)`), clamps the description to two lines when
+  `compact` (web `compact && line-clamp-2`), and falls back to `<EmptyState>` when `visible.length === 0`.
+  There is NO fetch / React-Query / Promise in the source, so it has NO loading/error/stale/offline branch
+  (the host widget that owns the query renders those). Per the sibling presentational-primitive precedent
+  (WidgetComparisonCard 0003, Delta 0081, MetricCard 0095, Accordion 0203) this surface reproduces ONLY the
+  source's REAL branches:
+    • populated list  (one card per visible tip; optional glyph + title + optional impact badge + description)
+    • compact slice   (one tip, description clamped to two lines; web maxTips ?? (compact ? 1 : 3) + line-clamp-2)
+    • empty leaf       (friendly "never a blank box" peer of web <EmptyState> — default "No recommendations")
+  The impact badge REUSES the shared native `TSBadge` (web `Badge`) with the web `impactBadgeMap` tone
+  (high -> success, medium -> warning, low -> neutral). The empty leaf REUSES the shared native `TSEmptyState`
+  (web `EmptyState` from `@/components/feedback`).
+  Files: WidgetTipCards.Adapter/Model/.swift/Views/Previews/Tests/AdapterTests.swift + .strings.
+  Bindings : P1/S8 WidgetTipCardsModel @Observable holder (props + projection; no HTTP in the view);
+             P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius) — no Tailwind ports, no raw hex;
+             P1/S10 NSLocalizedString facade (table "WidgetTipCards"); P1/S11 view.opened telemetry
+             (slug "WidgetTipCards", emitted once + idempotent across appear/disappear).
+  i18n     : web source has 0 t() keys (anonymous; its only literal "No recommendations" is reproduced via
+             widgetTipCards.empty). The web `tip.impact` raw-enum fallback (shown when no impactLabel is
+             given) is localized via widgetTipCards.impact.{high,medium,low} so no raw English ships. Native
+             a11y/HIG additions: emptyHint, cardLabel, cardLabelWithImpact. 0 dead keys.
+  a11y     : each card folds into one VoiceOver element reading "{title}, {impact}. {description}" (impact
+             omitted when absent); the leading glyph is decorative + hidden; min card height 44pt (web
+             min-h-[44px]); Dynamic Type via tokens; populated list is an accessibility container.
+
+----------------------------------------------------------------------------------------
+BUILD WIRING (no changes needed this prompt)
+----------------------------------------------------------------------------------------
+  The TeslaSync/widget-primitives tier already exists (added by 0003 WidgetComparisonCard) in BOTH
+  project.yml (TeslaSync iOS app + TeslaSync-macOS app sources excl *Tests.swift; TeslaSyncTests +
+  TeslaSync-macOSTests bundles incl *Tests.swift) and .swiftlint.yml (included). The 8 new files drop into
+  that tier with zero spec edits — verified by `xcodegen generate` enumerating all 8 (gate [6]).
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint
+      surface (TeslaSync/widget-primitives/WidgetTipCards.*, 7 .swift)  -> 0/7 files require formatting
+      tree-wide (apps/apple)                                            -> 0/5131 files require formatting, 2 skipped
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict
+      surface (7 WidgetTipCards files)  -> Done linting! Found 0 violations, 0 serious in 7 files.
+      tree-wide (apps/apple)            -> Found 3 violations, 3 serious in 4833 files.
+        ALL 3 are pre-existing in a SIBLING surface, NOT this one (outside this prompt's allowed files):
+          TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54: identifier_name ('a'/'b'/'c')
+        WidgetTipCards violations -> 0.   LINT_EXIT(surface)=0
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1)
+      NOTE: the prompt's literal `-Path …/widget-primitives/WidgetTipCards` has no extension and matches no
+      on-disk path (files are WidgetTipCards.*); the script treats a non-existent path as a clean no-op
+      (EXIT=0). To make the 0 MEANINGFUL it was also run against the real directory:
+        -Path apps/apple/TeslaSync/widget-primitives/WidgetTipCards (literal gate path) -> EXIT=0
+        -Path apps/apple/TeslaSync/widget-primitives -Language swift -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+      PLACEHOLDER_EXIT=0  (no TODO/FIXME/XXX/Placeholder/Lorem/"not implemented" in shipped code)
+
+[4] isolated SwiftPM build + test  (Foundation-pure layer: Adapter + Model; Package swift-tools 6.0,
+    macOS v15, Swift 6 language mode. Session harness — NOT shipped — under session-state/files.)
+      swift test -> Executed 32 tests, with 0 failures (0 unexpected)
+      Suites: WidgetTipCardsAdapterTests(1), WidgetTipCardsLimitTests(5), WidgetTipCardsVisibleTipsTests(5),
+              WidgetTipCardsRowsTests(4), WidgetTipCardsResolveTests(4), WidgetTipCardsValueTypeTests(3),
+              WidgetTipCardsModelTests(6), WidgetTipCardsStringsTests(4)
+      SPM_TEST_EXIT=0  (32/32 — adapter limit/slice/clamp/projection, model once-only view.opened +
+                        update re-derivation, i18n facade fallbacks + badge-text resolution + a11y compose)
+
+[5] dual-SDK swiftc -typecheck  (FULL surface incl. the SwiftUI views + previews + BOTH test files,
+    compiled against the REAL design system — ../design/generated/apple/Tokens.swift + Sources/Components
+    (38 files; UnitFormatters.swift excluded as it links the KMP Shared module and this surface does not use
+    it) + Sources/Design (2 files) — which supplies the REUSED TSBadge/TSTone (Badges.swift) and TSEmptyState
+    (States.swift); -swift-version 6 -D DEBUG; test files compiled in-module with XCTest on the framework path)
+      iOS 18    (-target arm64-apple-ios18.0-simulator, --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)         -> 0 errors  MAC_TYPECHECK_EXIT=0
+      (Tests.swift + AdapterTests.swift both type-check against the real API on both SDKs.)
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 8 files (file-ref + build-file entries across the iOS/macOS app +
+      iOS/macOS test bundles): WidgetTipCards.{Adapter,Model,swift,Views,Previews,Tests,AdapterTests}.swift
+      + WidgetTipCards.strings  (48 reference lines total; each of the 8 file names present).
+
+----------------------------------------------------------------------------------------
+FULL-APP xcodebuild build test  (the prompt gate) — EXECUTED on this runner — RED for PRE-EXISTING / ENVIRONMENTAL reasons
+----------------------------------------------------------------------------------------
+  The KMP Shared.xcframework was BUILT + STAGED by the scheme pre-action on this run:
+    apps/shared/gradlew :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 7m 44s
+    staged -> apps/apple/Frameworks/Shared.xcframework (✓ Shared.xcframework staged).
+
+  [iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         => ** BUILD FAILED ** ** TEST FAILED **   IOS_EXIT=65
+         The framework staged and the TeslaSync module compiled to the whole-module emit phase. The build
+         log contains EXACTLY ONE distinct compile error, PRE-EXISTING and unrelated to this surface
+         (another agent's parallel-merged file):
+           TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+             error: escaping closure captures non-escaping parameter 'content'
+         grep "error:" | grep WidgetTipCards => 0   (ZERO surface errors)
+         (Same class of pre-existing failure the 0003 predecessor recorded for
+          AIGeofenceAwareAutomationSuggestions.swift — a sibling shared-surface, not a widget primitive.)
+
+  [macOS] xcodebuild -scheme TeslaSync-macOS build test
+         => ** BUILD FAILED ** ** TEST FAILED **   MAC_EXIT=65
+         Fails at the SIGNING/entitlements phase BEFORE any Swift source compiles, with:
+           error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+           error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+         security find-identity -p codesigning -v => 0 valid identities found.
+         No CompileSwift ran; grep "error:" | grep WidgetTipCards => 0   (ZERO surface errors)
+
+  Concrete RED causes on THIS host (pre-existing / environmental, unrelated to this surface):
+    • macOS development-signing — 0 valid codesigning identities (entitlements need a dev cert).
+    • 1 pre-existing compile error in ANOTHER agent's parallel-merged surface
+      (AIAutoNameUnnamedLocations.swift) that fails the shared TeslaSync module emit. Fixing it is out of
+      this prompt's allowed-files scope (apps/apple/TeslaSync/widget-primitives/WidgetTipCards.*).
+  Per apps/macos-pending-verifications.md this full-app gate is owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner (with sibling surfaces green).
+
+----------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------------------------
+  [x] Surface renders on Apple with all REAL states from the web source reproduced (populated / compact /
+      empty). loading/error/stale/offline are not in the presentational source — faithful-parity, not scope
+      narrowing (documented in WidgetTipCards.Adapter.swift, matching sibling 0003/0081/0095/0203).
+  [x] Hooks bind to the shared P1/S8 state-holder (WidgetTipCardsModel); no direct HTTP from the view
+      (the source has no fetcher).
+  [x] Every i18n key the surface needs has a matching entry in the P1/S10 catalog (WidgetTipCards.strings);
+      web has 0 t() keys; its one literal + the localized impact labels + a11y strings all resolve via facade.
+  [x] Accessibility labels present (each card a combined VoiceOver element; decorative glyph hidden; 44pt min).
+  [x] Tests: adapter unit tests + model/strings tests RUN green (32/32, gate [4]); per-state view composition
+      + a11y label tests type-check against the real API on both SDKs (gate [5]).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (gate [3]).
+  [x] Host-runnable + surface-scoped gates all green; full-app xcodebuild RED only for pre-existing /
+      environmental reasons with ZERO WidgetTipCards errors.
+
+----------------------------------------------------------------------------------------
+VERDICT
+----------------------------------------------------------------------------------------
+  Surface WidgetTipCards is COMPLETE and verified GREEN by every host-runnable + surface-scoped gate:
+    FORMAT_EXIT=0  LINT_EXIT(surface)=0  PLACEHOLDER_EXIT=0  SPM_TEST_EXIT=0 (32/32)
+    IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+  The full-app xcodebuild build test is RED only for pre-existing, unrelated reasons (macOS dev-signing with
+  0 identities + one other agent's pre-existing compile error in AIAutoNameUnnamedLocations.swift) — ZERO
+  WidgetTipCards errors in either the iOS or macOS app-target build — and is deferred to the P99 acceptance
+  gate, recorded in apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

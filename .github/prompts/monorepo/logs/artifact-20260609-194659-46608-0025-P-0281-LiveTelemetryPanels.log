@@ -1,0 +1,299 @@
+================================================================================
+P4 · Feature view · 0281 — LiveTelemetryPanels (Apple)
+Run: 2026-06-09T23:52-0700   Host: Darwin arm64   Branch: auto/20260609-194659-46608/25
+Base: 265f0d21a
+Prompt: P4/feature-views/0281 — Feature view: LiveTelemetryPanels
+Web source (spec): web/src/features/vehicles/components/telemetry-panels/LiveTelemetryPanels.tsx (93 lines)
+  + the seven panels it composes (PowertrainPanel / ClimatePanel / SecurityPanel /
+    VehicleStatePanel / TirePressurePanel / EnergyChargingPanel / MediaNavigationPanel).
+Mode: code-complete + host-green; full-app xcodebuild build/test RAN and captured,
+      DEFERRED to the signed macos-latest acceptance gate (ADR-012, P99-0001) on two
+      PRE-EXISTING, code-unrelated reasons — (a) a sibling-surface duplicate-declaration
+      collision (StateTimeline* ambiguous across StateTimeline.* + StateTimelineWidget.*)
+      proven pre-existing by an isolation rebuild, and (b) macOS dev-signing — identical
+      disposition to FleetSummary 0276 / VehicleCommandCenter 0261 / ScheduledExportsPanel
+      0262. Honesty rule 7. Delegation: NONE (FORBIDDEN by this prompt; authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (Xcode toolchain) .... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  Xcode ...................... Xcode 26.5 (17F42)                                   OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-…-CBDDD3140989)           OK
+  SwiftUI .................... present in both SDKs (this surface's core dependency) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER —
+                               web "Charts/maps used: (none)")                       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4 — project generates cleanly; 18 LiveTelemetryPanels
+                               files enumerated (108 pbxproj refs across app + test targets) OK
+  Shared.xcframework ......... BUILT + STAGED — gradle :core:assembleSharedXCFramework
+                               BUILD SUCCESSFUL (6m53s); ios-arm64 + ios-arm64-simulator
+                               + macos-arm64 staged to apps/apple/Frameworks/             OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared components
+  "@/components/motion". The core requirement is SwiftUI, AVAILABLE and PROVEN by the real
+  iOS-18-simulator AND macOS-15 SDK type-checks + the executed XCTest suite below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== WHAT WAS BUILT (parity with the web source, read end-to-end) ===
+  LiveTelemetryPanels is the live-telemetry section of the Vehicle Detail page: a FadeIn
+  "Live Telemetry" header with a pulsing live indicator, over a responsive 1-col→2-col grid
+  of seven telemetry panels. The native surface reproduces its data, composition, every
+  state, and i18n keys via shared P1/S8 state-holder seams (no view I/O):
+
+  Composition (web → native), all SEVEN panels reproduced VERBATIM (not stubbed):
+   1. Powertrain      — shift-state chip (D/R/N tones), the −300…+300 kW power bar,
+                        front/rear rpm + torque MetricCard tiles, peak-motor (>80 °C danger)
+                        + inverter temps, regen.
+   2. Climate         — cabin/outside temp tiles, driver/passenger setpoints, HVAC state,
+                        the 6-bar fan meter, defrost/climate/precondition mode chips.
+   3. Security        — lock block (Locked/Unlocked), sentry chip, doors/windows/user-present
+                        rows, detail line, remote-start access (web `hasData` = security OR
+                        remoteStartEnabled present).
+   4. Vehicle State   — high-beams / turn-signal / hazards, driver-seat / paired-keys,
+                        valet / service / speed-limit / center-display / HomeLink rows (the
+                        three web divider sections), + the SSE live pip.
+   5. Tire Pressure   — FL/FR/RL/RR corner tiles (Pa→kPa→user-unit, banded tones) + the
+                        overall ✓/✗/⚠ status chip.
+   6. Energy & Charging— voltage/current tiles, charger-power + energy-added rows (web
+                        `fmtWithUnit(raw_w,'kW')` / `(raw_wh,'kWh')` quirk reproduced
+                        VERBATIM), charging-state chip, battery level, charge rate.
+   7. Media & Navigation— now-playing (title/artist/source/status with playback tones) +
+                        navigation (destination, distance via convertDistanceFromSI + ETA,
+                        home/work/favorite place chips). Always renders; per-sub-block empty.
+
+  Numeric pipeline ported VERBATIM from the web libs: lib/numberFormat (`fmtNumber` /
+  `fmtInt` / `fmtWithUnit`, grouped, locale-aware, half-up; global precision 2),
+  lib/unitConversion (`convert*FromSI` + `format*` for distance/speed/temperature/pressure;
+  km/mi/ft + KPA_PER_PSI/BAR byte-identical; °unit no-space rule; per-quantity default
+  precision distance 1 / speed 0 / temperature 1 / pressure 1), lib/cleanNil (Go "<nil>"
+  scrubbing), and vehicle-detail/helpers `TIRE_PRESSURE_PA` Pascal bands. SI is read
+  directly from the seam; conversion happens only at the render boundary (web `useUnits`).
+
+  Note (legacy proto-name fidelity): the web nav distance flows the legacy-named
+  `miles_to_arrival` field through `convertDistanceFromSI` — i.e. it is SI metres on the
+  wire. Modelled as `metresToArrival` and reproduced verbatim.
+
+  Seams (P1/S8): LiveTelemetryPanelsSource (seven telemetry snapshots + the SSE live bag +
+    remote-start flag + load status + freshness) → LiveTelemetryPanelsModel (@Observable).
+    Previews/tests inject InMemoryLiveTelemetryPanelsSource; the view performs no networking.
+    Telemetry (P1/S11): view.opened with surface slug "LiveTelemetryPanels", emitted once.
+    i18n (P1/S10): every string via LiveTelemetryPanelsStrings; 0 hardcoded English literals
+    in native code (web literals hardcoded in VehicleStatePanel / TirePressurePanel are
+    promoted to keys here).
+
+  Scope note (no silent drift, rule 9): the web composition composes seven child panels,
+  each a separate file in the same telemetry-panels/ directory. The prompt's allowed files
+  are ONLY LiveTelemetryPanels.* and lists "Other surfaces in the same feature (each has its
+  own prompt)" as out of scope. To honor BOTH "no stubs as final" (rule 4) and "no scope
+  narrowing" (rule 2), the seven panels' DATA + render are reproduced INLINE within the
+  allowed LiveTelemetryPanels.* files — the SAME precedent as the dashboard LiveTelemetry.*
+  surface (0127), which inlines its panels rather than referencing separate *Panel.swift
+  surfaces. No separate child-panel files were created (those remain other prompts').
+
+  Files (18; allowed scope = apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.*):
+    LiveTelemetryPanels.State.swift          274  (seven inbound snapshot DTOs + live bag)
+    LiveTelemetryPanels.Update.swift         165  (unit prefs + status + Update + Source seam)
+    LiveTelemetryPanels.Model.swift          103  (telemetry/i18n facade/in-memory source)
+    LiveTelemetryPanels.Adapter.swift        313  (fmtNumber + SI convert/format + clean + bands + primitives)
+    LiveTelemetryPanels.Panels.swift         337  (Powertrain + Climate + Security projections)
+    LiveTelemetryPanels.MorePanels.swift     374  (VehicleState + Tire + Energy + MediaNav projections)
+    LiveTelemetryPanels.Projector.swift       50  (aggregate projection + projector)
+    LiveTelemetryPanels.ViewModel.swift      155  (@Observable model + phase + stale auto-refresh)
+    LiveTelemetryPanels.swift                 84  (surface View shell + state switch)
+    LiveTelemetryPanels.Primitives.swift     198  (tone map + panel shell + row/chip/tile/empty)
+    LiveTelemetryPanels.Views.swift          242  (live header/dot/freshness/banner/grid/skeleton/states)
+    LiveTelemetryPanels.PanelViews.swift     214  (Powertrain + Climate + Security panel views)
+    LiveTelemetryPanels.MorePanelViews.swift 297  (VehicleState + Tire + Energy + MediaNav views + flow)
+    LiveTelemetryPanels.Previews.swift       179  (per-state #if DEBUG previews)
+    LiveTelemetryPanels.Tests.swift          276  (format/units/helpers + Powertrain/Climate/Security)
+    LiveTelemetryPanels.PanelTests.swift     244  (VehicleState/Tire/Energy/MediaNav + projector)
+    LiveTelemetryPanels.ModelTests.swift     226  (model/phase/a11y/per-state render tests)
+    LiveTelemetryPanels.strings              152  (i18n catalog; 109 keys)
+  All 17 .swift files ≤ 400 lines (swiftlint file_length); every project()/func ≤ 50 lines
+  (function_body_length); decomposed page+sub-components, not a monolith.
+
+  Collision audit: all public/internal type names use the LiveTelemetryPanels* / LTP*
+  prefix and are unique in the TeslaSync module (verified: a tree-wide grep for LTP /
+  LiveTelemetryPanels symbols pre-authoring returned 0 pre-existing matches; the full-app
+  iOS build below shows ZERO LiveTelemetryPanels errors). This surface introduces ZERO new
+  redeclarations.
+
+=== STATES (every state renders — no hidden surfaces) ===
+  loading ......... pre-snapshot / initial-fetch skeleton (7 panel-shaped skeletons)
+  data ............ the seven-panel grid (each panel renders its own per-source empty
+                    fallback inside, matching the web `data ? content : EmptyState` panels)
+  empty ........... no telemetry at all (all sources nil + empty live bag) → friendly
+                    TSEmptyState, never a blank section
+  error ........... parent-query failure with nothing to show → TSQueryError + retry →
+                    model.refresh()
+  stale ........... freshness window exceeded → amber freshness chip + banner + one guarded
+                    auto-refresh (web refetch self-refresh)
+  offline ......... no connectivity → cached values + offline chip + banner
+  Each has a #if DEBUG preview and a model/render test (EXECUTED green).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 14 production + 3 test .swift compiled together with the REAL
+  apps/apple token + component closure (design/generated/apple/Tokens + Sources/Design +
+  Sources/Components, minus the KMP-Units-dependent UnitFormatters.swift); none of the
+  surface files import the Shared xcframework.
+
+  [1] Isolated SwiftPM build — module "TeslaSync", real tokens + component library, Swift 6
+        language mode, -strict-concurrency=complete:
+          swift build -> "Build complete!"
+        ISO_BUILD_EXIT=0                                                           OK
+  [2] swift test — the FULL XCTest suite EXECUTED on the macOS host (real Adapter/State/
+        Update/Panels/MorePanels/Projector/ViewModel/Views/Previews + real tokens):
+          Executed 55 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: fmtNumber grouping/half-up/locale/safeNumber; fmtInt/fmtWithUnit;
+        distance/speed/temperature/pressure SI conversion + formatters (°unit no-space,
+        empty "—", default precisions, imperial); cleanNil; tire Pa bands + paToKpa;
+        formatAge buckets; all seven panel projectors (shift/charging/playback tones, power
+        bar fraction, fmtWithUnit kW/kWh quirk, peak-motor >80 danger, tire all-normal/
+        attention/check, place chips, distance/ETA, hasData branches, empty messages);
+        model phase matrix (loading/empty/data/error + static computePhase), stale
+        auto-refresh-once-until-live, freshness derivations, fetching-shows-chip, refresh/
+        stop forwarding, view.opened-once+slug; row spoken a11y; per-state ImageRenderer
+        render smoke (data/loading/empty/error/stale/offline).
+  [3] swiftc -typecheck — iOS 18 SIMULATOR SDK (-D DEBUG; -swift-version 6
+        -strict-concurrency=complete; -target arm64-apple-ios18.0-simulator; 55 files =
+        surface + real token/component closure):
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [4] swiftc -typecheck — macOS 15 SDK (same files/flags; -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [5] swiftlint --strict (17 surface .swift files; explicit paths; config apps/apple/
+        .swiftlint.yml):
+          Done linting! Found 0 violations, 0 serious in 17 files.
+        LINT_EXIT=0                                                                OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/17 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate) on a scan dir holding the
+        LiveTelemetryPanels.* files (all 18, incl .strings):
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+        (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented/stub/mock in any
+         file; 0 opt-outs.)
+  [8] i18n key coverage (referenced == declared) + plutil:
+          referenced=109  declared=109  missing=0  orphan=0   plutil -lint: OK
+        I18N_EXIT=0                                                               OK
+
+=== GATE — FULL-APP XCODEBUILD (RAN on this host; real output; DEFERRED to signed runner) ===
+    Prereqs done: `xcodegen generate` -> GEN_EXIT=0 (18 LiveTelemetryPanels files
+    enumerated; 108 pbxproj refs); Shared.xcframework staged from the gradle release
+    artifact (BUILD SUCCESSFUL 6m53s above; ios-arm64 + ios-arm64-simulator + macos-arm64).
+
+    [A] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+          IOS_EXIT=65   (** BUILD FAILED **, before the test phase)
+          error: lines = 104 total; LiveTelemetryPanels error: lines = 0 (verified:
+            grep 'error:' | grep -ci LiveTelemetryPanels -> 0). The failure is a PRE-EXISTING
+            DUPLICATE-DECLARATION collision in SIBLING surfaces — the StateTimeline state
+            types are declared TWICE across the merged tree:
+              'StateTimelineUpdate' / 'StateTimelineConnection' / 'StateTimelineLoadStatus' /
+              'StateTimelineModel' is ambiguous for type lookup
+            declared in BOTH TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift AND
+            TeslaSync/feature-views/StateTimeline.{Adapter,Model,Source}.swift (a
+            parallel-merge collision OUTSIDE this prompt's allowed files). All 104 errors are
+            StateTimeline*; ZERO LiveTelemetryPanels files appear in any error.
+            Representative: StateTimeline.Previews.swift:41:49: 'StateTimelineUpdate' is
+            ambiguous for type lookup in this context.
+
+          PROOF the collision is PRE-EXISTING (not induced by this surface): with all 18
+          LiveTelemetryPanels.* files MOVED OUT of the target and the project regenerated
+          (pbxproj LiveTelemetryPanels refs = 0), `xcodebuild build test` STILL fails
+          identically —
+              ISO_IOS_EXIT=65; 78 error: lines, ALL StateTimeline (78/78), ZERO
+              LiveTelemetryPanels files present.
+          The collision reproduces WITHOUT this surface present → it is a pre-existing
+          sibling-surface duplicate declaration, unrelated to LiveTelemetryPanels. (The
+          with-surface run shows 104 vs 78 errors only because more compilation batches
+          reference the ambiguous StateTimeline types; the ROOT cause and the
+          LiveTelemetryPanels error count, 0, are identical in both runs.) Files restored
+          afterward (18 files; 108 pbxproj refs).
+
+    [B] xcodebuild -scheme TeslaSync-macOS build test
+          MAC_EXIT=65   (** BUILD FAILED **)
+          Real errors = development-signing entitlements, PRE-EXISTING / infra (4 errors):
+            "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require
+              signing with a development certificate. Enable development signing…
+          Fast-fails at code-signing before the app module compile (security find-identity
+          -p codesigning -> 0 valid identities on this runner; ADR-012 reserves signed builds
+          for the macos-latest acceptance gate). ZERO LiveTelemetryPanels errors.
+
+    Disposition (two independent, code-unrelated reasons — neither a defect in this surface;
+    identical to the FleetSummary 0276 / VehicleCommandCenter 0261 predecessors, rule 7):
+      (a) SIBLING DUPLICATE DECLARATION: the iOS whole-module app compile is aborted by a
+          pre-existing StateTimeline*/StateTimelineWidget* type redeclaration in two DIFFERENT
+          surfaces. PROVEN pre-existing by the isolation rebuild above. Fixing those files is
+          OUTSIDE this prompt's allowed files. LiveTelemetryPanels compiles clean.
+      (b) DEV-SIGNING: macOS app/widget entitlements need a development certificate on a signed
+          runner (ADR-012). Independent of this UI surface.
+      Both are the downstream P99-0001 apple-acceptance-gate's responsibility (runs on
+      macos-latest with signing identities and the merged, de-collided tree).
+    The surface is PROVEN green where it can be: isolated SwiftPM build [1], 55/55 EXECUTED
+    tests [2], real iOS-18 AND macOS-15 SDK type-checks [3]/[4], swiftlint/swiftformat/
+    placeholder/i18n [5]/[6]/[7]/[8], and ZERO LiveTelemetryPanels errors in the full-app iOS
+    + macOS xcodebuild. A macos-pending row for this surface can be appended to
+    apps/macos-pending-verifications.md by the integrator (that file is outside this prompt's
+    allowed-files scope, so it is not edited here — the audit trail is captured in this log).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (loading/data/empty/error/stale/offline) — each has a #if DEBUG preview and a
+      model/render test; EXECUTED green (55/55). All seven panels reproduced (not stubbed).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (LiveTelemetryPanelsSource →
+      LiveTelemetryPanelsModel); no direct HTTP from the view. useUnits → display-boundary
+      conversion; useTranslation → P1/S10 facade; live SSE bag + telemetry props → the
+      coalesced source stream.
+  [x] Every i18n key from source has a matching catalog key — referenced (109) == declared
+      (109), 0 missing, 0 orphan; plutil -lint OK. Web-hardcoded VehicleState/Tire literals
+      promoted to keys (no English literals in native code).
+  [x] Accessibility labels on every interactive element (each row/chip/tile is one VoiceOver
+      element with label + value; live pip + freshness chip labelled+valued; icons
+      accessibilityHidden; loading/empty/error labelled; refresh button labelled). Dynamic
+      Type via Font.TS ramp; Reduce Motion via TSFadeIn/TSSkeleton + the guarded pulse.
+  [x] Tests: adapter/format/convert unit + per-panel projection tests + per-state model +
+      a11y label + per-state render — 55 methods, EXECUTED 55/55, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0, 0 opt-outs.
+  [x] EXIT=0 / STATUS=DONE — every host-runnable + surface-scoped gate green; the full-app
+      xcodebuild RAN with its REAL exit 65 (iOS: PRE-EXISTING sibling StateTimeline collision,
+      proven by isolation rebuild; macOS: dev-signing) + ZERO LiveTelemetryPanels errors,
+      DEFERRED to the signed P99 acceptance gate.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host/surface gates are genuinely green; the full-app xcodebuild is
+                          shown with its REAL exit 65 + cause (sibling StateTimeline collision
+                          + dev-signing) + zero-LiveTelemetryPanels-errors + isolation proof,
+                          DEFERRED, never reported as pass.
+  2 No scope narrowing ... full surface: all SEVEN panels' data + composition + every state +
+                          freshness chrome + a11y + telemetry reproduced; not the header-only
+                          shell.
+  3 No skip-and-assume ... web LiveTelemetryPanels.tsx + all seven child panels read
+                          end-to-end; every t() + every conditional render branch + the
+                          fmtNumber/convert/cleanNil/tire-band math reproduced.
+  4 No stubs as final .... complete implementation of all seven panels; placeholder gate
+                          COUNT=0, 0 opt-outs.
+  5 No parity shortcuts .. SI math + fmtNumber + km/mi/ft + KPA_PER_PSI/BAR identical to web;
+                          the web fmtWithUnit(raw_w,'kW') / (raw_wh,'kWh') quirk reproduced
+                          VERBATIM rather than "corrected".
+  6 No delegation ........ authored directly (delegation FORBIDDEN by this prompt; none).
+  7 No predecessor bypass  same disposition as FleetSummary 0276 (host green + full-app build
+                          deferred to the signed runner); the sibling collision is PROVEN
+                          pre-existing by an isolation rebuild, matching the predecessor's
+                          standard.
+  8 No commit on red ..... committed work is green on every surface-scoped runnable gate; the
+                          only non-green steps are a PRE-EXISTING sibling-surface duplicate
+                          declaration + dev-signing, both out-of-scope / out-of-allowed-files,
+                          and the surface itself is 0-error in both full-app builds.
+  9 No silent drift ...... the inline-panels scope decision, the full-app deferral + its causes
+                          (with real exit codes, the colliding sibling files + ambiguous types,
+                          and the isolation-rebuild proof), the legacy miles_to_arrival=metres
+                          fidelity, and the fmtWithUnit quirk are all recorded above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

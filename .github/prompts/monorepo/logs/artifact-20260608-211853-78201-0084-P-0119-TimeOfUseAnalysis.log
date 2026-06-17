@@ -1,0 +1,209 @@
+=== P4 Feature view 0119 TimeOfUseAnalysis (Apple) ===
+Run: 2026-06-09T01:40-0700  Host: Darwin arm64 (Apple Silicon)  Branch: auto/20260608-211853-78201/84
+Xcode 26.5 (Build 17F42) at /Applications/Xcode.app (activated via DEVELOPER_DIR;
+default xcode-select points at CommandLineTools). Swift 6.3.2. swiftlint + swiftformat
++ pwsh + xcodegen on PATH. iPhone 16 simulator + iOS/macOS 26.5 SDKs available
+(>= the iOS 18 / macOS 15 minimums). Platform capability for SwiftUI + Swift Charts is
+PRESENT (this surface uses no MapKit) — the capability-BLOCKED escape hatch does NOT
+apply; the surface is authored, host-compiled on BOTH SDKs, and host-tested 42/42.
+
+Web source (THE specification):
+  web/src/features/charging/components/cost-analysis/TimeOfUseAnalysis.tsx
+Native output (allowed files — all under apps/apple/TeslaSync/feature-views/):
+  TimeOfUseAnalysis.swift            entry View (fade + glass card, phase switch,
+                                     responsive content layout, a11y, telemetry)
+  TimeOfUseAnalysis.Adapter.swift    value types: numeric guard, band enum + classify,
+                                     hour sample/point, insights, load/conn/phase enums,
+                                     surface slug
+  TimeOfUseAnalysis.Projection.swift pure projection (points/offPeakPercent/cheapest/
+                                     priciest/busiest/insights/resolvePhase/axisTicks) +
+                                     VoiceOver summary builders
+  TimeOfUseAnalysis.Model.swift      P1/S11 telemetry seam (view.opened) + formatting
+                                     seam (web fmtNumber/fmtInt) + DefaultTimeOfUseFormatting
+                                     + P1/S8 source seam + @Observable TimeOfUseModel
+                                     (stale auto-refresh, offline cache) + in-memory source
+                                     + P1/S10 strings facade
+  TimeOfUseAnalysis.Chart.swift      Swift Charts BarMark hourly chart, per-band colour
+                                     (web <Cell>), thinned X axis (web interval={2}),
+                                     integer Y axis, chartXSelection callout (web Tooltip)
+  TimeOfUseAnalysis.Views.swift      header (Clock) + freshness chip + connectivity banner
+                                     + legend + insights rail (4 cards) + loading/empty/error
+  TimeOfUseAnalysis.Previews.swift   #if DEBUG previews — content/no-insights/empty/loading/
+                                     error/stale/offline
+  TimeOfUseAnalysis.Tests.swift      XCTest: model lifecycle/telemetry/stale/offline + a11y
+  TimeOfUseAnalysis.AdapterTests.swift  XCTest: band classification + projection + formatting
+  TimeOfUseAnalysis.strings          P1/S10 per-surface i18n table "TimeOfUseAnalysis"
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web -> native)
+---------------------------------------------------------------------------
+  props   hourlyData: HourBucket[] + touInsights: TouInsights|null  -> TimeOfUseUpdate{hours:[TimeOfUseHourSample]} pushed by P1/S8 source; insights re-derived in the adapter
+  hook    useTranslation                                            -> P1/S10 TimeOfUseStrings facade (NSLocalizedString, table "TimeOfUseAnalysis", web t(key,default) fallback)
+  hook    useChartPalette                                           -> TSChartPalette (mid-peak bar/legend fill = palette[0])
+  shell   <GlassPanel className="p-4">                              -> TSFadeIn + TSGlassPanel
+  title   Clock + t('costAnalysis.tou.title', ...)                 -> header: SF "clock" (statusWarning) + title + freshness chip
+  chart   Recharts <BarChart> per-hour <Cell> fill                 -> Swift Charts Chart{ BarMark }.foregroundStyle(band)
+          (peak #ef4444 / off #10b981 / mid palette[0])               peak->statusDanger, off-peak->statusSuccess, mid->TSChartPalette[0]
+  band    isPeak 14..19 ; isOffPeak >=22||<6 ; else mid            -> TimeOfUseBand.classify(hour:) (pure, unit-tested at every boundary)
+  axis    <XAxis interval={2}> (every 3rd label) ; <YAxis>         -> TimeOfUseProjection.axisTickLabels (stride 3) ; integer Y axis
+  tooltip <Tooltip content={<ChartTooltip/>}>                      -> .chartXSelection RuleMark -> TimeOfUseSelectionCallout (hour, band, sessions, avg cost)
+  legend  Peak / Mid-peak / Off-peak swatches                      -> TimeOfUseLegend (SAME TimeOfUseBandPalette as the bars — can never disagree)
+  rail    <h4>Insights</h4> + 4 nested <GlassPanel>                -> TimeOfUseInsightsColumn + 4 TimeOfUseInsightCardView
+  cards   Cheapest(green)/Priciest(red)/Busiest(cyan)/OffPeak%(emerald) -> statusSuccess / statusDanger / statusInfo / statusSuccess
+  fmt     "$"+fmtNumber(avgCost,3) ; fmtInt(sessions) ; fmtNumber(pct,1)+"%" -> DefaultTimeOfUseFormatting (half-up, grouping, fixed digits)
+  copy    "avg ${cost} / session" · "{n} Sessions" · "{pct}%"      -> avgCostCaption / sessionsCaption (web keys avgCost/perSession/sessions)
+  empty1  hourlyData.length===0 -> t('costAnalysis.charts.noData') -> .empty phase -> TimeOfUseEmpty ("Not enough data")
+  empty2  touInsights===null    -> t('costAnalysis.tou.noInsights') -> TimeOfUseInsightsEmpty ("No insights available")
+  layout  grid-cols-1 lg:grid-cols-3 (chart span-2 + rail span-1)  -> regular width (iPad/macOS): HStack chart+rail ; compact (iPhone): VStack stacked
+  i18n    costAnalysis.tou.* + costAnalysis.charts.noData          -> verbatim keys via TimeOfUseStrings (verified against web/src/i18n/en.json)
+  telem   (P1/S11)                                                 -> view.opened(surface:"TimeOfUseAnalysis") emitted once on appear
+
+Insight derivation parity note: the web component receives `touInsights` already
+computed by `useCostAnalysisData`. Native re-derives cheapest/priciest/busiest +
+off-peak share from the SAME hourly buckets — mathematically identical to the hook's
+per-session math (the buckets ARE the per-hour session counts + average costs), which
+keeps the adapter self-contained and fully unit-testable (cached -> projection).
+
+STATES (every one renders — no hidden surface):
+  loading  -> TimeOfUseLoadingView (TSSkeleton bars + insight tiles; reduce-motion safe)
+  content  -> TimeOfUseBarChart + legend + 4 insight cards (the web body)
+  empty(1) -> TimeOfUseEmpty       (web hourlyData-empty branch — "Not enough data")
+  empty(2) -> TimeOfUseInsightsEmpty (web touInsights-null branch — "No insights available")
+  error    -> TimeOfUseError (QueryError-equiv, Retry -> model.refresh())
+  stale    -> freshness chip (Stale) + connectivity banner + ONE guarded auto-refresh
+  offline  -> freshness chip (Offline) + banner; keeps cached numbers, NO refetch
+a11y: container summary (state-aware), per-bar VoiceOver label (hour + band) + value
+  (sessions), insight-cell combined label, header trait, retry labels, reduce-motion
+  animation gate, Dynamic Type via system fonts/tokens.
+
+===========================================================================
+SURFACE-SCOPED GATE  (host-runnable checks that validate THIS deliverable) — ALL GREEN
+===========================================================================
+[1] Isolated SwiftPM build (real Tokens.swift + TSDesign.swift + TSMaterial.swift +
+    verbatim TSFadeIn/TSGlassPanel/TSSkeleton shims + Swift Charts; the 7 production
+    files), Swift 6 language mode (strict concurrency complete):
+       "Build complete! (11.24s)"                                  BUILD_EXIT=0
+    (Shims are verbatim because the real Motion/Cards/Skeletons files' OTHER symbols
+     pull the whole component-library cascade; the shipped surface uses the real ones.)
+[2] Executed XCTest (swift test, Swift 6 strict concurrency, macOS host):
+       "Executed 42 tests, with 0 failures (0 unexpected)"         TEST_FAILURES=0
+         TimeOfUseBandTests ............. 5/5
+         TimeOfUseProjectionTests ....... 14/14
+         TimeOfUseFormattingTests ....... 7/7
+         TimeOfUseModelTests ............ 12/12
+         TimeOfUseAccessibilityTests .... 4/4
+[3] Real-SDK swiftc -typecheck (production sources, -swift-version 6 -strict-concurrency=complete):
+       iOS  : -sdk iphonesimulator -target arm64-apple-ios18.0-simulator   IOS_TYPECHECK_EXIT=0
+              (covers the #if os(iOS) horizontalSizeClass responsive branch)
+       macOS: -sdk macosx          -target arm64-apple-macos15.0           MAC_TYPECHECK_EXIT=0
+[4] swiftlint --strict (.swiftlint.yml, 9 swift files):
+       "Found 0 violations, 0 serious in 9 files."                 LINT_EXIT=0
+[5] swiftformat --lint (.swiftformat, 9 swift files):
+       "0/9 files require formatting."                             FORMAT_EXIT=0
+[6] check-placeholders.ps1 -Language swift (the 10 surface files):
+       PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                  PLACEHOLDER_EXIT=0
+       (tool self-test: SELFTEST_EXIT=0)
+[7] xcodegen generate (project.yml): enumerates all 10 TimeOfUseAnalysis.* files
+       (9 .swift PBXFileReference + the .strings resource).        XCODEGEN_EXIT=0
+
+===========================================================================
+XCODE FULL-APP GATE (xcodebuild -scheme TeslaSync build test) — DEFERRED (pre-existing, unrelated)
+===========================================================================
+Probed for real (covenant #3 — not assumed). App-target compile attempt:
+  xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator \
+    -configuration Debug CODE_SIGNING_ALLOWED=NO build       XCODEBUILD_RC=65
+  First/only error (target setup, BEFORE any Swift compilation):
+    "There is no XCFramework found at .../apps/apple/Frameworks/Shared.xcframework"
+  TimeOfUseAnalysis mentions in build output: 0 (zero errors attributable to this surface).
+
+The full `xcodebuild -scheme TeslaSync ... build test` is blocked by pre-existing,
+systemic, parallel-merge conditions in THIS slot — every one outside this prompt's
+allowed files, none introduced by this surface (matching the
+apps/macos-pending-verifications.md precedent rows for ToolCard / AlertMessageEditor /
+FSMTimelineChart):
+  (a) The KMP Shared.xcframework is unstaged (only Frameworks/.gitkeep). Staging it
+      runs the scheme's build-shared-xcframework.sh Gradle/Kotlin-Native pre-action,
+      deferred by ADR-012's CI matrix to a macos-latest runner.   -> proven (RC=65).
+  (b) 320 co-located *Tests.swift under the app-target source dirs (feature-views +
+      dashboard-widgets) do `@testable import TeslaSync`, compiling XCTest + a
+      self-import into the app module (the app target cannot link XCTest / import
+      itself). This surface's two test files follow the SAME established co-located
+      convention as the other 318; they add no new blocker class.
+      -> grep -rl "@testable import TeslaSync" {feature-views,dashboard-widgets} = 320.
+  + macOS app-target development signing (no identity on this host).
+The integration/signed runner (p4-apple/P99-0001-apple-acceptance-gate, on
+macos-latest) is the sanctioned owner of (a)-(b) + signing. Staging the KMP framework
+and re-routing the 320 co-located tests are OUTSIDE this prompt's allowed-files scope;
+"fixing" them here would violate covenant #7 (no predecessor bypass) and the allowlist.
+(Note: `struct DashboardWidgetSize` is defined exactly once in this slot — the 15x
+redeclaration seen in some sibling logs is NOT a blocker here.)
+
+===========================================================================
+ACCEPTANCE CRITERIA
+===========================================================================
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (loading / content / chart-empty / insights-empty / error / stale / offline) —
+      compiles iOS-18 + macOS-15, per-state previews + per-phase model tests.
+  [x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (.strings),
+      verified against web/src/i18n/en.json.
+  [x] Accessibility labels present on every interactive element (retry buttons,
+      freshness chip, banner) + per-bar chart labels/values + state-aware chart summary.
+  [x] Tests: adapter unit + per-state model/preview + a11y — 42 methods, EXECUTED 42/42.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — surface-scoped gates green; full xcodebuild build/test
+      DEFERRED with captured real evidence of pre-existing out-of-scope breakage.
+
+===========================================================================
+HONESTY COVENANT (verbatim restatement — adherence)
+===========================================================================
+  1 No red-as-green     : the 7 surface gates are pasted with their real output; the
+                          Xcode app gate is reported DEFERRED with its real RC=65 +
+                          pre-existing-blocker evidence, NOT as a pass.
+  2 No scope narrowing  : implemented ALL composition + every state (loading/content/
+                          chart-empty/insights-empty/error/stale/offline) + chart +
+                          tooltip + legend + 4 insight cards + a11y + i18n + telemetry.
+  3 No skip-and-assume  : web source read end-to-end; every t() + both empty branches
+                          reproduced; both iOS + macOS gates RUN; the Xcode path was
+                          actually probed (real xcodebuild -> RC=65), not assumed.
+  4 No stubs as final   : complete implementations; placeholder gate COUNT=0, ALLOWED=0;
+                          executed 42/42 XCTest. (The verbatim shims live ONLY in the
+                          throwaway /tmp harness — never in a shipped file.)
+  5 No parity shortcuts : faithful port of the HourBucket consumption, the exact
+                          peak/off-peak hour thresholds, the per-Cell band colours, the
+                          insight derivation, the avg/$/session + sessions + % copy,
+                          both empty branches, and the verbatim costAnalysis.tou.* keys.
+  6 No delegation       : authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass: did NOT stage Shared.xcframework, did NOT edit project.yml,
+                          did NOT re-route sibling tests, did NOT edit the shared
+                          Localizable.xcstrings — strings ship as the per-surface table.
+  8 No commit on red    : committing on all-green surface gates + iOS/macOS compiles +
+                          executed 42/42 tests; the Xcode app gate is DEFERRED
+                          (pre-existing, outside allowed files), not failed.
+  9 No silent drift     : changes confined to the allowed TimeOfUseAnalysis.* files +
+                          this log + one macos-pending-verifications.md row. Two
+                          pre-existing working-tree edits to web/ admin .tsx files
+                          (FleetApiSection.tsx, BackupRestorePage.tsx) predate this task
+                          and are left untouched/unstaged.
+ 10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native TimeOfUseAnalysis shipped at parity with the web source:
+  a pure, executed-green projection core (Foundation, Swift 6 strict — band
+  classification + insight derivation + number formatting), a P1/S8 state-holder seam
+  (no view HTTP), a P1/S10 i18n facade (verbatim web keys), P1/S11 view.opened
+  telemetry, the native Swift Charts bar chart with per-band colouring + selection
+  tooltip + legend, the four insight cards, and every prompt state (loading / content /
+  chart-empty / insights-empty / error / stale / offline) with VoiceOver + Dynamic Type
+  + reduce-motion. All host-runnable, surface-scoped gates pass under Swift 6 strict
+  concurrency on BOTH the iOS-Simulator (iOS 18) and macOS (15) SDKs with the real
+  Xcode 26.5 toolchain. The full `xcodebuild build test` is DEFERRED to the P4
+  integration/signed runner (unstaged KMP Shared.xcframework + 320 pre-existing
+  co-located test self-imports + macOS signing — none a defect in this code, all
+  outside the allowed files), with a real RC=65 probe proving zero
+  TimeOfUseAnalysis-attributable errors.
+
+EXIT=0
+STATUS=DONE

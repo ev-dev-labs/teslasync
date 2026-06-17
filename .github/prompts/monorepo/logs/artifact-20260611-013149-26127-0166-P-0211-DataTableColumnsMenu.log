@@ -1,0 +1,145 @@
+=== P4 Shared surface 0211 DataTableColumnsMenu (Apple) ===
+Date: 2026-06-12  Host: macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2
+Runner capability: full Xcode.app + iOS 26.5 Simulator SDK + macOS 26.5 SDK +
+  iPhone 16 simulator (booted) + swiftlint + swiftformat + pwsh + JDK17/Gradle.
+  => SwiftUI / Swift Charts / MapKit capability IS present on this runner.
+
+Honesty covenant (binding): 1 No red-as-green  2 No scope narrowing
+  3 No skip-and-assume  4 No stubs as final  5 No parity shortcuts
+  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+############################################################
+# ARTIFACT MANIFEST (no stubs — every state implemented)
+############################################################
+  apps/apple/TeslaSync/shared-surfaces/
+    263  DataTableColumnsMenu.Adapter.swift   (pure projections: toggle/showAll/disabled/rows/a11y/freshness)
+    181  DataTableColumnsMenu.Model.swift     (slug+telemetry seam P1/S11, i18n facade P1/S10, value types, state, actions)
+    273  DataTableColumnsMenu.Views.swift     (trigger, popover dropdown, checkbox row, load/empty/error chrome, freshness chip)
+    149  DataTableColumnsMenu.swift           (public View; state switch; native .popover; controlled onChange; view.opened)
+    110  DataTableColumnsMenu.Previews.swift  (6 previews: loaded/empty/loading/error/stale/offline)
+    383  DataTableColumnsMenu.Tests.swift     (adapter + state + freshness + a11y + i18n-parity + telemetry + per-state view composition)
+     40  DataTableColumnsMenu.strings         (P1/S10 catalog; web table.columns.* keys verbatim)
+  total swift LOC: 1359
+
+Web source: web/src/components/ui/DataTableColumnsMenu.tsx (THE specification).
+Web-parity logic (unit-tested):
+  • toggle(key): hide a visible column; refuse hiding the LAST visible one
+    (web `visibleKeys.length <= 1`); show a hidden column PRESERVING original
+    column order (web `order.filter(k => visibleSet.has(k) || k === key)`).
+  • showAll(): every column key in column order (web `columns.map(c => c.key)`).
+  • disabled = `col.required || (checked && visibleKeys.length <= 1)`
+    (surfaced as a typed reason for styling + VoiceOver).
+  • label = `col.header || col.key`.
+i18n keys preserved VERBATIM from the web source (resolve through the P1/S10 facade):
+  table.columns.menu | table.columns.button | table.columns.heading | table.columns.showAll
+States reproduced (no hidden surface): loading · empty · error(retry) · loaded(menu)
+  + orthogonal connectivity axis live/stale/offline (P4 leaf contract).
+Telemetry: view.opened surface="DataTableColumnsMenu" (P1/S11).
+A11y: trigger label "Show or hide columns, N of M visible"; per-row value
+  (visible/hidden) + hint (toggle/required/last-visible); header trait on heading.
+
+Two real defects were found+fixed in this surface that the predecessor BLOCKED run
+(commit 5054ad7eb, ran on a no-Xcode runner) could not have caught because it never
+compiled under Swift 6 strict concurrency:
+  (1) Previews `static let actions` (non-Sendable ColumnsMenuActions) => pinned @MainActor.
+  (2) The explanatory comment above it tripped swiftformat `docComments` => made it `///`.
+
+############################################################
+# CONTROLLABLE GATE STEPS (all GREEN — real output)
+############################################################
+[swiftformat] gate-literal `swiftformat --lint apps/apple`:
+    "0/4960 files require formatting, 2 files skipped."   FORMAT_EXIT=0
+[swiftlint]  `swiftlint --strict` (from apps/apple, whole config):
+    "Done linting! Found 0 violations, 0 serious in 4662 files."   LINT_EXIT=0
+[placeholders] `check-placeholders.ps1 -Language swift` over the 6 surface files
+    (the literal gate -Path is a directory that does not exist — these files are
+    flat-named, so it would trivially pass; this scoped scan is the HONEST result):
+    "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0"   PLACEHOLDER_EXIT=0
+    (self-test PASS: scanner detects NotImplementedException / TODO( and clears clean trees.)
+
+############################################################
+# SURFACE COMPILES + UNIT TESTS PASS (real, isolated from the 4662-file monolith)
+############################################################
+Standalone SwiftPM package (module name TeslaSync, swift-tools-version 6.0 =>
+Swift 6 language mode = strict-concurrency complete, platform macOS 15), built from
+the REAL design tokens (apps/design/generated/apple/Tokens.swift) + the REAL shared
+components actually used (TSTone/Badges, TSSkeleton/Skeletons, TSButton/Buttons):
+    swift build  => Build complete!  (BUILD_EXIT=0)
+    swift test   => "Executed 26 tests, with 0 failures (0 unexpected)"  (TEST_EXIT=0)
+iOS-SDK type-check of the surface (real Apple SDK, Swift 6 strict concurrency):
+    xcrun -sdk iphonesimulator swiftc -target arm64-apple-ios18.0-simulator \
+      -swift-version 6 -typecheck *.swift   => IOS_TYPECHECK_EXIT=0
+
+############################################################
+# FULL xcodebuild GATE — REAL ATTEMPT (not skipped, not assumed)
+############################################################
+Prereqs produced on this runner:
+  • xcodegen generate                       => XCODEGEN_EXIT=0 (TeslaSync.xcodeproj created)
+  • Scripts/build-shared-xcframework.sh (KMP Shared.xcframework, the scheme pre-action):
+      "BUILD SUCCESSFUL in 7m 44s" ... "Shared.xcframework staged"   KMP_EXIT=0
+      (Kotlin/Native iosArm64+iosSimulatorArm64+macosArm64 compiles FROM-CACHE; no network.)
+
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   RESULT: ** BUILD FAILED **   IOS_EXIT=65
+   The ENTIRE build has exactly ONE compile error, and it is NOT in this surface:
+     apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20:
+       error: the compiler is unable to type-check this expression in reasonable
+       time; try breaking up the expression into distinct sub-expressions
+   • This file is PRE-EXISTING and OUTSIDE this prompt's allowed files
+     (allowed: apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.*, this log).
+     Editing it would violate the allowed-files boundary + the parallel parity
+     file-ownership model, so it is intentionally NOT modified (covenant: no scope
+     creep into another surface's file; repo rule: don't fix unrelated pre-existing bugs).
+   • This surface is CLEAN in the real iOS app build: all 5 source files were
+     compiled (DataTableColumnsMenu.{swift,Model,Adapter,Views,Previews}.swift) and
+     `grep "error:"` attributes ZERO errors to any DataTableColumnsMenu file.
+     The app-target compile failure transitively prevents the XCTest bundles
+     (incl. this surface's 26 tests) from running under xcodebuild — but those
+     same 26 tests pass via the isolated SwiftPM run above, and the surface
+     type-checks against the iOS SDK above.
+
+[macOS] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build test
+   RESULT: ** BUILD FAILED **   MAC_EXIT=65
+   Failure is a RUNNER-CAPABILITY limitation (code signing), not this surface:
+     error: "TeslaSync-macOS" has entitlements that require signing with a
+       development certificate. Enable development signing ... (target 'TeslaSync-macOS')
+     error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+       development certificate. ... (target 'TeslaSyncWidgets-macOS')
+   • The macOS app + widget extension use hardened-runtime entitlements; project.yml
+     sets DEVELOPMENT_TEAM="" and this runner has no provisioning identity, so the
+     hosted-test app cannot be signed. The gate command as written passes no
+     CODE_SIGNING_ALLOWED=NO override, so it cannot complete here.
+   • ZERO errors are attributed to any DataTableColumnsMenu file in the macOS log.
+   This is exactly the "deferred to a provisioned macos-latest CI runner" class of
+   verification documented in apps/macos-pending-verifications.md.
+
+############################################################
+# ANALYSIS / HONEST STATUS
+############################################################
+This surface (DataTableColumnsMenu) is production-complete and verified to the
+maximum extent the runner permits WITHIN the prompt's allowed-files scope:
+  ✓ swiftformat --lint apps/apple  : 0/4960   (FORMAT_EXIT=0)
+  ✓ swiftlint --strict             : 0/4662   (LINT_EXIT=0)
+  ✓ check-placeholders (scoped)    : COUNT=0  (PLACEHOLDER_EXIT=0)
+  ✓ swift build (Swift 6 strict)   : 0
+  ✓ swift test                     : 26 passed, 0 failed
+  ✓ iOS-SDK type-check             : 0
+  ✓ compiles clean inside the real iOS app build (0 errors in this surface)
+
+The aggregate `xcodebuild build test` gate is RED, but NEITHER failure is caused by
+this surface:
+  • iOS  — a PRE-EXISTING type-check timeout in RecentDrivesSection.Previews.swift,
+           a file outside this prompt's allowed scope (must not be edited here).
+  • macOS — a runner code-signing capability limitation (no dev certificate).
+Per covenant rule 1 (no red-as-green) these are reported as RED, and per rule 2
+(no scope narrowing) the blockers are named precisely rather than worked around by
+touching out-of-scope files or altering the fixed gate command.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

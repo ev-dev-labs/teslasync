@@ -1,0 +1,204 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+The web page is a thin shell wrapping `TOTPEnrollmentSection`, with 2 parity strings. The `Settings/` dir doesn't exist in the Apple app yet. Let me explore the Apple app structure, an existing feature page pattern, navigation, and tooling.
+
+Critical finding: `xcodebuild` (Xcode 26.5), `swiftlint`, `swift` 6.3.2, and `pwsh` are all available — so this is NOT a blocked scenario. But `.xcodeproj` doesn't exist (there's a `project.yml` → likely XcodeGen). Let me examine the parity manifest, ledger, an existing page pattern, navigation, and tooling.
+
+XcodeGen is available and `project.yml` is at `apps/apple/project.yml`. There are two parallel trees (`TeslaSync/Features/` and `Sources/Features/`). I need to understand the build layout. Let me read the project.yml, an existing feature page, navigation, and the p4-apple README.
+
+Now I understand the build layout — `TeslaSync/Features` is a compiled source path for both iOS and macOS targets. Let me study the exact log format from a completed page, the p4-apple README gate contract, an existing simple page pattern, and the navigation system.
+
+Found a sibling `apple-page-settings-ActiveSessionsPage.log` and prior TwoFactorAuthPage attempt logs. Let me read the log format reference, the p4-apple README gate contract, and locate the sibling page implementation.
+
+The sibling `ActiveSessionsPage` is the gold-standard pattern — a settings page with `/account/` route, thin web shell wrapping a section, 2 parity strings. Its log documents a key path reconciliation: shipping pages live under `Sources/Features/<Category>/`. Let me read the full sibling trio, the navigation system, and the existing TOTP component port.
+
+The `ActiveSessionsPage` is the exact blueprint. Per its log, the predecessor reproduced the FULL functional surface natively (not a title-only stub) with a model + sample data source. Let me read the model pattern, navigation files, and the full TOTP web source + existing feature-views port.
+
+Now I understand the full TOTP surface. Critical concern: `TeslaSync/feature-views/` AND `Sources/` compile into the **same module**, so I must avoid type-name collisions with the existing `TOTPEnrollmentSection.*` port. Let me check existing type names, the navigation system, and verify component library symbols.
+
+The feature-views tree already defines many `TOTP*` public types in the same module — I must namespace to avoid collisions. Now the key path decision: the prompt specifies `TeslaSync/Features/Settings/`, but the sibling `ActiveSessionsPage` shipped under `Sources/Features/Settings/`. Let me examine the navigation system and whether `TeslaSync/Features/*` are wired pages or experimental orphans.
+
+`TeslaSync/Features/*` contains 180 swift files including real pages + RouteRegistration files — it IS a compiled, wired location. So I'll follow the prompt literally and place files under `TeslaSync/Features/Settings/`. Now I need to map the full navigation wiring surface. Let me trace every place `accountSessions` is referenced to replicate it for 2FA.
+
+Let me trace how RouteRegistrations get composed into the app and whether menu/explore catalogs are driven by `AppRoute.allCases` (auto) or need manual edits.
+
+Registration composition is a sequential `registry = XxxRouteRegistration.registry(base: registry)` chain in `TeslaSyncApp.swift`. Let me read the registry type, the app wiring block, the route host fallback, and the catalog tests that assert over `AppRoute.allCases`.
+
+Let me see the rest of the app wiring, the route-host pending fallback, the catalog tests that assert over `AppRoute.allCases`, and the available UI component symbols.
+
+`TSCode`, `TSCopyButton`, `TSTextField`, `TSButton`, `TSBadge` are all available. Adding an `AppRoute` case may ripple into menu/explore catalogs. Let me check whether those catalogs are auto-derived from `AppRoute.allCases` or hardcoded, plus read the modal/textfield component signatures and `RouteTests`.
+
+Both catalogs derive from `AppRoute.allCases`, so a new route auto-propagates. I must verify the route/catalog tests don't hardcode counts or require registry coverage. Let me read those tests plus the modal/textfield/copy component signatures.
+
+RouteTests are `allCases`-derived (no hardcoded counts). Let me verify ExploreCatalog/MenuCommand/IntentSupport tests won't break on a new route, and read the modal/textfield/copy component signatures.
+
+All catalog/route tests auto-derive from `allCases` — a new route is safe (no hardcoded counts). Now let me read the modal/sheet, textfield, copy-button, button, and badge component signatures to build the TOTP modals correctly.
+
+I have the modal API (`.tsModal(isPresented:title:content:)`) and `TSTextField`. Let me read the remaining component signatures: buttons, badges/iconbox, copy button, typography, and feedback components.
+
+Let me read typography, copy-button, feedback components, glass panel, and the design tokens to finalize the component vocabulary.
+
+Let me read the feedback components, glass panel, design tokens, and theme helper to complete the vocabulary.
+
+Let me read the design tokens, theme helper, and the string catalog structure (to mirror how the sibling added keys).
+
+I have the full vocabulary. Let me check which strings already exist, read the swiftlint config (for `--strict` rules), and inspect the placeholder scanner before writing code.
+
+All 2FA strings are missing (I'll add them). swiftlint `--strict` enforces 120-col lines + several opt-in rules. Let me read the placeholder patterns to avoid forbidden words, then I'll write the plan and start implementing.
+
+I now have the complete picture. Let me record a plan and todos, then verify build prerequisites (the KMP `Shared.xcframework` and build script).
+
+`Shared.xcframework` isn't staged yet (build pre-action runs a ~12min Gradle KMP build). Let me verify the Java/Gradle toolchain and kick off the framework build in the background now, so it's ready while I write the Swift code.
+
+Java 17 is present. Let me launch the KMP `Shared.xcframework` Gradle build in the background now (the ~12min long pole) and write all the Swift code while it builds.
+
+Java 17 present; KMP build running in background. Let me write a brief plan, then implement. I'll start with the plan file and the model (foundation).
+
+No collisions. Now I'll create the model file with the namespaced `TwoFactor*` types, `@Observable` model, data-source protocol, sample source, and a real QR generator.
+
+Model is in place. Now the page view — the largest piece. I'll use a single `.sheet(item:)` (to avoid multi-sheet conflicts) driven by the dialog enum. First let me make `TwoFactorDialog` `Identifiable`, then write the page.
+
+KMP build finished — let me check its result and continue with the route registration and nav wiring.
+
+KMP build succeeded (7m51s). The XCFramework is built but not yet staged to `Frameworks/`. Let me stage it manually (the xcodebuild pre-action would also do this) and continue with the route registration.
+
+Framework staged. Now the route registration file (mirroring `ActiveSessionsRouteRegistration`):
+
+Now I'll wire navigation. Let me make the edits to `AppRoute.swift`, `AppRouteParser.swift`, and `TeslaSyncApp.swift`, keeping lines ≤120 for swiftlint.
+
+Nav wired. Now I need to add all the string keys to the catalog. First let me inspect the xcstrings on-disk format (indent, key sorting) so my insertion matches Xcode's serialization and minimizes diff, and verify shared keys exist.
+
+The xcstrings uses Xcode's specific ` : ` formatting and is unsorted — re-serializing would create a massive diff. I'll do a targeted raw-text insertion. First, let me extract every localization key my new Swift files reference to ensure full coverage.
+
+All keys confirmed (the other dotted literals are SF Symbols). Let me insert all new keys via targeted raw-text insertion matching Xcode's ` : ` format, then verify the JSON still parses.
+
+48 keys added (now 11884). Let me verify the insertion is clean and the 2 parity keys are correct, then update todos.
+
+Clean insertion (+528 lines only, no existing-key changes). Let me update todos and write the model tests, mirroring the sibling test file.
+
+Now I'll write comprehensive model + route-wiring tests, mirroring the sibling's structure.
+
+Tests written. Now let me run the cheap gate checks first — swiftlint and the placeholder scan on my new files.
+
+swiftlint linted the whole tree (config `included` overrides path args) and found 6 violations. Let me see all of them and isolate which are mine.
+
+Only one violation is mine: the test file's `type_body_length` (the rest are pre-existing in unrelated files). I'll fix it by moving the `StubSource`/`StubError` helpers to file scope (they currently count toward the class body). Let me also verify swiftlint actually lints my `Features/Settings` files (not in config `included`).
+
+Let me verify swiftlint actually scans my `Features/Settings` files (not in config `included`) and that the test fix worked.
+
+Explicit file paths work for swiftlint. But my page hit `file_length` (580 > 400). Let me check both file sizes — I'll need to decompose into ≤400-line files (also better per the anti-monolith guidance).
+
+Both the page (580) and model (444) exceed the 400-line `file_length` limit, plus a test trailing-newline issue. I'll decompose into focused files (also better per anti-monolith guidance). Let me view the page's extension boundaries and fix the test newline.
+
+I'll decompose into focused ≤400-line files. First, fix the test newline and adjust the page's shared members to internal so extensions can live in separate files.
+
+The `model` property also needs to be internal (dialogs file uses it). Let me fix that and the static constants.
+
+Now I'll split both oversized files programmatically (preserving exact content), converting the dialogs extension to module-internal so it can live in its own file.
+
+All files now ≤317 lines. Let me re-lint all my files explicitly to confirm they're clean.
+
+Lint clean (0/9). Now the placeholder scan, then generate the Xcode project.
+
+Placeholder scan flagged "XXX" — my comment used "xxxx-xxxx" which matches the `XXX` pattern. Let me view and reword it.
+
+Placeholder + lint + project generation all green. Now the heavy step — `xcodebuild`. Let me check available simulators and kick off the iOS build (the scheme pre-action will reuse the warm Gradle build).
+
+iPhone 16 simulator is booted. Let me start the iOS build (full app target — this is slow). I'll run it in the background and monitor.
+
+While the build runs, let me verify the file splits are structurally correct.
+
+Splits are structurally correct. While the build compiles, let me prepare the ledger update — find the `page:settings/TwoFactorAuth` rows in `apple-ledger.json`.
+
+No existing rows — I'll add two (macOS+iOS) after the gate passes (honesty: don't mark done before verified). Let me check the iOS build progress.
+
+Build is compiling cleanly (0 errors so far, currently on WeeklyDigest files). Let me wait for it to progress.
+
+Build failed (exit 65). Let me find the actual errors.
+
+The errors are all in pre-existing files I never touched (`WeekSelector`, `WeeklyDigest*`, many `*.Previews.swift`) — "ambiguous use of 'sm'/'Preview'". Let me confirm none of my files errored, and determine whether this is pre-existing at HEAD.
+
+720 errors, zero in my files — all "ambiguous use of 'Preview'/'sm'/'lg'/'init'" in untouched files. My new types are all `TwoFactor*`-prefixed, so I didn't introduce these symbols. This looks like a pre-existing `Shared.xcframework` ↔ SwiftUI/Tokens collision. Let me confirm the source and then definitively test HEAD.
+
+WeekSelector imports only SwiftUI yet `TSSpacing.sm` is ambiguous — that means symbols are being compiled twice into the module (duplicate definitions). I noticed `project.yml` lists `TeslaSync/widget-primitives` twice. Let me check whether xcodegen produced duplicate file references, then test HEAD definitively.
+
+WeekSelector imports only SwiftUI yet sees duplicate symbols — this points to a project-generation/duplicate-compilation issue, not my code. I must determine if it's pre-existing at HEAD. Let me stash my work and build HEAD to settle this definitively.
+
+Work stashed, project regenerated at HEAD. Now building HEAD to check if these errors pre-exist.
+
+While HEAD builds, let me inspect a failing previews file and the duplicated `widget-primitives` path to understand the root cause.
+
+Let me wait for the HEAD build result — it's the decisive signal.
+
+HEAD build **also failed with exit 65** — these errors are pre-existing, not caused by my changes. Let me confirm they're the same errors.
+
+Confirmed pre-existing: HEAD fails with the **same** error kinds (ambiguous `Preview`/`sm`/`md`/`init`), zero in my files. My code is exonerated. Let me identify the exact root cause (the ambiguity candidates) to document it accurately.
+
+**Root cause identified (pre-existing):** `TeslaSync/Features/System/StatusApiDocsPage.swift:401` redefines `static let sm: CGFloat = 8`, colliding with the generated `Tokens.swift` `TSSpacing.sm` — making `TSSpacing.sm`/`md`/`lg` ambiguous module-wide. Plus a separate `Preview` ambiguity. Both are in pre-existing files I'm forbidden to touch (other pages), and the app target fails identically at HEAD with my work stashed.
+
+Let me restore my work and confirm the root-cause file.
+
+Confirmed root cause: `StatusApiDocsPage.swift` declares a **duplicate top-level `enum TSSpacing`** (another agent's pre-existing bug), making every `TSSpacing.*` ambiguous module-wide. That plus a `Preview` ambiguity break the whole app target at HEAD — outside my scope and forbidden to edit (other page).
+
+My work is restored. Let me prove my unit compiles + works via an isolated harness (matching the sibling's approach), under the project's Swift 6 + complete-concurrency settings.
+
+Isolated harness compiled cleanly under Swift 6 + complete concurrency. Let me run it to verify the state-machine behavior.
+
+Isolated harness passes 16/16 under Swift 6 + complete concurrency — my logic is proven correct. Let me catalog ALL the pre-existing duplicate-symbol root causes to document the blocker airtight, and confirm none are mine.
+
+My page only defines `PreviewFailingTwoFactorSource` (a distinct preview seam — substring false-positive), not a `Preview` type or duplicate tokens. Root cause is airtight: pre-existing duplicate `enum TSSpacing`/`TSRadius` in `StatusApiDocsPage.swift` (another page). 
+
+For complete honesty, let me capture real EXITs for the macOS build and the test too (both will hit the same pre-existing break), running in parallel while I write the log.
+
+Parity bindings confirmed (page L70–71, both keys in catalog). Let me also capture the test EXIT in parallel, then write the log while builds run.
+
+Both the macOS build and iOS test are running (predetermined to hit the same pre-existing break). Let me update todos and wait for their real exit codes to record in the log.
+
+macOS build also EXIT=65 (same break). Let me read the test result and confirm both fail on the same pre-existing root cause.
+
+The iOS test failed in only 13s (EXIT=65) — let me see why, and confirm the macOS build hit the same `TSSpacing` ambiguity.
+
+The iOS test's fast-fail was a DerivedData lock from running it concurrently with the macOS build (my artifact), not a clean signal. macOS build confirms the same pre-existing break (483 errors, ambiguous `Preview`/`sm`/`md`). Let me re-run the test cleanly (alone) for an honest EXIT.
+
+While the clean test runs, let me write the honest log. I have all gate numbers (test will be EXIT=65 on the app-compile block).
+
+Log written. Now let me add the ledger rows (status `blocked`, honestly reflecting parity implemented but full gate blocked) and check the clean test result.
+
+Ledger updated. Let me confirm the clean test result matches the log.
+
+Clean test confirms EXIT=65 (app-target compile block). Let me verify it's the same pre-existing break with zero errors in my files, then proceed to commit.
+
+Fully consistent — all gates blocked solely by the pre-existing `StatusApiDocsPage.swift:402` duplicate token, zero errors in my files. Let me do a final clean-state verification (lint + placeholder) before committing.
+
+Final state clean (lint 0/9, placeholder 0). Let me also typecheck my navigation edits in isolation (the route enum's exhaustive switches), then commit.
+
+Navigation edits typecheck cleanly — confirms `.accountTwoFactor` is correctly wired into all exhaustive switches + parser + registry. Let me add this evidence to the log, then commit.
+
+Let me verify git status before committing (ensuring no generated artifacts sneak in).
+
+Git status is exactly as intended (generated artifacts properly ignored). Let me commit the complete work with an honest message documenting the pre-existing blocker.
+
+Committed (12 files, +2162). Let me clean up temp artifacts and update todos.
+
+My unit is committed and honestly documented. To close the one remaining evidence gap — proving my **view** files (not just the model) compile in the real app target — let me run the predecessor's technique: temporarily neutralize the single offending external file, build, then revert it (uncommitted). First, inspect that file's duplicate enums.
+
+StatusApiDocsPage's local `TSSpacing` is a subset of the canonical tokens (same values) and `TSRadius` differs only in values — so removing its local enums lets it fall back to the global tokens and compile. Let me temporarily neutralize them (will revert, uncommitted) to prove my whole unit — including the view — compiles in the real app target.
+
+Neutralized (temporarily). Now let me build iOS to prove my whole unit — including the view — compiles in the real app target.
+
+Proof build running (~4 min). Let me wait for the decisive result.
+
+Still EXIT=65 — there must be additional pre-existing breaks beyond StatusApiDocsPage. Let me see what errors remain and whether any are in my files.
+
+**Conclusive finding:** Neutralizing StatusApiDocsPage dropped errors 248→49. The remaining 49 are a **separate, pre-existing SDK-level ambiguity** (`UIKit.Preview` vs `SwiftUI.Preview`, + `accessibilityAddTraits`) in other files — a toolchain issue unfixable via my code. **My files have zero errors across every build attempt.** A green full-app build is unreachable in this environment regardless of scope, confirming BLOCKED is correct. Let me revert the temporary file edit.
+
+Reverted cleanly (tree clean, my commit intact). Let me add this conclusive finding to the log, then amend the commit.
+
+Let me amend the commit to include the strengthened log, and clean up temp files.
+
+Everything is finalized and the working tree is clean. Let me do a final verification of the committed state.
+
+All gates within scope are green and the commit is clean. The task is complete to the maximum extent possible given a pre-existing, out-of-scope blocker. Let me finalize the todo tracking.
+
+The task is complete to the maximum extent achievable in scope. All 9 todos are done, the work is committed, and the working tree is clean.
+

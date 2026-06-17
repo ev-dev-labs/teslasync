@@ -1,0 +1,236 @@
+================================================================================
+ P4 · Feature view · 0019 — RegexTester (Apple)
+ Native SwiftUI parity of
+   web/src/features/admin/components/devtools/tools/RegexTester.tsx
+ Output: apps/apple/TeslaSync/feature-views/RegexTester.*
+ Base commit: 887134713
+ Generated: 2026-06-09 (autopilot)
+================================================================================
+
+--------------------------------------------------------------------------------
+ TOOLCHAIN (host capability — present)
+--------------------------------------------------------------------------------
+ xcodebuild      : Xcode 26.5 (17F42), DEVELOPER_DIR=/Applications/Xcode.app
+ swift           : Apple Swift 6.3.2
+ iOS SDK         : iPhoneSimulator26.5  (deployment target iOS 18.0)
+ macOS SDK       : MacOSX26.5           (deployment target macOS 15.0)
+ swiftlint       : present (/opt/homebrew/bin/swiftlint)
+ swiftformat     : present (/opt/homebrew/bin/swiftformat)
+ pwsh            : present (/opt/homebrew/bin/pwsh)
+ xcodegen        : present (/opt/homebrew/bin/xcodegen)
+ => SwiftUI + iOS 18 / macOS 15 HIG capability IS available on this runner.
+    (No Swift Charts / MapKit needed: the web source uses neither.)
+
+--------------------------------------------------------------------------------
+ ARTIFACT — files shipped (7)
+--------------------------------------------------------------------------------
+ RegexTester.Adapter.swift   192   pure engine core (Foundation only):
+                                   RegexEngine.evaluate = faithful port of the web
+                                   `new RegExp(pattern,flags)` + global exec loop +
+                                   try/catch; RegexEvaluation (idle/invalidPattern/
+                                   noMatches/matches), RegexMatch (UTF-16 offset),
+                                   RegexFlagCatalog (web flagOptions), RegexSurface
+                                   slug, RegexAccessibility summary.
+ RegexTester.Model.swift     117   P1/S8 @MainActor @Observable RegexTesterModel
+                                   (pattern/flags/testString -> evaluation; useMemo
+                                   parity), P1/S11 RegexTesterTelemetry + OSLog impl
+                                   (view.opened), P1/S10 RegexStrings facade.
+ RegexTester.swift            54    composable View; binds model; header + input row
+                                   + test-string editor + count badge + result.
+ RegexTester.Views.swift     396   subviews: ToolCard header, pattern field (icon +
+                                   \d+ hint), flags picker, test-string editor,
+                                   match-count badge, match list/row, idle/empty/
+                                   invalid states. Token-driven (P1/S9), facade i18n.
+ RegexTester.Previews.swift  52    #if DEBUG previews, one per state.
+ RegexTester.Tests.swift     196   XCTest: engine parity, flag catalog, model
+                                   derivation + telemetry, accessibility (21 cases).
+ RegexTester.strings         48    table "RegexTester": every web-source t() key +
+                                   native chrome + a11y.
+ -------------------------------------------------------------------------------
+ Surface total: 1055 lines across 7 files vs 72-line web source (≈1466%).
+ Far exceeds the ≥70%-of-original completeness bar; faithful, decomposed port.
+
+--------------------------------------------------------------------------------
+ PARITY MAPPING (web -> native)
+--------------------------------------------------------------------------------
+ Data        : pattern/flags/testStr useState + matches useMemo
+               -> RegexTesterModel.{pattern,flags,testString} + .evaluation.
+ Engine      : RegExp + global exec loop, `if (!m[0]) break`, try/catch
+               -> NSRegularExpression; g=>all-vs-first, i=>.caseInsensitive,
+                  m=>.anchorsMatchLines; zero-width break replicated; UTF-16
+                  offset == JS m.index (NSString/NSRange are UTF-16, like JS).
+ flagOptions : g / gi / gm / gim / '' (t('No Flags')) -> RegexFlagCatalog (verbatim
+               labels; only the empty entry localized).
+ Components  : ToolCard->inline header; Input->pattern field; Select->flags Picker;
+               Textarea->TextEditor; Badge->TSBadge (shared) + token capsule.
+ States      : web renders badge always + match list when length>0. Native renders
+               EVERY branch (never a blank box):
+                 idle           (empty pattern/test) -> friendly hint
+                 invalidPattern (catch)              -> error panel  [= "error"]
+                 noMatches      (valid, 0)           -> empty hint   [= "empty"]
+                 matches        (>0)                 -> match list   [= "content"]
+               NOTE (honest): "loading / stale / offline" are network/cache states
+               with NO analog in a pure-local synchronous transform; the web source
+               has none either. Documented, not silently dropped.
+ i18n keys   : Regex Tester, Regex Tester Desc, No Flags, Pattern, Flags,
+               Test String, Test String Placeholder, Matches, At Index — all present
+               in RegexTester.strings (web-faithful fallbacks) + native-chrome keys.
+ a11y        : VoiceOver label on every interactive element (pattern/flags/test/
+               rows) + composed container summary; Dynamic Type via Font.TS ramp;
+               icons accessibilityHidden.
+ Telemetry   : view.opened, surface slug "RegexTester", emitted once (P1/S11).
+
+================================================================================
+ GATE RESULTS
+================================================================================
+
+[1] swiftformat --lint                                          FORMAT_EXIT=0
+    $ swiftformat --lint TeslaSync/feature-views/RegexTester.{Adapter,Model,Views,Previews,Tests}.swift RegexTester.swift
+    -> 0/6 files require formatting.
+
+[2] swiftlint --strict                                          LINT_EXIT=0
+    $ swiftlint lint --strict --config .swiftlint.yml <6 RegexTester swift files>
+    -> Done linting! Found 0 violations, 0 serious in 6 files.
+
+[3] placeholder gate                                            PLACEHOLDER_EXIT=0
+    The prompt's literal command passes a FILE-PREFIX path
+      (-Path apps/apple/TeslaSync/feature-views/RegexTester) which is not a real
+      directory; check-placeholders.ps1 L132 early-returns Count=0 for a
+      non-existent path => a VACUOUS pass. To avoid red-as-green (Covenant #1)
+      the files were copied to a real dir and scanned honestly:
+    $ cp RegexTester.* /tmp/rtcheck && check-placeholders.ps1 -Path /tmp/rtcheck
+      -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    Positive control (inject `// TODO`) -> PLACEHOLDER_COUNT=1 (scanner verified live).
+    (One earlier real hit — a MARK comment containing the word — was fixed, not masked.)
+
+[4] Surface compilation vs BOTH SDKs (Swift 6, strict concurrency, DEBUG previews)
+    Isolated typecheck of the surface + its real shared deps (Tokens.swift,
+    Badges.swift) — proves the surface compiles against the real components and
+    the iOS 18 / macOS 15 SDKs, independent of the rest of the app:
+    $ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+        -sdk <iPhoneSimulator> -target arm64-apple-ios18.0-simulator  ...  -> IOS_SDK_TYPECHECK_EXIT=0
+    $ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+        -sdk <MacOSX>        -target arm64-apple-macos15.0           ...  -> MAC_SDK_TYPECHECK_EXIT=0
+    (A real strict-concurrency defect — a nonisolated preview helper calling the
+     @MainActor model init — was caught here and FIXED, not suppressed.)
+
+[5] Test EXECUTION (Xcode toolchain XCTest, Swift 6, macOS)     21/21 PASS
+    SwiftPM harness over the pure core (Adapter + Model) + the surface tests:
+      RegexEngineTests        10 passed  (UTF-16 offsets, non-global first-match,
+                                          gi case-insensitive, gm multiline anchors,
+                                          invalid-pattern, no-match, options map,
+                                          zero-width `if(!m[0])break` parity x2)
+      RegexFlagCatalogTests    2 passed
+      RegexTesterModelTests    5 passed  (default flags "g", derivation, telemetry-once)
+      RegexAccessibilityTests  4 passed
+      => Executed 21 tests, 0 failures.
+
+[6] Xcode project registration
+    $ xcodegen generate  -> Created TeslaSync.xcodeproj (git-ignored)
+    -> 42 RegexTester refs; all 7 files membership: app target + TeslaSyncTests/
+       TeslaSync-macOSTests bundles. (Surface IS wired into the real targets.)
+
+--------------------------------------------------------------------------------
+ [7] AGGREGATE `xcodebuild build test` — CANNOT REACH EXIT=0 (environment + scope)
+--------------------------------------------------------------------------------
+ The literal gate `xcodebuild -scheme TeslaSync -destination '...iPhone 16' build
+ test` runs a scheme pre-action that builds the KMP `Shared.xcframework` via
+ `apps/shared/gradlew :core:assembleSharedXCFramework` (ADR-004). On this shared
+ runner that step DEADLOCKS on cross-worktree Gradle daemon-lock contention
+ (the documented FleetStatsWidget R3); `which gradle`/`which kotlin` = none,
+ `apps/apple/Frameworks/` ships only `.gitkeep`.
+
+ To verify FURTHER than the SDK typecheck, a sibling worktree's already-built,
+ valid `Shared.xcframework` (identical KMP base; git-ignored) was staged and the
+ iOS app target built directly (skips the contended pre-action):
+
+   $ xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator \
+       -arch arm64 ONLY_ACTIVE_ARCH=YES build CODE_SIGNING_ALLOWED=NO
+   -> ARM64_BUILD_EXIT=65 ; 76 compile errors — ZERO in RegexTester.
+   (full fat build arm64+x86_64: 152 errors — ZERO in RegexTester.)
+   RegexTester.* compiled (9 compile references, 0 errors) inside the full app.
+
+ ALL aggregate-build errors are in OTHER, OUT-OF-SCOPE surfaces, e.g.:
+   ChargeStatusLiveWidget.*, ChargeStatusWidget.*, ChargeSessionChartWidget.*,
+   FleetStatsBarWidget.*, EntriesTable.*, EnvironmentSlide.*, EventTimeline.*
+ with pre-existing faults this prompt FORBIDS touching ("Out of Scope: Other
+ surfaces"):
+   • "'ChargeSessionDTO' / 'ChargeDistanceUnit' is ambiguous for type lookup"
+       => those types are declared in the app (ChargeStatusLiveWidget.Model.swift,
+          ChargeSessionChartWidget.Models.swift) AND exported by Shared.xcframework
+          — a pre-existing duplicate-symbol condition in those surfaces.
+   • "cannot infer contextual base in reference to member 'loaded'/'live'/'stale'/
+      'offline'" in other surfaces' *.Previews.swift.
+
+ macOS aggregate build additionally requires an Apple signing identity
+ (DEVELOPMENT_TEAM="" + hardened runtime) — FleetStatsWidget R1; the macOS SURFACE
+ compile is already proven green at [4] (MAC_SDK_TYPECHECK_EXIT=0).
+
+   IOS_EXIT  = 65   (full-app aggregate; 0 RegexTester errors — fails only on
+                     out-of-scope pre-existing surfaces + KMP staging)
+   MAC_EXIT  = blocked (same out-of-scope failures + missing signing identity;
+                        macOS surface compile proven green at [4])
+
+================================================================================
+ HONESTY COVENANT SELF-ASSESSMENT
+================================================================================
+ 1  No red-as-green   : aggregate build is RED (65) and is reported RED; the
+                        vacuous placeholder-prefix pass was rejected and re-run
+                        honestly; the strict-concurrency preview defect was fixed.
+ 2  No scope narrowing : every web branch reproduced; loading/stale/offline
+                        explicitly documented as N/A for a synchronous local tool.
+ 3  No skip-and-assume : web source read end-to-end; every t() key catalogued.
+ 4  No stubs as final  : no TODO/stub/mock/placeholder/Lorem (gate + grep verified).
+ 5  No parity shortcuts: engine matches JS exec incl. zero-width break + UTF-16
+                        offsets, proven by executed tests.
+ 6  No delegation      : authored directly; no sub-agents.
+ 7  No predecessor bypass: builds on P4 core/P1 seams (state-holder, tokens, i18n,
+                        diagnostics) exactly as the Base64Tool precedent.
+ 8  No commit on red   : the SURFACE is green (typechecks both SDKs, 21/21 tests,
+                        0 lint/format/placeholder, 0 errors in the full-app build).
+                        The aggregate red is 100% environmental + out-of-scope, so
+                        the surface is committed (as the merged FleetStatsWidget
+                        precedent did) WITH this fully transparent BLOCKED log.
+ 9  No silent drift    : changes confined to feature-views/RegexTester.* + this log;
+                        generated .xcodeproj + staged Shared.xcframework (both
+                        git-ignored) removed after evidence capture.
+ 10 Log ends with EXIT/STATUS below.
+
+================================================================================
+ ACCEPTANCE CRITERIA
+================================================================================
+ [x] Surface renders all web states (idle/invalid/no-match/matches), each a #Preview
+     + unit-tested; never a blank box.
+ [x] Hooks bind via the shared P1/S8 state-holder (RegexTesterModel); the view does
+     NO HTTP (the tool is a pure local transform).
+ [x] Every i18n key from source present in the P1/S10 catalog (RegexTester.strings).
+ [x] Accessibility labels on every interactive element + composed summary; a11y
+     unit-tested; Dynamic Type via Font.TS.
+ [x] Tests: engine/adapter + per-state + model/telemetry + a11y — 21 executed green.
+ [x] No TODO/stub/mock/placeholder/Lorem (honest placeholder gate = 0).
+ [x] Surface compiles on iOS 18 AND macOS 15 SDKs (Swift 6 strict concurrency);
+     compiles inside the full iOS app with 0 RegexTester errors.
+ [~] EXIT=0/STATUS=DONE: NOT claimed — the literal aggregate `xcodebuild build test`
+     is RED for reasons entirely outside this surface (KMP Gradle staging + macOS
+     signing + pre-existing OUT-OF-SCOPE surface compile errors). Reported honestly
+     as BLOCKED with environment evidence, per the Honesty Covenant and the
+     most-recent merged P4 precedent (FleetStatsWidget: EXIT=1/STATUS=BLOCKED).
+
+================================================================================
+ VERDICT
+================================================================================
+ The RegexTester surface is CODE-COMPLETE and verified to the maximum extent this
+ environment permits:
+   • swiftformat --lint = 0, swiftlint --strict = 0, placeholder (honest) = 0
+   • compiles on iOS 18 + macOS 15 SDKs under Swift 6 strict concurrency (incl.
+     DEBUG previews); compiles inside the full iOS app with 0 RegexTester errors
+   • 21/21 of its own tests EXECUTE GREEN
+   • registered in the iOS + macOS app and test targets
+ The aggregate `xcodebuild build test` gate cannot reach EXIT=0 here for reasons
+ entirely outside this surface's scope and control (KMP Shared.xcframework Gradle
+ staging contention; macOS signing identity; pre-existing compile errors in OTHER
+ surfaces this prompt forbids touching). Per Honesty Covenant #1/#8 this is reported
+ as BLOCKED with evidence rather than DONE.
+
+EXIT=1
+STATUS=BLOCKED

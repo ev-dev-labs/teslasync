@@ -1,0 +1,156 @@
+================================================================================
+p4-apple · P7 · page:analytics/Mileage — SwiftUI / HIG parity
+================================================================================
+artifact : apps/apple/Sources/Features/Analytics/MileagePage.swift (+ models, model, sample, sections, charts, table, format, route reg, tests)
+host     : macOS (Darwin 25.x / SDK MacOSX26.5); Xcode (xcodebuild present); Apple Swift 6.3.2; swiftlint 0.63.x + swiftformat 0.57.x + xcodegen 2.45.x + pwsh 7.x + Java (Gradle/KMP) present
+parity   : page:analytics/Mileage  (manifest PARITY_REQUIRED=29 = 7 panels + 2 charts + 4 states + 16 strings)
+web src  : web/src/features/analytics/pages/MileagePage.tsx  (route /mileage)
+data srcs: useMileageStats   -> GET /mileage/stats   [vehicle_id]            (PRIMARY: drives loading/empty/error/success) ;
+           useDailyMileage   -> GET /mileage/daily    [vehicle_id, days=90]  (odometer-over-time area + daily-distance bar) ;
+           useMonthlyMileage -> GET /mileage/monthly  [vehicle_id]           (monthly-summary table)
+           (all bound through one @Observable MileagePageModel via an injected MileageDataSource seam, ADR-004;
+            the three load methods KEEP the web hook names verbatim at the Swift call sites — useMileageStats /
+            useDailyMileage / useMonthlyMileage — per the manifest. The /mileage endpoints emit kilometres on the
+            wire; the data-source boundary normalizes to SI metres (km*1000), exactly as the web `fromKm` helper does,
+            and the view converts back to the user unit via the shared Units facade (ADR-005). No live SSE on this
+            surface — the web page reads cached query data, no EventSource — so no staleness indicator.)
+
+PATH-MAPPING NOTE (no silent drift, covenant #9)
+  The prompt's idealized output path is apps/apple/TeslaSync/Features/Analytics/MileagePage.swift, but the
+  REAL Xcode project (project.yml) compiles app sources from apps/apple/Sources/** — the TeslaSync/Features/**
+  subtree is NOT a build input. The already-present sibling pages page:analytics/Statistics and
+  page:analytics/FleetCompare likewise live under apps/apple/Sources/Features/Analytics/. Placing the page there is
+  what actually compiles, registers, and is covered by the gate; the alternative would be a non-compiled,
+  non-registered stub (covenant #4). Files therefore live under apps/apple/Sources/Features/Analytics/** + the
+  matching Tests/Unit/Features/Analytics/ test dir.
+
+FILES (allowed scope: Sources/Features/Analytics/**, navigation registration, the string catalog, this log)
+  NEW  apps/apple/Sources/Features/Analytics/MileageModels.swift            (SI value types: vehicle, stats, daily/monthly bucket, chart sample, month row)
+  NEW  apps/apple/Sources/Features/Analytics/MileageFormat.swift            (SI display-boundary formatters via Units; web fmtNumber / fmtInt / fromKm)
+  NEW  apps/apple/Sources/Features/Analytics/MileagePageModel.swift         (@Observable model: data-source seam w/ web hook names, phase, per-vehicle load, odometer/daily/month derivations)
+  NEW  apps/apple/Sources/Features/Analytics/MileagePageModel.Sample.swift  (sample + empty + failing preview/test data sources)
+  NEW  apps/apple/Sources/Features/Analytics/MileagePage.swift              (adaptive View: header + vehicle Select, phase switch loading/empty/error/ready)
+  NEW  apps/apple/Sources/Features/Analytics/MileagePage.Sections.swift     (4 summary MetricCards + loading skeleton + redaction)
+  NEW  apps/apple/Sources/Features/Analytics/MileagePage.Charts.swift       (odometer AreaChart GlassPanel + daily-distance BarChart GlassPanel, per-section empty)
+  NEW  apps/apple/Sources/Features/Analytics/MileagePage.Table.swift        (monthly-summary TSDataTable: Month / Distance / Drives / Distance per Drive, sortable, empty)
+  NEW  apps/apple/Sources/Features/Analytics/MileageRouteRegistration.swift (registers the .mileage route host)
+  NEW  apps/apple/Tests/Unit/Features/Analytics/MileagePageModelTests.swift (16 XCTest cases: phases, selection, odometer/daily/month derivations, computed values)
+  EDIT apps/apple/Sources/App/AppRoute.swift            (new first-class .mileage route case + systemImage + .vehicle group)
+  EDIT apps/apple/Sources/TeslaSyncApp.swift            (compose MileageRouteRegistration into the route-host chain)
+  EDIT apps/apple/Localization/Localizable.xcstrings    (+17 strings: the 16 manifest keys + route.mileage; en source values ported verbatim from the web t(key, default) calls)
+  EDIT apps/parity/apple-ledger.json                    (+2 rows: apple-macos / apple-ios)
+
+Navigation note (covenant #7 — no predecessor bypass): the web route /mileage has no pre-existing AppRoute case and
+  the .analytics / .fleetCompare routes are already owned by the sibling Statistics / FleetCompare pages, so a NEW
+  first-class `.mileage` AppRoute case was added (pathSegment defaults to "mileage", so AppRouteParser resolves
+  /mileage automatically — deep-linkable; group .vehicle mirrors the web "Driving" sidebar section). Only
+  AppRoute.swift switches exhaustively over the enum (systemImage + group); both got a .mileage case. RouteTests
+  (testEveryRouteHasUniquePathSegment / testEveryRouteResolvesToItsGroup) remain satisfied. The page model is built
+  @MainActor in MileageRouteRegistration and captured, mirroring the sibling *RouteRegistration enums.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes — covenant #1 no red-as-green)
+================================================================================
+
+--- Shared.xcframework (ADR-004) assembled via Gradle + staged (apps/apple/Scripts/build-shared-xcframework.sh) ---
+> Task :core:assembleSharedXCFramework ; "xcframework successfully written out" (ios-arm64, ios-arm64-simulator, macos-arm64)
+BUILD SUCCESSFUL in 6m49s ; "✓ Shared.xcframework staged"
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "Mileage" referenced 156x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Analytics -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=3   (my one .redacted(.placeholder) opt-out + the two sibling Statistics/FleetCompare ones — each carries a // parity:allow reason)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- swiftformat --lint --config .swiftformat (my 10 new/test files + the 3 edited files) ---
+0/27 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict --config .swiftlint.yml apps/apple/Sources/Features/Analytics + edited App files + test ---
+0 violations.
+LINT_EXIT=0
+
+--- BUILD (macOS): xcodebuild -scheme TeslaSync-macOS -destination platform=macOS CODE_SIGNING_ALLOWED=NO clean build ---
+BUILD_EXIT=65
+  Failure is NOT in this artifact. The only errors are 2 PRE-EXISTING lines in a file outside this prompt's scope:
+    TeslaSync/shared-surfaces/Input.Previews.swift:88:9  error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+    TeslaSync/shared-surfaces/Input.Previews.swift:101:9 error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+  PROOF it is pre-existing (covenant #1): a CLEAN build of the repo with EVERY Mileage change removed (the 10 new
+  files moved aside + the AppRoute/TeslaSyncApp/xcstrings edits git-stashed + xcodegen regenerated) fails with the
+  IDENTICAL 2 errors (x3 targets = 6 occurrences). Zero Mileage files appear in any build error. Input.Previews.swift
+  is a DEBUG-only preview surface (predecessor P4 "0217 · Input") with no external references; this environment's
+  Swift 6.3.2 / SDK MacOSX26.5 toolchain rejects the checked-in `return`-in-#Preview shape.
+
+--- TEST (macOS): xcodebuild -scheme TeslaSync-macOS test ---
+TEST_EXIT=65
+  Failure is NOT in this artifact. With Input.Previews.swift isolated so the app host builds, the shared
+  TeslaSync-macOSTests bundle then fails to COMPILE on a second PRE-EXISTING, out-of-scope, UNMODIFIED file:
+    Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20:57  error: call to main actor-isolated static method
+      'artifact(id:status:bytes:sha256:storage:error:)' in a synchronous nonisolated context
+  (git status shows this file unmodified by me — a Swift-6 strict-concurrency rejection by the same newer toolchain.)
+
+--- SCOPED VERIFICATION of THIS artifact (the 2 pre-existing broken files temporarily set aside, then RESTORED) ---
+  With ONLY the 2 pre-existing blockers isolated (Input.Previews.swift + GDPRExportPageModelTests.swift),
+  the full macOS app target + this artifact compile and LINK clean (0 errors across all 5739 sources), and:
+    xcodebuild test -only-testing:TeslaSync-macOSTests/MileagePageModelTests  ->
+       Test Suite 'MileagePageModelTests' passed ; Executed 16 tests, with 0 failures (0 unexpected) ; ** TEST SUCCEEDED **
+  Both pre-existing files were renamed back to their originals afterward; `git status` confirms neither appears in
+  this change set. This proves the BUILD_EXIT/TEST_EXIT reds are 100% external pre-existing defects, and that THIS
+  artifact builds, links, and passes its tests.
+  SCOPED_BUILD_EXIT=0   SCOPED_TEST_EXIT=0 (16/16 MileagePageModelTests passed)
+
+================================================================================
+=== PARITY ===   PARITY_REQUIRED=29
+================================================================================
+[x] panel  — Total-Distance       : MileagePage.Sections.swift  MileageSummarySection  card "mileage.totalDistance" = MileageFormat.distanceInt(model.totalDistanceM, units)
+[x] panel  — Total-Drives         : MileagePage.Sections.swift  MileageSummarySection  card "mileage.totalDrives" = MileageFormat.integer(model.totalDrives)
+[x] panel  — Daily-Avg-30d        : MileagePage.Sections.swift  MileageSummarySection  card "mileage.dailyAvg" = MileageFormat.distance(model.dailyAverageM, units)
+[x] panel  — Annual-Projection    : MileagePage.Sections.swift  MileageSummarySection  card "mileage.annualProjection" = MileageFormat.distanceInt(model.annualProjectionM, units)
+[x] panel  — GlassPanel5          : MileagePage.Charts.swift     MileageOdometerSection  TSGlassPanel + TSPanelTitle("Odometer Over Time")
+[x] panel  — GlassPanel6          : MileagePage.Charts.swift     MileageDailyDistanceSection  TSGlassPanel + TSPanelTitle("Daily Distance")
+[x] panel  — GlassPanel7          : MileagePage.Table.swift      MileageMonthlySection  TSGlassPanel + TSPanelTitle("Monthly Summary")
+[x] chart  — AreaChart            : MileagePage.Charts.swift     MileageOdometerSection.series -> TSAreaChart(series:) (P3 Swift Charts wrapper, palette idx 2)
+[x] chart  — BarChart             : MileagePage.Charts.swift     MileageDailyDistanceSection.series -> TSBarChart(series:) (P3 Swift Charts wrapper, palette idx 0)
+[x] state  — loading              : MileagePage.swift  content `.loading` -> MileageSkeleton (MileagePage.Sections.swift) .mileageRedacted(while:) [redacted(.placeholder)]
+[x] state  — empty                : MileagePage.swift `.empty` -> TSEmptyState(ContentUnavailableView); per-section "No Entries" empties in MileageOdometerSection/DailyDistance/Monthly; model resolves .empty when no vehicle/no data (MileagePageModel.loadSelectedVehicle)
+[x] state  — error               : MileagePage.swift `.error` -> errorView TSErrorDisplay(title:"error.loadFailed", onRetry:); model sets .error when useMileageStats throws (MileagePageModel.loadSelectedVehicle)
+[x] state  — success             : MileagePage.swift `.ready` -> readyView (cards + charts + table); model resolves .ready (MileagePageModel.loadSelectedVehicle)
+[x] string — Daily Distance       : MileagePage.Charts.swift  TSPanelTitle("Daily Distance")
+[x] string — Distance             : MileagePage.Charts.swift  seriesName String(localized:"Distance"); MileagePage.Table.swift unitHeader("Distance")
+[x] string — Distance per Drive   : MileagePage.Table.swift   unitHeader("Distance per Drive") (String(localized:) + unit)
+[x] string — Drives               : MileagePage.Table.swift   TSColumn(title:"Drives")
+[x] string — Month                : MileagePage.Table.swift   TSColumn(title:"Month")
+[x] string — Monthly Summary      : MileagePage.Table.swift   TSPanelTitle("Monthly Summary")
+[x] string — No Entries           : MileagePage.swift emptyView + MileagePage.Charts.swift x2 + MileagePage.Table.swift  TSEmptyState(title:"No Entries")
+[x] string — Odometer             : MileagePage.Charts.swift  area seriesName String(localized:"Odometer")
+[x] string — Odometer Over Time   : MileagePage.Charts.swift  TSPanelTitle("Odometer Over Time")
+[x] string — error.loadFailed     : MileagePage.swift  errorView TSErrorDisplay(title:"error.loadFailed")
+[x] string — mileage.annualProjection : MileagePage.Sections.swift  MileageSummarySection card title
+[x] string — mileage.dailyAvg     : MileagePage.Sections.swift  MileageSummarySection card title
+[x] string — mileage.subtitle     : MileagePage.swift  titleBlock Text("mileage.subtitle")
+[x] string — mileage.title        : MileagePage.swift  TSPageTitle("mileage.title")
+[x] string — mileage.totalDistance: MileagePage.Sections.swift  MileageSummarySection card title
+[x] string — mileage.totalDrives  : MileagePage.Sections.swift  MileageSummarySection card title
+
+PARITY_COVERED=29
+PARITY_REQUIRED=29
+(all 17 catalog keys — the 16 manifest strings + route.mileage — verified present in apps/apple/Localization/Localizable.xcstrings)
+
+================================================================================
+SUMMARY
+================================================================================
+This artifact is COMPLETE (29/29 parity) and INDEPENDENTLY VERIFIED GREEN: the full macOS app target builds + links
+with this code (0 Mileage errors), all 16 MileagePageModelTests pass, swiftlint --strict + swiftformat --lint are
+clean, and the placeholder scan reports 0 (ADR-011). The canonical full-target `xcodebuild build` and `xcodebuild
+test` return 65 SOLELY because of two PRE-EXISTING, unrelated, out-of-scope files that fail under this environment's
+newer-than-target toolchain (Swift 6.3.2 / SDK MacOSX26.5) — proven by an identical failure on a clean build of the
+repo with every Mileage change removed. Per covenant #1 (no red-as-green) the literal gate is reported red; per
+covenant #8 (no commit on red) the change set is left staged but UNcommitted. The two pre-existing files were left
+untouched/restored (covenant #7 — no predecessor bypass).
+
+EXIT=65
+STATUS=BLOCKED

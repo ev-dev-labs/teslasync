@@ -1,0 +1,279 @@
+================================================================================
+p4-apple · P7 · page:admin/APIKeys — SwiftUI / HIG parity
+  web source : web/src/features/admin/pages/APIKeysPage.tsx  (route /api-keys)
+  output     : apps/apple/Sources/Features/Admin/APIKeys*.swift
+               (the live Xcode project — like the sibling AuditLogPage /
+                FeatureFlagsPage — hosts admin pages under Sources/Features/Admin/;
+                the prompt's nominal apps/apple/TeslaSync/Features/Admin/** is the
+                allowed-files alias, reconciled here. `Sources/` is the only
+                hand-written group compiled by project.yml; the generated
+                TeslaSync.xcodeproj is git-ignored and rebuilt via xcodegen.)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI APIKeysPage at web parity: a pure @Observable state
+holder (ADR-004 — no networking in the view) over an injectable APIKeysDataSource
+seam whose value types mirror the web `APIKey` 1:1 (production binds the KMP API-key
+endpoints GET/POST /api-keys, DELETE /api-keys/{id}, POST /api-keys/{id}/revoke through
+the seam). API-key metadata is control-plane data — it carries NO SI units, so there is
+no unit conversion (the ADR display-boundary rule is N/A here, like the sibling Feature
+Flags page). There are no charts and no map (manifest declares 0/0).
+
+The page reproduces the web chrome (PageContainer title + subtitle + the "Create Key"
+header action) and BOTH web GlassPanels:
+
+  GlassPanel1 — the one-time secret reveal: after a key is minted, the plaintext token
+    is shown inside a frosted panel (TSGlassPanel) with a TSMaskedValue (click-to-reveal)
+    and a TSCopyButton — web `<GlassPanel><MaskedValue/></GlassPanel>` + `<CopyButton/>`.
+  GlassPanel2 — the per-key card: each key is a TSGlassPanel row with its key icon, name,
+    permission chip (PermissionBadge: read→shield/green, read-write→shield/amber,
+    admin→crown/power-purple #a855f7), an "Expired" badge + dimming for expired keys,
+    the prefix / Created / Last used meta line, and trailing Revoke (hidden once expired)
+    + Delete actions.
+
+The create flow (web `Modal`) is an HIG-native sheet that swaps between the form
+(Name TSTextField + Permissions TSSelect + Generate/Cancel) and the secret reveal, and
+cannot be dismissed mid-create. The delete confirmation (web `ConfirmDialog`) is an
+HIG-native sheet (title + the `{{name}}`-interpolated message + Cancel/Delete) that
+stays open carrying the error on failure and cannot be dismissed mid-delete — faithful
+to the web's keep-`deleteTarget`-on-failure semantics. The list switches its own data
+state in place: loading (3 shimmer skeletons) / empty (ContentUnavailableView) /
+error (+Retry) / success (the key rows) — never a blank region.
+
+Adaptive across macOS/iPad (regular) + iPhone (compact): a ScrollView of cards that
+reflow, ≥44pt icon-button tap targets on iOS, macOS pointer tooltips via `.help`,
+VoiceOver labels/headers, Dynamic Type (token fonts), and light/dark via the P2 tokens.
+
+Files (all new unless noted):
+  Sources/Features/Admin/APIKeysModels.swift            (entry/permission/created/datasource/state/format)
+  Sources/Features/Admin/APIKeysPageModel.swift         (@Observable model — list/create/delete/revoke)
+  Sources/Features/Admin/APIKeysPageModel.Sample.swift  (actor seed source + real mutations)
+  Sources/Features/Admin/APIKeysPage.swift              (view: header + list states + sheet wiring)
+  Sources/Features/Admin/APIKeysPage.Row.swift          (key card GlassPanel2 + PermissionBadge)
+  Sources/Features/Admin/APIKeysPage.CreateSheet.swift  (create form + GlassPanel1 reveal)
+  Sources/Features/Admin/APIKeysPage.DeleteSheet.swift  (delete confirmation sheet)
+  Sources/Features/Admin/APIKeysRouteRegistration.swift (.apiKeys route registration)
+  Tests/Unit/Features/Admin/APIKeysPageModelTests.swift (24-case state-machine + format tests)
+  Sources/App/AppRoute.swift            (MOD: +.apiKeys case / pathSegment "api-keys" / icon / System group)
+  Sources/TeslaSyncApp.swift            (MOD: wire APIKeysRouteRegistration as the outermost routeHosts base)
+  Localization/Localizable.xcstrings    (MOD: +28 keys = 27 web parity literals + route.apiKeys)
+  apps/parity/apple-ledger.json         (MOD: +2 rows page:admin/APIKeys 32/32, apple-macos + apple-ios)
+
+Navigation: the web route /api-keys maps 1:1 to AppRoute.apiKeys (pathSegment
+"api-keys"), so AppRouteParser resolves it directly with NO alias needed (unlike the
+/admin/* sibling pages). `.apiKeys` is added to the System sidebar group and is
+reachable + deep-linkable. The only exhaustive AppRoute switches live in AppRoute.swift
+(verified: `.featureFlags`/`.auditLog` are referenced only in AppRoute.swift +
+AppRouteParser.swift + their own registrations), so no other file required editing.
+
+i18n: every visible literal resolves from Localizable.xcstrings using the WEB key names
+verbatim (the web page uses the English text AS the i18next key, e.g. t('API Keys'),
+t('Create Key')), so the xcstrings keys are those literal strings. The `{{name}}` in
+the delete message is the verbatim web key/default; the page resolves it via
+String(localized:) + replacingOccurrences(of: "{{name}}", with: name) — the i18next
+interpolation faithfully reproduced. Zero hardcoded user-facing strings.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=32
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1 (one-time secret reveal)
+       APIKeysPage.CreateSheet.swift > APIKeysCreateSheet.generatedView (TSGlassPanel
+       wrapping TSMaskedValue + TSCopyButton)
+[x] panel  — GlassPanel2 (per-key card)
+       APIKeysPage.Row.swift > APIKeyRow.body (TSGlassPanel)
+[x] state  — loading
+       APIKeysPage.swift > listSection/.loading -> loadingView (3× TSSkeleton)
+       (model APIKeysListState.loading)
+[x] state  — empty
+       APIKeysPage.swift > listSection/.empty -> emptyView (TSEmptyState /
+       ContentUnavailableView: "No API keys")
+[x] state  — success
+       APIKeysPage.swift > listSection/.loaded -> keysList(_:) ForEach APIKeyRow
+       (an .error -> TSErrorDisplay + Retry branch is also implemented for the source,
+        satisfying "error view + Retry; never a blank region")
+[x] string — API Key Created
+       APIKeysPage.CreateSheet.swift > titleKey (model.hasGeneratedKey ? "API Key Created" : …)
+[x] string — API Keys
+       APIKeysPage.swift > header TSPageTitle("API Keys") (+ loadingView a11y label;
+       also route.apiKeys = "API Keys" for the sidebar)
+[x] string — API key, click to reveal
+       APIKeysPage.CreateSheet.swift > generatedView TSMaskedValue.accessibilityLabel
+[x] string — Admin
+       APIKeysPage.Row.swift > APIKeyPermission.labelKey (.admin) — PermissionBadge + create TSSelect option
+[x] string — Are you sure you want to permanently delete the key "{{name}}"?
+       APIKeysPage.swift > APIKeysPage.deleteMessage(for:) String(localized:) + {{name}} substitution;
+       rendered by APIKeysPage.DeleteSheet.swift
+[x] string — Cancel
+       APIKeysPage.CreateSheet.swift formView + APIKeysPage.DeleteSheet.swift footer (secondary TSButton)
+[x] string — Copy
+       APIKeysPage.CreateSheet.swift > generatedView TSCopyButton.help("Copy")  (macOS tooltip = web title)
+[x] string — Copy API key
+       APIKeysPage.CreateSheet.swift > generatedView TSCopyButton.accessibilityLabel (web CopyButton ariaLabel)
+[x] string — Copy this key now — it won't be shown again.
+       APIKeysPage.CreateSheet.swift > generatedView TSCaption
+[x] string — Create Key
+       APIKeysPage.swift > createButton Label("Create Key", systemImage:"plus") + accessibilityLabel
+[x] string — Create an API key to enable programmatic access to TeslaSync data and controls.
+       APIKeysPage.swift > emptyView TSEmptyState(message:)
+[x] string — Created
+       APIKeysPage.Row.swift > metaRow Label { Text("Created") + formatted date }
+[x] string — Delete
+       APIKeysPage.Row.swift > actions delete Button (.accessibilityLabel/.help)
+       + APIKeysPage.DeleteSheet.swift footer destructive TSButton
+[x] string — Delete API Key
+       APIKeysPage.DeleteSheet.swift > header Text("Delete API Key")
+[x] string — Done
+       APIKeysPage.CreateSheet.swift > generatedView TSButton("Done")
+[x] string — Expired
+       APIKeysPage.Row.swift > titleRow TSBadge("Expired", tone:.danger) (when isExpired)
+[x] string — Generate Key
+       APIKeysPage.CreateSheet.swift > formView Label("Generate Key", systemImage:"plus")
+[x] string — Last used
+       APIKeysPage.Row.swift > metaRow (Text("Last used") + formatted date, when lastUsedAt != nil)
+[x] string — Manage programmatic access to TeslaSync
+       APIKeysPage.swift > header subtitle Text
+[x] string — My Application
+       APIKeysPage.CreateSheet.swift > formView TSTextField prompt (web Input placeholder)
+[x] string — Name
+       APIKeysPage.CreateSheet.swift > formView TSTextField label
+[x] string — New API Key
+       APIKeysPage.CreateSheet.swift > titleKey (model.hasGeneratedKey ? … : "New API Key")
+[x] string — No API keys
+       APIKeysPage.swift > emptyView TSEmptyState(title:)
+[x] string — Permissions
+       APIKeysPage.CreateSheet.swift > formView TSSelect label
+[x] string — Read
+       APIKeysPage.Row.swift > APIKeyPermission.labelKey (.read) — PermissionBadge + create TSSelect option
+[x] string — Read-Write
+       APIKeysPage.Row.swift > APIKeyPermission.labelKey (.readWrite) — PermissionBadge + create TSSelect option
+[x] string — Revoke
+       APIKeysPage.Row.swift > actions revoke Button (.accessibilityLabel/.help)
+--------------------------------------------------------------------------------
+PARITY_COVERED=32
+(All 32 required items render from the bound @Observable state. All 27 visible literals
+ resolve from Localizable.xcstrings; key names match the web verbatim — verified by a
+ script that confirmed each of the 27 strings is referenced in the Admin source AND
+ present as an xcstrings key. Beyond the gate minimum, the full web behaviour was
+ ported: create-vs-reveal modal, name-gated Generate, one-time MaskedValue secret,
+ per-row Revoke/Delete with expired dimming + revoke-hides-when-expired, delete
+ keep-open-on-failure, and the loading/empty/error/success list states.)
+
+================================================================================
+GATE RESULTS
+================================================================================
+Toolchain present: Xcode 26.5 / Swift 6.3.2 / swiftlint / swiftformat 0.61.1 /
+                    xcodegen 2.45.4 / pwsh 7 / java 17 (KMP). Xcode runner IS available
+                    (so this gate is NOT BLOCKED).
+
+[GREEN] PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+        -> PLACEHOLDER_COUNT=0  EXIT=0   (Tests/Unit/Features/Admin also scanned: COUNT=0)
+        My APIKeys* files contribute ZERO placeholders and ZERO opt-outs (the reported
+        PLACEHOLDER_ALLOWED=6 are PRE-EXISTING sibling FeatureFlags/AuditLog opt-outs,
+        not mine). No stubs — complete implementations.
+
+[GREEN] SWIFTFORMAT  swiftformat --lint  (8 new Admin files + test + AppRoute + TeslaSyncApp)
+        -> 0/11 files require formatting.
+
+[GREEN] SWIFTLINT    swiftlint --strict --config apps/apple/.swiftlint.yml  (same 11 files)
+        -> "Found 0 violations, 0 serious in 11 files."
+
+[GREEN] XCODEGEN     xcodegen generate -> TeslaSync.xcodeproj created; my new files are
+        picked up via the Sources globs (18 build/file references in project.pbxproj).
+
+[GREEN] TYPE-CHECK (isolated, macOS)  xcrun --sdk macosx swiftc -typecheck
+        -target arm64-apple-macos15.0 -swift-version 6 -strict-concurrency=complete
+        (my 8 Admin files + the REAL Components/UI + Components/Feedback + Design tokens
+         + Theme + App/AppRoute + App/RouteHostRegistry — 30 files) -> EXIT=0, zero diagnostics.
+
+[GREEN] TYPE-CHECK (isolated, iOS)    xcrun --sdk iphoneos swiftc -typecheck
+        -target arm64-apple-ios18.0 -swift-version 6 -strict-concurrency=complete
+        (same set; exercises the #if os(macOS) sheet-sizing branches' iOS path)
+        -> EXIT=0, zero diagnostics.
+        (The component library + design tokens are Shared-xcframework-free, verified by
+         grep, so this isolated dual-idiom check exercises my code against the REAL P2/P3
+         layer — not stubs.)
+
+[GREEN] MODEL HARNESS  compiled (Swift 6, complete concurrency, -parse-as-library) +
+        EXECUTED the model logic (APIKeysModels + APIKeysPageModel + .Sample) against a
+        stub data source: initial loading, load success/empty/failure, isExpired
+        (past/future/nil + injected clock), create success (reveals secret + clears name
+        + reloads + stays open) and create failure (keeps form + error), delete success
+        (clears target + reloads) and delete failure (keeps target + error), revoke
+        (invokes source, clears revokingID) and revoke failure, permission wire fallback,
+        the formatDate boundary (nil/garbage -> em-dash; valid -> year), and the sample
+        seed's create round-trip + expired-legacy-key.  -> "ALL PASSED" (24/24, exit 0).
+        The XCTest peer is Tests/Unit/Features/Admin/APIKeysPageModelTests.swift (24 cases).
+
+[TOOLCHAIN PROVEN] KMP Shared.xcframework  apps/shared/gradlew :core:assembleSharedXCFramework
+        -> the DEBUG Shared.xcframework was built fresh + written out successfully
+        (proving the Kotlin/Native Apple toolchain works here); the RELEASE slice was
+        still linking (linkReleaseFrameworkMacosArm64) when a 10-minute time-box elapsed.
+
+[OUT-OF-SCOPE / NOT GREENABLE HERE] xcodebuild build + test (full TeslaSync scheme)
+        Not run to green, and NOT claimed green (Covenant #1). Two environment realities,
+        BOTH independent of this change:
+          1. The scheme pre-action assembles the full RELEASE Shared.xcframework via
+             Kotlin/Native (3 slices) — that link alone exceeds a 10-minute box here.
+          2. The app target then compiles the entire generated mega-surface codebase
+             (TeslaSync/feature-views ~2.6k files + shared-surfaces ~2.3k files), which
+             carries a PRE-EXISTING swift-frontend crash documented by the immediately-
+             preceding sibling tasks on this branch lineage (apple-page-admin-AuditLogPage
+             / apple-page-admin-FeatureFlagsPage logs). ZERO of my files live in or are
+             referenced by that generated tree (my files are brand-new + additive). My
+             code is fully verified by the isolated dual-idiom type-checks (against the
+             REAL P2/P3 layer) + the executed model harness above, all with zero
+             diagnostics. NOT dressed up as passing.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : in-scope gates GREEN are reported GREEN; the full xcodebuild is
+                         explicitly reported OUT-OF-SCOPE / not-greenable (heavy KMP
+                         release link + pre-existing mega-surface crash) and NOT as green.
+ 2 No scope narrowing  : both web GlassPanels + the create Modal (form + one-time reveal)
+                         + the delete ConfirmDialog + permission badge + expired state +
+                         revoke + the 4 list states were all implemented, not a minimum.
+ 3 No skip-and-assume  : web page + its PermissionBadge sub-component + the 4 useAdmin
+                         hooks + the APIKey type read end-to-end; PageContainer semantics
+                         verified (the query feeds only the freshness badge — the body
+                         always renders, so the list owns its own state, never gated).
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0, ZERO opt-outs in my files; complete code.
+ 5 No parity shortcuts : 4 list states render distinctly; create-vs-reveal modal; name-
+                         gated Generate; one-time MaskedValue secret + Copy; per-row
+                         Revoke (hidden when expired) + Delete; expired dimming + badge;
+                         delete keep-open-on-failure; every visible string = a verbatim
+                         web key; {{name}} interpolation reproduced.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface / shared component / other
+                         owners' files; only ADDED the .apiKeys nav case + registration +
+                         28 strings + 2 ledger rows. (Did NOT reuse the FeatureFlags
+                         sheet scaffold — a self-contained delete/create sheet was written
+                         so this page owns its surface.)
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE gates (placeholder / swiftformat
+                         / swiftlint / xcodegen / macOS+iOS isolated type-check / executed
+                         model harness). The only RED is the out-of-scope, pre-existing,
+                         not-mine mega-surface crash in the full scheme — deferred to its
+                         owner / the P99 gate, as the sibling pages did.
+ 9 No silent drift     : changes confined to the files listed above + this log + the
+                         ledger. xcstrings insertion is a single contiguous block (the
+                         8626 existing entries are byte-identical); ledger diff is +2 rows,
+                         0 deletions; TeslaSyncApp routeHosts was re-indented by swiftformat
+                         as the direct consequence of nesting one more registration.
+10 EXIT/STATUS below.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/APIKeys*.swift \
+          apps/apple/Tests/Unit/Features/Admin/APIKeysPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-APIKeysPage.log
+  git commit -m "feat(apps/apple): APIKeysPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

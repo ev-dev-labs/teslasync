@@ -1,0 +1,128 @@
+=== P4 Shared surface 0219 Lightbox (Apple) ===
+Surface: components/ui/Lightbox.tsx  ->  apps/apple/TeslaSync/shared-surfaces/Lightbox.*
+Toolchain: Xcode 26.5 (Build 17F42), Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1
+Runner: local macOS (Darwin arm64), iPhone 16 simulator booted, KMP Shared.xcframework staged OK.
+
+------------------------------------------------------------------------------
+DELIVERABLE — Lightbox surface (10 files, all present, no stubs)
+------------------------------------------------------------------------------
+  Lightbox.swift            public View (prop + model inits), backdrop, phase switch, onKeyPress
+                            keyboard map, modal a11y, freshness chip, onAppear/onDisappear.
+  Lightbox.Model.swift      @MainActor @Observable state-holder (P1/S8): images/connection/phase +
+                            index/zoom/pan; nav + zoom + close commands; view.opened once.
+  Lightbox.Adapter.swift    pure core: slug, LightboxImage, phase/conn/status, zoom maths,
+                            navigation, counter/percent format, projection, keyboard map, a11y.
+  Lightbox.Seams.swift      telemetry seam, LightboxUpdate, LightboxSource + InMemory source, i18n.
+  Lightbox.States.swift     loading skeleton / empty / error leaf views.
+  Lightbox.Views.swift      viewer: top bar, AsyncImage stage (zoom+pan+skeleton+broken), nav,
+                            bottom bar (caption + zoom pill), freshness chip.
+  Lightbox.Previews.swift   9 previews: data first/middle/last/single, loading, empty, error,
+                            stale, offline.
+  Lightbox.strings          i18n catalog: 8 web keys (counter/close/previous/next/zoomOut/zoomIn/
+                            zoomReset/zoomPercent) + native a11y/leaf/freshness keys.
+  Lightbox.Tests.swift      model state-holder XCTest (lifecycle, seed/clamp/no-snap-back, nav caps,
+                            zoom steps/caps, navigate-resets-zoom, close, keyboard, freshness).
+  Lightbox.AdapterTests.swift  pure-core XCTest (zoom, navigation, format, projection, keyboard, a11y).
+
+Web parity reproduced: counter "n / total"; caption when present; prev/next hidden for single image;
+nav caps (no wraparound); navigate resets zoom+pan; 1x-5x zoom in 0.5x steps; zoom-out-to-1x resets
+pan; zoom-reset disabled unless zoomed/panned; safeInitialIndex clamp + no snap-back; keyboard
+Esc/Left/Right/Home/End/+(=)/-(_)/0; backdrop-tap closes / image+controls do not; per-image loading
+skeleton + broken-image fallback; drag-to-pan when zoomed (+ native pinch). All 8 source i18n keys
+present. VoiceOver labels on every interactive element; Dynamic Type via tokens; reduce-motion honored.
+
+------------------------------------------------------------------------------
+STEP 1 — iOS build+test  (xcodebuild -scheme TeslaSync -destination iPhone 16 build test)
+------------------------------------------------------------------------------
+RESULT: BLOCKED (build failed) — IOS_EXIT=65
+ROOT CAUSE (pre-existing, OUT OF SCOPE — not a Lightbox file):
+  swift-frontend (Swift 6.3.2) deterministically CRASHES during IR generation of
+  TeslaSync/feature-views/AppearanceSettings.Controls.swift:
+      4. While evaluating request IRGenRequest(IR Generation for file ".../AppearanceSettings.Controls.swift")
+      5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"   (a Bool/any-Actor/Optional
+         async reabstraction thunk)
+      7. llvm::report_fatal_error(...)
+      8. report_at_maximum_capacity(unsigned long)
+      9. llvm::SmallVectorBase<unsigned int>::grow_pod(...)
+     10. (anonymous namespace)::SyncCallEmission::setArgs(irgen::Explosion&, bool, irgen::WitnessMetadata*)
+     11. (anonymous namespace)::IRGenSILFunction::visitFullApplySite(swift::FullApplySite)
+     -> "Command SwiftCompile failed with a nonzero exit code"  ->  ** BUILD FAILED **
+  report_at_maximum_capacity = a SmallVector<uint32_t> growth past its 4-billion theoretical max
+  => a compiler bug (runaway), NOT memory pressure. Reproduced IDENTICALLY in TWO independent runs
+  (default parallelism and -jobs 4; ~80% free RAM), same file, same thunk. IRGen is per-file; this
+  file shares no types with Lightbox.
+
+EVIDENCE THE LIGHTBOX SURFACE ITSELF COMPILES CLEANLY IN THE FULL APP TARGET:
+  - Whole-module type-check (EmitSwiftModule for target TeslaSync) completed with NO errors.
+  - All 7 Lightbox implementation object files were produced (compile -> IRGen -> codegen OK):
+      Lightbox.Adapter.o  Lightbox.Model.o  Lightbox.o  Lightbox.Previews.o
+      Lightbox.Seams.o    Lightbox.States.o  Lightbox.Views.o
+    (the crashing AppearanceSettings.Controls.o was NOT produced — it never got past IRGen.)
+  - Standalone `swiftc -typecheck` of the pure trio (Adapter+Seams+Model), iOS 18 sim target,
+    -swift-version 6: exit 0.
+  - `git status --porcelain`: only Lightbox.* (+ this log) are added; NO out-of-scope file modified.
+
+STANDALONE EXECUTION OF THE PURE-CORE TESTS (Adapter + Model + Seams do not depend on SwiftUI or the
+app target, so they were lifted into a throwaway SwiftPM package and run on macОS to prove the test
+logic actually passes despite the app-build blocker above):
+  $ swift test            ->  Executed 51 tests, with 0 failures (0 unexpected)
+  Covers: zoom maths/caps, navigation caps + safeInitialIndex clamp, counter/zoom-percent format,
+  phase projection (every branch), keyboard map (all web keys + default), a11y labels, image URL,
+  model lifecycle (view.opened once), seed/clamp/no-snap-back, navigate-resets-zoom, zoom-out-to-1x
+  -clears-pan, close seam, handleKey routing, stale-auto-refresh-once, offline-no-refresh, inline
+  error only with cached images. (This run caught + fixed one test-only defect: the stale-refresh
+  test discarded the model via `_`, letting it deallocate behind the source's weak `onUpdate`; the
+  fix retains it with `withExtendedLifetime`, matching the view's `@State` ownership.)
+
+------------------------------------------------------------------------------
+STEP 2 — macOS build+test  (xcodebuild -scheme TeslaSync-macOS build test)
+------------------------------------------------------------------------------
+RESULT: BLOCKED (build failed) — MAC_EXIT=65
+ROOT CAUSE (environment — no Apple Developer signing identity; project.yml DEVELOPMENT_TEAM=""):
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  -> ** BUILD FAILED ** before any Swift compilation. The macOS app target compiles the SAME
+     shared app sources as iOS, so it would additionally hit the AppearanceSettings.Controls.swift
+     IRGen crash above. Unsigned macOS app + widget extensions cannot be produced on this runner.
+
+------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict        LINT_EXIT=2
+------------------------------------------------------------------------------
+Full-tree (5316 files): Found 3 violations, 3 serious — ALL pre-existing & OUT OF SCOPE:
+  TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54  identifier_name ('a','b','c')
+Lightbox-scoped run (all 10 Lightbox files): 0 violations, 0 serious.  => Lightbox is clean.
+
+------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple        FORMAT_EXIT=1
+------------------------------------------------------------------------------
+Full-tree (5614 files): 1 file requires formatting — pre-existing & OUT OF SCOPE:
+  TeslaSync/feature-views/RecentDrivesSection.Previews.swift:27/28  (redundantType)
+Lightbox-scoped run (all 10 Lightbox files): passes (0).  => Lightbox is clean.
+
+------------------------------------------------------------------------------
+STEP 5 — placeholder check  (./apps/tools/check-placeholders.ps1 -Path .../Lightbox)
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  ->  PLACEHOLDER_EXIT=0
+No TODO/stub/mock/placeholder/Lorem in shipped Lightbox code.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+IOS_EXIT=65          (BLOCKED: pre-existing Swift 6.3.2 IRGen crash in out-of-scope AppearanceSettings.Controls.swift)
+MAC_EXIT=65          (BLOCKED: no code-signing identity for entitlement-bearing macOS targets)
+LINT_EXIT=2          (3 pre-existing violations in out-of-scope WidgetChartSummary.Tests.swift; Lightbox=0)
+FORMAT_EXIT=1        (1 pre-existing issue in out-of-scope RecentDrivesSection.Previews.swift; Lightbox=0)
+PLACEHOLDER_EXIT=0   (Lightbox clean)
+
+The Lightbox surface is COMPLETE and passes every check that can be scoped to it (compiles to object
+code in the full app target, whole-module type-check clean, swiftlint --strict clean, swiftformat
+--lint clean, placeholder clean, full per-state previews, and 51/51 adapter+model tests executed &
+passing standalone). The P4 gate cannot
+reach EXIT=0 on THIS runner because of three environment/out-of-scope blockers I am contractually
+forbidden to touch (allowed files: Lightbox.* + this log): (1) a deterministic Swift 6.3.2 compiler
+IRGen crash in AppearanceSettings.Controls.swift, (2) no macOS code-signing certificate, (3) pre-existing
+lint/format violations in other slots' files. Per Honesty Covenant #8 (No commit on red) the surface is
+left staged-but-uncommitted in the working tree.
+
+EXIT=65
+STATUS=BLOCKED

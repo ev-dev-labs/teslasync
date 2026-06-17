@@ -1,0 +1,194 @@
+=== P4-APPLE · P7 · page:settings/Helix (SwiftUI / HIG) ===
+started: 2026-06-16T18:23:00-0700
+host: macOS (Darwin) 26.5.1; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh + Java 17 present
+web source: web/src/features/settings/pages/HelixPage.tsx   (route /integrations/helix)
+parity unit: page:settings/Helix  (manifest requiredCount=5; dataSources: useSettings → GET /settings; states: loading, success; strings: helix.breadcrumb.integrations, helix.page.subtitle, helix.page.title)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Settings/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group. The repo's
+real, compiled canonical page home is `apps/apple/Sources/Features/<Domain>/` (the shipped
+Admin / Maps / Dashboard pages live there; `Sources` is a project.yml source path with
+createIntermediateGroups). Page hosting uses the proven SettingsRouteRegistration /
+ApiPlaygroundRouteRegistration pattern. The page therefore ships at
+`apps/apple/Sources/Features/Settings/**` — the faithful equivalent of the prompt's
+`Features/Settings`; tests at `apps/apple/Tests/Unit/Features/Settings/`; strings in the
+platform catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed file). This
+mapping is the only deviation from the literal prompt path and is recorded here per covenant #9.
+Gate commands below were run against the REAL paths.
+
+--------------------------------------------------------------------------------
+PARITY APPROACH (web HelixPage is a PageContainer wrapper over <AISettings />)
+--------------------------------------------------------------------------------
+The web page is a thin `PageContainer` (title + subtitle + `Integrations › Helix` breadcrumb,
+`loading={useSettings().isLoading}`) whose sole child is the `<AISettings />` configuration
+surface. The native `AISettings` surface ALREADY EXISTS at parity
+(apps/apple/TeslaSync/feature-views/AISettings*.swift, driven by AiSettingsModel). This unit
+therefore ships the PAGE: the breadcrumb + page title/subtitle chrome (always rendered), the
+`useSettings → GET /settings` page-level query state holder, every data state, and it HOSTS the
+existing AISettings surface on success — exactly the web composition. No AISettings logic is
+duplicated.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Settings/HelixPage.swift              (202 LOC) SwiftUI view: breadcrumb (Integrations › Helix), header (TSPageTitle+subtitle, always shown), state router loading/empty/error/loaded, hosts AISettings(model:) on success; adaptive macOS+iOS single-column; a11y combine/labels; #if DEBUG previews (loaded/loading/empty/error)
+?? apps/apple/Sources/Features/Settings/HelixPageModel.swift         (96 LOC)  @MainActor @Observable model: HelixPageState(loading/empty/error/loaded), HelixSettingsProviding seam (web useSettings→GET /settings), SampleHelixSettingsProvider, isLoading/showsConfiguration gates, load()/refresh()
+?? apps/apple/Sources/Features/Settings/HelixRouteRegistration.swift (29 LOC)  registers .helix -> HelixPage(model:aiModel:) (mirrors SettingsRouteRegistration; both @Observable models built on MainActor + captured; default Helix mode off per ADR-015 §I1)
+?? apps/apple/Tests/Unit/Features/Settings/HelixPageModelTests.swift (74 LOC)  XCTest: initial=loading, success->loaded+showsConfiguration, empty, error, refresh, sample-provider presence
+ M apps/apple/Sources/App/AppRoute.swift               + case .helix (pathSegment "integrations/helix", group .account, systemImage "brain")
+ M apps/apple/Sources/App/AppRouteParser.swift         + alias "/integrations/helix" -> .helix (multi-segment, mirrors notifications/audit)
+ M apps/apple/Sources/TeslaSyncApp.swift               chains HelixRouteRegistration.registry(base: registry) into \.routeHosts (account/integrations cluster)
+ M apps/apple/Localization/Localizable.xcstrings       +9 keys (3 required + route.helix nav title + 5 native state/loading/a11y); JSON validated (11085 -> 11094 total)
+ M apps/parity/apple-ledger.json                       +2 rows page:settings/Helix (apple-macos + apple-ios, status done, 5/5)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (scheme pre-action, run standalone) ---
+# bash apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 9m 59s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "Helix" referenced 24x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 4 new files + 3 edited files) ---
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (in-scope: my files) ---
+0 violations in apps/apple/Sources/Features/Settings/** + edited App/*.swift + Tests/Unit/Features/Settings/**
+LINT_EXIT=0  (in-scope)
+# NB: the repo .swiftlint.yml has an `included:` list, so a bare `swiftlint --strict` scans all
+#     ~12619 files and reports 2 PRE-EXISTING, OUT-OF-SCOPE line_length violations in
+#     TeslaSync/feature-views/AnomalyInlineRow.Previews.swift:37,89 (git: unmodified by me) — none mine.
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Settings -Language swift ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in shipped code — ADR-011]
+
+--- xcodebuild macOS build (scheme TeslaSync-macOS, platform=macOS,arch=arm64, signing off) ---
+** BUILD SUCCEEDED **   [full app target compiles against the KMP Shared.xcframework + all P2/P3 deps; ZERO diagnostics in any file]
+BUILD_MACOS_EXIT=0
+
+--- xcodebuild macOS test (-only-testing HelixPageModelTests + RouteTests) ---
+Test Suite 'HelixPageModelTests' passed — Executed 6 tests, with 0 failures
+Test Suite 'RouteTests' passed       — Executed 8 tests, with 0 failures   [route enum + parser additions: uniqueness/parse/group all green]
+** TEST SUCCEEDED **  (14 tests, 0 failures)
+TEST_MACOS_EXIT=0
+
+--- xcodebuild iOS build (scheme TeslaSync, platform=iOS Simulator iPhone 17 Pro, signing off) ---
+** BUILD SUCCEEDED **   [same sources compile for the iOS idiom; widgets embedded + AppIntents trained + bundle validated]
+BUILD_IOS_EXIT=0
+
+--- xcodebuild iOS test (-only-testing HelixPageModelTests + RouteTests, iPhone 17 Pro sim) ---
+Test Suite 'HelixPageModelTests' passed — Executed 6 tests, with 0 failures
+Test Suite 'RouteTests' passed       — Executed 8 tests, with 0 failures
+** TEST SUCCEEDED **  (14 tests, 0 failures)
+TEST_IOS_EXIT=0
+
+--- xcodebuild macOS test (route-regression: every test that enumerates AppRoute.allCases) ---
+# proves the new `.helix` enum case breaks NO route-derived catalog/menu/explore surface
+Test Suite 'ExploreCatalogTests'         passed — Executed 13 tests, 0 failures  (build/group/gating cover .helix)
+Test Suite 'IntentSupportTests'          passed — Executed 6 tests,  0 failures
+Test Suite 'MenuCommandCatalogTests'     passed — Executed 7 tests,  0 failures  (navigateRoutes==allCases incl .helix)
+Test Suite 'RouteTests'                  passed — Executed 8 tests,  0 failures
+Test Suite 'SqlPlaygroundPageModelTests' passed — Executed 18 tests, 0 failures  (pathSegment uniqueness)
+** TEST SUCCEEDED **  (52 tests, 0 failures)
+TEST_ROUTE_REGRESSION_EXIT=0
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+Two pre-existing defects, both OUTSIDE this artifact's allowed files and untouched by this change
+(confirmed via `git status --porcelain`), are recorded so no RED is recoloured as GREEN:
+
+ (1) swiftlint (whole-tree, due to .swiftlint.yml `included:`): 2 line_length violations in
+     TeslaSync/feature-views/AnomalyInlineRow.Previews.swift:37 (134 chars) and :89 (127 chars).
+     Pre-existing; my in-scope files are 0/0.
+ (2) test-bundle compile: Tests/Unit/Features/Notifications/WebhooksPageModelTests.swift:13-14 uses
+     `LocalizedStringKey(...)` but imports only XCTest (missing `import SwiftUI`) → "Cannot find
+     'LocalizedStringKey' in scope". xcodebuild compiles the WHOLE *Tests bundle, so this one sibling
+     blocks the bundle build. To EXECUTE my tests I TEMPORARILY added `import SwiftUI` to that file,
+     ran the scoped tests GREEN (macOS: 14/14 above), then RESTORED the file verbatim via
+     `git checkout` — the committed tree contains ONLY my deliverable (git status above). Neither
+     defect is in my files; both are deferred to their owners / the P99 integration gate.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=5
+================================================================================
+[x] state  — loading   HelixPageModel.HelixPageState.loading (initial) -> HelixPage `loadingPanel`
+              = TSGlassPanel { TSSkeleton(180×22) + TSSkeleton×3 + 3×TSSkeleton(64) + TSSpinner("helix.loading") };
+              bound via @Observable model.state; verified by test testInitialStateIsLoading (exec macOS 6/6)
+[x] state  — success   HelixPageModel.HelixPageState.loaded -> HelixPage hosts AISettings(model: aiModel)
+              (model.showsConfiguration==true); web `PageContainer` success branch renders <AISettings/>;
+              verified by tests testLoadSuccessShowsConfiguration + testRefreshReResolvesState (exec macOS)
+[x] string — helix.breadcrumb.integrations  HelixPage `breadcrumb` -> Text("helix.breadcrumb.integrations")
+              (Integrations › Helix); catalog en = "Integrations"
+[x] string — helix.page.subtitle            HelixPage `header` -> Text("helix.page.subtitle"); catalog en =
+              "Optional AI integration. Off by default — nothing runs until you opt in here." (verbatim web default)
+[x] string — helix.page.title               HelixPage `header` -> TSPageTitle("helix.page.title") + breadcrumb
+              current crumb + route.helix sidebar title; catalog en = "Helix"
+PARITY_COVERED=5
+
+All 5 states/strings resolve from the bound @Observable HelixPageModel and the Localizable.xcstrings
+catalog; web key names preserved verbatim. The empty + error branches are also implemented (ADR-011, no
+blank regions) though the manifest declares only loading+success. Charts/maps: none (manifest). Live SSE /
+staleness: N/A (useSettings is a non-live query). SI converters: N/A (no unit-bearing values on this page).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. macOS build+test, iOS build, lint(in-scope),
+                       format, placeholder, parity are all GREEN. The only REDs are 2 PRE-EXISTING out-of-scope
+                       defects, labelled as such, never recoloured.
+ 2 No scope narrowing: breadcrumb + title + subtitle chrome (always rendered), all data states (loading/empty/
+                       error/loaded), and the hosted AISettings surface are implemented + adaptive macOS/iOS.
+ 3 No skip-and-assume: the web page + AISettings composition were read end-to-end; PageContainer title/subtitle/
+                       breadcrumb/loading + the <AISettings/> child reproduced; no AISettings logic duplicated.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code.
+ 5 No parity shortcuts: each of the 5 items renders distinctly from the bound model; strings = web keys verbatim.
+ 6 No delegation     : implemented here directly; no sub-agents.
+ 7 No predecessor bypass: committed NO edit to sibling surfaces, project.yml, or other owners' files. The single
+                       temporary out-of-scope verification edit (WebhooksPageModelTests.swift import) was restored
+                       via `git checkout` (tree clean — git status above).
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — xcframework(0), xcodegen(0), swiftformat(0/7),
+                       swiftlint in-scope(0), placeholder(0), macOS build(0) + test(14/14), iOS build(0)
+                       + iOS test (below). The only REDs are out-of-scope/pre-existing, deferred to P99.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI HelixPage shipped at parity with the web source: a thin page over a pure
+@Observable HelixPageModel (ADR-004 — no networking in the view) exposing the web `useSettings → GET /settings`
+loading/success states (plus empty/error, ADR-011) through an injectable settings seam; an always-rendered
+breadcrumb (Integrations › Helix) + page title + subtitle using the P2 tokens + P3 shared components
+(TSGlassPanel/TSPageTitle/TSEmptyState/TSErrorDisplay/TSSpinner/TSSkeleton) — no hand-rolled glass; on the
+success branch it HOSTS the existing native AISettings configuration surface (the web `<AISettings/>` child),
+not a duplicate; every visible string from Localizable.xcstrings with web key names; full VoiceOver
+labels/traits; deep-linkable via the new .helix route (AppRouteParser resolves /integrations/helix) and hosted
+through the shell's route registry; adaptive across macOS + iOS (ADR-002/006). Verified on BOTH idioms:
+macOS app build GREEN + test 14/14 executed, iOS app build GREEN + iOS test below. apple-ledger.json updated
+with the apple-macos + apple-ios rows (5/5).
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Settings apps/apple/Tests/Unit/Features/Settings \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-settings-HelixPage.log
+  git commit -m "feat(apps/apple): HelixPage at web parity (P7 settings)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,105 @@
+=== P4 Feature view 0280 InfoTile (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/InfoTile.*
+Web source (spec): web/src/features/vehicles/components/telemetry-panels/InfoTile.tsx
+Pattern: P4 leaf contract, mirrors AchievementBadge/0051 (presentational leaf bound through
+         a P1/S8 state-holder with loading/empty/error/data phases + live/stale/offline axis).
+
+--- Platform capability (REQUIRED by prompt) ---
+host: macOS 26.5.1
+Xcode 26.5 (Build 17F42); Apple Swift 6.3.2
+SwiftUI + Swift Charts + MapKit available; iOS 18 / macOS 15 deployment targets (project.yml).
+SDKs: iphonesimulator26.5, macosx26.5. Simulator: iPhone 16 (booted).
+Toolchain: swiftlint 0.x, swiftformat (homebrew), xcodegen 2.45.4, pwsh 7.x — all present.
+KMP Shared.xcframework built + staged via apps/shared gradlew (BUILD SUCCESSFUL, 6m57s).
+=> Platform is fully capable; this is NOT a capability BLOCK.
+
+============================================================
+GATE STEP RESULTS (commands per prompt, adapted PowerShell->bash)
+============================================================
+1. xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   IOS_EXIT=65   (** BUILD FAILED ** / ** TEST FAILED **)
+   Cause: PRE-EXISTING sibling-surface public-type COLLISION — NOT InfoTile (0 InfoTile errors).
+2. xcodebuild -scheme TeslaSync-macOS build test
+   MAC_EXIT=65   (** BUILD FAILED ** / ** TEST FAILED **)
+   Cause: PRE-EXISTING macOS code-signing entitlement requirement (no dev certificate in env) —
+          NOT InfoTile (0 InfoTile errors; failed at signing before compile).
+3. swiftlint --strict                  LINT_EXIT=0    (0 violations, 0 serious in 3073 files)
+4. swiftformat --lint apps/apple       FORMAT_EXIT=0  (0/3077 files require formatting)
+5. check-placeholders.ps1              PLACEHOLDER_EXIT=0
+     - literal gate path -Path .../InfoTile : PLACEHOLDER_COUNT=0 EXIT=0
+     - scoped scan of the 8 actual InfoTile .swift files: PLACEHOLDER_COUNT=0 EXIT=0
+
+============================================================
+InfoTile SURFACE — ISOLATED VERIFICATION (ALL GREEN)
+============================================================
+A. Compiles clean inside the real TeslaSync module:
+   - In the full iOS app build the ONLY errors are StateTimeline.* (sibling); grep "InfoTile.*error:" => none.
+   - In a collision-excluded build the TeslaSync.swiftmodule EMITTED successfully, i.e. every app
+     source incl. all 8 InfoTile files (views + model + adapter) passed type-checking.
+B. Real XCTest files executed via XCTest runner (SwiftPM harness over byte-identical source +
+   the actual InfoTile.Tests.swift / InfoTile.ModelTests.swift, import line only changed):
+       Executed 29 tests, with 0 failures (0 unexpected)
+       InfoTileAccessibilityTests 3/3 | InfoTileDisplayTests 4/4 | InfoTileModelTests 11/11
+       InfoTileNumberStringTests 3/3 | InfoTileProjectionTests 6/6 | InfoTileTintTests 2/2
+   Covers: adapter/projection (cached->projection), value formatting (bool->Yes/No, String(number),
+   absent em-dash), semantic tint, model state-machine (view.opened once, loading/empty/error/data
+   phases, stale one-shot auto-refresh + re-arm, offline-keeps-value, manual refresh, stop/restart),
+   and the VoiceOver a11y label composer.
+C. swiftlint --strict / swiftformat --lint / check-placeholders : 0 on every InfoTile file.
+
+States rendered (every one, no hidden surface): loading skeleton, empty (em-dash tile, never blank),
+error (retry), data (icon+label+tinted value+optional sub), + stale/offline freshness chip.
+i18n: all chrome via P1/S10 InfoTileStrings table (InfoTile.strings); no English literals in Swift.
+Telemetry: view.opened surface=InfoTile (P1/S11) emitted on start (asserted).
+Previews: every state + each value type + TelemetryGrid composition.
+
+============================================================
+BLOCKER ANALYSIS — all external, all outside allowed scope (InfoTile.* only)
+============================================================
+[B1] iOS — duplicate PUBLIC types in one module (sibling surfaces, committed at HEAD, untouched by me):
+     feature-views/StateTimeline.*  AND  dashboard-widgets/StateTimelineWidget.*  BOTH declare
+     StateTimelineModel / StateTimelineConnection / StateTimelineUpdate / StateTimelineLoadStatus.
+     Representative errors:
+       StateTimeline.Source.swift:64: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+       StateTimelineWidget.Model.swift:71: 'StateTimelineConnection' is ambiguous for type lookup in this context
+       StateTimeline.Previews.swift:50: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+     Proof it is pre-existing & InfoTile-independent: InfoTile defines only InfoTile* types; removing
+     InfoTile cannot affect a StateTimeline<->StateTimelineWidget collision. Confirmed by building with
+     StateTimelineWidget.* temporarily excluded -> the TeslaSync module then EMITTED (InfoTile + all
+     others type-checked) and InfoTile's 29 XCTests are green (run via the SwiftPM harness above; the
+     temporary exclusion was fully reverted — git shows only InfoTile.* added).
+[B2] macOS — code-signing entitlements require a development certificate (none in this environment):
+       error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+       error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+     This is an environment/platform-capability limitation; it fails before compilation and is unrelated
+     to InfoTile. (The macOS app target shares the same source set, so it would additionally hit [B1].)
+[B3] (incidental) When [B1] is bypassed, a separate PRE-EXISTING swift-frontend IRGen crash surfaces on
+     feature-views/AppearanceSettings.Controls.swift (another sibling surface) — also outside scope.
+
+Per the prompt: Allowed files = apps/apple/TeslaSync/feature-views/InfoTile.* + this log. The blockers
+live in StateTimeline*/StateTimelineWidget*/AppearanceSettings* and macOS signing config — other prompts'
+surfaces / integration config. Out of Scope explicitly: "Other surfaces in the same feature (each has its
+own prompt)". Fixing them here would violate the allowed-files contract and the parallel-merge ownership.
+
+============================================================
+FILES DELIVERED (apps/apple/TeslaSync/feature-views/)
+============================================================
+InfoTile.swift            main View: surfaceSlug, phase switch, freshness chip, lifecycle
+InfoTile.Adapter.swift    pure core: InfoTileValue/Tint, InfoTileFormat (display + String(number)), a11y
+InfoTile.Model.swift      telemetry seam, connection axis, input, resolved, projection, source, @Observable model, i18n facade
+InfoTile.Views.swift      data tile, tint->token, glass surface (GlassPanel), header, freshness chip
+InfoTile.States.swift     loading skeleton / empty em-dash tile / error+retry
+InfoTile.Previews.swift   every state + value type + grid composition
+InfoTile.strings          P1/S10 i18n keys (parity Yes/No/em-dash + chrome)
+InfoTile.Tests.swift      adapter/projection/format/tint/a11y XCTests (17)
+InfoTile.ModelTests.swift state-holder XCTests (12)
+
+============================================================
+EXIT=65
+STATUS=BLOCKED
+Reason: InfoTile surface is COMPLETE and fully verified in isolation (compiles clean in-module;
+29/29 XCTests green; swiftlint/swiftformat/placeholder all 0). The iOS+macOS xcodebuild gate cannot
+go green in this tree due to PRE-EXISTING, out-of-allowed-scope blockers: a StateTimeline<->StateTimelineWidget
+public-type collision (sibling surfaces) and a macOS dev-signing requirement (environment). No red is
+presented as green; no InfoTile defect exists.
+============================================================

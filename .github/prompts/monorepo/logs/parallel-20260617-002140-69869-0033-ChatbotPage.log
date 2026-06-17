@@ -1,0 +1,282 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app, and supporting infrastructure.
+
+Let me explore the web source page and the Apple app structure in parallel.
+
+The web page is complex. Let me read the rest of it and look at existing Apple page examples to learn conventions.
+
+Let me see the rest of the render section and the helper functions.
+
+I now have the full web page. Let me set up a plan and explore the Apple architecture (facade, navigation, existing page patterns, tooling) in parallel.
+
+Xcode 26.5 + SwiftLint are available — the gate can run. There's a shared KMP ChatStore/ChatRepository. Let me explore the shared KMP chat code, the SharedFacade, an existing page+model pattern, and navigation.
+
+Now let me understand how the Apple SharedFacade bridges this KMP store to Swift, and study an existing page+model that uses facade reads + mutations.
+
+No existing chat facade in the Apple app. Let me read the facade infrastructure and the one example domain model.
+
+Now I understand the facade pattern. The critical question is how existing pages instantiate their models (do they wire real `Shared` stores or use a different pattern?). Let me study two existing System pages end-to-end.
+
+Existing pages use mock data with local types and a "KMP integration pending" note — they don't import `Shared`. Let me verify whether the `Shared` framework is actually linked in the Xcode build and whether ANY page model uses it, so I match the buildable pattern.
+
+No feature page imports `Shared` — all 184 use local Swift models. The buildable pattern is local `@Observable` models. Let me study the View layer, navigation registration, the design system components (P3/P2), the string catalog, a ModelTests example, and the gate tooling in parallel.
+
+SearchPage uses `String(localized: "key", defaultValue: "...")`. Let me find navigation registration, the string catalog, a ModelTests example, the placeholder scanner, design tokens, and the gate contract.
+
+Let me read the placeholder scanner, the gate contract, the navigation structure, and check the string catalog for existing chatbot keys.
+
+The catalog has chatbot keys under a `translation.chatbot.*` prefix. I need to understand the exact key convention. Let me check what keys exist and how other System pages' keys are stored.
+
+Two namespaces exist: bare keys (used by Swift pages via `String(localized:)`) and `translation.*` (imported web keys). I need to add 13 bare `chatbot.*` keys. Let me extract the exact values from the existing `translation.chatbot.*` entries and confirm against the web translation file.
+
+The catalog's placeholder differs from the source-code fallback. Let me get the authoritative web i18n values from `en.json`.
+
+I have authoritative values. Now the critical unknowns: how the Xcode project includes files (synchronized groups vs pbxproj), the design system components, navigation/routes, forbidden placeholder patterns, and test structure. Let me investigate these in parallel.
+
+`pwsh` is available, and I must avoid words like "Placeholder"/"TODO" (or use `// parity:allow`). The `.xcodeproj` isn't at the expected path — let me find how the project is defined/generated.
+
+The project is XcodeGen-generated from `project.yml`. Let me read it to understand source mapping and targets, and check if `xcodegen` is installed.
+
+Build system is XcodeGen — `TeslaSync/Features` is auto-included by path, co-located `*Tests.swift` excluded from app target. Now let me study the navigation/route system, the design tokens, and shared UI components.
+
+The `AppRoute` enum has no `chatbot` case. Let me see the rest of AppRoute and find where routes map to views.
+
+`AppRoute` has no `chatbot` case. Let me read the route→view registry and shell to understand how (and whether) recent pages like Search/SystemStatus are wired, since "navigation registration" is an allowed file.
+
+Let me find where routes get registered to views (the `.register(` calls) and how the shell renders them.
+
+The navigation pattern is per-feature `XRouteRegistration.swift` files calling `registry.register(.route) { View() }`. Let me read a recent example, find the aggregator that invokes them, and a registration test.
+
+Let me find the aggregator that composes these registrations into the shell, plus the `AppRouteParser` for deep links, and a registration test example.
+
+Let me read `TeslaSyncApp.swift` (the composition root) and `AppRouteParser.swift` to see how registrations and deep-links are wired.
+
+Now I understand the full navigation wiring. Adding a `.chatbot` route touches exhaustive switches and route tests. Let me read `RouteTests.swift`, the full `AppRouteParser.swift`, and check the web App routing + design tokens before deciding scope.
+
+`RouteTests` requires unique pathSegment + group resolution (both satisfiable). Let me read the full `AppRouteParser`, find chatbot's web nav group, and locate the Apple design tokens + shared Card/Panel components.
+
+`/chatbot` deep-links resolve automatically via pathSegment. Let me check the web nav group placement and the Apple design system (tokens + shared Card/Panel components).
+
+Web places `/chatbot` ("Helix Chat") in the Settings nav section → I'll use the `.account` group (next to settings). Let me read the design system (TSDesign, TSMaterial, Tokens) and a recent gold-standard page (InboxPage) to match component/token usage.
+
+Found `tsGlassPanel()` — the GlassPanel equivalent. Let me read the generated design tokens and the InboxPage (gold-standard recent page) with its model to lock in conventions.
+
+I have the full token vocabulary. Let me read the InboxPage gold-standard (page + model) and the SwiftLint config to lock conventions and avoid lint failures.
+
+Now I see the `TS*` component conventions (TSButton, TSPageTitle, `.teslaSyncTheme()`). Let me locate the P3 component library and the key components I'll need (button, text input, card, empty state, titles).
+
+The P3 library is in `Sources/Components/UI/`. Let me read the components I'll use: Buttons, Fields, Typography, Cards, and the Feedback States.
+
+Let me read the Feedback states, Cards, the `teslaSyncTheme` modifier, and the InboxPageModel to finalize all conventions before writing.
+
+I have all components. Let me read the InboxPageModel (state/source pattern) and a route-registration test example to finalize the model + test conventions.
+
+I have everything needed. Let me verify there are no naming collisions for my local model types and confirm the source-injection seam pattern, then start writing.
+
+There's already a ported `ChatMessageItem` feature-view component (and likely `SessionList`/`SuggestedPrompts`). I should reuse these. Let me inspect the chatbot feature-view components and their public APIs.
+
+These are the exact components the web page composes. The native `ChatbotPage` should orchestrate them. Let me read the public APIs/models of `SessionList`, `SuggestedPrompts`, and `ChatMessageModel`.
+
+Let me extract just the public initializers and model APIs for these components.
+
+The ported components are self-contained feature views with their own models/sources. Let me read the exact init signatures and source seams to compose them correctly.
+
+Let me read the remaining component initializers: `SuggestedPrompts`, `ChatMessageModel`/`ChatMessageSource`, `ChatMessageData`, and the SessionList load-status enum.
+
+All three components have clean source/model seams. Let me check for existing in-memory `ChatMessageSource` implementations I can reuse for per-message rows.
+
+`InMemoryChatMessageSource` exists. Let me read it to wire per-message models with regenerate/edit callbacks.
+
+I have everything needed to compose all three components. Let me confirm the remaining annotations/enum cases before writing.
+
+Let me check the `SuggestedPromptsCatalog` defaults, then I'll record the plan and start building.
+
+I have all the details. Let me read an existing P7-system log to mirror the exact gate/log format, then record my plan.
+
+Key gate constraints learned: SwiftLint `--strict` enforces **≤400 lines/file** and **≤120 chars/line**; the placeholder scanner flags the substring "placeholder" (so the `chatbot.placeholder` key line needs a `// parity:allow`). Let me establish the lint baseline on the System folder and set up my plan.
+
+Let me capture the actual lint violations and exit code properly (the previous exit reflected `echo`, not swiftlint).
+
+Let me determine whether SwiftLint filters by the path argument or lints the whole `included` set (critical for the gate).
+
+SwiftLint lints per-file cleanly but a directory arg pulls in the whole `included` set (4 pre-existing violations outside my scope). Let me read the p4-apple README gate contract to understand the exact intended invocation.
+
+Let me record the plan and check whether the `Shared.xcframework` is prebuilt (needed for a feasible build gate).
+
+`Shared.xcframework` must be built from KMP via Gradle (the long pole). Let me record my plan, set up todos, and kick off the framework build in the background while I write code.
+
+Now let me kick off the Shared.xcframework build in the background (the long pole) while I write code.
+
+Framework build is running. Now I'll write the code. Starting with the data seam (DTOs, `ChatbotSource` protocol, sample source, per-row source forwarder).
+
+Now I'll write the data seam file. I'll reuse the public `ChatMessageData`/`ChatSessionListItem`/`ChatMessageSource` types from the feature-views.
+
+Now the per-row source forwarder and conversation row-management helper (keeps the model file small and reuses `ChatMessageItem` cleanly).
+
+Now the main `@Observable` page model with the 13 string keys, sub-models, state, and the five `use*` calls.
+
+Let me check the model's line count (must be ≤400) and the framework build progress.
+
+Model files are within limits. Let me check the framework build progress, then write the views.
+
+Conversation model is solid. Let me check for a `HelixMark` brand view and confirm `@Bindable`/`TextField(axis:)` usage patterns before writing the views.
+
+`HelixMark`, `@Bindable`, and `.help(Text:)` are all available. Let me check `HelixMark`'s visibility/init before deciding to reuse it.
+
+`HelixMark` is reusable (internal, native port of the web brand glyph). Now writing the main view.
+
+Now the conversation log, empty hero, and thinking bubble. Let me first confirm the shared error/retry string keys exist (for the error state).
+
+The framework build finished. Let me confirm it succeeded and verify the staged xcframework.
+
+Excellent — `Shared.xcframework` built and staged (7m41s). The build gate is now feasible. Let me update todos and write the remaining views.
+
+Now the route registration + navigation wiring. Let me view the exact AppRoute lines to edit surgically.
+
+Now the registration file and wiring it into the app composition root.
+
+Now I'll add the 13 `chatbot.*` keys plus `route.chatbot` to the string catalog via a precise text insertion (preserving the file's existing formatting).
+
+The anchor uses no space before the colon. Let me fix and re-run.
+
+Catalog updated and valid. Let me verify the keys landed and run a quick SwiftLint pass on my new files to catch issues early.
+
+A few lint fixes needed: explicit `label:` (no trailing closure) on `TSButton`, and move the model's internals into an extension (type body length). Let me fix the three button sites.
+
+Now let me move the model's internals into an extension to fix the type-body-length violation.
+
+Let me re-lint all my new files.
+
+All 7 files pass `--strict`. Now let me write the tests (route registration + model logic), mirroring the existing patterns.
+
+Let me lint the test files (Tests is in the lint scope), then generate the Xcode project.
+
+Test files lint clean. Let me update todos, generate the Xcode project, and do a fast macOS compile check (building the target directly skips the slow Gradle pre-action since the framework is already staged).
+
+Project generated. Now a fast macOS compile check (building the target directly to skip the Gradle pre-action). This compiles all app sources against the staged framework.
+
+The build had failures. Let me extract the actual errors, focusing on my files.
+
+Those errors are systemic (wrong-arch raw-target build against an arm64-only framework) — none are in my files. Let me build via the proper scheme + destination (arm64) instead. I'll background it (the pre-action re-runs Gradle with a warm cache).
+
+Still failing on arm64. Let me check whether any errors are now in my files.
+
+978 errors with "invalid redeclaration" and "ambiguous use" across many unrelated files — a classic double-compilation symptom, none in my files. Let me determine if this is pre-existing (not caused by me) by inspecting a concrete error and checking for duplicate file compilation.
+
+Root cause identified: the macOS failures are an **Xcode 26.5 SDK issue** — `Preview` is ambiguous between `SwiftUI` and `AppKit` (and similar AppKit collisions), breaking the **entire** existing app on macOS, unrelated to my code. The gate targets the **iOS** scheme (`-scheme TeslaSync`), where AppKit doesn't exist. Let me build the iOS scheme, as the gate specifies.
+
+iOS build is compiling x86_64 too (the framework only has an arm64 simulator slice). Let me inspect the actual iOS errors.
+
+All 468 errors are pre-existing (`Preview` is ambiguous repo-wide under Xcode 26.5) — **zero** in my files. Let me check how sibling P7 page logs recorded their build/test status to calibrate the expected gate outcome in this environment.
+
+This matches the established environment reality: sibling P7 pages (StatusApiDocs, SystemStatus, Help) all recorded the full build as blocked/skipped by the **pre-existing** repo-wide failure and still passed on placeholder + lint + type-check. My 468 errors are all pre-existing (0 in chatbot files). Let me run the placeholder gate, capture the precise root cause, and syntax-check my files.
+
+Two of my comment lines contain the word "placeholder" (flagged by the scanner). The `// parity:allow` key line is correctly counted as ALLOWED. Let me find and reword the comment lines, and scan all my files for any forbidden words.
+
+Let me re-run the placeholder scan and list every violation to confirm my files now contribute zero.
+
+My files now contribute **0** placeholder violations (the remaining 13 are pre-existing in `TeslaAccountPage`/`ScheduledExportsPanelForm` — other units). Let me re-lint my edited files and run a standalone syntax parse as additional verification that my code is well-formed.
+
+My files are lint-clean, placeholder-clean (0 attributable), and syntax-valid. The full build is blocked by pre-existing repo-wide issues. Let me confirm (via git) that every erroring file is untouched by me, and that my files were processed by the compiler.
+
+Let me confirm whether the compiler actually reached my files in the full log (to validate the "zero errors" is meaningful, not just "not reached").
+
+My files are processed and error-free in the failed build; every erroring file is pre-existing (untouched by me, proven via git). The Debug gate hits the repo-wide `Preview` ambiguity. A **Release** build strips `#if DEBUG` previews and could compile much further — high value if it goes green. Let me kick that off in the background while I write the evidence log.
+
+The Release build is running. Let me gather exact line-number evidence for each of the 18 parity items to build the log.
+
+I have all evidence. Let me check the Release build progress.
+
+Still building. Let me prepare the ledger update — checking the exact JSON structure and a system-page row for format.
+
+The ledger is standard JSON (231 rows). I'll add 2 rows via minimal text insertion. Let me check the Release build progress.
+
+The Release build stripped the DEBUG previews (0 errors so far) and is now doing the whole-module compile of the app target. This is promising. Let me wait for it.
+
+The Release build process finished. Let me check the actual build outcome.
+
+The Release WMO build reveals the deeper pre-existing issue: the design tokens (`lg`/`md`/`sm`, `Color.TS`) are **ambiguous** module-wide — a duplicate-symbol problem. This now cascades into every file using tokens, including mine. Let me inspect the 15 chatbot errors to confirm they're token-cascade (not real bugs in my code).
+
+The Release WMO build caught a **real bug in my code**: `ChatbotRow` is internal but exposed by the public `rows` property. (The DEBUG build bailed early on the pre-existing `Preview` issue before reaching my files, masking it.) The other chatbot errors are cascade from a pre-existing token-duplication bug in `StatusApiDocsPage.swift` (another unit). Let me confirm that root cause and fix my real bug.
+
+Confirmed: `StatusApiDocsPage.swift` (another unit) redefines `enum TSSpacing`/`enum TSRadius`, shadowing the design tokens module-wide — a pre-existing bug that blocks the WMO build for everyone. I won't modify another unit's file in my commit. But first, let me fix the **real bug in my code** (`ChatbotRow` access level).
+
+Now, to definitively verify my code type-checks, I'll **temporarily** remove the duplicate enums from `StatusApiDocsPage.swift` (unblocking the WMO build), compile, confirm zero chatbot errors, then revert that file so my commit never touches it. Let me view the exact block.
+
+Now let me re-run the Release WMO build to verify my code compiles cleanly with the token ambiguity removed.
+
+While the verification build runs, let me add the two ledger rows (macos + ios) via minimal text insertion.
+
+Ledger updated. Let me check the verification build progress.
+
+The verification build finished. Let me check whether my code compiled cleanly with the token ambiguity removed.
+
+Removing one duplicate cut errors 6955→439, and my files now have just **one** error (`ChatbotPageViews.swift:92 ambiguous 'init'` on a `ScrollView`) — likely a cascade from *another* duplicate token definition still present. Let me find all duplicate token definitions across the repo.
+
+Only `TirePressureUnit` (pre-existing) and Watch-only tokens remain as dups. Let me see the actual error messages and the candidates for my `ScrollView` ambiguity to determine if it's a real bug or cascade.
+
+Decisive finding: my `ScrollView` error has **two candidates both from `SwiftUI.ScrollView.init`** — a SwiftUI **SDK-level** ambiguity under Xcode 26.5 (277 other call sites hit it identically). The codebase fundamentally doesn't compile under this toolchain. My one real bug (`ChatbotRow` access) is fixed; my page now contributes only this universal SDK ambiguity. Let me revert the temporary StatusApiDocs change so my commit never touches it.
+
+StatusApiDocs is untouched. Let me run a final comprehensive verification (lint + syntax parse + placeholder) on all my files.
+
+All final checks green: lint 0, syntax parse 0, all files ≤400 lines, ~1107 page-Swift lines (>web's 1027). Let me update todos and write the comprehensive evidence log.
+
+Let me do final integrity checks before committing: full git status, JSON validity, and parse the edited `AppRoute.swift`.
+
+All changes are scoped correctly (StatusApiDocs reverted, xcodeproj gitignored, JSON valid, parse clean). Let me confirm the three `AppRoute` additions are all present (enum case, systemImage, group) for switch exhaustiveness.
+
+All additions consistent. Let me stage my files and commit.
+
+All 14 files staged. Let me check SwiftFormat compliance (a pre-commit hook may run it) before committing.
+
+SwiftFormat wants formatting fixes (no pre-commit hook is installed, but the gate expects SwiftFormat-clean). Let me auto-format my files, then re-verify SwiftLint and the placeholder opt-out line still hold.
+
+Formatting clean, lint clean, opt-out intact. SwiftFormat shifted some line numbers — let me re-verify the log's cited line numbers and the placeholder/parse status, updating citations if needed.
+
+Log citations remain accurate (changes were below the cited lines). Let me update the three line-count figures in the log for precision, then re-verify placeholder + re-stage the formatted files.
+
+Let me re-verify placeholder + syntax after formatting, then re-stage and commit.
+
+All clean post-format. Let me commit.
+
+Committed. Let me verify the commit contents and a clean working tree.
+
+Commit is complete and correct: exactly 14 files, StatusApiDocs not touched, working tree clean. Let me finalize todos and clean up temp files.
+
+The task is complete. Here's a summary of what was delivered and verified.
+
+## Summary
+
+Implemented the native **SwiftUI / HIG** `ChatbotPage` ("Helix" assistant, `/chatbot`) at full web parity, adaptive across macOS + iOS. Committed as `e882ed04c` (14 files, working tree clean).
+
+**Implementation (7 page files + 2 tests, ~1154 lines):**
+- `ChatbotPage.swift` — scaffold: header (title/subtitle/History toggle), adaptive layout (regular = sidebar column, compact = sheet), **GlassPanel1** conversation container.
+- `ChatbotPageModel*.swift` — `@Observable` model with the 13 web string keys, the **five web hook names** (`useChatSessions/useChatHistory/useSendChatMessage/useRenameChatSession/useDeleteChatSession`) on a `ChatbotSource` seam, typewriter reveal, and per-row management.
+- `ChatbotPageViews.swift` / `Composer.swift` — empty hero (`HelixMark` + suggestions), **GlassPanel2** thinking bubble, composer.
+- **Reuses** the ported `ChatSessionList`, `ChatMessageItem`, `SuggestedPrompts` feature views + P2 tokens / P3 components (DRY, web-faithful).
+- Navigation: added `.chatbot` route + registration + app wiring (`/chatbot` deep-links resolve).
+- Strings: 13 `chatbot.*` keys + `route.chatbot` added to `Localizable.xcstrings` (verbatim web values).
+- Tests + ledger (2 rows, 18/18) + evidence log.
+
+**Verification:** `PARITY_COVERED=18/18`. SwiftLint `--strict` = 0, SwiftFormat `--lint` = clean, placeholder scan = 0 (my files), syntax-parse = 0 errors, all files ≤400 lines.
+
+**Honest build/test note:** The full-app `xcodebuild` build/test is **blocked by a pre-existing, repo-wide Xcode-26.5 incompatibility** (ambiguous `SwiftUI.Preview`/`ScrollView.init` across ~277 call sites + duplicate symbols in *other* units like `StatusApiDocsPage`'s `TSSpacing`/`TSRadius` and `TirePressureUnit`). Every erroring file is untouched by this change (proven via `git`). A whole-module build with the unrelated token-dup temporarily removed reduced this page to a single shared SDK ambiguity and surfaced **one real bug in my code** (`ChatbotRow` access level), which I **fixed**. This matches the recorded behavior of sibling P7 system pages on this runner (e.g. `StatusApiDocsPage`: build 65, test blocked, `STATUS=DONE`). No red is reported as green.
+
+
+
+All work is complete and committed (`e882ed04c`), with all 10 todos done and a clean working tree. Verification is finished: parity 18/18, SwiftLint/SwiftFormat/placeholder/syntax-parse all green for my files; the full build/test is environmentally blocked by a pre-existing Xcode-26.5 incompatibility (documented with proof). I'll mark the task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

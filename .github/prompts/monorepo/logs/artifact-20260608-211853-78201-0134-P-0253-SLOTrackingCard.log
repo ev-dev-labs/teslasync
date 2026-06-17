@@ -1,0 +1,92 @@
+=== P4 Feature view 0253 SLOTrackingCard (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/SLOTrackingCard.{Adapter,Model,Views,States,Previews,Tests}.swift + SLOTrackingCard.swift + SLOTrackingCard.strings
+Web source of truth: web/src/features/system/components/status/SLOTrackingCard.tsx
+Toolchain: Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat, xcodegen; iPhone 16 sim (iOS 26.5), macOS 15 target. Capability AVAILABLE.
+
+--------------------------------------------------------------------------------
+SECTION A — Prerequisites
+--------------------------------------------------------------------------------
+[A1] KMP Shared.xcframework build (scheme pre-action) ............ BUILD SUCCESSFUL (9m); staged to Frameworks/Shared.xcframework. EXIT=0
+[A2] xcodegen generate ........................................... Created TeslaSync.xcodeproj; all 8 SLOTrackingCard files referenced (app iOS, app macOS, test iOS, test macOS). EXIT=0
+
+--------------------------------------------------------------------------------
+SECTION B — Gate steps (run verbatim per prompt; bash-adapted from PowerShell)
+--------------------------------------------------------------------------------
+[B1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     IOS_EXIT=65   (RED — see Section D: predecessor breakage, NOT this surface)
+[B2] xcodebuild -scheme TeslaSync-macOS build test
+     MAC_EXIT=65   (RED — same predecessor breakage)
+[B3] swiftlint --strict   (whole apps/apple)
+     LINT_EXIT=2    (RED — 1 violation, in dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift; opening_brace)
+[B4] swiftformat --lint apps/apple   (whole tree)
+     FORMAT_EXIT=0  (GREEN — 0/2501 files require formatting)
+[B5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SLOTrackingCard
+     PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0  (GREEN)
+
+--------------------------------------------------------------------------------
+SECTION C — This surface verified GREEN in isolation (the actual deliverable)
+--------------------------------------------------------------------------------
+[C1] swiftformat --lint  (7 SLOTrackingCard files) ............... 0/7 require formatting. EXIT=0
+[C2] swiftlint --strict  (7 SLOTrackingCard files) ............... 0 violations. EXIT=0
+[C3] check-placeholders  (SLOTrackingCard) ...................... PLACEHOLDER_COUNT=0. EXIT=0
+[C4] swiftc -typecheck of the 6 app-target surface files against
+     their REAL shared dependencies (generated design tokens +
+     Components/UI Cards/Buttons/Typography/Badges + Feedback/Skeletons
+     + Motion/TSFadeIn + Design/TSMaterial), Swift 6 strict-concurrency
+     complete, -target arm64-apple-ios18.0-simulator, linking the staged
+     Shared.xcframework ...........................................  MINIMAL_CLOSURE_TYPECHECK_EXIT=0  (0 errors)
+[C5] swiftc -typecheck of SLOTrackingCard.Tests.swift logic + API
+     usage (XCTest assertions shimmed; compiled in-module with the
+     surface) ....................................................  TESTS_SHIM_TYPECHECK_EXIT=0  (0 errors)
+[C6] xcodebuild (B1) confirms SLOTrackingCard.strings is validated +
+     copied into TeslaSync.app (CopyStringsFile step succeeded;
+     "detected encoding" note only).
+[C7] grep of both build logs for "SLOTrackingCard.*error:" ...... 0 matches (iOS + macOS).
+
+--------------------------------------------------------------------------------
+SECTION D — Root cause of the RED gate (PRE-EXISTING, OUT OF SCOPE)
+--------------------------------------------------------------------------------
+All B1/B2/B3 failures are pre-existing breakage in OTHER surfaces under
+apps/apple/TeslaSync/dashboard-widgets/ — committed baseline, untouched by this
+prompt (git status clean for them), owned by their own prompts ("Out of Scope:
+Other surfaces in the same feature (each has its own prompt)"), and outside this
+prompt's Allowed files (SLOTrackingCard.* + this log).
+
+Build (B1/B2): duplicate type definitions across sibling widget files cause
+"ambiguous for type lookup" + cascading "cannot infer contextual base" errors
+across 21 dashboard-widget files (Charge*/Safety*/DrivingCoach*/FleetStatsBar*).
+Confirmed duplicate definitions (each declared in 2 files in dashboard-widgets):
+  - ChargeSessionDTO       (ChargeStatusLiveWidget.Model.swift, ChargeSessionChartWidget.Models.swift)
+  - ChargeStatusProjection (ChargeStatusLiveWidget.Adapter.swift, ChargeStatusWidget.Adapter.swift)
+  - ChargeStateDTO, ChargeUnitPrefs, ChargeDistanceUnit, ChargeLoadStatus,
+    ChargeConnection, ChargeStatusUpdate (ChargeStatusLiveWidget.* vs ChargeStatusWidget.*)
+  - SafetyModel/SafetyConnection/SafetyLoadStatus/SafetyUpdate (SafetyFeaturesWidget.* vs SafetyHistoryWidget.*)
+  - DrivingCoachConnection/DrivingCoachLoadStatus, FleetStatsBarModel
+Plus one stray ViewBuilder error in SafetyHistoryWidget.Previews.swift:144.
+Lint (B3): 1 opening_brace violation in dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift.
+
+ZERO of these are attributable to SLOTrackingCard. This surface compiles, lints,
+formats, and type-checks clean (Section C). These collisions are the kind the P4
+ACCEPTANCE GATE (which this surface "Blocks") exists to resolve; they cannot be
+fixed here without editing files outside the Allowed set (Honesty Covenant: no
+scope creep, no predecessor bypass).
+
+--------------------------------------------------------------------------------
+SECTION E — Disposition
+--------------------------------------------------------------------------------
+Surface implementation: COMPLETE + independently verified (Section C). Every web
+state reproduced (loading skeleton / empty note / error+retry / data / stale chip
++ auto-refresh / offline banner), data bound via shared state-holder seam (no HTTP
+in view), personal target persisted + editable, all strings via P1/S10 facade,
+VoiceOver labels on every interactive element, adapter+model+a11y unit tests.
+
+Full gate: RED, exclusively due to pre-existing, out-of-scope dashboard-widget
+breakage (Section D). Per Honesty Covenant rule 1 (no red-as-green) and rule 8
+(no commit on red), this surface is NOT committed and the run is reported BLOCKED
+on predecessor integration breakage (not a platform-capability limit — the Apple
+toolchain is fully functional, Sections A & C). Files remain staged in the working
+tree for the P4 acceptance/integration gate once the sibling widget collisions are
+resolved by their owning prompts.
+
+EXIT=65
+STATUS=BLOCKED

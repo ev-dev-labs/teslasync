@@ -1,0 +1,188 @@
+=== P4 Dashboard widget 0013 BatteryGaugeWidget (Apple) ===
+run-at: 2026-06-08T22:00Z..23:20Z
+runner: Darwin 25.5.0 arm64 — FULL Xcode 26.5 (Build 17F42), Swift 6.3.2
+tools present: xcodebuild ✓  xcodegen 2.45.4 ✓  swiftlint ✓  swiftformat ✓  pwsh ✓
+               iPhone 16 simulator ✓  Gradle/Kotlin-Native (KMP Shared) ✓
+NOTE: this is a SHARED runner. During this gate ~12 sibling slots
+(auto/20260608-211853-78201/1..20) were running the SAME apple gate
+concurrently against the SAME machine; sustained load average climbed to
+220–242 (see CAPABILITY EVIDENCE). The iOS app build for THIS surface
+completed (** BUILD SUCCEEDED **), proving the toolchain + this code build;
+the full XCTest *execution* phase and the macOS build could not be scheduled
+to completion under that saturation. Reported honestly below.
+
+### Deliverable (allowed files only — apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.*)
+      62 BatteryGaugeWidget.Previews.swift
+      82 BatteryGaugeWidget.swift
+     142 BatteryGaugeWidget.Model.swift
+     180 BatteryGaugeWidget.Adapter.swift
+     231 BatteryGaugeWidget.Content.swift
+     250 BatteryGaugeWidget.Tests.swift
+     947 total
+File split mirrors the shipped sibling battery surface (BatteryRadialGauge*)
+and the P4 GuardModeWidget convention: pure KMP-free core (Adapter), pure
+SwiftUI (Content/Previews), the shared-core binding (Model, the only file that
+imports Shared), the dashboard entry + registry (BatteryGaugeWidget.swift),
+and co-located XCTests (Tests).
+
+============================================================
+## BUILD PREREQUISITES (performed on this runner)
+$ (cd apps/shared && ./gradlew :core:assembleSharedXCFramework)
+  BUILD SUCCESSFUL in 11m 40s — Shared.xcframework (ios-arm64, ios-arm64-sim,
+  macos-arm64) assembled (KMP Kotlin/Native core).
+$ cp -R apps/shared/core/build/XCFrameworks/release/Shared.xcframework apps/apple/Frameworks/
+$ (cd apps/apple && xcodegen generate)  -> Created TeslaSync.xcodeproj
+
+============================================================
+## GATE STEP 1 — xcodebuild iOS (build test)
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  ** BUILD SUCCEEDED **           (/tmp ios_build.log:10270 ; exit 0)
+  -> The whole TeslaSync iOS app module (1900+ files INCLUDING the 6 new
+     BatteryGaugeWidget.* files) type-checked, compiled, and linked against the
+     REAL Shared.xcframework + design tokens + feedback components. 0 errors.
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,id=<dedicated BGW-slot9 sim>' \
+    -only-testing:TeslaSyncTests/BatteryGaugeTintTests ...(8 BatteryGauge* classes)... build test
+  build phase: ** BUILD SUCCEEDED **   (ios_test.log:8567)
+  test phase:  could NOT reach execution — the scheme test pre-action re-stages
+     Shared.xcframework (cp -R updates mtime) which forces a second full
+     1900-file recompile; under the concurrent-slot saturation (load 220–242)
+     this rebuild was CPU-starved (0 frontends scheduled for long stretches) and
+     did not finish in-window.
+  IOS_EXIT=BLOCKED  (build PROVEN green; test-suite EXECUTION blocked by shared-runner saturation, not by this code)
+
+## GATE STEP 2 — xcodebuild macOS (build test)
+$ xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS build
+  Attempted on this runner; same shared-runner saturation (load ~242, 8 live
+  xcodebuilds / 97 swift-frontends across sibling slots). Result recorded in
+  the GATE RESULT SUMMARY below after the in-flight attempt.
+  MAC_EXIT=see summary
+
+## GATE STEP 3 — swiftlint --strict
+$ swiftlint lint --strict --config apps/apple/.swiftlint.yml <the 6 BatteryGaugeWidget.* files>
+  Done linting! Found 0 violations, 0 serious in 6 files.            -> CLEAN
+$ (cd apps/apple && swiftlint --strict)   # full included tree (gate's literal command)
+  Done linting! Found 1 violation, 1 serious in 1917 files.
+  The single violation is PRE-EXISTING and OUTSIDE the allowed files:
+    TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+      error: Opening Brace Spacing (opening_brace)
+  That file is a different surface, committed in the baseline (HEAD 3b30a99d5),
+  not in this prompt's allowed-files set, so it is not mine to modify.
+  LINT_EXIT=0 for the deliverable; full-tree=1 due to the pre-existing external file.
+
+## GATE STEP 4 — swiftformat --lint apps/apple
+$ swiftformat --lint apps/apple
+  SwiftFormat completed. 0/1921 files require formatting, 2 files skipped.
+  FORMAT_EXIT=0
+
+## GATE STEP 5 — check-placeholders (pwsh) — gate scope
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+  PLACEHOLDER_EXIT=0
+  (The 24 hits that appear when scanning the whole dashboard-widgets DIRECTORY
+   are all in the unrelated YearReviewWidget.* surface, outside this deliverable.)
+
+============================================================
+## CAPABILITY / SATURATION EVIDENCE (why STEP 1 test-exec + STEP 2 are BLOCKED)
+$ uptime
+  load averages: 242.50 229.77 213.28      (sustained 200+ for ~45 min)
+$ ps -Ao comm | grep -c '[x]codebuild'   -> 8     (concurrent sibling-slot app builds)
+$ ps -Ao comm | grep -c '[s]wift-frontend' -> 97  (concurrent compiler frontends)
+  Several sibling xcodebuilds confirmed by cwd, e.g. slot-20 (build test) and
+  slot-8 (TeslaSync-macOS build test), all targeting the same 1900-file app.
+  The machine is oversubscribed many-fold; THIS slot's test-bundle rebuild was
+  repeatedly scheduled with 0 CPU. The toolchain itself is fully functional here
+  — proven by this surface's own ** BUILD SUCCEEDED ** above.
+
+## COMPENSATING VERIFICATION (run on THIS runner, contention-free)
+1. Adapter logic — REAL BatteryGaugeWidget.Adapter.swift compiled with
+   `swiftc -swift-version 6` + a harness running the SAME assertions as the
+   XCTest file (tint ramp, clamp, percent rounding, load-fault retryability,
+   render-state derivation for every branch, a11y value + summary):
+     30 checks -> HARNESS_FAILURES=0  (exit 0)   ALL PASS
+2. Tests.swift symbol resolution — `swiftc -typecheck` of
+   BatteryGaugeWidget.Tests.swift against the built (-enable-testing)
+   TeslaSync.swiftmodule + Shared.framework: every reference to this surface's
+   symbols resolved (BatteryGaugeTint/Reading/LoadFault/RenderState/Accessibility,
+   BatteryGaugeWidget.registration/.surfaceSlug/.reportOpen, BatteryGaugeModel.project,
+   BatteryGaugeContent, DashboardWidgetSize, DashboardWidgetTelemetry). The only
+   diagnostics were the XCTAssert* C-macro overlay (handled by xcodebuild, not by
+   bare swiftc) — i.e. no error against any of this surface's types.
+3. iOS app ** BUILD SUCCEEDED ** — the strongest integration proof: all 5
+   production files link into the real app target.
+
+============================================================
+## PARITY MAP (web source -> native)
+web features/dashboard/widgets/BatteryGaugeWidget.tsx -> BatteryGaugeWidget (entry) + BatteryGaugeContent
+  useVehicles / useVehicleState        -> BatteryGaugeModel binds VehiclesStore via StateHolderModel<LoadableState<…>>
+                                          (P1/S8); resolves vehicleId ?? vehicles[0].id ?? 0; NO HTTP in the view
+  batteryColor() green/amber/red/grey  -> BatteryGaugeTint.forLevel (>50/>20/else, unknown when no state); tint->token in Content
+  WidgetShell loading/error/freshness  -> BatteryGaugeContent: TSSkeleton / failure surface / offline+stale+fetching chip
+  WidgetGaugeHero + RadialGauge        -> BatteryGaugeRing (track ring + tinted arc + centered percent% + "Battery" label)
+  is_charging "⚡ Charging" pulse        -> BatteryGaugeChargingLine (Reduce-Motion aware)
+  EmptyState "No battery data"         -> TSEmptyState(title: translation.widget.noBattery) [@/components/feedback]
+  @/components/feedback                -> Sources/Components/Feedback: TSEmptyState / TSSkeleton (shared natives)
+
+## STATES RENDERED (none hidden)
+loading (skeleton) | content+gauge | empty ("No battery data") | error(retry) |
+stale chip | offline chip | fetching (ProgressView) | charging line  -> all present
+
+## I18N KEYS (P1/S10 catalog — verified present in Localization/Localizable.xcstrings)
+  widget.battery   -> translation.widget.battery   = "Battery"
+  widget.charging  -> translation.widget.charging  = "Charging"
+  widget.noBattery -> translation.widget.noBattery = "No battery data"
+  chrome reuses existing catalog keys: translation.common.refresh/.offline/.retry,
+  translation.live.staleBanner.title, translation.error.loadFailed.
+  No English literals in the views; all strings resolve via LocalizedStringKey (P1/S10).
+
+## REGISTRY (matches web registry/battery.ts)
+  id=battery-gauge  category=battery  default=1x2  min=1x2  max=2x40
+  (BatteryGaugeWidget.registration via shared DashboardWidgetRegistration; clamp tested)
+
+## TELEMETRY (P1/S11)
+  BatteryGaugeWidget.reportOpen -> DashboardWidgetTelemetry.viewOpened(surface:"BatteryGaugeWidget")
+  emitted from BatteryGaugeModel.start(); default sink OSLogDashboardWidgetTelemetry
+  ("view.opened surface=BatteryGaugeWidget"). Asserted by BatteryGaugeTelemetryTests.
+
+## TESTS (BatteryGaugeWidget.Tests.swift — 8 classes / 18 cases)
+  tint thresholds | reading clamp+percent+tint+charging | load-fault retryability |
+  render-state every branch | registry metadata + clamp | view.opened slug |
+  Model.project(nil) + per-state Content construction | a11y gauge value + summary.
+  Pure-logic equivalents executed green via the swiftc harness (30/30); XCTest
+  *execution* requires the saturated simulator build phase (see STEP 1).
+
+## ACCEPTANCE CRITERIA
+[x] Surface reproduces all web states (loading/content/empty/error + stale/offline/charging)
+[x] Hooks bind to shared P1/S8 state-holder layer (VehiclesStore/StateHolderModel); no HTTP in the view
+[x] Every source i18n key has a matching P1/S10 catalog key (battery/charging/noBattery verified present)
+[x] Accessibility: gauge label+value, charging element combined, Reduce-Motion honored
+[x] Tests authored: adapter unit + render-state + per-state Content construction + a11y + telemetry-slug
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0, gate scope)
+[x] iOS app ** BUILD SUCCEEDED ** (this surface compiles+links in the real target)
+[~] EXIT=0/STATUS=DONE -> BLOCKED: the iOS XCTest *execution* phase and the macOS
+    build could not be scheduled to completion under the shared-runner saturation
+    (load 220–242 from ~12 concurrent sibling-slot gates). Re-run the two
+    xcodebuild build+test steps on an unsaturated runner to close the gate; the
+    code is build-verified and the test logic is proven green here.
+
+============================================================
+## GATE RESULT SUMMARY
+IOS_EXIT=BLOCKED   (** BUILD SUCCEEDED **; XCTest execution CPU-starved by ~12 concurrent slot gates, load 242)
+MAC_EXIT=BLOCKED   (same shared-runner saturation; see below)
+LINT_EXIT=0        (swiftlint --strict: 0 violations on the 6 deliverable files; full-tree's lone violation is a pre-existing non-allowed file)
+FORMAT_EXIT=0      (swiftformat --lint apps/apple: 0/1921 require formatting)
+PLACEHOLDER_EXIT=0 (check-placeholders gate scope: PLACEHOLDER_COUNT=0)
+HARNESS_EXIT=0     (adapter/render-state/a11y logic: 30/30 assertions pass, Swift 6)
+
+Implementation is COMPLETE, parity-faithful, and verified to compile+link into
+the real iOS app; all statically-checkable gates (lint/format/placeholder) are
+green for the deliverable, and the unit-test logic is proven green. The only
+unmet steps are the two xcodebuild build+test *executions*, blocked by extreme
+shared-runner CPU saturation (an environment-capacity limit, not a code defect).
+Per the prompt Capability clause this is reported as BLOCKED with the evidence
+above rather than a false green.
+
+EXIT=1
+STATUS=BLOCKED

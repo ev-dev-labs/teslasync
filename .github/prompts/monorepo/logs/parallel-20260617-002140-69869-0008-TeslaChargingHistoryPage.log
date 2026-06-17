@@ -1,0 +1,270 @@
+I'll start by exploring the repository structure to understand the task and existing patterns.
+
+I have the web source. Now let me explore the Apple app structure and existing patterns.
+
+The Charging feature directory doesn't exist yet, but tests reference charging models. Let me explore the existing source structure and find a similar reference page (table + charts + stats).
+
+The `MaintenancePage` (multi-section, summary/cost/records) and `TirePressurePage` (charts + history table) look like the closest references. Let me study them along with route registration patterns.
+
+Excellent reference pattern. Let me study the data source, charts, table, models, and route registration patterns in parallel.
+
+Now let me study the views/models, design tokens, route registration, and shared facade patterns.
+
+Let me examine the design tokens, app routing, SI unit converters, and the string catalog structure.
+
+There are two source roots. Let me check `project.yml`, the design tokens, the string catalog, and shared components to understand conventions.
+
+Now let me examine the string catalog conventions, the chart components (BarChart, ChartContainer), and data display components (Metrics/StatCard).
+
+The catalog uses a `translation.` prefix. Most keys exist. Let me verify which of the 31 required keys are missing, and check the web i18n source for exact default values.
+
+Three keys are missing. Let me find the web i18n source to get exact default values for all required keys.
+
+I have all default values. The 3 missing keys map to web inline defaults: `col.cost_decimal`='Cost', `monthlySpending.aria`='Monthly Tesla charging spending bar chart', `selectVehicle`='Select vehicle'. Let me inspect the xcstrings JSON structure to add them correctly.
+
+Now let me read the key shared components I'll use: ChartContainer, BarCharts, DataTable, Metrics, UnitFormatters, and the existing Charging test files for model conventions.
+
+Let me read the chart models, DataTable, Metrics, UnitFormatters, and the existing Charging test files to understand model conventions.
+
+Let me find the `Units` SI converter, `UnitPreferences`, the Metrics (StatCard) component, DataTable, and the Charging test files.
+
+The facade imports `Shared` (KMP core). Now let me check tooling availability (xcodebuild, swiftlint, swift), the gate scripts, the ledger, and the log file referenced.
+
+Xcode tooling is available — I must actually pass the gate. Let me find where sibling Charging pages live and read a passing log + the ledger entry to understand the exact format.
+
+Existing Charging pages live in `Sources/Features/Charging/` but the task targets `TeslaSync/Features/Charging/` — both compile into the same `TeslaSync` module, so I must avoid type-name collisions (prefix with `TeslaChargingHistory`). Let me study the sibling routing/model patterns and check for existing references.
+
+Let me read the routing infrastructure (AppRoute, AppRouteParser, RouteHostRegistry) and check how the TirePressure reference page is registered.
+
+The TirePressure reference page isn't wired into the central `AppRoute` enum — newer parity pages are self-contained with a typed `NavigationDestination` registration. I'll follow that pattern within the allowed `Charging/**` scope. Now let me read the web API hook types for exact field shapes.
+
+Now let me read the sibling models, currency formatting, the StatCard/Metrics component, DataTable, a sample data source, and a passing log to mirror the format.
+
+Let me read the DataTable, Metrics (StatCard), and the main ChargingListPage view, plus a passing log to mirror the gate format.
+
+Let me read the placeholder-scan script, the README gate contract, a sibling passing log, and the ledger entry for this unit.
+
+Let me check existing ledger rows for this unit, read a sibling passing log for format, and the placeholder script.
+
+No existing rows for this unit — I'll append two. Let me read a sibling passing log to mirror the exact format, plus the placeholder script.
+
+The sibling log noted a path concern, but the **current** `project.yml` *does* compile `TeslaSync/Features/**` (the TirePressure reference page lives there). I'll follow the task's explicit target path. Let me read the PARITY section format and the placeholder script.
+
+I now understand the full structure and gate. Let me create a plan, then read the main ChargingList page composition, the design tokens, and key components (PageContainer, feedback, forms) to learn exact APIs.
+
+Let me read the main ChargingList page composition and its charts file to learn exact component APIs (PageContainer, GlassPanel, EmptyState, Button, SearchInput, charts).
+
+I have the component composition pattern. Let me confirm the exact initializer signatures for the components I'll use (Button, Badge, SearchInput, EmptyState, GlassPanel, Select, theme modifier).
+
+Let me read the exact initializer signatures for the components I'll compose with.
+
+Let me confirm the remaining signatures: SearchInput, GlassPanel, Badge, the theme modifier, and the default `UnitPreferences`.
+
+I have all component APIs. The riskiest gate step is building the KMP `Shared.xcframework`. Let me check whether it's pre-staged and whether the KMP/Gradle toolchain exists. Let me also find the theme modifier and `UnitPreferences` presets.
+
+`Shared.xcframework` must be built via Gradle (heavy). Let me check the Java version, kick off the framework build in the background early, and meanwhile find the theme modifier and `UnitPreferences` presets.
+
+JDK 17 is available. Let me kick off the KMP `Shared.xcframework` build in the background now (it's the slowest, code-independent step) while I write the implementation.
+
+Now let me find the theme modifier and `UnitPreferences` presets while the framework builds.
+
+The idiom: pages read `@Environment(\.tsUnits)` and format via `Units`/`UnitPreferences`. Let me read `ChargingHeatmapFormat` (kWh formatting) and `Theme.swift` to nail the energy-display + theme pattern.
+
+I have everything needed. Let me check the swiftlint config and placeholder patterns to avoid violations, then set up my plan.
+
+Key findings: SwiftLint `--strict` makes the 120-char line limit an error, and the placeholder scan flags words like "Placeholder"/`searchPlaceholder`/`.placeholder` (needing `// parity:allow`). Let me read the placeholder script to understand the allow mechanism exactly.
+
+The placeholder scan is **case-insensitive** and flags "placeholder" (so `.placeholder` redaction and the `searchPlaceholder` key need `// parity:allow`). SwiftLint `--strict` enforces ≤120-char lines. Let me verify no type-name collisions for my planned `TeslaChargingHistory*` symbols, then write the plan.
+
+No collisions. Let me check the framework build progress and set up my plan/todos.
+
+The framework build is progressing fast (cached Kotlin/Native). Let me set up my plan and todos, then write the implementation.
+
+The framework is building well. Now let me write the implementation, starting with the models file.
+
+Models done. Now the format helpers.
+
+Now the data source. Let me check the framework build progress and how the app exposes an API base URL (for the invoice link).
+
+The GDPRExport page handles this exact "relative `/api/v1/...` resolved against a base" pattern. Let me read its approach to mirror it.
+
+I'll mirror the GDPR base-URL pattern. Now let me write the data source with realistic fixtures.
+
+The framework build completed. Let me verify it staged, then continue with the page model.
+
+Framework staged (arm64 slices only, as expected). Now the page model.
+
+Now the section panels. I'll split views across files to respect SwiftLint's 400-line file limit under `--strict`. First, the stats row + monthly chart panel.
+
+Now the sessions table panel (GlassPanel6) — the largest section.
+
+Now let me refine the model: the web's freshness indicator is the `lastSync` line (from `fetched_at`), and none of this page's data sources are live (SSE), so I'll drop the unused `lastUpdated`/`isStale` to avoid dead code.
+
+Now the main page view with the toolbar, states, and previews.
+
+Now the route registration (typed deep-link destination, mirroring the sibling pattern).
+
+I need to add an `initialVin` parameter to the page and a model setter. Let me wire those.
+
+Now add the `applyInitialVin` method to the model:
+
+Page and route wired. Now let me add the 3 missing string keys to the catalog. First, let me inspect the exact raw format of an existing entry to mirror it surgically.
+
+The raw format matches Python's default JSON formatting. Let me verify a round-trip produces zero diff before inserting the 3 keys.
+
+The file has mixed formatting, so a full re-dump would churn thousands of lines. I'll insert the 3 keys surgically after the `col.cost` block, matching its exact format.
+
+Let me validate the JSON is still well-formed and the keys are present.
+
+All 3 keys added, JSON valid. Let me verify the accessory (non-required) keys I reference exist with the right convention.
+
+Some shared-component keys aren't in the catalog (they're pre-existing component labels that fall back to the literal). For my own a11y labels, let me check which selection/clear keys actually exist so I reference real ones.
+
+Let me fix my two a11y labels that referenced missing keys (`action.clear` → existing `translation.common.clear`; `table.selectAll` → localized default).
+
+Let me audit all string-key literals across my files to confirm required keys are present and correctly prefixed.
+
+All 31 required keys are referenced with correct prefixes. Now let me run the fast checks first: SwiftLint and the placeholder scan.
+
+SwiftLint linted the whole tree (config `included`). It found 4 violations. Let me isolate them.
+
+The 4 violations are all in pre-existing files (`MyActivityPageModel`, `WeeklyDigestWidget.*`) — none in my `Charging/` dir. Let me confirm my files are clean in isolation and verify my changeset, then run the prompt's literal scoped gate command.
+
+Now I see violations in my files. Let me view the flagged lines to fix them precisely.
+
+Now let me fix all 6 violations in my files: remove the redundant `Summary` init, remove 4 trailing commas, and split the over-length line.
+
+Now let me re-lint only my files to confirm they're clean.
+
+SwiftLint clean on all 8 files. Now the placeholder scan.
+
+The placeholder scan flags the `searchPlaceholder` key line — the `// parity:allow` marker must be on the *same* line as the match, not the line above. Let me view and fix.
+
+Let me re-run both the placeholder scan and SwiftLint to confirm clean.
+
+Both fast gates pass (placeholder COUNT=0, SwiftLint 0 violations). Now the build. Let me regenerate the Xcode project to pick up the new files.
+
+Project generated. Let me confirm my files are included, then start the macOS build (the scheme pre-action rebuilds the now-cached framework).
+
+All 8 files are in the project. Now the macOS build (scheme pre-action rebuilds the cached framework; needs `JAVA_HOME`). This will take several minutes — I'll run it in the background.
+
+While the macOS build runs, let me proactively fix two SwiftUI localization gotchas I spotted: `Text(ternary)` defaults to the verbatim (non-localized) initializer, and `LocalizedStringKey.init` as a bare function reference can be ambiguous.
+
+The macOS build finished. Let me check the result.
+
+The macOS build failed — but on a **pre-existing duplicate filename** collision (`ScheduledExportsPanel.swift` exists in both `feature-views/` and `Features/System/`), not my code. Let me verify this is pre-existing and check for other duplicate basenames across the compiled roots.
+
+Confirmed pre-existing: both `ScheduledExportsPanel.swift` files are in HEAD, I touched neither, and it's the *only* duplicate basename. The newer `Features/System/` was added to the compiled roots, colliding with the stale `feature-views/` copy. Let me inspect both to decide which is the stale duplicate.
+
+The two files share a basename but define **different** symbols — a pure filename collision (Swift requires unique basenames per target), pre-existing and unrelated to my work. Let me check whether the stale `feature-views` copy's symbols are referenced anywhere, and test a source-preserving build workaround.
+
+This is a tangled pre-existing collision. Let me map the symbol dependency graph between the two `ScheduledExportsPanel` file sets to find the safe resolution.
+
+It's a pure pre-existing filename collision — `ScheduledExportsPanelView` (in the `feature-views` copy) is referenced nowhere, so I can resolve it at build-invocation time (no source change) by excluding that copy and re-including the live `Features/System` one. Let me run the macOS build with that workaround.
+
+While the build runs, let me proactively fix the `pickerOptions` `LocalizedStringKey.init` reference, which can be ambiguous.
+
+The build is running. Let me monitor its progress (this compiles the full app, several minutes).
+
+Build still failing (exit 65). Let me check whether the collision was resolved and what errors remain.
+
+The collision is resolved and there are no compile `error:` lines, yet exit 65. Let me look at the actual failure reason.
+
+SwiftCompile batches failed but no `error:` lines surfaced — likely a root failure in an `emit-module` step that cascades. Let me find the actual root diagnostic.
+
+No diagnostics at all — the root is the `EmitSwiftModule` for `TeslaSync-macOS` failing fast (cascading to all SwiftCompile jobs). This build ran *before* my `pickerOptions` fix, so the `LocalizedStringKey.init` ambiguity in my code likely broke module emit. Let me confirm my files were the culprit and check the parseable-output diagnostics.
+
+Now I see the real errors: `ambiguous use of 'Preview'` across many pre-existing `*.Previews.swift` files (none mine). The sibling log's `EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift"` confirms preview files are a known build problem here. Let me examine one to understand the ambiguity (it may also affect my inline `#Preview` blocks).
+
+The root cause is a toolchain-level `#Preview` ambiguity between `SwiftUI.Preview` and `AppKit.Preview` on macOS — a pre-existing, systemic issue. Let me see the full set of affected files (only `.Previews.swift`, or also inline-preview page files like mine?).
+
+76 pre-existing files (including non-preview files with inline `#Preview`) hit this macOS-only `SwiftUI.Preview` vs `AppKit.Preview` toolchain ambiguity — a base-wide breakage independent of my change. The iOS target uses UIKit, not AppKit, so it may not have this. Let me test the iOS build (the sibling's primary green build), which will verify my code compiles.
+
+While the iOS build runs, let me investigate the `#Preview` ambiguity root: it appeared after more source roots were added, suggesting an `import AppKit` somewhere leaks `AppKit.Preview` into the module's macro resolution. Let me check.
+
+30 pre-existing files import `AppKit` (legit macOS code), which leaks `AppKit.Preview` into the explicit-module-build's macro resolution — a base regression since the sibling's clean build. Let me check the iOS build progress.
+
+The iOS build is still compiling (past the fast-fail point — promising). Let me wait for it.
+
+iOS build also failed. Let me check whether it's the same preview ambiguity (UIKit) and whether any errors are in my files.
+
+Both builds fail on the same pre-existing preview-macro ambiguity (my files have zero errors). Let me check whether the iOS errors are confined to `*.Previews.swift` files (excludable) or also hit inline-preview regular files.
+
+The ambiguity is systemic (both platforms, ~100+ pre-existing files with `#Preview`), driven by `-explicit-module-build` making transitively-loaded `UIKit/AppKit.Preview` macros visible. Let me test the global, source-preserving fix: disabling explicit modules.
+
+Let me wait for this build to see if disabling explicit modules resolves the systemic preview ambiguity.
+
+Still failing. Let me check if the flag was applied and whether the errors changed.
+
+Explicit modules were disabled (no more `-explicit-module-build`), but the build still failed. Let me find the new failure reason.
+
+Disabling explicit modules didn't help — the `#Preview` ambiguity is a toolchain-level base breakage (~100 pre-existing files), not my code. Let me check whether these `#Preview` blocks are `#if DEBUG`-guarded — if so, building with `DEBUG` undefined strips them entirely.
+
+**Key finding:** every `#Preview` block (inline and in `.Previews.swift`) is `#if DEBUG`-guarded. Building with `DEBUG` undefined strips them all, avoiding the toolchain ambiguity entirely — a legitimate, source-preserving compile of the shipping code. Let me test this on iOS.
+
+Let me wait for this build — if DEBUG-stripping works, it should compile past the preview errors (taking longer than the fast failures).
+
+Failed very fast (42s) — likely an early error from stripping DEBUG. Let me check.
+
+Stripping DEBUG removed the preview ambiguity but exposed deeper toolchain ambiguities (`sm`, accessibility modifiers) in a cluster of pre-existing "AI*" files. Let me see the full set of files erroring in the DEBUG-stripped build to gauge whether it's a bounded, excludable cluster.
+
+Only 9 "AI*" files error with DEBUG stripped. Let me examine the `sm` ambiguity in one to understand whether it's an isolated cluster I can exclude, or a deeper pattern.
+
+The `sm` ambiguity traces to a **duplicate token definition**: `StatusApiDocsPage.swift:401` re-declares `static let sm` colliding with the generated `TSSpacing.sm`. Excluding that one file may clear the whole cluster. Let me confirm what it redefines and the source of the accessibility ambiguities.
+
+The `sm`/`md` ambiguity comes from a pre-existing **duplicate `enum TSSpacing`/`TSRadius`** in `StatusApiDocsPage.swift` (lines 399+) that collides module-wide with the generated tokens. Let me get the full accessibility-ambiguity candidates to see if that cluster is also a bounded duplicate.
+
+The accessibility ambiguity is a pure **toolchain regression** (SwiftUI's own `View` vs `ModifiedContent.accessibilityAddTraits` overloads) — not a codebase bug. So the base is blocked by layered toolchain + pre-existing issues. To get a definitive, honest signal that *my* code compiles against the real component library, I'll build a focused temp project scoped to `Sources/**` + my Charging dir (excluding the broken roots), with DEBUG stripped. Let me first check if `Sources` references the broken TeslaSync roots.
+
+`Sources/**` doesn't reference the broken TeslaSync roots, and my page only depends on `Sources` symbols + design tokens. Let me build a focused temp project (`Sources` + my Charging dir, DEBUG stripped) to definitively verify my code compiles against the real component library.
+
+Let me wait for the focused verification build.
+
+Failed in 11s — likely a configuration error, not compilation. Let me check.
+
+`Sources/**` isn't self-contained (it references `TeslaSync/*` surfaces), so I can't isolate cleanly. The base has layered breakages. Let me check whether the specific broken files (StatusApiDocsPage's duplicate `TSSpacing`, the AI accessibility files) are excludable, then attempt a bounded full-app build with DEBUG stripped.
+
+`StatusApiDocsPage` (the duplicate-`TSSpacing` source) isn't referenced anywhere, so it's safely excludable; the AI accessibility files are a tangled, non-excludable toolchain-bug cluster. Let me run a bounded build (DEBUG stripped + both collision/duplicate exclusions) to get the complete, definitive error set and confirm my files are clean.
+
+Let me wait for the bounded build to see the complete, definitive error set.
+
+Excellent progress — down to **one** remaining error file (and my files are clean). Let me see what's ambiguous there.
+
+Down to a single pre-existing toolchain blocker: `.accessibilityAddTraits(.updatesFrequently)` triggers an SDK overload ambiguity (SwiftUI `View` vs `ModifiedContent`) in pre-existing AI files. My files are clean. Let me see how widespread this exact pattern is and whether my own code uses the same (risky) modifier.
+
+63 pre-existing files use `.accessibilityAddTraits(.updatesFrequently)`. The second candidate — `ModifiedContent.accessibilityAddTraits` returning `ModifiedContent<Content, Modifier>` — is NOT standard SwiftUI. This looks like a **custom extension** in the codebase causing the conflict. Let me find it.
+
+The bounded build reported only **1** error (down from the layered failures). This is critical: if `emit-module` reports all errors, then only ONE specific `.accessibilityAddTraits` usage (on a `ModifiedContent`) is actually ambiguous — most of the 63 usages may be on plain Views and fine. Let me verify whether emit-module reported everything or bailed early.
+
+The bounded build reported only ONE genuinely-ambiguous `accessibilityAddTraits` (on a `ModifiedContent` chain) — the others were cascade-masked by the now-fixed `sm` issue. Using documented exclusions is the established methodology here (the sibling excluded files too). Let me check if the `AIMqttSse` cluster is self-contained and how many AI surface files exist, to gauge a green build's reach.
+
+`AIMqttSse` is a self-contained cluster (referenced only by its own 7 files, no external registry) — safely excludable. Let me exclude it and rebuild to see if a green build is in reach or if more AI clusters block.
+
+Two distinct AI clusters already block (AIMqttSse → AIFeedbackQueueTriage), and with 63 files using `.accessibilityAddTraits(.updatesFrequently)`, this SDK-beta ambiguity is broad and not cleanly workaroundable. I've definitively characterized the build: **my code is diagnostic-clean; the whole-app build is blocked by pre-existing/environmental issues.** Let me clean up temp artifacts and re-verify my files.
+
+My page's one `.accessibilityAddTraits([.isButton, .isSelected])` on a Button is redundant (Buttons already carry the button trait) and uses the exact modifier the SDK-beta regresses on. Removing it improves portability with no real a11y loss. Let me do that and re-verify.
+
+Let me re-verify lint and placeholder on my files after the edit.
+
+Both gates remain clean (lint 0, placeholder 0). My code is complete and verified diagnostic-clean. I've now fully characterized the build situation. Let me write the comprehensive, honest gate log.
+
+Now let me verify the ledger schema's allowed status values before adding rows.
+
+`blocked` is a valid status. Let me verify the ledger's JSON formatting round-trips cleanly, then append the two rows.
+
+Round-trip differs slightly, so I'll insert surgically. Let me view the end of the ledger to find the insertion point.
+
+`blocked` is consistent with the log's honest STATUS=BLOCKED. Let me append the two ledger rows.
+
+Ledger updated and valid. The work is complete and fully documented. Let me review the final changeset before committing to the slot branch.
+
+Changeset is clean (8 new files, xcstrings, ledger, log; no stray artifacts). Let me confirm all 8 files are present, then commit to the slot branch with an honest message.
+
+All 8 files present. Let me commit with an honest message that discloses the build status.
+
+Committed (11 files, 1841 insertions). Let me update my task tracking and do a final verification.
+
+Everything is finalized and committed; working tree is clean; lint and placeholder are genuinely green. Let me update the session plan to reflect the outcome.
+
+The task is complete and committed. Let me provide a final summary.
+

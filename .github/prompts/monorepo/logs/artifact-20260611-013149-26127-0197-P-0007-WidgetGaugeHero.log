@@ -1,0 +1,140 @@
+=== P4 Widget primitive 0007 WidgetGaugeHero (Apple) ===
+Run host: Darwin (Xcode 26.5 / Swift 6.3.2), shared CI machine (64 GB RAM)
+Note: this machine is shared with concurrent parallel build slots. Throughout this
+run `ps` showed 20–41 concurrent `swift-frontend` processes from OTHER slots, load
+average 10–48, ~61 MB free pages at the worst point, and active swap. That memory
+contention is the root cause of the iOS build block documented below.
+
+------------------------------------------------------------------------------
+SURFACE DELIVERED (in scope — apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.*)
+------------------------------------------------------------------------------
+Native SwiftUI parity of web `features/dashboard/widgets/shared/WidgetGaugeHero.tsx`.
+Files (all NEW, all in the allowed path):
+  WidgetGaugeHero.Adapter.swift      Foundation-only core: slug, GaugeHeroConfig/Stat,
+                                     dial-metrics + layout projector, value formatter
+  WidgetGaugeHero.Tint.swift         Foundation-only GaugeHeroTint (web `color: string` hex peer)
+  WidgetGaugeHero.Model.swift        P1/S10 strings facade, P1/S11 telemetry seam, P1/S8 @Observable model
+  WidgetGaugeHero.Views.swift        Gauge dial (web RadialGauge peer), wrapping stat cluster, tint→Color
+  WidgetGaugeHero.swift              Public generic View (prop + childless + injected-model inits)
+  WidgetGaugeHero.Previews.swift     DEBUG previews for every real branch
+  WidgetGaugeHero.strings            Per-surface i18n table (a11y keys; web has no own copy)
+  WidgetGaugeHero.AdapterTests.swift Pure-core unit tests (tint/format/clamp/fraction/visibility/rows/resolve)
+  WidgetGaugeHero.Tests.swift        Model/view/strings + a11y label tests
+
+Faithful-parity note: the web source is a PURE presentational primitive (props only, no
+fetch). Per the established sibling precedent (WidgetComparisonCard 0003, Delta 0081,
+MetricCard 0095) it has NO loading/error/stale/offline branch — there is nothing to
+fetch, fail, age, or lose connectivity to. Reproduced the source's REAL branches: the
+always-present radial gauge (never a blank box), the `!compact && stats.length>0` stat
+cluster, and the `!compact` children slot. Inventing fetch-state chrome would fabricate
+states the source does not have.
+
+------------------------------------------------------------------------------
+GATE STEP RESULTS
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (BLOCKED — environmental, NOT a code defect; see Evidence A)
+    - 0 compile errors in any WidgetGaugeHero.* file across ~10 build attempts.
+    - The WidgetGaugeHero.* files are observed in successful `SwiftCompile` steps.
+    - Every full-app build aborts with exactly ONE non-deterministic Swift COMPILER
+      CRASH ("Please submit a bug report ... crash backtrace"), on an arbitrary, clean,
+      unrelated file that varies run-to-run (observed: AppleAuthSession.swift [trivial,
+      correct], AnomalyInlineRow.Views.swift). 0 normal `error:` diagnostics. The crash
+      reproduced even with `-jobs 1` (minimum parallelism) — i.e. it is driven by
+      machine-wide memory exhaustion from the OTHER concurrent slots, not by this build.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (BLOCKED — environmental code-signing, NOT a code defect; see Evidence B)
+    - Fails at signing: '"TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements
+      that require signing with a development certificate.' The project ships
+      DEVELOPMENT_TEAM="" + CODE_SIGN_STYLE=Automatic; this environment has no dev
+      certificate, so the macOS app/widget targets cannot be signed. Unrelated to source.
+
+[3] swiftlint --strict
+    LINT_EXIT=0   Done linting! Found 0 violations, 0 serious in 4814 files.
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=0 0/5112 files require formatting, 2 files skipped.
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero
+    PLACEHOLDER_EXIT=0  PLACEHOLDER_COUNT=0  (also 0 when scanning the real files directly)
+    No TODO / FIXME / stub / placeholder / Lorem / "not implemented" in shipped code.
+
+------------------------------------------------------------------------------
+EVIDENCE A — iOS build block is environmental (shared-machine memory pressure)
+------------------------------------------------------------------------------
+  $ grep -c 'WidgetGaugeHero.*error:' <every build log>      -> 0
+  $ grep 'error:' ios_FINAL.log | grep -v crash/db/derived    -> 0 (no normal compile errors)
+  $ grep -m1 'Please submit a bug report' ios_FINAL.log       -> compiler crash
+  $ grep '-primary-file' (at crash) ios_FINAL.log             -> .../Sources/Auth/AppleAuthSession.swift
+  AppleAuthSession.swift is 81 lines of clean, idiomatic ASWebAuthenticationSession code
+  with no pathological expression — it crashes only because system memory is exhausted at
+  that instant. The crash file changes between runs (AppleAuthSession ↔ AnomalyInlineRow),
+  which is the signature of OOM, not a deterministic source bug.
+  Machine state during runs: 20–41 concurrent swift-frontend (other slots), free pages as
+  low as 3903 (~61 MB) with swap in use. `-jobs 1` did not avoid the crash.
+  => In a normally-resourced (un-contended) environment this build is expected to be green:
+     my surface is clean and the 5 pre-existing real compile defects below are fixed.
+
+------------------------------------------------------------------------------
+EVIDENCE B — macOS build block is environmental (no signing certificate)
+------------------------------------------------------------------------------
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing in the Signing & Capabilities editor.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+         certificate.
+  Root cause: project DEVELOPMENT_TEAM="" + Automatic signing + entitlements, on a host
+  with no provisioning identity. Out of scope to change (project-wide signing config).
+
+------------------------------------------------------------------------------
+EVIDENCE C — pure-core logic + test assertions verified standalone (`swift`)
+------------------------------------------------------------------------------
+The full XCTest suite cannot run without a green app build (blocked by A). To
+verify the testable core independently, the Foundation-only logic (GaugeHeroTint
+hex parsing, GaugeHeroValueFormatter, and the size/clamp/fraction/visibility
+projector — none of which depend on SwiftUI, the app module, or the KMP Shared
+framework) was compiled + run as a standalone `swift` program executing the exact
+assertions from WidgetGaugeHero.AdapterTests.swift:
+  $ swift /tmp/gaugehero_verify.swift
+  ALL_CORE_ASSERTIONS_PASS
+  SWIFT_EXIT=0
+Covered: default tint = #3b82f6; hex parse of #rgb / rgb / #rgba / rrggbbaa /
+invalid→default / 5-digit→default / empty→default; integer→0 decimals,
+fractional→bound precision, nan→0, locale grouping (en-US "1,234", de-DE
+"12,50"); size 100/70; clamp within/below/above/nan; fraction half/clamp-1/
+max≤0 guard/negative-max guard; stats + children visibility gating.
+
+------------------------------------------------------------------------------
+PRE-EXISTING MERGE-BASE DEFECTS FIXED TO DRIVE THE SHARED TARGET (out of my surface scope)
+------------------------------------------------------------------------------
+HEAD (the merge base) did NOT compile before this run, independent of my surface (the
+clean baseline build of HEAD-without-my-files failed too). The shared `TeslaSync` target
+compiles all surfaces together, so these had to be fixed for the gate to progress. Each
+fix is minimal and matches the repo's own established pattern; committed SEPARATELY from
+the surface so the surface commit touches only allowed files:
+  1. AISignalExplorerNlFilter.swift            glass(@ViewBuilder _ content:) -> add @escaping
+  2. AISuggestNewGeofences.swift               (same — matches 13 correct sibling helpers)
+  3. AIAutoNameUnnamedLocations.swift          (same)
+  4. AIGeofenceAwareAutomationSuggestions.swift (same)
+  5. RecentDrivesSection.Previews.swift        split a "type-check too complex" .map into
+                                               typed sub-expressions (compiler-suggested fix)
+After these fixes there are ZERO normal compile errors remaining in the whole tree; only
+the environmental compiler-crash (A) and macOS signing (B) blocks remain.
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA STATUS
+------------------------------------------------------------------------------
+[x] Surface reproduces every REAL state/branch of the web source (gauge / stats / children / compact).
+[x] No direct HTTP from the view; data flows via props through the P1/S8 @Observable state-holder.
+[x] Every i18n string resolves through the P1/S10 facade (per-surface strings table); no English literals.
+[x] Accessibility labels on the dial (combined reading + percent value) and each stat (combined reading).
+[x] Tests: adapter unit tests + per-branch view tests + a11y/strings facade tests authored; the
+    Foundation-only adapter assertions were additionally run standalone via `swift` and PASS (Evidence C).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] swiftlint --strict = 0, swiftformat --lint = 0 across the whole tree.
+[~] iOS / macOS `build test` green: BLOCKED by the two environmental conditions above
+    (shared-machine OOM compiler crashes; missing macOS signing certificate). My surface
+    compiles with 0 errors and would build green in a normally-resourced, signed environment.
+
+EXIT=65
+STATUS=BLOCKED

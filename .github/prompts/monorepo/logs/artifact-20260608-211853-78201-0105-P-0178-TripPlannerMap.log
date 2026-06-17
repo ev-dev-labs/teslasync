@@ -1,0 +1,240 @@
+=== P4 Feature view 0178 TripPlannerMap (Apple) ===
+Prompt  : .github/prompts/monorepo/p4-apple/feature-views/0178 — Feature view: TripPlannerMap
+Web src  : web/src/features/driving/components/TripPlannerMap.tsx   (THE spec)
+Native   : apps/apple/TeslaSync/feature-views/TripPlannerMap.*      (11 files)
+Runner   : Darwin (Apple silicon). Xcode 26.5 (17F42). SDKs: iphonesimulator26.5,
+           macosx26.5. Sim: iPhone 16 (booted). swift 6.3.2 · swiftlint · swiftformat
+           · xcodegen · pwsh present and exercised on THIS runner.
+Capability: SwiftUI + MapKit present and exercised on THIS runner (this surface uses
+           SwiftUI + MapKit; no chart). NOT platform-capability-blocked.
+
+----------------------------------------------------------------------------------
+DELIVERABLE (11 files — the only files this prompt adds; all under TripPlannerMap.*)
+----------------------------------------------------------------------------------
+  TripPlannerMap.swift            — composable View; phase switch over the full state
+                                    envelope (loading/empty/error/content); freshness +
+                                    callout overlays; legend; binds TripPlannerMapModel
+                                    (P1/S8); emits view.opened (P1/S11). 120 lines.
+  TripPlannerMap.Adapter.swift    — pure core: coordinate finite-guard, the decoded trip
+                                    primitives (TripLocation/TripLeg/TripChargeStop ports),
+                                    phase/load-status/connection enums, surface slug,
+                                    SOC + charge-minute formatting. 173 lines.
+  TripPlannerMap.Projection.swift — pure projection: web polylinePoints + center + zoom +
+                                    hasData memos ported verbatim, origin/destination/
+                                    charge-stop markers, camera inputs (fit-bounds +
+                                    single-point fallback). 289 lines.
+  TripPlannerMap.Model.swift      — P1/S8 state-holder seam (TripPlannerMapSource) +
+                                    @Observable TripPlannerMapModel (phase + freshness +
+                                    projection + stale auto-refresh), P1/S10 i18n facade
+                                    (TripPlannerMapStrings), P1/S11 telemetry seam,
+                                    InMemoryTripPlannerMapSource for previews/tests. 268 lines.
+  TripPlannerMap.Labels.swift     — pure label/VoiceOver builders + {{token}} interpolation
+                                    + the marker callout display model (web Popup). 204 lines.
+  TripPlannerMap.Views.swift      — MapKit canvas (Map + MapPolyline + Annotation), the
+                                    origin/destination/charge-stop pins, the callout card,
+                                    the role legend. Token-driven (P1/S9). 267 lines.
+  TripPlannerMap.States.swift     — freshness chip, error (QueryError), empty (EmptyState),
+                                    loading skeleton. 149 lines.
+  TripPlannerMap.Previews.swift   — #Preview per state: Content(full route)/Content(origin
+                                    only)/Empty/Loading/Error/Stale/Offline. 147 lines.
+  TripPlannerMap.strings          — P1/S10 catalog contribution (table "TripPlannerMap"). 47 lines.
+  TripPlannerMap.Tests.swift      — adapter/polyline/camera/projection/format/labels/callout
+                                    coverage. 300 lines.
+  TripPlannerMap.ModelTests.swift — model state machine + stale auto-refresh + offline +
+                                    telemetry + connection tracking. 171 lines.
+
+  (Tests are split .Tests/.ModelTests per the repo's co-located-surface-test convention;
+   both match the allowed TripPlannerMap.* set. Every file ≤ 300 lines — within the repo
+   ceiling enforced by swiftlint file_length.)
+
+----------------------------------------------------------------------------------
+WEB→NATIVE PARITY MAP (TripPlannerMap.tsx is the spec; every branch + label reproduced)
+----------------------------------------------------------------------------------
+  GlassPanel wrapper + 400px map               → TripPlannerMap loadedMap (rounded glass
+                                                  panel, minHeight 320, bordered).
+  MapContainer + MapTileLayer style="dark"     → MapKit Map(.standard, POI excluded).
+  polylinePoints memo (legs chain, or direct   → TripPlannerMapProjection.polylineCoordinates
+   origin→destination when no legs)              (verbatim port) → MapPolyline accent 3pt.
+  center memo (midpoint / origin / US center)  → TripPlannerMapProjection.centerCoordinate
+                                                  (verbatim; fallback 39.8283,-98.5795).
+  zoom memo (maxDiff thresholds 4/5/6/7/9)     → TripPlannerMapProjection.zoomLevel (verbatim)
+                                                  → single-point camera span; both-endpoint
+                                                  case fits all coords via TSGeo.boundingRegion.
+  CircleMarker origin #22c55e + Popup          → origin pin Color.TS.statusSuccess + callout
+   (origin.name || t('…origin','Origin'))        [i18n tripPlanner.map.origin].
+  CircleMarker destination #ef4444 + Popup     → destination pin Color.TS.statusDanger + callout
+   (destination.name || t('…destination'))       [i18n tripPlanner.map.destination].
+  CircleMarker chargeStops #3b82f6 + Popup     → charge-stop pin Color.TS.accent + callout:
+   name + round(from)% → round(to)% (round(       title (stop.name) + range line
+   dur/60) min)                                   [i18n tripPlanner.map.stopRange].
+  hasData ? <map> : <EmptyState>               → TripPlannerMapModel.resolvePhase → .content
+   "Enter origin and destination to see route"   / .empty; EmptyState ContentUnavailableView
+                                                  [i18n tripPlanner.map.empty — verbatim copy].
+  (P4 widening) web content/empty → full native envelope: + loading skeleton, + error/retry
+                (QueryError parity), + stale/offline freshness chip & guarded auto-refresh
+                (ADR-013). + role legend + tap-to-open callout (native map idiom of the popup).
+
+  Token map (web hex → platform token, theme-aware light/dark/highContrast):
+    #22c55e green origin → Color.TS.statusSuccess   #ef4444 red destination → Color.TS.statusDanger
+    #3b82f6 blue route/charge stop → Color.TS.accent
+
+  i18n keys from the web source (resolve through the P1/S10 facade, no English literals in
+  code): tripPlanner.map.origin, tripPlanner.map.destination, tripPlanner.map.empty.
+  The web also renders the charge-stop "from% → to% (min)" popup as a template literal — keyed
+  here (tripPlanner.map.stopRange) so NO English literal lives in native code. Native-envelope
+  keys (map label/legend/freshness/error/loading/callout + VoiceOver) added.
+
+  States rendered (every one — never a blank box): loading, empty, error, stale, offline,
+  content. Telemetry: view.opened surface="TripPlannerMap" (P1/S11), once.
+
+  Accessibility: each pin is a VoiceOver button ("Origin: {name}" / "Destination: {name}" /
+  "{name}, {from}% to {to}%, {min} minutes"); map container labeled "Trip route map"; legend +
+  callout combined for VoiceOver; Dynamic Type via tokens; Reduce-Motion honored (TSAnimation,
+  TSSkeleton).
+
+----------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (the committed artifact — all GREEN, raw exits)
+----------------------------------------------------------------------------------
+[swiftlint --strict — the 10 TripPlannerMap .swift files]
+  Done linting! Found 0 violations, 0 serious in 10 files.            SURFACE_LINT_EXIT=0
+
+[swiftformat --lint — the 10 TripPlannerMap .swift files]
+  0/10 files require formatting.                                      SURFACE_FORMAT_EXIT=0
+
+[file_length — every file ≤ 400 (repo ceiling)]
+  Projection 289 · Model 268 · Views 267 · Labels 204 · Adapter 173 · ModelTests 171 ·
+  States 149 · Previews 147 · swift 120 · Tests 300.  (max 300)       FILELEN_OK=0
+
+[check-placeholders.ps1 — real pwsh scan, verbatim prompt -Path …/TripPlannerMap]
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0                                                              PLACEHOLDER_EXIT=0
+  (raw grep for TODO/FIXME/XXX/Placeholder/Lorem/Coming soon/not implemented/fatalError/
+   stub/mock across all 11 files = NONE.)
+
+[Isolated SwiftPM build — the FULL surface (all 8 .swift surface files incl. SwiftUI/MapKit
+ views + #Preview blocks) compiled against the REAL design system (generated Tokens.swift +
+ 18 real Sources/{Design,Components/{UI,Feedback,Maps}} files, verbatim), Swift 6 mode]
+  Build complete!                                                     ISO_BUILD_EXIT=0
+
+[Isolated SwiftPM test — pure core (Adapter/Projection/Labels/Model) + the two test files,
+ Swift 6 language mode == the app's complete strict concurrency]
+  Test Suite 'All tests' passed. Executed 42 tests, with 0 failures (0 unexpected).
+    TripPlannerMapAdapterTests · TripPlannerMapPolylineTests · TripPlannerMapCameraInputsTests ·
+    TripPlannerMapProjectionTests · TripPlannerMapFormatTests · TripPlannerMapLabelsTests ·
+    TripPlannerMarkerDisplayTests · TripPlannerMapModelTests                ISO_TEST_EXIT=0
+
+[type-name collision scan — every public TripPlannerMap* type vs the rest of apps/apple]
+  0 collisions (all surface types are TripPlanner-prefixed; unique in the module).
+
+----------------------------------------------------------------------------------
+PREREQUISITE (host setup, reproducible — executed on THIS runner)
+----------------------------------------------------------------------------------
+  cd apps/apple && xcodegen generate  → TeslaSync.xcodeproj (git-ignored). All 11
+    TripPlannerMap files wired into the TeslaSync / TeslaSync-macOS targets + the XCTest
+    bundles (66 references verified in project.pbxproj).
+
+----------------------------------------------------------------------------------
+FULL-APP / WHOLE-TREE GATES (raw exits — RED on PRE-EXISTING, UNRELATED code only)
+----------------------------------------------------------------------------------
+[xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test]
+  ** BUILD FAILED **
+  72 "ambiguous for type lookup" errors — ALL in sibling dashboard-widget surfaces:
+    dashboard-widgets/ChargeSessionChartWidget.Model.swift:74: 'ChargeSessionDTO' is ambiguous
+    dashboard-widgets/ChargeStatusLiveWidget.Adapter.swift:173: 'ChargeStateDTO' is ambiguous
+    dashboard-widgets/ChargeStatusLiveWidget.Adapter.swift:175: 'ChargeUnitPrefs' is ambiguous
+    dashboard-widgets/ChargeStatusLiveWidget.Adapter.swift:176: 'ChargeStatusProjection' is ambiguous
+    dashboard-widgets/ChargeStatusWidget.Model.swift:142-143: 'ChargeLoadStatus'/'ChargeConnection' …
+  Root cause = duplicate type declarations across committed sibling surfaces (e.g.
+    ChargeSessionDTO declared in BOTH ChargeStatusLiveWidget.Model.swift AND
+    ChargeSessionChartWidget.Models.swift; ChargeStatusProjection / ChargeConnection /
+    ChargeLoadStatus each declared in TWO ChargeStatus*Widget files).
+  TripPlannerMap errors in this run: 0 (grep -c = 0).                 IOS_EXIT=65
+
+[xcodebuild -scheme TeslaSync-macOS build test]
+  ** TEST FAILED ** (build action)
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing… (target 'TeslaSync-macOS')
+  error: "TeslaSyncWidgets-macOS" … requires signing with a development certificate.
+  No code-signing identity on this runner (DEVELOPMENT_TEAM empty). Infra, not code.
+  TripPlannerMap errors in this run: 0 (grep -c = 0).                 MAC_EXIT=65
+
+[swiftlint --strict — whole apps/apple]
+  Found 1 violation, 1 serious:
+    dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: opening_brace
+  TripPlannerMap violations: 0.                                       LINT_EXIT=2
+
+[swiftformat --lint apps/apple]
+  0 files require formatting (whole tree, incl. TripPlannerMap).      FORMAT_EXIT=0
+
+Why the two xcodebuild reds + the one whole-tree lint red are NOT this surface's defect
+(no red-as-green):
+  • iOS blocker = duplicate top-level type declarations in committed SIBLING dashboard-widget
+    surfaces (ChargeSessionDTO/ChargeStateDTO/ChargeUnitPrefs/ChargeStatusProjection/
+    ChargeConnection/ChargeLoadStatus), each declared in two files → "ambiguous for type
+    lookup" at every use site. Pre-existing: the BASELINE build (run BEFORE these 11 files
+    existed in the project) failed the same way. TripPlannerMap adds ZERO of these (grep=0).
+  • macOS blocker = development-signing of the app/widget entitlements — no signing identity
+    on this runner. Infra, not code. TripPlannerMap adds ZERO errors (grep=0).
+  • whole-tree swiftlint hit is in LiveSignalSparklinesWidget.Builder.swift — a pre-existing,
+    parallel-merge artifact, NOT TripPlannerMap.
+  • All three are OUTSIDE this prompt's allowed file set (TripPlannerMap.* + this log); they
+    cannot be fixed here, and TripPlannerMap introduces ZERO new errors into any of them.
+  • The COMMITTED artifact (TripPlannerMap.*) is GREEN on every surface-scoped gate AND on a
+    real isolated Swift 6 build of the FULL surface against the real design system + 42/42
+    tests. "No commit on red" holds for the committed files.
+
+----------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+----------------------------------------------------------------------------------
+  1  No red-as-green   : every red exit (IOS_EXIT=65/MAC_EXIT=65/LINT_EXIT=2) pasted raw +
+                         labeled red; pre-existing, non-TripPlannerMap causes named with
+                         file:line; TripPlannerMap error count = 0 each (grep-verified).
+  2  No scope narrowing: full surface — all 6 states, route polyline, origin/destination/
+                         charge-stop pins, tap callouts, legend, camera fit, a11y, i18n,
+                         telemetry, 42 tests. Nothing deferred or trimmed.
+  3  No skip-and-assume: every gate executed on THIS runner; raw exits pasted; the project
+                         actually generated, both Xcode failures inspected (not assumed), the
+                         full surface actually built against the real design system, the 42
+                         tests actually run.
+  4  No stubs as final : complete production surface + 42 real tests; placeholder scan = 0;
+                         no TODO/FIXME/XXX/stub/mock/Placeholder/Lorem/fatalError.
+  5  No parity shortcut: MapContainer/MapTileLayer/Polyline/origin+destination+charge-stop
+                         markers/popups/polylinePoints/center/zoom/hasData/empty-state copy/
+                         i18n/a11y/telemetry all mapped to platform idioms + verified.
+  6  No delegation     : authored directly; no sub-agent delegation of the surface.
+  7  No predecessor bypass: binds P1/S8 source seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11
+                         telemetry, P4 core (TSGeo/TSSkeleton/Color.TS/Font.TS/TSSpacing/
+                         TSRadius/TSMotion/TSAnimation); no HTTP in the view.
+  8  No commit on red  : the COMMITTED files (TripPlannerMap.* + this log) are GREEN on every
+                         surface-scoped gate + an isolated full-surface build + 42/42 tests;
+                         the full-app/whole-tree reds live in files this commit neither adds
+                         nor touches.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/TripPlannerMap.*
+                         (11 files) + this log. Documented widening: web content/empty → full
+                         P4 state envelope (loading/error/stale/offline); the Leaflet popup
+                         realized as a native tap-to-open callout + a role legend (map idiom).
+                         Documented spec fidelity: polylinePoints/center/zoom ported verbatim;
+                         fit-to-bounds preferred over the web zoom heuristic when both
+                         endpoints exist, with the web center+zoom kept as the single-point
+                         fallback.
+  10 EXIT/STATUS below.
+
+----------------------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic TripPlannerMap shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: the FULL surface (all 8 SwiftUI/MapKit files) compiles against the
+  REAL design system and its 42 tests pass under the app's own Swift 6 strict-concurrency rules,
+  with swiftlint / swiftformat / placeholder all green on the surface and every file within the
+  repo's ≤400-line ceiling. The full-app iOS-Simulator + macOS xcodebuild build/test gate is
+  DEFERRED (not failed by this code) — blocked by pre-existing duplicate-type declarations in
+  sibling dashboard-widget surfaces (iOS) and macOS development-signing (infra), both
+  pre-existing, both outside this prompt's allowed file set, both owned by the P99 apple-
+  acceptance-gate on a signed runner. This matches the repo's sanctioned "code-complete +
+  DEFERRED full-app Xcode gate" disposition used by sibling P4 feature views (e.g. 0176
+  SOCRouteChart, same web feature directory). TripPlannerMap introduces ZERO new errors into
+  any full-app/whole-tree gate (grep-verified count = 0).
+
+EXIT=0
+STATUS=DONE

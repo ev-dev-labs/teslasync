@@ -1,0 +1,155 @@
+=== P4 Shared surface 0052 AITCONarration (Apple) ===
+Runner: Darwin arm64 (Mac Studio), Xcode 26.5 (17F42), Swift 6.3.2,
+        swiftlint + swiftformat + pwsh + xcodegen present, Java 17 (KMP).
+Surface: apps/apple/TeslaSync/shared-surfaces/AITCONarration.*
+Web spec: web/src/components/ai/AITCONarration.tsx
+Canonical native sibling (structural twin): AICostForecastNarration.*
+
+Files shipped (10):
+  AITCONarration.swift            (main surface View — gated/loading/error/ready)
+  AITCONarration.Model.swift      (state-holder seam P1/S8, i18n facade P1/S10, telemetry P1/S11)
+  AITCONarration.Projection.swift (pure web-body projection + canStart + noVehicleHint + output branches)
+  AITCONarration.Adapter.swift    (request {vehicle_id}, SSE parse, stream reducer, output/action derivation, a11y)
+  AITCONarration.Chrome.swift     (freshness chip, refresh, connectivity banner, loading skeleton, gate-error)
+  AITCONarration.Views.swift      (Helix badge, Ask-Helix button, thinking dots/indicator, output panel, ready body)
+  AITCONarration.Previews.swift   (10 #Preview states)
+  AITCONarration.strings          (P1/S10 i18n catalog: parity + shared helix + output + chrome keys)
+  AITCONarration.Tests.swift      (projection/model/telemetry/freshness/a11y)
+  AITCONarration.AdapterTests.swift (request/SSE/reducer/output/action)
+
+Data sources bound via shared P1/S8 state holders (no HTTP in the view):
+  useSelectedVehicle -> Cost… analog TCONarrationInput.vehicleID
+  useTranslation     -> TCONarrationStrings facade (table "AITCONarration")
+  useAiStream        -> TCONarrationStreamSnapshot + reducer (POST /ai/analytics/tco/narrate)
+Shared components reproduced natively (P4 component-library atoms out of scope):
+  AIFeatureCard, withAiFeature gate, AiOutputPanel, AIThinkingIndicator.
+i18n parity keys (all resolve through P1/S10, no English literals in code):
+  tco.aiNarration.title  "Explain my total cost of ownership"
+  tco.aiNarration.button "Explain ownership cost"
+  tco.aiNarration.badge  "Helix"
+  tco.aiNarration.noVehicleHint "Pick a vehicle above to enable Helix."
+
+------------------------------------------------------------------------------
+STEP 1 — xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build test
+------------------------------------------------------------------------------
+Pre-req satisfied: KMP Shared.xcframework assembled + staged
+  (apps/shared/gradlew :core:assembleSharedXCFramework -> BUILD SUCCESSFUL in 6m53s;
+   staged slices: ios-arm64, ios-arm64-simulator, macos-arm64).
+xcodegen generate -> OK (AITCONarration referenced 60x in project.pbxproj across
+  TeslaSync / TeslaSync-macOS app targets and the XCTest bundles).
+
+Result: ** BUILD FAILED ** IOS_EXIT=65 — BLOCKED (NOT caused by this surface).
+  Two baseline blockers, both OUTSIDE this prompt's allowed files:
+
+  (a) Pre-existing compile error in a *different* shared surface (untouched by me,
+      git-confirmed unmodified):
+        TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+          error: escaping closure captures non-escaping parameter 'content'
+
+  (b) After temporarily neutralizing (a) as a diagnostic, the build advances and the
+      Swift compiler ITSELF crashes during IR generation of an UNRELATED file — a
+      capacity/scale limit on the monolithic ~5000-file TeslaSync module:
+        4.  While evaluating request IRGenRequest(IR Generation for file
+            ".../feature-views/AppearanceSettings.Controls.swift")
+        5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+        abort + 148
+        llvm::report_fatal_error(...) + 292
+        report_at_maximum_capacity(unsigned long) + 0   <-- SmallVector capacity overflow
+
+  PROOF (b) is baseline and independent of this surface — rebuilt with all 10
+  AITCONarration files REMOVED from the tree (regenerated project, 0 AITCONarration
+  refs) and sibling (a) patched:
+        BASELINE_BUILD_EXIT=65, identical IRGen crash:
+          report_at_maximum_capacity / report_fatal_error / SignalHandler
+        -> the crash reproduces with my surface entirely absent.
+
+  AITCONarration compile errors across ALL build attempts (ios + baseline + macOS): 0.
+  Every AITCONarration source file compiled cleanly in the full app target.
+
+------------------------------------------------------------------------------
+STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------------------
+Result: ** BUILD FAILED ** MAC_EXIT=65 — BLOCKED (environment, NOT this surface):
+  .../TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require
+    signing with a development certificate. Enable development signing ...
+  (DEVELOPMENT_TEAM is empty + hardened-runtime entitlements; no signing identity on
+   this runner). Fails at code-sign/entitlement stage; AITCONarration errors: 0.
+
+------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict           LINT_EXIT=0
+------------------------------------------------------------------------------
+  Done linting! Found 0 violations, 0 serious in 4027 files.
+  (AITCONarration's 9 Swift files lint clean; also verified scoped:
+   swiftlint --strict <9 AITCONarration files> -> 0 violations.)
+
+------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple   FORMAT_EXIT=0
+------------------------------------------------------------------------------
+  0/4325 files require formatting, 2 files skipped. (includes all 9 AITCONarration files)
+
+------------------------------------------------------------------------------
+STEP 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AITCONarration
+------------------------------------------------------------------------------
+  PLACEHOLDER_EXIT=0
+  Scoped scan clean. Independently verified the 10 AITCONarration.* files contain
+  zero forbidden tokens (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented).
+
+==============================================================================
+SUPPLEMENTARY SURFACE-SCOPED VERIFICATION (proves the surface is correct + complete,
+isolating it from the two baseline build blockers above)
+==============================================================================
+A) Isolated swiftc -typecheck of all 7 source files against the REAL design tokens
+   (apps/design/generated/apple/Tokens.swift) + REAL shared components
+   (TSDesign, TSMaterial, Typography, Buttons, Cards, Skeletons, Motion),
+   -swift-version 6 -strict-concurrency=complete -target arm64-apple-macos15.0:
+     EXIT=0  (zero diagnostics in any AITCONarration file)
+
+B) Real unit-test execution via an isolated SwiftPM package (module named TeslaSync so
+   `@testable import TeslaSync` resolves), built against the same real tokens + shared
+   components, swift-tools-version 6.0 (Swift 6 language mode):
+     `swift test` ->  Executed 73 tests, with 0 failures (0 unexpected).
+   Covers: SSE frame parse (14), stream reducer (8), output derivation (8),
+   action derivation (3), request body (6), projection phases (4), ready card (6),
+   localized output branches (6), input->request (2), model wiring/telemetry/
+   freshness/delegation (14), accessibility (2). Module compiled with all 10
+   #Preview blocks macro-expanded (validates Previews.swift).
+
+C) Full xcodebuild compiled every AITCONarration file with ZERO errors (the only
+   failures were baseline blockers (a)/(b) in unrelated files).
+
+States reproduced (parity with web source, every non-gated state renders — no hidden
+surface): gated (AI off -> withdrawn), loading (skeleton chrome), error (retryable
+gate-error + inline stream "Helix error: {msg}"), ready (description + no-vehicle hint +
+Ask-Helix button + output panel: empty/thinking/prose/failed), plus P4 leaf freshness
+axis (live/stale/offline chip + banner + one-shot stale auto-refresh).
+Accessibility: VoiceOver labels on every interactive element, Dynamic Type via Font.TS
+tokens, Reduce-Motion respected (thinking dots + symbol pulse gated on reduceMotion).
+Telemetry: view.opened emitted once, deferred past the gate (web data-ai-feature parity).
+
+==============================================================================
+CONCLUSION
+==============================================================================
+The AITCONarration surface is fully implemented and INDEPENDENTLY VERIFIED:
+compiles in the real Xcode project (Swift 6, strict-concurrency=complete), 73 unit
+tests pass, swiftlint --strict clean, swiftformat clean, placeholder-clean, i18n via
+P1/S10 facade, data via P1/S8 holders, telemetry via P1/S11.
+
+The full-target `build test` (IOS_EXIT/MAC_EXIT) cannot reach 0 on this runner due to
+factors entirely outside this surface and outside this prompt's allowed files:
+  - a pre-existing compile error in a DIFFERENT shared surface
+    (AIGeofenceAwareAutomationSuggestions.swift) — not editable under this prompt;
+  - a baseline swift-frontend IRGen capacity crash on the monolithic ~5000-file module
+    (proven to reproduce with this surface entirely removed);
+  - macOS dev-signing/entitlements not configured on this runner.
+Per the prompt's capability clause, these are reported as BLOCKED with evidence rather
+than worked around (no scope narrowing, no predecessor bypass, no red-as-green).
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_EXIT=0
+SURFACE_UNIT_TESTS=73 passed / 0 failed
+EXIT=65
+STATUS=BLOCKED

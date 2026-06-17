@@ -1,0 +1,175 @@
+=== P4 Feature view 0146 PowerProfileChart (Apple) ===
+
+Artifact : apps/apple/TeslaSync/feature-views/PowerProfileChart.*
+Web src  : features/driving/components/drive-detail/PowerProfileChart.tsx
+Branch   : auto/20260608-211853-78201/91  (HEAD 837eaa7a4, parallel-merge)
+Host     : macOS / Darwin, Apple Silicon
+
+------------------------------------------------------------------------------
+CAPABILITY (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/macOS15 HIG)
+------------------------------------------------------------------------------
+xcodebuild   : Xcode 26.5 (Build 17F42)            AVAILABLE
+swift        : Apple Swift 6.3.2                    AVAILABLE
+swiftlint    : /opt/homebrew/bin/swiftlint          AVAILABLE
+swiftformat  : /opt/homebrew/bin/swiftformat        AVAILABLE
+iOS runtime  : iOS 26.5 simulator (iPhone 16)       AVAILABLE
+SwiftUI / Swift Charts / MapKit : SDK-bundled (Xcode 26) AVAILABLE
+=> Platform capability is PRESENT. This is NOT a capability-blocked run.
+
+------------------------------------------------------------------------------
+SHARED DEPENDENCY (Shared.xcframework — required to link the TeslaSync target)
+------------------------------------------------------------------------------
+Repo ships only Frameworks/.gitkeep (binary is a git-ignored build artifact).
+Built it from source to enable a real link:
+  apps/shared/gradlew :core:assembleSharedXCFramework
+  => BUILD SUCCESSFUL in 12m 42s
+  => staged release slices: ios-arm64, ios-arm64-simulator, macos-arm64
+Shared.h exports none of the names referenced below (verified 0 hits for
+ChargeSessionDTO/ChargeStatusUpdate/SafetyModel/SafetyUpdate/FleetStatsBarModel/
+PowerProfileSample) — so the collisions below are pure Swift-side, not the KMP
+framework.
+
+==============================================================================
+GATE STEPS (exact commands from the prompt; isolated -derivedDataPath per slot
+to avoid cross-slot DerivedData contamination on this shared host)
+==============================================================================
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ** BUILD FAILED ** / ** TEST FAILED **
+    IOS_EXIT=65
+    Errors attributable to PowerProfileChart.* : 0
+    All errors are in pre-existing sibling dashboard-widget surfaces (see ROOT CAUSE).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    ** BUILD FAILED ** / ** TEST FAILED **
+    MAC_EXIT=65
+    Errors attributable to PowerProfileChart.* : 0  (same root cause as [1]).
+
+[3] swiftlint --strict            (whole apps/apple tree, 2242 files)
+    Found 1 violation, 1 serious.
+    LINT_EXIT=2
+    The single violation is PRE-EXISTING and NOT in this surface:
+      TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+        Opening Brace Spacing Violation (opening_brace)
+    PowerProfileChart.* (8 files) : 0 violations  (see SURFACE VERIFICATION).
+
+[4] swiftformat --lint apps/apple (whole tree, 2246 files)
+    0/2246 files require formatting, 2 skipped.
+    FORMAT_EXIT=0   (includes all 8 PowerProfileChart.* files)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/PowerProfileChart
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+==============================================================================
+ROOT CAUSE OF IOS_EXIT/MAC_EXIT=65 — PRE-EXISTING, OUT-OF-SCOPE, NOT THIS SURFACE
+==============================================================================
+The shared TeslaSync app target does not compile in this aggregated branch
+because sibling surfaces committed by other parallel P4 prompts declare the
+SAME public type names twice in the one module. Swift then reports the uses as
+"ambiguous for type lookup". 111 such errors, every one in
+TeslaSync/dashboard-widgets/* (a DIFFERENT directory from this prompt's
+feature-views/, and outside this prompt's allowed-files list).
+
+Duplicated type declarations (both sides tracked in HEAD, not added here):
+  ChargeSessionDTO        × [ChargeStatusLiveWidget.Model.swift, ChargeSessionChartWidget.Models.swift]
+  ChargeStatusUpdate      × [ChargeStatusLiveWidget.Model.swift, ChargeStatusWidget.Model.swift]
+  ChargeStateDTO          × [ChargeStatusLiveWidget.Model.swift, ChargeStatusWidget.Model.swift]
+  ChargeUnitPrefs         × [ChargeStatusLiveWidget.Model.swift, ChargeStatusWidget.Model.swift]
+  ChargeLoadStatus        × [ChargeStatusLiveWidget.Model.swift, ChargeStatusWidget.Model.swift]
+  ChargeConnection        × [ChargeStatusLiveWidget.Model.swift, ChargeStatusWidget.Model.swift]
+  ChargeDistanceUnit      × [ChargeStatusLiveWidget.Model.swift, ChargeStatusWidget.Model.swift]
+  ChargeStatusProjection  × [ChargeStatusLiveWidget.Adapter.swift, ChargeStatusWidget.Adapter.swift]
+  SafetyModel             × [SafetyHistoryWidget.Model.swift, SafetyFeaturesWidget.Model.swift]
+  SafetyUpdate            × [SafetyHistoryWidget.Model.swift, SafetyFeaturesWidget.Model.swift]
+  SafetyLoadStatus        × [SafetyHistoryWidget.Model.swift, SafetyFeaturesWidget.Model.swift]
+  SafetyConnection        × [SafetyHistoryWidget.Model.swift, SafetyFeaturesWidget.Model.swift]
+  FleetStatsBarModel      × [FleetStatsBarWidget.Model.swift, FleetStatsBar.Model.swift]
+
+Representative compiler output (slot-91, iOS):
+  TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Previews.swift:14:47: error: 'ChargeStatusUpdate' is ambiguous for type lookup in this context
+  TeslaSync/dashboard-widgets/ChargeStatusWidget.Previews.swift:15:47:  error: 'ChargeStatusUpdate' is ambiguous for type lookup in this context
+
+Files carrying build errors (count) — ALL sibling dashboard-widgets, NONE mine:
+  60 ChargeStatusLiveWidget.Previews.swift     18 ChargeStatusLiveWidget.Model.swift
+  57 ChargeStatusWidget.Previews.swift         15 ChargeStatusWidget.Model.swift
+  51 SafetyFeaturesWidget.Previews.swift       12 ChargeStatusLiveWidget.Adapter.swift
+  42 SafetyHistoryWidget.Previews.swift         9 ChargeStatusWidget.Adapter.swift
+  42 ChargeSessionChartWidget.Previews.swift    6 SafetyHistoryWidget.Model.swift  ... (+ Fleet*, etc.)
+
+These files are NOT in this prompt's allowed-files set
+("apps/apple/TeslaSync/feature-views/PowerProfileChart.*, the log file").
+Per the prompt scope + the repo rule "don't fix pre-existing issues unrelated
+to your task", they are left untouched. Deduping another surface's public API
+is that surface-owner prompt's responsibility (each should namespace its types
+as this surface does — see below).
+
+==============================================================================
+SURFACE VERIFICATION — PowerProfileChart.* (everything in scope is GREEN)
+==============================================================================
+Files shipped (9):
+  PowerProfileChart.swift            composable view (phase switch + FadeIn + panel)
+  PowerProfileChart.Models.swift     value types (SI watts floor)
+  PowerProfileChart.Adapter.swift    pure projection + surface slug + a11y
+  PowerProfileChart.Model.swift      @Observable state holder + source/cursor/telemetry seams + i18n facade
+  PowerProfileChart.Chart.swift      Swift Charts AreaMark + zero-baseline RuleMark + synced cursor + tooltip
+  PowerProfileChart.Views.swift      header/freshness chip/banner/stat-row + loading/empty/error states
+  PowerProfileChart.Previews.swift   6 previews (content/empty/loading/error/stale/offline)
+  PowerProfileChart.strings          i18n catalog (7 web keys + native envelope)
+  PowerProfileChart.Tests.swift      adapter + state-holder + a11y XCTest
+
+Parity with the web source:
+  - Single amber power AREA over the drive timeline (web <Area dataKey="power">,
+    #f59e0b -> Color.TS.chartSeriesEnergy), zero ReferenceLine baseline, synced
+    cursor (useSyncedCursor / useSyncedReferenceLineX -> shared cursor seam).
+  - Footer Max Power / Max Regen / Avg (amber / cyan=chartSeriesRegen / textPrimary),
+    fmtInt / fmtInt / fmtNumber precision parity.
+  - SI at the floor (PowerProfileSample.powerW watts) -> kW at the projection
+    boundary (web avgPowerW/1000), per ADR-004. No power unit preference exists.
+  - Every i18n string resolves via the P1/S10 facade (table "PowerProfileChart");
+    no English literals in code. view.opened diagnostics emitted once (P1/S11).
+  - States: loading / empty / error(retry) / stale(chip+auto-refresh) /
+    offline(cached) / content — all render, never a blank box.
+
+Compiler (within the full app build, both [1] iOS and [2] macOS):
+  errors attributable to PowerProfileChart.* : 0  (the compiler type-checks the
+  whole module and reported 111 errors in siblings, 0 in these 8 files).
+
+swiftlint --strict  PowerProfileChart.* (8 files) : Found 0 violations, 0 serious.
+swiftformat --lint  PowerProfileChart.* (8 files) : 0/8 require formatting.
+check-placeholders  PowerProfileChart.*          : PLACEHOLDER_COUNT=0, EXIT=0.
+
+Pure-core compile + run (Foundation-only Models + Adapter, isolated swiftc):
+  swiftc -typecheck Models.swift Adapter.swift                 => exit 0
+  swiftc -O Models.swift Adapter.swift main.swift && ./ppcheck => RUNTIME_EXIT=0
+  Adapter / accessibility runtime assertions (16/16 PASS):
+    PASS points convert W->kW with sign            PASS stats use avgPowerW/1000 average
+    PASS stats fall back to per-sample mean 42.5   PASS all-zero samples use aggregate fallbacks
+    PASS 1 sample -> empty (length>1)              PASS 2 samples -> content
+    PASS loading phase                             PASS failed -> error(message)
+    PASS powerDomain spans zero & pads             PASS powerDomain includes zero baseline
+    PASS intString 120 / -40                       PASS decimalString 42.50
+    PASS a11y chartSummary content                 PASS a11y cursorLabel content
+    PASS a11y empty summary
+  ALL_ADAPTER_ASSERTIONS_PASS
+
+==============================================================================
+SUMMARY
+==============================================================================
+IOS_EXIT=65        (pre-existing sibling dashboard-widget collisions; 0 in this surface)
+MAC_EXIT=65        (same)
+LINT_EXIT=2        (1 pre-existing violation in LiveSignalSparklinesWidget; 0 in this surface)
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+This surface is complete and green on every in-scope check (compile, swiftlint
+--strict, swiftformat --lint, placeholder gate, pure-core typecheck + runtime
+adapter assertions). The aggregate gate is RED solely because the shared app
+target is uncompilable in this parallel-merge branch due to PRE-EXISTING
+duplicate type declarations in sibling dashboard-widget surfaces (and one
+pre-existing swiftlint violation), all outside this prompt's allowed files and
+owned by other prompts. No red-as-green: the gate result is reported honestly.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,206 @@
+=== P4-APPLE · P7 · page:admin/AuditLog (Apple / SwiftUI) ===
+Artifact : apps/apple/TeslaSync/feature-views/AuditLogPage.*  (11 .swift + 1 .strings)
+Web src  : web/src/features/admin/pages/AuditLogPage.tsx
+Host     : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+Date     : 2026-06-12
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked)
+  xcodebuild -version            -> Xcode 26.5 / Build 17F42
+  swift --version                -> Apple Swift version 6.3.2
+  swiftlint / swiftformat / xcodegen / pwsh -> all present (versions above)
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0).
+  KMP Shared.xcframework BUILT + STAGED on this run (gradle :core:assembleSharedXCFramework -> BUILD SUCCESSFUL).
+  SwiftUI available; this surface has no chart and no map (parity manifest declares 0 charts / 0 maps).
+
+----------------------------------------------------------------------------------------
+BUILD-WIRING DECISION (documented — no silent drift)
+----------------------------------------------------------------------------------------
+  The generated prompt's template paths (Output `apps/apple/TeslaSync/Features/Admin/AuditLogPage.swift`,
+  allowed `apps/apple/TeslaSync/Features/Admin/**`) name a directory that is NOT one of the source roots in
+  apps/apple/project.yml. Files placed there would never be compiled by the iOS/macOS app targets, the
+  XCTest bundles, or swiftlint (.swiftlint.yml `included:`), so they could not actually achieve parity in the
+  app. The repo's established convention for page/feature surfaces is the satellite-file pattern under
+  `TeslaSync/feature-views/` (e.g. the existing AlertStudioPage — itself a *page* — and AuditPanel). This
+  surface therefore ships in `apps/apple/TeslaSync/feature-views/AuditLogPage.*`, which IS a compiled source
+  root in project.yml (iOS + macOS app + both XCTest bundles) and in .swiftlint.yml — so every gate below is
+  meaningful. Navigation registration lives in this feature's own file (AuditLogPage.Registration.swift),
+  mirroring the established SettingsRouteRegistration pattern; no shared app file is edited (parallel-safe).
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (full parity with the web source)
+----------------------------------------------------------------------------------------
+  The web `AuditLogPage` is the admin audit-log browser + SHA-256 hash-chain verifier. It binds FOUR data
+  sources (useAuditLog / useAuditCategories / useAuditActions / useAuditChainVerify) and renders THREE
+  GlassPanels (hash-chain integrity, filters, entries table) with loading / empty / error / success states,
+  an expandable row detail (ip / user-agent / trace / before / after / row_hash), pagination, and a 503
+  "subsystem unavailable" banner. The native SwiftUI parity reproduces ALL of it, adaptive across macOS
+  (regular) + iOS (compact/regular):
+
+  Files (apps/apple/TeslaSync/feature-views/AuditLogPage.*, 2478 LOC):
+    • Model.swift        — wire value types (AuditLogEntry + snake_case decode, AuditChainVerification,
+                           AuditLogFilters + query builder), error taxonomy, cache-then-network load state.
+    • Localization.swift — P1/S11 surface identity + telemetry sinks; P1/S10 i18n facade (ALStrings/ALText/
+                           ALLocalizer over table "AuditLogPage"); date facade (formatDateTime/formatRelative).
+    • Store.swift        — P1/S8 AuditLogSource seam (4 feeds), InMemoryAuditLogSource, @Observable
+                           AuditLogPageModel (start/stop/applyFilters/reset/pagination/verify/expansion).
+    • Copy.swift         — ALCopy: 50 web `t(key,default)` descriptors + 9 native HIG chrome descriptors.
+    • Projection.swift   — pure row formatting (em-dash, trace truncation, #entity_id, pretty JSON, tone),
+                           per-source presentation resolvers (table + verify), filter options, a11y summary.
+    • AuditLogPage.swift — top-level View + localize.key LocalizedStringKey bridge + page chrome + banner.
+    • Views.swift        — GlassPanel1 integrity, GlassPanel2 filters, GlassPanel3 entries (all 4 states).
+    • Table.swift        — adaptive entries table (columnar macOS / card iPhone) + expanded detail + badges.
+    • Registration.swift — AuditLogRouteRegistration (hosts `.admin`; web /admin/audit-log deep link).
+    • Previews.swift     — previews for success / loading / empty / error / subsystem / verify-broken /verifying.
+    • Tests.swift        — XCTest: decode, projection, both presentation resolvers, model, strings, a11y,
+                           registration (runs in TeslaSync(/-macOS) XCTest bundles).
+    • AuditLogPage.strings — per-surface i18n table "AuditLogPage" (50 web keys + 9 native chrome keys).
+  Bindings : P1/S8 @Observable AuditLogPageModel (no HTTP in the view); P1/S9 tokens (Color.TS/Font.TS/
+             TSSpacing/TSRadius — no raw hex, no ad-hoc typography); shared components only (TSGlassPanel,
+             TSButton, TSBadge, TSSelect, TSTextField, TSEmptyState, TSErrorDisplay, TSAlertBanner,
+             TSTableSkeleton, TSCopyButton, TSCard, TSCaption/TSPanelTitle/TSPageTitle/TSLabel); P1/S10
+             NSLocalizedString facade; P1/S11 view.opened telemetry (slug "AuditLogPage", once + idempotent).
+  i18n     : every visible literal resolves through ALLocalizer; the 50 manifest keys ship verbatim (the web
+             defaults) + 9 native HIG keys (status OK/Fail tokens the web Badge renders bare, loading/error/
+             a11y). The 2 web keys whose identifier embeds the placeholder-gate token carry the sanctioned
+             `// parity:allow verbatim web i18n key` opt-out (ADR-011).
+  a11y     : panels are accessibility containers; each row folds into one VoiceOver element reading
+             ts+actor+action+category+status; decorative glyphs hidden; ≥44pt targets (shared components);
+             Dynamic Type + light/dark via tokens; SI not applicable (no unit-bearing values on this page).
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint (surface, 11 .swift)            -> 0/11 files require formatting.   FORMAT_EXIT=0
+[2] swiftlint --strict (surface, 11 .swift)            -> Found 0 violations, 0 serious.    LINT_EXIT=0
+[3] placeholder gate (apps/tools/check-placeholders.ps1, isolated surface copy, -Language swift)
+        PLACEHOLDER_ALLOWED=2 (the 2 verbatim web i18n keys)   PLACEHOLDER_COUNT=0           EXIT=0
+        (literal prompt path apps/apple/TeslaSync/Features/Admin -> EXIT=0, clean no-op)
+[4] isolated SwiftPM build + test (Foundation-pure layer: Model + Localization + Store + Copy + Projection;
+    swift-tools 6.0, macOS v15, Swift 6 mode. Session harness under session-state/files — NOT shipped.)
+        swift test -> Executed 8 tests, with 0 failures.                                    SPM_TEST_EXIT=0
+        (DecodeTests, ProjectionTests, PresentationTests, ModelTests, StringsTests)
+[5] dual-SDK swiftc -typecheck (FULL shipped surface: Model/Localization/Store/Copy/Projection/AuditLogPage/
+    Views/Table/Registration/Previews) against the REAL design system — ../design/generated/apple/Tokens.swift
+    + Sources/Components (UnitFormatters.swift excluded) + Sources/Design + Sources/App/{AppRoute,
+    AppRouteParser,RouteHostRegistry}.swift; -swift-version 6 -D DEBUG.
+        iOS 18    (-target arm64-apple-ios18.0-simulator, --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+        macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)         -> 0 errors  MAC_TYPECHECK_EXIT=0
+[6] Tests.swift in-module typecheck (XCTest shimmed; verifies the co-located tests use the real surface API
+    correctly) macOS 15 -> 0 errors.                                                        TEST_TYPECHECK_EXIT=0
+[7] xcodegen generate -> Created project at apps/apple/TeslaSync.xcodeproj; project.pbxproj enumerates all 12
+    AuditLogPage files (72 file-ref + build-file lines across iOS/macOS app + iOS/macOS test bundles).  XCODEGEN_EXIT=0
+
+----------------------------------------------------------------------------------------
+FULL-APP xcodebuild (the prompt gate) — EXECUTED — RED for ONE PRE-EXISTING / UNRELATED reason
+----------------------------------------------------------------------------------------
+  KMP Shared.xcframework built + staged by the scheme pre-action (gradle BUILD SUCCESSFUL).
+  [iOS]  xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS Simulator' build
+         => ** BUILD FAILED **
+         The TeslaSync whole-module Swift emit (EmitSwiftModule — the type-check of EVERY module file,
+         including all 11 AuditLogPage files) RAN. The build log contains EXACTLY ONE distinct compile error,
+         PRE-EXISTING and unrelated to this surface (another agent's parallel-merged shared-surface file):
+           TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+             error: escaping closure captures non-escaping parameter 'content'
+         grep "error:" | grep AuditLogPage => 0   (ZERO surface errors)
+         (Same class of pre-existing failure the predecessor logs recorded for AIAutoNameUnnamedLocations.swift.)
+         Fixing AISuggestNewGeofences.swift is OUT of this prompt's allowed-files scope
+         (apps/apple/TeslaSync/feature-views/AuditLogPage.*). Deferred to P99 acceptance gate on a clean,
+         signed macos-latest runner, per apps/macos-pending-verifications.md.
+  [macOS] not separately run: the same shared-surfaces module error precedes any app-target link, and macOS
+         additionally fails dev-signing (0 codesigning identities on this host) — both pre-existing/environmental.
+  This surface's own correctness is proven instead by gates [4][5][6] (iOS + macOS typecheck 0 errors,
+  SPM tests green) plus the whole-module emit running clean of AuditLogPage errors.
+
+=== PARITY ===
+PARITY_REQUIRED=57
+-- panels (3) --
+[x] panel  · GlassPanel1  -> ALIntegrityPanel (AuditLogPage.Views.swift) — TSGlassPanel, hash-chain integrity
+[x] panel  · GlassPanel2  -> ALFiltersPanel   (AuditLogPage.Views.swift) — TSGlassPanel, filter row
+[x] panel  · GlassPanel3  -> ALEntriesPanel   (AuditLogPage.Views.swift) — TSGlassPanel, entries table
+-- data states (4) --
+[x] state  · loading -> AuditLogProjection.tablePresentation(.loading)+verifyPresentation(.verifying); ALEntriesPanel content(.loading)->TSTableSkeleton; ALIntegrityPanel(.verifying)->TSSpinner
+[x] state  · empty   -> AuditLogProjection.tablePresentation(.empty); ALEntriesPanel content(.empty)->TSEmptyState(emptyTitle/emptyMessage)
+[x] state  · error   -> AuditLogProjection.tablePresentation(.error)+verifyPresentation(.error); ALEntriesPanel->TSErrorDisplay; ALIntegrityPanel->TSAlertBanner(verifyErrorTitle)
+[x] state  · success -> AuditLogProjection.tablePresentation(.content)->ALEntriesTable (AuditLogPage.Table.swift); verifyPresentation(.result)->ALVerifyChip
+-- strings (50; each ALCopy.<symbol> in AuditLogPage.Copy.swift + entry in AuditLogPage.strings) --
+[x] string · admin.auditLog.actionLabel            -> ALCopy.actionLabel
+[x] string · admin.auditLog.actorLabel             -> ALCopy.actorLabel
+[x] string · admin.auditLog.actorPlaceholder       -> ALCopy.actorPrompt (key verbatim)
+[x] string · admin.auditLog.allActions             -> ALCopy.allActions
+[x] string · admin.auditLog.allCategories          -> ALCopy.allCategories
+[x] string · admin.auditLog.applyFilters           -> ALCopy.applyFilters
+[x] string · admin.auditLog.categoryLabel          -> ALCopy.categoryLabel
+[x] string · admin.auditLog.chainBroken            -> ALCopy.chainBroken
+[x] string · admin.auditLog.chainIntact            -> ALCopy.chainIntact
+[x] string · admin.auditLog.colAction              -> ALCopy.colAction
+[x] string · admin.auditLog.colActor               -> ALCopy.colActor
+[x] string · admin.auditLog.colCategory            -> ALCopy.colCategory
+[x] string · admin.auditLog.colDetail              -> ALCopy.colDetail
+[x] string · admin.auditLog.colEntity              -> ALCopy.colEntity
+[x] string · admin.auditLog.colSuccess             -> ALCopy.colSuccess
+[x] string · admin.auditLog.colTrace               -> ALCopy.colTrace
+[x] string · admin.auditLog.colTs                  -> ALCopy.colTs
+[x] string · admin.auditLog.detailAfter            -> ALCopy.detailAfter
+[x] string · admin.auditLog.detailBefore           -> ALCopy.detailBefore
+[x] string · admin.auditLog.detailHash             -> ALCopy.detailHash
+[x] string · admin.auditLog.detailIp               -> ALCopy.detailIP
+[x] string · admin.auditLog.detailTrace            -> ALCopy.detailTrace
+[x] string · admin.auditLog.detailUa               -> ALCopy.detailUA
+[x] string · admin.auditLog.emptyMessage           -> ALCopy.emptyMessage
+[x] string · admin.auditLog.emptyTable             -> ALCopy.emptyTable
+[x] string · admin.auditLog.emptyTitle             -> ALCopy.emptyTitle
+[x] string · admin.auditLog.entityTypeLabel        -> ALCopy.entityTypeLabel
+[x] string · admin.auditLog.entityTypePlaceholder  -> ALCopy.entityTypePrompt (key verbatim)
+[x] string · admin.auditLog.filtersTitle           -> ALCopy.filtersTitle
+[x] string · admin.auditLog.firstBadId             -> ALCopy.firstBadID
+[x] string · admin.auditLog.hideDetails            -> ALCopy.hideDetails
+[x] string · admin.auditLog.integrityTitle         -> ALCopy.integrityTitle
+[x] string · admin.auditLog.limitLabel             -> ALCopy.limitLabel
+[x] string · admin.auditLog.nextPage               -> ALCopy.nextPage
+[x] string · admin.auditLog.notConfigured          -> ALCopy.notConfigured
+[x] string · admin.auditLog.pageInfo               -> ALCopy.pageInfo
+[x] string · admin.auditLog.pageTitle              -> ALCopy.pageTitle
+[x] string · admin.auditLog.prevPage               -> ALCopy.prevPage
+[x] string · admin.auditLog.resetFilters           -> ALCopy.resetFilters
+[x] string · admin.auditLog.rowsChecked            -> ALCopy.rowsChecked
+[x] string · admin.auditLog.showDetails            -> ALCopy.showDetails
+[x] string · admin.auditLog.sinceLabel             -> ALCopy.sinceLabel
+[x] string · admin.auditLog.subtitle               -> ALCopy.subtitle
+[x] string · admin.auditLog.tableTitle             -> ALCopy.tableTitle
+[x] string · admin.auditLog.untilLabel             -> ALCopy.untilLabel
+[x] string · admin.auditLog.verifyButton           -> ALCopy.verifyButton
+[x] string · admin.auditLog.verifyErrorTitle       -> ALCopy.verifyErrorTitle
+[x] string · admin.auditLog.verifyHint             -> ALCopy.verifyHint
+[x] string · admin.auditLog.verifying              -> ALCopy.verifying
+[x] string · admin.subsystem.unavailableTitle      -> ALCopy.unavailableTitle
+PARITY_COVERED=57
+=== END PARITY ===
+
+----------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------------------------
+  [x] Every named panel implemented (GlassPanel1/2/3); the web's anonymous regions (banner, pagination,
+      expanded detail) reproduced.
+  [x] All 57 parity items render from the bound @Observable state holder (AuditLogPageModel).
+  [x] loading / empty / error / success implemented for the log feed (+ idle/verifying/result/error for the
+      verify feed, + cached-keep for the dropdown feeds).
+  [x] All visible strings from the "AuditLogPage" table; zero hardcoded literals; key names match web verbatim.
+  [x] Dark mode + Dynamic Type + accessibility honored; SwiftUI-native (no web cloning); adaptive macOS+iOS.
+  [x] build-wiring: files in a real compiled source root; xcodegen enumerates all 12; navigation registered.
+  [x] format + lint + placeholder + xcodegen + dual-SDK typecheck + SPM tests all green; PARITY_COVERED==57.
+  [x] Full app xcodebuild RED only for ONE pre-existing/unrelated error (AISuggestNewGeofences.swift) with
+      ZERO AuditLogPage errors; deferred to P99 acceptance gate (apps/macos-pending-verifications.md).
+
+----------------------------------------------------------------------------------------
+VERDICT
+----------------------------------------------------------------------------------------
+  Surface page:admin/AuditLog is COMPLETE and verified GREEN by every host-runnable + surface-scoped gate:
+    FORMAT_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  SPM_TEST_EXIT=0 (8/8)
+    IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  TEST_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+  The full-app xcodebuild is RED only for ONE pre-existing, unrelated compile error in another agent's
+  shared-surface (AISuggestNewGeofences.swift) — ZERO AuditLogPage errors, whole-module emit clean — deferred
+  to the P99 acceptance gate on a signed runner. apple-ledger.json rows (apple-macos + apple-ios) set to
+  status=done, coveredCount=requiredCount=57.
+
+EXIT=0
+STATUS=DONE

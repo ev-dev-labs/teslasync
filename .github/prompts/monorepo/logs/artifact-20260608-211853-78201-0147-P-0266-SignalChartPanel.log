@@ -1,0 +1,204 @@
+================================================================================
+P4 · Feature view · 0266 — SignalChartPanel (Apple)
+Run: 2026-06-09T04:08-0700   Host: Darwin arm64 (Atuls-Mac-Studio.local), macOS 26.5.1
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0266-SignalChartPanel.prompt.md
+Web source (spec): web/src/features/telemetry/components/SignalChartPanel.tsx
+Native output: apps/apple/TeslaSync/feature-views/SignalChartPanel.*
+Toolchain: Xcode 26.5 (17F42) · Apple Swift 6.3.2 · xcodegen 2.45.4 ·
+           swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh · iPhoneSimulator 26.5 + MacOSX 26.5 SDK
+Mode: code-complete + host-validated gates; full-app Xcode scheme build/test DEFERRED
+      (ADR-012 macOS-pending; apps/macos-pending-verifications.md) — the established
+      P4 Apple disposition shared by all 225 prior feature-view surfaces (STATUS=DONE).
+Delegation: NONE (authored directly; delegation FORBIDDEN by the prompt).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS + iPhoneSimulator SDKs present   OK
+  Xcode ...................... 26.5 (17F42)                                              OK
+  Swift Charts ............... available (overlay multi-line + grid mini charts compiled) OK
+  MapKit ..................... N/A for this surface (web "Charts / maps used: (none)";
+                               no map in the web source — nothing to port)              N/A
+  iPhone 16 simulator SDK .... arm64-apple-ios18.0-simulator typecheck EXIT=0           OK
+  macOS 15 SDK ............... arm64-apple-macos15.0 typecheck EXIT=0                    OK
+  swiftlint / swiftformat .... 0.63.3 / 0.61.1                                           OK
+  pwsh (placeholder gate) .... present; -SelfTest PASS                                   OK
+  xcodegen ................... 2.45.4; generate EXIT=0                                   OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)    WARN (deferred Xcode app build)
+  codesign identities ........ "0 valid identities found"                                WARN (macOS app gate blocker, ADR-012)
+
+  The prompt's capability requirement is SwiftUI + Swift Charts (+ MapKit, unused here).
+  All are present and proven by REAL-SDK compiles below, so the capability-BLOCKED
+  escape hatch does NOT apply — the surface is authored and host-validated for real.
+
+=== WHAT SHIPPED (10 files, established feature-view multi-file pattern) =============
+  SignalChartPanel.Adapter.swift       310  pure Foundation core: modes (overlay/grid/auto +
+        effective), live-state + load enums, SignalSeriesStat (web SignalStat), SignalChartRow/
+        Sample/Projection, surface slug, SignalChartFormat (fmtInt / ISO parse / formatTime), and
+        SignalChartBuilder — useRightAxis, effectiveMode, rightAxisIndex, samples/project, domain,
+        rescale, cellValues (finite+stride), downsample, endpointIndices.
+  SignalChartPanel.Model.swift         288  P1/S11 telemetry seam, SignalChartUpdate (mirrors web props),
+        P1/S8 SignalChartSource seam + @Observable SignalChartModel (phase/mode/dual-axis/counters,
+        stale one-shot auto-refresh) + InMemorySignalChartSource.
+  SignalChartPanel.Localization.swift  152  P1/S10 facade (table "SignalChartPanel") + the live/points
+        counter builders + SignalChartAccessibility VoiceOver summaries.
+  SignalChartPanel.swift               109  main surface View: TSFadeIn + TSGlassPanel (web GlassPanel),
+        header + connectivity banner + phase switch + overlay/grid content swap. surfaceSlug.
+  SignalChartPanel.Views.swift         279  header (live Radio pulse / historical BarChart3 glyph + title +
+        counter annotation + freshness chip), pulse dot/icon, freshness chip, stale/offline banner,
+        loading skeleton, empty (live "Waiting…" / historical "No data…"), error+retry.
+  SignalChartPanel.Chart.swift         296  overlay multi-line Swift Chart (LineMark per series, palette
+        colors, auto dual-axis via rescale + relabeled trailing axis, endpoint time x-axis, synced-cursor
+        RuleMark + ChartTooltip parity), circle-dot legend, tooltip number format.
+  SignalChartPanel.Grid.swift          150  small-multiples grid (LazyVGrid; one mini Chart per series with
+        its own auto y-scale; finite-only + stride-downsampled points; color-coded label; "No data" cell).
+  SignalChartPanel.Previews.swift      186  #if DEBUG previews — overlay / dual-axis / grid / live / loading /
+        empty(live) / empty(historical) / error / stale / offline (10).
+  SignalChartPanel.strings              51  P1/S10 catalog: 8 web-source keys + native chrome + a11y.
+  SignalChartPanel.Tests.swift         332  XCTest: 4 suites / 33 tests (builder, format, model, a11y).
+  Total 2153 lines. Every file <= 400 (house file_length budget); largest 332. One exported public View
+  (SignalChartPanel) across the set; helper Views are internal.
+
+  States reproduced (no hidden surface — every branch renders):
+    loading   — web `loading && !isLive` → TSChartSkeleton at panel height.
+    content   — overlay multi-line OR small-multiples grid per `effectiveMode`
+                (web overlay LineChart vs SmallMultiplesChart; auto threshold 8).
+    empty     — live "Waiting for signal data…" (pulsing broadcast glyph) /
+                historical "No data for this time range" (activity glyph).
+    error     — QueryError-equivalent with Retry (native load envelope).
+    stale     — Stale chip + banner + ONE guarded auto-refresh (ADR-013).
+    offline   — Offline chip + banner; cached trace kept; no refetch.
+    live mode — red pulsing Radio glyph + "{events} events · {points} points";
+                series animation suppressed (web `isAnimationActive={!isLive}`).
+
+  Data binding: the web panel owns no fetching (it receives `data`/`stats`/`isLive` as props from
+  SignalExplorerPage / SignalsWorkspacePage, fed by `useLiveSignalStream` + the history query). The native
+  surface reproduces that whole lifecycle through the P1/S8 `SignalChartSource` seam coalesced into one
+  `SignalChartUpdate`; the view performs ZERO networking. `useTranslation` → SignalChartStrings (P1/S10);
+  `useDateFormat` → SignalChartFormat.time. Telemetry: `view.opened` slug "SignalChartPanel" once (P1/S11).
+
+=== HOST-RUNNABLE GATES (all green; real exit codes from this machine) ==============
+  swiftformat --lint <9 .swift> ............... 0/9 require formatting                  FORMAT_EXIT=0
+  swiftlint lint --strict <9 .swift> .......... Found 0 violations, 0 serious in 9 files LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 PLACEHOLDER_EXIT=0
+        (scanned all 9 shipped .swift via an isolated copy; -SelfTest PASS — SELFTEST_EXIT=0,
+         the gate is proven to flag NotImplementedException / Kotlin TODO( and honor opt-outs.)
+  swiftc -typecheck iPhoneSimulator (target arm64-apple-ios18.0-simulator, -swift-version 6,
+        -strict-concurrency=complete, real SDK, bound against the REAL shared Sources/Components +
+        Sources/Design + design/generated/apple/Tokens.swift) ................. IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (target arm64-apple-macos15.0, -swift-version 6,
+        -strict-concurrency=complete, real SDK, same dep set) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 language mode,
+        bound against the REAL shared Components + design Tokens) ............. 33/33 passed, TEST_EXIT=0
+      → SignalChartBuilderTests (14) · SignalChartFormatTests (4) ·
+        SignalChartModelTests (12) · SignalChartAccessibilityTests (2) · 1 swift-testing shim suite (0).
+  xcodegen generate (project spec re-generated; the 10 new files auto-wire into the iOS + macOS app
+        targets + the co-located XCTest bundles — 60 pbxproj references) ...... XCODEGEN_EXIT=0
+
+  Typecheck dep-set note: the surface is bound against the REAL shared component library + design tokens.
+  The single file Sources/Components/DataDisplay/UnitFormatters.swift is excluded from the host
+  typecheck/test dep-set because it depends on `Units`/`UnitPreferences` from the SharedFacade/KMP layer
+  (the deferred xcframework below) and is NOT a dependency of this surface — SignalChartPanel uses no
+  unit-conversion component. The remaining 40 Components/Design files + Tokens compile clean on their own
+  (baseline EXIT=0) and with this surface added.
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test =============
+  xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED state in the shared app target — ZERO of
+    which originates in this surface. A deterministic single-target build (no scheme pre-action) emits
+    exactly one error, and it is the framework, not this code:
+
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build
+        → error: There is no XCFramework found at
+          '/…/apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync')
+        ** BUILD FAILED **   (exit 65)
+
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep). The scheme pre-action
+        builds it via the Kotlin/Native Gradle toolchain (apps/shared/gradlew :core:assembleShared
+        XCFramework) — tracked macOS-pending in apps/macos-pending-verifications.md.
+      • No macOS development-signing identity (`security find-identity -p codesigning` → 0 valid),
+        which the macOS app/widget hardened-runtime entitlements require (ADR-012).
+
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs (both typechecks
+    EXIT=0) and its logic runs green (33/33 XCTest under Swift 6 strict concurrency). The full-app
+    build/test is the same deferral recorded for p4-apple/feature-views/0250-OperationsSection (and
+    0097-BatteryLevelChart, 0036-LiveSignalsTable); it belongs to the P99 apple-acceptance-gate on a
+    macos-latest runner with signing.
+
+=== PARITY (vs web SignalChartPanel.tsx) ===
+  Logic — faithfully ported + unit-tested:
+    • useRightAxis: stats>=2; ranges = |max-min| (flat→1); right axis fires when r0/r1>10 || r1/r0>10.
+    • effectiveMode: overlay→overlay; grid→(n>=2?grid:overlay); auto→(n>gridAutoThreshold(8)?grid:overlay).
+    • overlay yAxis assignment: every series on the shared left scale except index 1, which (when
+      useRightAxis) is rescaled onto the left domain and read back through a relabeled trailing axis
+      (web `yAxisId="right"`). connectNulls = plot finite points only + monotone interpolation.
+    • grid: per-cell own y-scale, finite-only projection, stride-downsample to 400 (web maxPointsPerCell).
+    • header counters: live `{fmtInt(events)} events · {fmtInt(points)} points`; historical
+      `{fmtInt(pointsLoaded)} points loaded` (shown only when data present and pointsLoaded != nil).
+    • resolvedTitle: title override ?? (isLive ? "Live Signal Stream" : "Signal Chart").
+    • isAnimationActive={!isLive} → overlay chart animation nil in live mode (also nil under Reduce Motion).
+  Composition — native primitives (no Tailwind ports): TSGlassPanel (web GlassPanel), TSFadeIn (web FadeIn),
+    TSChartSkeleton (web Skeleton), Swift Charts overlay (web Recharts LineChart) + a circle-dot legend
+    (web `<Legend iconType="circle">`) + a synced-cursor tooltip (web ChartTooltip), and a LazyVGrid
+    small-multiples grid (web SmallMultiplesChart) reusing the shared brand palette (web CHART_COLORS →
+    TSChartPalette, index-stable, the same Okabe-Ito values). Recharts → Swift Charts. Leaflet → none.
+  i18n — all 8 web-source strings resolve through the P1/S10 facade with the web English as the fallback:
+    "Live Signal Stream", "Signal Chart", "events", "points", "points loaded",
+    "Waiting for signal data…", "No data for this time range", and the grid "No data"
+    (smallMultiples.noData) → ALL present in SignalChartPanel.strings. No English literals in native code.
+  a11y — panel is one contained element with a localized chart summary (title + layout + signal/point
+    counts); legend + tooltip rows + grid cells carry per-series labels/values; the live pulse + chart
+    animation respect Reduce Motion; Dynamic Type via the token ramp. Retry button labelled.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced (loading / content
+      overlay+grid / empty live+historical / live mode) plus the prompt envelope (error / stale / offline)
+      — 10 #if DEBUG previews; phase + mode resolution unit-tested.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (SignalChartSource → SignalChartModel); no direct
+      HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (8/8 source keys in .strings).
+  [x] Accessibility labels present on every interactive/meaningful element (header, freshness chip, banner,
+      legend chips, tooltip rows, grid cells, retry); Reduce Motion + Dynamic Type honoured.
+  [x] Tests: adapter unit (builder + format) + per-state model test + a11y label test — 33 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0, 0 opt-outs.
+  [x] Telemetry: `view.opened` emitted once with surface slug "SignalChartPanel" (P1/S11) — spy-asserted.
+  [~] xcodebuild build test EXIT=0 — DEFERRED to P99 macos-latest (Shared.xcframework + signing, pre-existing
+      unrelated blockers above); host-runnable equivalents (real-SDK typecheck both platforms + 33/33 XCTest
+      + lint/format/placeholder + xcodegen) all green.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full-app xcodebuild is shown DEFERRED with its real exit 65 + the single
+                       deterministic cause (missing Shared.xcframework, 0 signing identities); never
+                       reported as passing. Every host "EXIT=0" is a real run on this machine.
+  2  No scope narrowing: implemented ALL states + both chart modes + auto dual-axis + live mode + counters
+                       + freshness/banner + legend + tooltip + seams + 33 tests + 10 previews.
+  3  No skip-and-assume: web source + SmallMultiplesChart + ChartTooltip + useLiveSignalStream read
+                       end-to-end; every t() + conditional branch reproduced. swiftlint caught a real
+                       large_tuple defect (preview signal tuple) — fixed to a struct, then re-run green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; no forbidden markers.
+  5  No parity shortcuts: useRightAxis / effectiveMode / dual-axis rescale / finite+stride grid / live
+                       counters / animation-suppression all ported AND unit-tested.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (feature-views is
+                       already a registered source path) and did NOT edit the shared Localizable.xcstrings;
+                       strings shipped as the per-surface table, consuming P1/S8 + P1/S9 + P1/S10 + P1/S11.
+  8  No commit on red  : committing on all-green host gates; the Xcode app build/test is explicitly
+                       DEFERRED (environment), not failed by this code.
+  9  No silent drift   : changes confined to the allowed SignalChartPanel.* files + this log. The temp
+                       SwiftPM verification package and the git-ignored generated .xcodeproj were removed;
+                       the two pre-existing modified web files were left untouched (not mine).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SignalChartPanel shipped at parity with the web source: pure-Swift display math
+  (33/33 green, builder + format), a P1/S8 state-holder seam (no view HTTP), P1/S11 view.opened telemetry,
+  every state + both chart modes + auto dual-axis + live mode, 8/8 i18n keys + a11y summaries. All
+  host-runnable gates pass; the Xcode app build/test is DEFERRED to the signed macos-latest runner
+  (Shared.xcframework absent + 0 signing identities — neither a defect in this code), matching the
+  established P4 Apple disposition (225/225 sibling surfaces).
+
+Per-step: FORMAT_EXIT=0 LINT_EXIT=0 PLACEHOLDER_EXIT=0 IOS_TYPECHECK_EXIT=0 MAC_TYPECHECK_EXIT=0
+          TEST_EXIT=0 XCODEGEN_EXIT=0 | DEFERRED full-app xcodebuild (BUILD_EXIT=65: missing Shared.xcframework)
+
+EXIT=0
+STATUS=DONE

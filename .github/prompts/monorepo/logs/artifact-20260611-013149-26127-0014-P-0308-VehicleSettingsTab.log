@@ -1,0 +1,105 @@
+=== P4 Feature view 0308 VehicleSettingsTab (Apple) ===
+date: 2026-06-11T10:49:56Z
+xcode: Xcode 26.5 Build version 17F42 
+Shared.xcframework: staged (Info.plist
+ios-arm64
+ios-arm64-simulator
+macos-arm64)
+--- swiftlint --strict (surface files): PASS (exit 0) ---
+--- swiftformat --lint (surface files): PASS (exit 0) ---
+--- check-placeholders (surface files): PASS (0 violations) ---
+--- focused swiftc typecheck (Swift 6 + strict concurrency, iOS SDK): PASS (0 errors) ---
+
+================================================================================
+ GATE RESULTS (real command output; see narrative below)
+================================================================================
+
+[1] SURFACE FILES (apps/apple/TeslaSync/feature-views/VehicleSettingsTab.*)
+    12 Swift sources + 1 .strings catalog (split for the SwiftLint 400-line
+    file-length budget; co-located *Tests.swift compile into the XCTest bundles):
+      VehicleSettingsTab.swift            (surface view + phase switch)
+      VehicleSettingsTab.Models.swift     (Foundation value types)
+      VehicleSettingsTab.Adapter.swift    (pure projector: effectiveToDraft/parseDraft/RFC3339/phase)
+      VehicleSettingsTab.Projection.swift (row/section projection + surface slug + a11y)
+      VehicleSettingsTab.Model.swift      (telemetry seam + i18n facade + store seam + @Observable model)
+      VehicleSettingsTab.Store.swift      (in-memory store + surface identity)
+      VehicleSettingsTab.Views.swift      (header, source pill, row, freshness chip, banner, list)
+      VehicleSettingsTab.Inputs.swift     (text / unit-select / RFC3339 timestamp inputs)
+      VehicleSettingsTab.States.swift     (loading skeleton / empty / error+retry)
+      VehicleSettingsTab.Previews.swift   (content/empty/loading/error/stale/offline/saving)
+      VehicleSettingsTab.Tests.swift      (adapter + accessibility XCTests)
+      VehicleSettingsTab.ModelTests.swift (state-holder XCTests)
+      VehicleSettingsTab.strings          (P1/S10 catalog: web keys + envelope + a11y)
+
+[2] swiftlint --strict (surface files) ....................... EXIT 0  (PASS)
+[3] swiftformat --lint  (surface files) ...................... EXIT 0  (PASS)
+[4] check-placeholders.ps1 (each surface file) ............... 0 violations (PASS)
+      (the gate's literal `-Path .../VehicleSettingsTab` is a non-existent
+       literal path → the scanner returns a vacuous clean result; scanning each
+       real file individually is the faithful check and is shown above.)
+
+[5] Shared.xcframework (KMP/Gradle prerequisite) ............. BUILD SUCCESSFUL
+      apps/apple/Scripts/build-shared-xcframework.sh →
+      ":core:assembleSharedXCFramework  BUILD SUCCESSFUL in 6m 59s"
+      staged at apps/apple/Frameworks/Shared.xcframework
+      (ios-arm64, ios-arm64-simulator, macos-arm64). The repo ships only a
+      .gitkeep here, so this binary had to be built before any xcodebuild step.
+
+[6] swiftc -typecheck, Swift 6 + -strict-concurrency=complete, surface sources
+    + the shared component/design/token modules they consume:
+      iOS  (arm64-apple-ios18.0-simulator, iPhoneSimulator26.5 SDK) .. 0 errors (PASS)
+      macOS(arm64-apple-macos15.0) .................................. 0 errors (PASS)
+
+[7] Unit tests EXECUTED (SwiftPM harness over the surface module; the surface
+    core + tests are SwiftUI/Shared-independent so they run on the macOS host):
+      Test Suite 'All tests' passed — Executed 30 tests, 0 failures
+        VehicleSettingsTabAdapterTests        11 tests, 0 failures
+        VehicleSettingsTabModelTests          16 tests, 0 failures
+        VehicleSettingsTabAccessibilityTests   3 tests, 0 failures
+      SWIFT_TEST_EXIT=0  (PASS)
+
+[8] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+      ** BUILD FAILED **
+      The compile error that fails the build is in a PRE-EXISTING, OUT-OF-SCOPE
+      predecessor surface — not in this surface (the Swift module build aborts at
+      the first failing batch):
+        apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20:
+          error: the compiler is unable to type-check this expression in
+          reasonable time; try breaking up the expression into distinct
+          sub-expressions
+      Provenance: committed by predecessor "feat(apps/apple/feature-views): add
+        RecentDrivesSection surface (P4)" (afff462c1), untouched by this task.
+      grep ': error:' over the full build log = 1 match (the line above);
+      grep 'VehicleSettingsTab.*error:' = 0 matches (this surface emits no build
+      errors, and is independently proven to compile in [6]+[7]). The macOS app
+      target consumes the same TeslaSync/feature-views sources (project.yml), so
+      it is blocked by the identical predecessor file; the surface's own macOS
+      compilation is proven green in [6] and its tests pass in [7].
+
+      IOS_EXIT=65   (xcodebuild, blocked by predecessor RecentDrivesSection)
+      MAC_EXIT=65   (same shared-source predecessor blocker)
+      LINT_EXIT=0
+      FORMAT_EXIT=0
+      PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+ DISPOSITION
+--------------------------------------------------------------------------------
+ This surface (VehicleSettingsTab) is COMPLETE and fully verified against the web
+ source features/vehicles/components/VehicleSettingsTab.tsx: all data hooks
+ (useVehicleSettings / useUpsertVehicleSetting / useResetVehicleSetting) bound via
+ a P1/S8 state-holder seam (no HTTP in the view), every render state reproduced
+ (loading / content / empty / error / stale / offline + per-row saving/resetting),
+ every web i18n key present in the P1/S10 catalog, VoiceOver labels on every
+ interactive control, view.opened telemetry (slug "VehicleSettingsTab"), and
+ adapter + state-holder + a11y tests that pass (30/30).
+
+ The literal `xcodebuild build test` gate cannot reach EXIT=0 because of a
+ pre-existing compile failure in the predecessor surface RecentDrivesSection
+ (RecentDrivesSection.Previews.swift:24), which is OUTSIDE this prompt's allowed
+ files (apps/apple/TeslaSync/feature-views/VehicleSettingsTab.*, the log). Per the
+ Honesty Covenant (#1 no red-as-green, #7 no predecessor bypass) this surface
+ neither fakes a green build nor edits/disables the predecessor to force one.
+
+EXIT=65
+STATUS=BLOCKED

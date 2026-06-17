@@ -1,0 +1,246 @@
+================================================================================
+p4-apple · P7 · page:driving/RegenEfficiency — SwiftUI / HIG parity
+  web source : web/src/features/driving/pages/RegenEfficiencyPage.tsx  (route /regen-efficiency)
+  output     : apps/apple/Sources/Features/Driving/RegenEfficiency*.swift
+               (the live Xcode project — like the sibling DriveScorePage /
+                StatisticsPage — hosts feature pages under Sources/Features/<Domain>/;
+                the prompt's nominal apps/apple/TeslaSync/Features/Driving/** is the
+                allowed-files alias, reconciled here. `Sources/` is the only hand-written
+                group compiled by project.yml; the generated TeslaSync.xcodeproj is
+                git-ignored and rebuilt via xcodegen. The earlier feature-views/ attempt
+                for this unit (artifact-…-0557) ended BLOCKED; this run follows the
+                DONE DriveScorePage convention instead.)
+  parity     : page:driving/RegenEfficiency  (manifest PARITY_REQUIRED=47 = 10 panels +
+               3 charts + 4 states + 30 strings)
+  env        : Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint+swiftformat (Homebrew) · pwsh ·
+               xcodegen · KMP Shared.xcframework built fresh from apps/shared via Gradle
+               (Java 17), staged to apps/apple/Frameworks/Shared.xcframework.
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI RegenEfficiencyPage at web parity: a pure @Observable state holder
+(ADR-004 — no networking in the view) over an injectable RegenEfficiencyDataSource seam whose methods
+keep the web hook names at the Swift call sites (loadVehicles ← useSelectedVehicle/GET /vehicles,
+useRegenEfficiency ← GET /analytics/regen [start, end], useDrives ← GET /drives?vehicle_id). The web
+client-side derivations (getRegenRatio, the date-window `drives` memo, the `monthlyTrend` group-by-
+month memo, the `regenDrives` top-20 memo) are ported verbatim into the deterministic, unit-tested
+RegenEfficiencyEngine.
+
+The page reproduces the web chrome (PageContainer title + subtitle + the global VehicleSelect + the
+RangePicker date filter) and ALL of the web sections:
+
+  Hero regen-ratio gauge (GlassPanel1 + RadialGauge tinted by the web `regenColor` band + the
+  "You've recovered … free charges" info line), the six summary stat tiles (GlassPanel2-7: Total
+  Regen / Recovery Rate / Monthly Avg kW / Free Charges / Lifetime Regen kWh / Lifetime Drive kWh —
+  the two lifetime tiles always show an em dash exactly as the web hardcodes them null), the
+  Monthly-Regen-Trend composed chart (purple drive-count bars + green regen-kWh line, ChartContainer +
+  ComposedChart), the regen-metrics bar strip (GlassPanel9: four MetricBars whose value/max fractions
+  reproduce the web formulas exactly), and the recent-regen-drives table (GlassPanel10, ratio cells
+  tinted by the web `regenColor` band).
+
+All measurements stay SI canonical in the model (meters / watt-hours / watts / m·s⁻¹); conversion to
+the user's unit preference happens ONLY at the SwiftUI render boundary via the shared KMP Units facade
++ RegenEfficiencyFormat (ADR-005). Like the web `useUnits` hook, energy is always shown in kWh and
+power in kW (its DEFAULT_ENERGY_PREF / DEFAULT_POWER_PREF), independent of the distance preference.
+Adaptive across macOS/iPad regular width vs. iPhone compact (ADR-002/006): the controls, the six-tile
+grid, and the four-bar metric strip reflow. Every visible literal resolves from Localizable.xcstrings
+with the web key names (zero hardcoded text).
+
+Navigation: a dedicated `.regenEfficiency` AppRoute (pathSegment `regen-efficiency`, group `.vehicle`)
+so the page is reachable + deep-linkable at /regen-efficiency WITHOUT shadowing the sibling
+DriveScorePage, which owns `.driving` (RouteTests still pass — see GATES). Registered via
+RegenEfficiencyRouteRegistration in the TeslaSyncApp route-host chain.
+
+There is no map (manifest declares 0 maps). The data sources are request/response, not live SSE
+streams, so no staleness indicator applies.
+
+FILES (apps/apple/Sources/Features/Driving/):
+  RegenEfficiencyModels.swift             value types + derived view-models + RegenRatioTint
+  RegenEfficiencyFormat.swift             display-boundary formatters (Units facade; kWh/kW like useUnits)
+  RegenEfficiencyEngine.swift             getRegenRatio + filter + monthlyTrend + recentDrives (pure)
+  RegenEfficiencyPageModel.swift          @Observable model + RegenEfficiencyDataSource + phase + filter
+  RegenEfficiencyPageModel.Sample.swift   sample / empty / success-no-drives / failing sources
+  RegenEfficiencyPage.swift               View + header + phase switch (loading/empty/error/ready) + previews
+  RegenEfficiencyPage.Sections.swift      hero gauge / stat tiles / metric strip / range control / skeleton
+  RegenEfficiencyPage.Charts.swift        Monthly-Regen-Trend ChartContainer + ComposedChart + legend
+  RegenEfficiencyPage.Table.swift         recent-regen-drives grid + tinted ratio cells
+  RegenEfficiencyRouteRegistration.swift  route host registration (.regenEfficiency)
+  Tests/Unit/Features/Driving/RegenEfficiencyPageModelTests.swift   model + engine + formatter XCTest
+EDITED (navigation registration + string catalog, in allowed scope):
+  Sources/App/AppRoute.swift              +case .regenEfficiency (+pathSegment +systemImage +group .vehicle)
+  Sources/TeslaSyncApp.swift              RegenEfficiencyRouteRegistration.registry(base:) in the chain
+  Localization/Localizable.xcstrings      +30 keys (29 regen.* + help.regenEfficiency.iconLabel +
+                                          route.regenEfficiency; common.noData already present) —
+                                          additive only, JSON re-validated (10631 → 10661 strings)
+  apps/parity/apple-ledger.json           +2 rows (apple-macos + apple-ios, done, 47/47)
+
+--------------------------------------------------------------------------------
+GATES
+--------------------------------------------------------------------------------
+--- [1] check-placeholders.ps1 -Path apps/apple/Sources/Features/Driving -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=1   (the DriveScore .driveScoreRedacted(.placeholder) skeleton opt-out in the same
+                         directory — carries a // parity:allow reason; NOT one of my files)
+PLACEHOLDER_COUNT=0     (zero in the RegenEfficiency* files)
+PLACEHOLDER_EXIT=0
+(Tests dir apps/apple/Tests/Unit/Features/Driving: PLACEHOLDER_ALLOWED=0, COUNT=0, EXIT=0)
+
+--- [2] swiftformat --lint (repo .swiftformat; maxwidth 120, before-first wrapping; 11 my files) ---
+0/11 files require formatting.
+FORMAT_EXIT=0
+
+--- [3] swiftlint lint --strict --config .swiftlint.yml (11 my files) ---
+Done linting! Found 0 violations, 0 serious in 11 files.
+LINT_EXIT=0
+
+--- [4] KMP framework (Scripts/build-shared-xcframework.sh → :core:assembleSharedXCFramework) ---
+BUILD SUCCESSFUL in 22m 21s · "✓ Shared.xcframework staged"   (release, macos-arm64 + ios slices)
+KMP_EXIT=0
+
+--- [5] TYPE-CHECK (macOS, in-scope): xcrun swiftc -typecheck -target arm64-apple-macos15.0
+        -F Frameworks/Shared.xcframework/macos-arm64 -swift-version 6 <713 Sources/*.swift + Tokens.swift> ---
+ALL RegenEfficiency* sources type-check with ZERO errors against the REAL design tokens (Tokens.swift),
+the REAL P3 shared component library (Sources/Components/**), and the REAL Shared.xcframework
+(Kotlin/Native core). grep of the diagnostics for RegenEfficiency + 'error:' = 0 hits; for
+Features/Driving + 'error:' = 0 hits. (The 3 diagnostics present are a PRE-EXISTING cross-tree
+reference — Admin/TeslaOrdersPage → ActiveOrdersModel/Section, which live in the TeslaSync/* tree
+excluded from this Sources-only pass; TeslaOrdersPage.swift is unmodified by this changeset.)
+TYPECHECK_EXIT(macOS, in-scope)=0 errors in scope
+
+--- [6] TYPE-CHECK (iOS, in-scope): same, -target arm64-apple-ios18.0 -sdk iphoneos
+        -F Frameworks/Shared.xcframework/ios-arm64 ---
+ALL RegenEfficiency* sources type-check with ZERO errors on the iOS target — confirming the
+#if os(iOS) horizontalSizeClass / isCompact adaptive branches in RegenEfficiencyPage.swift +
+.Sections also type-check. grep for RegenEfficiency + 'error:' = 0 hits. (Same 3 pre-existing
+ActiveOrders cross-tree diagnostics as macOS — unrelated to this surface.)
+TYPECHECK_EXIT(iOS, in-scope)=0 errors in scope
+
+--- [7] TYPE-CHECK (macOS, WHOLE module): the exact 4964 .swift files the macOS app target compiles
+        (Sources/** + TeslaSync/{dashboard-widgets,feature-views,misc-surfaces,shared-surfaces,
+        widget-primitives}, minus *Tests.swift) + Tokens.swift, against the staged Shared.xcframework ---
+Whole-module type-check yields exactly ONE error, and it is NOT in this surface:
+  Sources/Features/Diagnostics/AnomalyDashboardModels.swift:185:22: error: the compiler is unable to
+  type-check this expression in reasonable time; try breaking up the expression into distinct
+  sub-expressions
+That file is PRE-EXISTING and unmodified by this changeset (git status confirms). grep of the
+diagnostics for RegenEfficiency / Features/Driving / AppRoute / TeslaSyncApp + 'error:' = 0 hits.
+This is the binding proof the surface integrates cleanly into the full module.
+TYPECHECK_EXIT(macOS, whole-module)=0 errors in scope (1 pre-existing, out-of-scope)
+
+--- [8] LOGIC HARNESS: standalone swiftc -O of the real engine + formatters + @Observable model ---
+xcrun swiftc -O -parse-as-library -D DEBUG  Stubs(UnitPreferences/Units/TSTone)
+  RegenEfficiencyModels RegenEfficiencyFormat RegenEfficiencyEngine RegenEfficiencyPageModel
+  RegenEfficiencyPageModel.Sample  Harness  => COMPILE_EXIT=0
+./regenharness  => CHECKS=35  FAILURES=0
+  (getRegenRatio 25% + nil on no-power/no-used/no-regen; date-window filter; monthlyTrend group-by-
+   month + ascending + empty + roundedToTenth; recentDrives regen>0 filter + 20-cap + ratio; all
+   formatters number/percent/integer/energy(kWh,1)/power(kW,1)/distance(km+mi)/regenCellKwh/nan-em-dash;
+   RegenRatioTint green/cyan/amber/red bands; metricFraction value/max formula; AND the full
+   @Observable model state machine: initial loading, load→ready + auto-select first vehicle, no-summary
+   →empty, summary-throw→error, vehicle reselect refetch, setDateRange refetch, filteredDrives window.)
+HARNESS_EXIT=0
+
+--- [9] FULL xcodebuild build (whole app target incl. the pre-existing TeslaSync/* tree) ---
+RED. xcodegen generate (EXIT=0; project includes the new RegenEfficiency files) then
+xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -destination platform=macOS build
+CODE_SIGNING_ALLOWED=NO  =>  ** BUILD FAILED **  (BUILD_EXIT=65). The whole-module EmitSwiftModule
+phase (which type-checks EVERY file, including all RegenEfficiency* sources) completed with ZERO
+errors; the build then failed during object compilation on a single PRE-EXISTING, OUT-OF-SCOPE
+expression-type-check timeout:
+  Sources/Features/Diagnostics/AnomalyDashboardModels.swift:185:22: error: the compiler is unable to
+  type-check this expression in reasonable time
+The "(3 failures)" reported by xcodebuild all trace to that one root cause (its batch SwiftCompile, its
+individual SwiftCompile, and the overall scheme build). AnomalyDashboardModels.swift is unmodified by
+this changeset and lies outside this prompt's allowed-files scope (Features/Diagnostics, not
+Features/Driving), so it is NOT corrected here (covenant: no scope creep; Out-of-Scope: reject other
+pages). This is the SAME class of pre-existing full-target breakage the already-DONE sibling
+DriveScorePage documented (its log records the full xcodebuild as RED, BUILD_EXIT(full)=65). It is
+REPORTED here as RED, not masked (covenant #1). The in-scope whole-module type-check ([7], 0
+RegenEfficiency errors) + the executable logic harness ([8], 35/35) prove the Regen surface itself is
+complete + correct.
+BUILD_EXIT(full, pre-existing out-of-scope)=65
+
+--- [10] FULL xcodebuild test ---
+BLOCKED by the same pre-existing app-target compile failure ([9]) — the XCTest bundle cannot link
+while the app module won't code-gen past AnomalyDashboardModels.swift. The model/engine/formatter
+behaviour the bundle asserts is proven instead by the executable logic harness ([8], 35/35); the
+RegenEfficiencyPageModelTests.swift file passes swiftformat ([2]) + swiftlint ([3]) clean.
+TEST_EXIT(full, pre-existing out-of-scope)=65
+
+--- RouteTests regression check (added AppRoute case) ---
+RouteTests.testEveryRouteHasUniquePathSegment — `regen-efficiency` is unique (Set==count holds).
+RouteTests.testEveryRouteResolvesToItsGroup — `.regenEfficiency` resolves to `.vehicle` (exhaustive
+  `group` switch updated). No test asserts AppRoute.allCases.count, so the new case is additive-safe.
+DriveScorePage retains sole ownership of `.driving`; no shadowing (distinct route).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=47
+================================================================================
+[x] panel  — GlassPanel1          RegenEfficiencyPage.Sections.swift `RegenHeroSection` TSGlassPanel — hero regen-ratio gauge + recoveredInfo line
+[x] panel  — GlassPanel2          RegenEfficiencyPage.Sections.swift `RegenStatCardsSection`→`RegenStatTile`(id "totalRegen") TSGlassPanel — Total Regen
+[x] panel  — GlassPanel3          RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "ratio") TSGlassPanel — Recovery Rate
+[x] panel  — GlassPanel4          RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "monthlyAvg") TSGlassPanel — Monthly Avg kW
+[x] panel  — GlassPanel5          RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "freeCharges") TSGlassPanel — Free Charges
+[x] panel  — GlassPanel6          RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "lifetimeRegen") TSGlassPanel — Lifetime Regen kWh (em dash, web-null)
+[x] panel  — GlassPanel7          RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "lifetimeDrive") TSGlassPanel — Lifetime Drive kWh (em dash, web-null)
+[x] panel  — Monthly-Regen-Trend  RegenEfficiencyPage.Charts.swift `RegenMonthlyTrendSection` TSChartContainer("regen.monthlyTrend")
+[x] panel  — GlassPanel9          RegenEfficiencyPage.Sections.swift `RegenMetricsSection` TSGlassPanel — four MetricBars + help affordance
+[x] panel  — GlassPanel10         RegenEfficiencyPage.Table.swift `RegenRecentDrivesSection` TSGlassPanel — recent-regen-drives grid
+[x] chart  — RadialGauge          RegenEfficiencyPage.Sections.swift `RegenRatioGauge` → TSRadialGauge(value: ratio/100, colorIndex: RegenRatioTint)
+[x] chart  — ChartContainer       RegenEfficiencyPage.Charts.swift `RegenMonthlyTrendSection` TSChartContainer(summary: "regen.monthlyTrend.aria", csv:)
+[x] chart  — ComposedChart        RegenEfficiencyPage.Charts.swift `RegenMonthlyTrendSection` TSComposedChart(bars: drivesSeries[idx6], line: regenSeries[idx2])
+[x] state  — loading              RegenEfficiencyPage.swift phase `.loading` → `RegenEfficiencySkeleton` (Sections.swift) redacted echo
+[x] state  — empty                RegenEfficiencyPage.swift phase `.empty` → `emptyView` TSEmptyState("regen.noData"); model `phase` = .empty when summary == nil
+[x] state  — error                RegenEfficiencyPage.swift phase `.error` → `errorView` TSErrorDisplay(onRetry:) ; model `phase` = .error on useRegenEfficiency throw
+[x] state  — success              RegenEfficiencyPage.swift phase `.ready` → `readyView` (+ inner table common.noData empty via RegenRecentDrivesSection)
+[x] string — common.noData             RegenEfficiencyPage.Table.swift `RegenRecentDrivesSection` TSEmptyState + RegenEfficiencyPage.Charts.swift not-enough-data empty
+[x] string — help.regenEfficiency.iconLabel  RegenEfficiencyPage.Sections.swift `RegenMetricsSection.header` Image(.accessibilityLabel/.help)
+[x] string — regen.col.drives          RegenEfficiencyPage.Charts.swift `RegenMonthlyTrendSection.csv` column header
+[x] string — regen.col.month           RegenEfficiencyPage.Charts.swift `RegenMonthlyTrendSection.csv` column header
+[x] string — regen.col.regenKwh        RegenEfficiencyPage.Charts.swift `RegenMonthlyTrendSection.csv` column header
+[x] string — regen.date                RegenEfficiencyPage.Table.swift `columnHeader` TSCaption + RegenRangeControl a11y label
+[x] string — regen.distanceCol         RegenEfficiencyPage.Table.swift `columnHeader` TSCaption
+[x] string — regen.drives              RegenEfficiencyPage.Charts.swift `drivesSeries` name + `legend`
+[x] string — regen.freeCharges         RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "freeCharges") label
+[x] string — regen.freeChargesBar      RegenEfficiencyPage.Sections.swift `RegenMetricsSection.items`(id "freeCharges") label
+[x] string — regen.lifetimeDrive       RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "lifetimeDrive") label
+[x] string — regen.lifetimeRegen       RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "lifetimeRegen") label
+[x] string — regen.maxRegenCol         RegenEfficiencyPage.Table.swift `columnHeader` TSCaption
+[x] string — regen.metrics             RegenEfficiencyPage.Sections.swift `RegenMetricsSection.header` TSPanelTitle
+[x] string — regen.monthlyAvg          RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "monthlyAvg") label
+[x] string — regen.monthlyAvgBar       RegenEfficiencyPage.Sections.swift `RegenMetricsSection.items`(id "monthlyAvg") label
+[x] string — regen.monthlyTrend        RegenEfficiencyPage.Charts.swift `RegenMonthlyTrendSection` TSChartContainer title
+[x] string — regen.monthlyTrend.aria   RegenEfficiencyPage.Charts.swift `RegenMonthlyTrendSection` TSChartContainer summary + chart .accessibilityLabel
+[x] string — regen.noData              RegenEfficiencyPage.swift `emptyView` TSEmptyState title
+[x] string — regen.ratioCol            RegenEfficiencyPage.Table.swift `columnHeader` TSCaption (trailing)
+[x] string — regen.ratioLabel          RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "ratio") label
+[x] string — regen.recentDrives        RegenEfficiencyPage.Table.swift `RegenRecentDrivesSection.header` TSPanelTitle
+[x] string — regen.recoveredInfo       RegenEfficiencyPage.Sections.swift `RegenHeroSection.recoveredInfo` (String(format:) energy+charges)
+[x] string — regen.regenKwh            RegenEfficiencyPage.Charts.swift `regenSeries` name + `legend`
+[x] string — regen.regenRatio          RegenEfficiencyPage.Sections.swift `RegenRatioGauge` TSRadialGauge label + a11y
+[x] string — regen.regenRatioBar       RegenEfficiencyPage.Sections.swift `RegenMetricsSection.items`(id "ratio") label
+[x] string — regen.subtitle            RegenEfficiencyPage.swift `titleBlock` subtitle Text
+[x] string — regen.title               RegenEfficiencyPage.swift `titleBlock` TSPageTitle + `.navigationTitle`
+[x] string — regen.totalRegen          RegenEfficiencyPage.Sections.swift `RegenStatTile`(id "totalRegen") label
+[x] string — regen.totalRegenLabel     RegenEfficiencyPage.Sections.swift `RegenMetricsSection.items`(id "totalRegen") label
+PARITY_COVERED=47
+
+(All 30 string keys verified present in the RegenEfficiency* sources AND in Localizable.xcstrings.
+ The two lifetime stat tiles render an em dash exactly as the web hardcodes lifetimeRegenKwh /
+ lifetimeDriveKwh to null. The Monthly-Regen-Trend container always renders — showing its own
+ not-enough-data empty when <2 months — rather than hiding when monthlyTrend.length<=1 as the web
+ does, satisfying ADR "never render a blank region".)
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
+Honesty note: gates [1][2][3][4][5][6][7][8] are GREEN and binding; PARITY_COVERED==PARITY_REQUIRED
+(47/47). Gates [9][10] (full-app xcodebuild build/test) are RED=65 on a SINGLE pre-existing,
+out-of-scope, unmodified file (Sources/Features/Diagnostics/AnomalyDashboardModels.swift:185 — an
+expression-type-check timeout), exactly mirroring the already-DONE sibling DriveScorePage. The
+RegenEfficiency surface itself compiles with ZERO errors in the whole-module type-check that includes
+every file the app target builds, and its logic passes 35/35 in the executable harness. STATUS=DONE
+is asserted on that in-scope evidence; the red is reported, not masked.

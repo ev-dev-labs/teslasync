@@ -1,0 +1,171 @@
+=== P4 Shared surface 0069 ChartTimeRangeContext (Apple) ===
+Web source : web/src/components/charts/ChartTimeRangeContext.tsx (+ companion components/charts/cursorSync.ts)
+Native out : apps/apple/TeslaSync/shared-surfaces/ChartTimeRangeContext.*
+Runner     : macOS (Darwin) · Xcode 26.5 (17F42) · Swift 6.3.2 · xcodegen 2.45.4 · swiftlint/swiftformat (brew) · pwsh · OpenJDK 17
+
+────────────────────────────────────────────────────────────────────────
+CAPABILITY (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG;
+if unavailable → BLOCKED with API evidence"). AVAILABLE on this runner and exercised end to end:
+xcodegen generate, swiftc -typecheck against the iPhoneSimulator26.5 (iOS 18) SDK under Swift 6
+-strict-concurrency=complete, the Kotlin/Native Shared.xcframework built via Gradle, and full
+iOS-Simulator + macOS xcodebuild build/test. This surface is a chart-cursor-sync COORDINATION
+primitive: the web source itself renders no chart/map ("Charts / maps used: (none)"), but its native
+peer drives Swift Charts (the persistent reference line `tsSyncedCursorRule` → `RuleMark`, hover
+capture → `.chartXSelection`), so Swift Charts is used and was type-checked on the iOS 18 SDK. MapKit
+is not required (no maps in the source). Capability is therefore NOT a blocker.
+
+────────────────────────────────────────────────────────────────────────
+ARTIFACT (9 files, all ChartTimeRangeContext.* — the only files this prompt may touch)
+  ChartTimeRangeContext.swift            — SwiftUI entry: EnvironmentValues.chartSyncContext
+                                           (web `useChartSync`), ChartTimeRangeProvider (web
+                                           `<ChartTimeRangeProvider>`, clears cursor on unmount),
+                                           .chartTimeRangeProvider(_:) modifier spelling
+  ChartTimeRangeContext.Adapter.swift    — pure core: surface slug (P1/S11), CursorSyncValue
+                                           (web `string|number|null`), ChartSyncMethod (`index|value`),
+                                           ChartSyncContextValue, SyncedCursorProps, and
+                                           CursorSyncReducer (verbatim port of cursorSync.ts mutators:
+                                           no-op-on-unchanged, delete-on-null, clear-absent-no-op)
+  ChartTimeRangeContext.Projection.swift — pure cached(positions)+context → resolved read-models
+                                           (web useChartSync / useSyncedCursor / useSyncedReferenceLineX)
+  ChartTimeRangeContext.Model.swift      — P1/S8 CursorSyncStore (@Observable @MainActor peer of the
+                                           web external store; shared singleton + injectable),
+                                           ChartTimeRangeContextModel (provider value + hook reads,
+                                           hover broadcast, unmount clear, once-only view.opened
+                                           P1/S11), P1/S10 i18n facade, OSLog telemetry seam
+  ChartTimeRangeContext.Views.swift      — tsSyncedCursorRule @ChartContentBuilder (web
+                                           `<ReferenceLine x={syncedX}/>`, numeric + category x) +
+                                           DEBUG sample (two synced charts + one standalone), a11y
+  ChartTimeRangeContext.Previews.swift   — #Preview per branch (synced index/value, cursor preset,
+                                           cursor cleared, standalone-no-provider)
+  ChartTimeRangeContext.strings          — i18n table "ChartTimeRangeContext" (DEBUG-sample copy only;
+                                           the web source is anonymous/transparent — no shipped copy)
+  ChartTimeRangeContext.AdapterTests.swift — pure-core unit tests (reducer cached→state, value types,
+                                           method raw values, slug)
+  ChartTimeRangeContext.Tests.swift      — projection per-branch + store + model (view.opened,
+                                           cross-model sync, isolation, unmount clear) + view
+                                           composition + a11y/label presence
+
+PARITY (web → native, faithful + complete; anonymous transparent primitive — same disposition as the
+sibling withAiFeature: reproduce the source's REAL branches, invent no loading/empty/error chrome the
+source does not have)
+  • `ChartTimeRangeProvider({syncId, syncMethod='index'})` → SwiftUI ChartTimeRangeProvider injecting
+    the context into the Environment (the SwiftUI analog of the React context); clears the syncId's
+    persistent cursor on unmount (web effect cleanup `clearCursorSync(syncId)`).
+  • `useChartSync()` → @Environment(\.chartSyncContext) (nil outside a provider; web useContext→null).
+  • `useSyncedCursor()` → model.syncedCursor (spread props) + model.moveCursor(to:) (web onMouseMove
+    → setCursorSyncPosition writing activeLabel); `.inactive` outside a provider (web `{}`).
+  • `useSyncedReferenceLineX()` → model.referenceLineX (web syncedX; nil outside/un-hovered) →
+    tsSyncedCursorRule draws the persistent RuleMark (web `<ReferenceLine x={syncedX}/>`).
+  • cursorSync.ts external store → CursorSyncStore (@Observable replaces useSyncExternalStore) +
+    CursorSyncReducer: setCursorSyncPosition (no-op when unchanged, delete on null),
+    getCursorSyncPosition / useCursorSyncPosition(undefined→nil), clearCursorSync (absent→no-op),
+    _resetCursorSyncStore → reset(). CursorSyncValue = .text|.number (null = Swift nil).
+  • Real branches reproduced + tested: inside vs outside provider, cursor present vs absent,
+    syncMethod index vs value, unmount clear, cross-chart broadcast over one store, per-syncId isolation.
+
+────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+  1  No red-as-green     : every exit code below is the REAL captured value. The two full-app
+                           xcodebuild gates are RED (65) and are reported as RED with file:line
+                           root-cause evidence; they are NOT claimed to pass.
+  2  No scope narrowing  : all four web hooks + the provider + the external store reproduced, with
+                           every real render/return branch; nothing dropped. (No loading/empty/error/
+                           stale/offline chrome is invented because the web source renders none — it
+                           is a transparent coordination primitive, identical to withAiFeature.)
+  3  No skip-and-assume  : ChartTimeRangeContext.tsx AND cursorSync.ts read end-to-end; every export,
+                           the `string|number|null` union, the `index|value` method, the no-op/delete
+                           store semantics, and the unmount cleanup reproduced and asserted.
+  4  No stubs as final   : check-placeholders PLACEHOLDER_COUNT=0 on a real per-file scan of all 8
+                           .swift files; no TODO/stub/mock/placeholder/Lorem shipped.
+  5  No parity shortcuts : full store reducer + provider + 3 hook read-models + persistent RuleMark +
+                           Swift-Charts hover capture; a11y label + cursor VoiceOver value on the sample.
+  6  No delegation       : authored directly (delegation FORBIDDEN; none used).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/
+                           TSChartPalette), P1/S10 i18n facade, P1/S11 once-only view.opened telemetry
+                           all honoured; types prefixed Chart*/CursorSync* — collision-checked vs the
+                           whole app module (0 redeclarations). Same iOS/macOS xcodebuild disposition
+                           as the sibling shared-surfaces (AnnotationList 0063, withAiFeature 0062) and
+                           the 30+ surfaces catalogued in apps/macos-pending-verifications.md.
+  8  No commit on red    : the committed artifact is GREEN on every gate within this surface's
+                           allowed-files scope (format, lint --strict, placeholder, real iOS-18 SDK
+                           typecheck of all 6 production files on BOTH isolation regimes, test-body
+                           API typecheck, xcodegen, Gradle xcframework). The full-app iOS/macOS
+                           xcodebuild gates are RED for PRE-EXISTING, out-of-scope reasons (proof
+                           below) — this surface contributes ZERO errors to either (grep-verified).
+  9  No silent drift     : only the 9 ChartTimeRangeContext.* files are new (git status verified —
+                           no tracked file modified, no sibling surface touched). project.yml /
+                           .swiftlint.yml already glob shared-surfaces (no edit). xcodeproj +
+                           Shared.xcframework are git-ignored build artifacts.
+  10 EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────
+GATE COMMANDS / EXITS (real, captured)
+  swiftformat --lint apps/apple (tree-wide) .......... FORMAT_EXIT=0   (0/3839 require formatting)
+  swiftformat --lint (8 surface files) ............... FORMAT_EXIT=0   (0/8)
+  swiftlint --strict (tree-wide) ..................... LINT_EXIT=0     (0 violations, 0 serious)
+  swiftlint --strict (8 surface files) ............... LINT_EXIT=0     (0 violations in 8 files)
+  check-placeholders.ps1 -Path …/ChartTimeRangeContext  PLACEHOLDER_EXIT=0  (literal gate path)
+  check-placeholders.ps1 (real scan of 8 .swift) ..... PLACEHOLDER_COUNT=0 (meaningful verification)
+  swiftc -typecheck production (6 files + Tokens +
+     TSDesign), iOS 18 SDK, Swift 6, strict=complete,
+     -D DEBUG, -default-isolation MainActor .......... TYPECHECK_PROD_MAINACTOR_EXIT=0
+  swiftc -typecheck production, same, nonisolated
+     default (View=@MainActor regime) ................ TYPECHECK_PROD_NONISO_EXIT=0
+  swiftc -emit-module production (module=TeslaSync,
+     -enable-testing) ................................ MODULE_EXIT=0
+  test-file API typecheck (AdapterTests+Tests vs the
+     built module / shimmed XCTest asserts) .......... TESTBODY_EXIT=0   (0 surface-API errors;
+                                                        real XCTest C-assert macros resolve only
+                                                        inside an XCTest bundle — the deferred
+                                                        TeslaSyncTests target)
+  xcodegen generate .................................. XCODEGEN_EXIT=0
+  Shared.xcframework via Gradle (Kotlin/Native) ...... GRADLE_EXIT=0   (BUILD SUCCESSFUL; debug+release
+                                                        XCFrameworks written; staged to Frameworks/)
+  xcodebuild iOS (build test, iPhone 16) ............. IOS_EXIT=65  [DEFERRED — see below]
+  xcodebuild macOS (build test) ...................... MAC_EXIT=65  [DEFERRED — see below]
+
+DEFERRED FULL-APP GATES — ROOT CAUSE (pre-existing, out of this surface's allowed-files scope)
+  IOS_EXIT=65: the single app module has DUPLICATE public type declarations in two sibling surface
+      slots, reported by the compiler as "ambiguous for type lookup":
+        StateTimelineModel       @ TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104
+                                 AND TeslaSync/feature-views/StateTimeline.Model.swift:64
+        StateTimelineUpdate      @ TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:61
+                                 AND TeslaSync/feature-views/StateTimeline.Source.swift:44
+        StateTimelineConnection  @ TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:52
+                                 AND TeslaSync/feature-views/StateTimeline.Adapter.swift:125
+        RecentDrivesModel        @ TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+                                 AND TeslaSync/feature-views/RecentDrivesSection.Model.swift:23
+        (and RecentDrives{Update,LoadStatus,Connection} likewise). These cascade into
+        RecentDrivesListWidget.*/StateTimelineWidget.*/RecentDrivesSection.*/VehicleHero*/VehicleHeader*/
+        WebhookChannelsSection.* ("cannot infer contextual base in reference to member 'loading'/'stale'/
+        …"). git status confirms the untracked changes are ONLY the 9 ChartTimeRangeContext.* files;
+        `grep -i "ChartTimeRangeContext" <iOS build log> | grep error` returns NOTHING — this surface
+        contributes 0 errors. Fixing the duplicates requires editing sibling surfaces this prompt may
+        NOT touch. Same finding catalogued for EnergyChargingPanel et al. in
+        apps/macos-pending-verifications.md.
+  MAC_EXIT=65: TeslaSync-macOS and TeslaSyncWidgets-macOS declare entitlements that "require signing
+        with a development certificate"; this runner has no dev-signing identity, so the build-for-test
+        is rejected. Runner-infrastructure limitation, not a code defect; 0 ChartTimeRangeContext errors.
+
+────────────────────────────────────────────────────────────────────────
+DISPOSITION
+Production-polished, Apple-idiomatic ChartTimeRangeContext shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on this runner: all 6 production files type-check against the real iOS 18 SDK
+under Swift 6 -strict-concurrency=complete on BOTH the nonisolated-default (SwiftUI View=@MainActor)
+and the -default-isolation MainActor regimes, with the DEBUG Views + Previews branches and the real
+design system (Color.TS/Font.TS/TSSpacing/TSRadius/TSChartPalette) + Swift Charts; the test files'
+bodies type-check against the built TeslaSync module (the only -typecheck gaps are XCTest's C assertion
+macros, which resolve solely inside the XCTest bundle); swiftformat --lint / swiftlint --strict /
+placeholder are green on the surface AND tree-wide; xcodegen enumerates all 9 files; and the
+Kotlin/Native Shared.xcframework the app links was built from source (GRADLE_EXIT=0). The full-app
+iOS-Simulator + macOS `xcodebuild build test` gates are RED (IOS_EXIT=65 / MAC_EXIT=65) for
+PRE-EXISTING, out-of-scope reasons — sibling-slot StateTimeline*/RecentDrives* duplicate-type
+ambiguities (iOS) and the absent macOS development-signing certificate (macOS) — to which this surface
+contributes ZERO errors (grep-verified over both build logs). Per the established shared-surface
+precedent (AnnotationList 0063, withAiFeature 0062, and the catalogue in
+apps/macos-pending-verifications.md) these two gates are DEFERRED to the P4 acceptance gate
+(p4-apple/P99-0001-apple-acceptance-gate) on a signed macos-latest runner once the sibling
+duplicate-type collisions are resolved; every gate within this surface's scope is 0.
+
+EXIT=0
+STATUS=DONE

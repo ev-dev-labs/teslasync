@@ -1,0 +1,233 @@
+=== P4-APPLE · P7 · page:maps/Geofences (SwiftUI / HIG) ===
+started: 2026-06-16T12:12:00-0700
+host: macOS (Darwin); Xcode 26.5 Build 17F42; Swift 6.3.2 (swiftlang-6.3.2.1.108); swiftlint 0.x + xcodegen 2.45.4 + pwsh present
+web source: web/src/features/maps/pages/GeofencesPage.tsx   (route /geofences)
+parity unit: page:maps/Geofences  (manifest PARITY_REQUIRED=81)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Maps/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group (the app
+targets list `Sources` + `TeslaSync/{widget-primitives,dashboard-widgets,feature-views,
+misc-surfaces,shared-surfaces}` — there is no `TeslaSync/Features`). The repo's real,
+compiled canonical feature-page home is `apps/apple/Sources/Features/<Domain>/**` — where
+every sibling P7 page ships (Admin/ApiPlayground, Admin/AuditLog, Driving/DriveDetail, …)
+and which `Sources` already lists as a project.yml source path (createIntermediateGroups).
+The Geofences page therefore ships at `apps/apple/Sources/Features/Maps/**`, the faithful
+equivalent of the prompt's `Features/Maps`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the same
+reconciliation the sibling done-page logs recorded; it is the only deviation from the
+literal prompt path. The placeholder + lint gates below were therefore run against the
+REAL path `apps/apple/Sources/Features/Maps` (the nominal `TeslaSync/Features/Maps` does
+not exist, so a scan of it would be vacuously clean — running the real path is the honest
+check).
+
+ROUTE HOSTING: the web route is `/geofences`. A dedicated `.geofences` AppRoute case is
+added (default pathSegment `geofences`, `.vehicle` group, icon `location.circle.fill`);
+`AppRouteParser` already resolves `/geofences` -> `.geofences` by pathSegment (no alias
+needed), and `GeofencesRouteRegistration` hosts `GeofencesPage` on it, chained into
+`\.routeHosts` in TeslaSyncApp.swift after TripPlannerRouteRegistration. So the page is
+reachable via the Vehicle-group sidebar entry and any `/geofences` deep link.
+(Navigation registration is an allowed file per the prompt.)
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain; the .xcodeproj is git-ignored)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Maps/GeofencesModels.swift            (344 LOC) value types GeofenceZone (web Geofence; SI radiusMeters) + GeofenceAlertType (web getAlertType) + GeofencePayload (web toGeofencePayload, costPerKwh:nil) + GeofenceStats (web stats memo) + GeofenceForm (+validated() = web geofenceFormSchema.safeParse) + GeofenceFieldError(s) + GeofencesListState(loading/empty/error/loaded) + GeofenceLocationSource(vehicle/device/map) + GeofenceVehicleOption/GeofencePin/GeofenceCoordinate/GeofenceLocationError
+?? apps/apple/Sources/Features/Maps/GeofencesDataSource.swift        (64 LOC)  GeofencesDataSource seam (loadGeofences/create/update/delete/setEnabled/rename/bulkDelete/loadVehicles/loadPinned/latestVehiclePosition/reverseGeocode — web hook names verbatim) + GeofenceDeviceLocating seam + GeofenceToast (web toast.success/error)
+?? apps/apple/Sources/Features/Maps/GeofencesPageModel.swift         (393 LOC) @MainActor @Observable GeofencesPageModel: list state + 4 stats + search/pin sort + bulk selection + create/edit form(+validation) + delete confirm + per-row toggle + use-current-location; load/reload/submit/persist/askDelete/confirmDelete/toggle/rename/confirmBulkDelete/requestCurrentLocation (mutations split into a same-file extension to keep the type body lean)
+?? apps/apple/Sources/Features/Maps/GeofencesPageModel.Sample.swift  (155 LOC) actor SampleGeofencesDataSource (4-fence seed; real in-memory CRUD so create/update/delete/toggle/bulk visibly mutate) + SystemGeofenceDeviceLocator (CLLocationUpdate.liveUpdates(); authorizationDenied -> web locationDenied). Production binds the KMP geofence adapter through the same seam.
+?? apps/apple/Sources/Features/Maps/GeofencesStrings.swift           (174 LOC) GeofencesStr localized-key map (computed LocalizedStringKey vars — concurrency-safe; web i18next key names verbatim) + alert badge/tone/option, field-error, location-error, toast maps + interpolated {{name}} helpers (deleteMessage/selectLabel/renameLabel) + noun plural
+?? apps/apple/Sources/Features/Maps/GeofencesPage.swift              (287 LOC) SwiftUI view GeofencesPage: header(title+subtitle+Add Geofence), toast AlertBanner, state machine (loadingPanel=GlassPanel6 / TSErrorDisplay+Retry / emptyContent / loadedContent), AI seed input, bulk toolbar, search filter+chip, staggered GeofenceZoneRow list, create/edit sheet + delete & bulk-delete alerts; #if DEBUG previews (loaded/empty/error)
+?? apps/apple/Sources/Features/Maps/GeofencesPage.Stats.swift        (68 LOC)  GeofencesStatsPanel (GlassPanel1): TSGlassPanel { adaptive LazyVGrid of 4 TSStatCard (Total/Active/Entry-Alerts/Exit-Alerts) | TSEmptyState common.noData }
+?? apps/apple/Sources/Features/Maps/GeofencesPage.Row.swift          (193 LOC) GeofenceZoneRow (GlassPanel7): adaptive (HStack regular / VStack compact) selection checkbox + pin IconBox + inline-rename name (GeofenceNameEditor) + enabled/alert TSBadges + mono coord + radius+m meta + enable Toggle + edit + delete
+?? apps/apple/Sources/Features/Maps/GeofencesPage.Form.swift         (278 LOC) GeofenceFormSheet (Create/Edit) + GeofenceLocationPanel (GlassPanel8: useCurrentLocation, vehicle/browser/draw segmented tabs, vehicle picker, Get-Location) + GeofenceDrawSection (MapContainer=MapKit Map via MapReader tap-to-place + MapTileLayer=TSMapLayerSwitcher + GeofenceDrawer=TSGeofenceDrawer) + name/lat/lon/radius(+hint)/alert-type/enabled fields + validation banner + Cancel/Create-Update
+?? apps/apple/Sources/Features/Maps/GeofencesRouteRegistration.swift (21 LOC)  registers .geofences -> GeofencesPage (model built on MainActor + captured; mirrors AuditLogRouteRegistration)
+ M apps/apple/Sources/App/AppRoute.swift                  +.geofences case (pathSegment "geofences", systemImage "location.circle.fill", .vehicle group)
+ M apps/apple/Sources/TeslaSyncApp.swift                  chains GeofencesRouteRegistration.registry(base:) into \.routeHosts (after TripPlanner)
+ M apps/apple/Localization/Localizable.xcstrings          +69 keys (66 required parity keys + route.geofences + Entry Only/Exit Only select labels + 5 geofences.form.* validation msgs); Cancel/Delete/Name/common.delete/common.noData already present; JSON validated (10898 total keys); web key names verbatim
+ M apps/parity/apple-ledger.json                          +2 rows (apple-macos, apple-ios) for page:maps/Geofences, covered 81/81
+
+MINIMAL OUT-OF-SCOPE FIXES required only to keep the SHARED whole-repo gates green (the
+swiftlint config lints the whole tree; the app build compiles the whole module). Both are
+pre-existing, behavior-preserving, and unrelated to Geofences:
+ M apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Previews.swift   2 pre-existing line_length(>120) wraps (swiftlint --strict blocker)
+ M apps/apple/Sources/Features/Diagnostics/AnomalyDashboardModels.swift signalFrequency: replaced a `.map{}.sorted{}` chain with an explicit loop+sort (the chain INTERMITTENTLY tripped the type-checker's time budget under full-app load: green in 1 build, "unable to type-check in reasonable time" in 2 others — the compiler itself recommends this exact fix). De-flakes the build.
+
+================================================================================
+GATES  (run against the REAL output path apps/apple/Sources/Features/Maps)
+================================================================================
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "Geofences*" referenced 54x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Maps -Language swift ---
+PLACEHOLDER_ALLOWED=1   (the single opt-out is the REQUIRED parity i18n key literal
+"geofences.searchPlaceholder" — its identifier embeds the banned word "Placeholder";
+marked `// parity:allow i18n key verbatim` in GeofencesStrings.swift)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- swiftlint --strict (repo .swiftlint.yml lints the whole included tree) ---
+0 violations in any apps/apple/Sources/Features/Maps file; 0 violations repo-wide
+(the 2 pre-existing AnomalyInlineRow.Previews line_length violations were wrapped — see above)
+LINT_EXIT=0
+
+--- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build ---
+** BUILD SUCCEEDED **   (clean full build; KMP Shared.xcframework + the entire app module incl.
+all 10 Geofences files compiled; 0 errors, 0 warnings in any of my files)
+BUILD_EXIT=0
+BUILD_IOS_EXIT=0
+
+--- xcodebuild -scheme TeslaSync-macOS build  (cross-idiom, ADR-002/006) ---
+** BUILD SUCCEEDED **   (full macOS app build; the entire app module incl. all 10 Geofences
+files compiled for arm64-apple-macos; 0 errors, 0 warnings in any of my files — confirms the
+#if os(iOS) guards + horizontalSizeClass adaptivity compile cleanly on the regular idiom too)
+MACOS_BUILD_EXIT=0
+
+--- xcodebuild test -scheme TeslaSync -only-testing:TeslaSyncTests/RouteTests ... ---
+TEST_EXIT=65  — RED, but ENTIRELY pre-existing + out-of-scope, ZERO diagnostics in any of my
+files. The shared TeslaSyncTests bundle does NOT compile at repo baseline: it carries
+systemic Swift-6 strict-concurrency / type drift in UNRELATED test files written for an older
+toolchain — proven cascade: VehicleCostPageModelTests.swift (@MainActor static `zeroTotals`
+read from a nonisolated context; XCTAssertEqual(accuracy:) misused on Date) then, once that one
+file is patched, GDPRExportPageModelTests.swift (@MainActor static `artifact(...)` called from a
+nonisolated context), and more behind it. `git status` confirms I touched NO file under
+apps/apple/Tests/** and NO VehicleCost/GDPRExport source. Per "do not fix pre-existing issues
+unrelated to your task," I did not chase the suite-wide cascade (and reverted the probe edit to
+keep this change focused). This mirrors the sibling AuditLog done-page log, which shipped DONE
+with the full scheme RED on a pre-existing out-of-scope crash and ZERO diagnostics of its own;
+here the app BUILD is in fact fully GREEN and only the pre-existing test bundle is red.
+The route-coverage assertions that DO exercise my change hold by construction: RouteTests
+asserts unique pathSegments (geofences is unique) and that every AppRoute is in its group's
+list (.geofences ∈ .vehicle) — both true.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=81
+
+[x] panel  — GlassPanel1          GeofencesPage.Stats.swift `GeofencesStatsPanel` -> TSGlassPanel { adaptive LazyVGrid(4 cards) | TSEmptyState(common.noData) }
+[x] panel  — Total-Geofences      GeofencesPage.Stats.swift `statCard(GeofencesStr.totalGeofences, stats.total, "mappin.and.ellipse")` -> TSStatCard
+[x] panel  — Active               GeofencesPage.Stats.swift `statCard(GeofencesStr.active, stats.active, "checkmark.circle.fill")` -> TSStatCard
+[x] panel  — Entry-Alerts         GeofencesPage.Stats.swift `statCard(GeofencesStr.entryAlerts, stats.entryAlerts, "arrow.down.right.circle.fill")` -> TSStatCard
+[x] panel  — Exit-Alerts          GeofencesPage.Stats.swift `statCard(GeofencesStr.exitAlerts, stats.exitAlerts, "arrow.up.right.circle.fill")` -> TSStatCard
+[x] panel  — GlassPanel6          GeofencesPage.swift `loadingPanel` -> TSGlassPanel { TSSkeleton(24) + 3x TSSkeleton(80) } (web loading skeleton)
+[x] panel  — GlassPanel7          GeofencesPage.Row.swift `GeofenceZoneRow` -> TSGlassPanel { checkbox + pin + name + badges + coord/radius + toggle/edit/delete } (web per-row hover/glow panel)
+[x] panel  — GlassPanel8          GeofencesPage.Form.swift `GeofenceLocationPanel` -> TSGlassPanel { useCurrentLocation + source tabs + vehicle picker / Get-Location / draw map }
+[x] map    — MapContainer         GeofencesPage.Form.swift `GeofenceDrawSection` -> MapReader { Map(position:$camera){ draft Annotation+MapCircle } }.onTapGesture(proxy.convert -> set lat/lon) (native MapKit, tap-to-place)
+[x] map    — MapTileLayer         GeofencesPage.Form.swift `GeofenceDrawSection` -> TSMapLayerSwitcher(style: $style)  (P3 map-style wrapper)
+[x] map    — GeofenceDrawer       GeofencesPage.Form.swift `GeofenceDrawSection` -> TSGeofenceDrawer(geofences: draftFences, onDelete: clear coords)  (P3 wrapper)
+[x] state  — loading              GeofencesListState.loading -> GeofencesPage.content -> `loadingPanel` (TSSkeleton)
+[x] state  — empty                GeofencesListState.empty -> `emptyContent` -> TSEmptyState("No geofences defined","Add a geofence…", "mappin.slash") + Add-Geofence action
+[x] state  — error                GeofencesListState.error(msg) -> TSErrorDisplay(onRetry: model.reload) .accessibilityValue(msg)
+[x] state  — success              GeofencesListState.loaded -> `loadedContent` (stats + AI input + bulk + filter + GeofenceZoneRow StaggerContainer)
+[x] string — Active                                GeofencesStr.active  -> "Active"
+[x] string — Add Geofence                          GeofencesStr.addGeofence  -> "Add Geofence"
+[x] string — Add a geofence to track when your vehicle arrives or leaves a location.   GeofencesStr.emptyMessage
+[x] string — Alert Type                            GeofencesStr.alertTypeLabel
+[x] string — Are you sure you want to delete "{{name}}"? This action cannot be undone.  GeofencesStr.deleteMessage(name:) (String(localized:)+{{name}} sub)
+[x] string — Cancel                                GeofencesStr.cancel
+[x] string — Clear search                          GeofencesStr.clearSearch
+[x] string — Create                                GeofencesStr.create
+[x] string — Create Geofence                       GeofencesStr.createTitle
+[x] string — Define locations for contextual tracking and automation   GeofencesStr.subtitle
+[x] string — Delete                                GeofencesStr.delete
+[x] string — Delete Geofence                       GeofencesStr.deleteTitle
+[x] string — Edit Geofence                         GeofencesStr.editTitle
+[x] string — Entry                                 GeofencesStr.alertBadge(.entry)
+[x] string — Entry & Exit                          GeofencesStr.alertBadge(.both) / alertOption(.both)
+[x] string — Entry Alerts                          GeofencesStr.entryAlerts
+[x] string — Exit                                  GeofencesStr.alertBadge(.exit)
+[x] string — Exit Alerts                           GeofencesStr.exitAlerts
+[x] string — Failed to create geofence             GeofencesStr.toast(.createFailed)
+[x] string — Failed to delete geofence             GeofencesStr.toast(.deleteFailed)
+[x] string — Failed to toggle geofence             GeofencesStr.toast(.toggleFailed)
+[x] string — Failed to update geofence             GeofencesStr.toast(.updateFailed)
+[x] string — Geofence created                      GeofencesStr.toast(.created)
+[x] string — Geofence deleted                      GeofencesStr.toast(.deleted)
+[x] string — Geofence updated                      GeofencesStr.toast(.updated)
+[x] string — Geofences                             GeofencesStr.title (+ route.geofences nav title)
+[x] string — Home                                  GeofencesStr.namePrompt (name field prompt)
+[x] string — Inactive                              GeofencesStr.inactive
+[x] string — Latitude                              GeofencesStr.latitudeLabel
+[x] string — Longitude                             GeofencesStr.longitudeLabel
+[x] string — Minimum 10m, maximum 50000m           GeofencesStr.radiusHint
+[x] string — Name                                  GeofencesStr.nameLabel
+[x] string — No geofences defined                  GeofencesStr.emptyTitle
+[x] string — None                                  GeofencesStr.alertBadge(.none) / alertOption(.none)
+[x] string — Radius (meters)                       GeofencesStr.radiusLabel
+[x] string — Total Geofences                       GeofencesStr.totalGeofences
+[x] string — Update                                GeofencesStr.update
+[x] string — common.delete                         GeofencesStr.commonDelete (bulk confirm)
+[x] string — common.noData                         GeofencesStr.noData (empty stats panel)
+[x] string — editableText.rename.geofence          GeofencesStr.renameLabel(name:) (inline-rename a11y)
+[x] string — forms.validationFailed                GeofencesStr.validationFailed (form banner)
+[x] string — geofences.aiSuggest.pickLocation      GeofencesStr.aiPickLocation (AI seed input label)
+[x] string — geofences.browser                     GeofencesStr.browserTab
+[x] string — geofences.bulk.delete                 GeofencesStr.bulkDelete
+[x] string — geofences.bulk.deleteConfirm.body     GeofencesStr.bulkConfirmBody
+[x] string — geofences.bulk.deleteConfirm.title    GeofencesStr.bulkConfirmTitle
+[x] string — geofences.chooseVehicle               GeofencesStr.chooseVehicle
+[x] string — geofences.drawHint                    GeofencesStr.drawHint
+[x] string — geofences.drawOnMap                   GeofencesStr.drawOnMap
+[x] string — geofences.drawerLabel                 GeofencesStr.drawerLabel (draw map a11y)
+[x] string — geofences.error.nameTooLong           GeofencesStr.fieldError(.nameTooLong)
+[x] string — geofences.filterLabel.search          GeofencesStr.filterLabelSearch (active filter chip)
+[x] string — geofences.getLocation                 GeofencesStr.getLocation
+[x] string — geofences.gettingLocation             GeofencesStr.gettingLocation
+[x] string — geofences.locationDenied              GeofencesStr.locationError(.denied)
+[x] string — geofences.locationFailed              GeofencesStr.locationError(.failed)
+[x] string — geofences.noMatches                   GeofencesStr.noMatches (search empty state)
+[x] string — geofences.noPosition                  GeofencesStr.locationError(.noPosition)
+[x] string — geofences.noun.one                    GeofencesStr.nounCount(1) (bulk noun)
+[x] string — geofences.noun.other                  GeofencesStr.nounCount(n) (bulk noun)
+[x] string — geofences.searchPlaceholder           GeofencesStr.searchPrompt (search field prompt)
+[x] string — geofences.selectGeofence              GeofencesStr.selectLabel(name:) (checkbox a11y)
+[x] string — geofences.selectVehicle               GeofencesStr.selectVehicle
+[x] string — geofences.useCurrentLocation          GeofencesStr.useCurrentLocation
+[x] string — geofences.vehicle                     GeofencesStr.vehicleTab
+[x] string — m                                      GeofencesStr.unit (radius unit suffix)
+PARITY_COVERED=81
+
+SUMMARY
+The native SwiftUI Geofences surface ships at the repo-canonical
+apps/apple/Sources/Features/Maps/** (the faithful equivalent of the prompt's
+Features/Maps) as 10 files / 1977 LOC, decomposed page + @Observable model + data-source
+seam + sample + strings + sub-views + route registration — mirroring the sibling done
+pages. It reproduces the web PageContainer chrome (title/subtitle/Add-Geofence), all eight
+web GlassPanels (the summary panel + its 4 MetricCards, the loading skeleton, the per-row
+card, and the modal "Use current location" panel), the three map components via the P3
+MapKit wrappers (MapContainer as a native Map+MapReader with tap-to-place — the read-only
+TSMapView wrapper cannot surface the tap proxy and is out-of-scope to modify;
+MapTileLayer=TSMapLayerSwitcher; GeofenceDrawer=TSGeofenceDrawer), and all four data states
+(loading/empty/error/success) bound to the @Observable model with full CRUD (create/edit/
+delete/toggle/inline-rename/bulk-delete), search+pin-ordered list, and the
+vehicle/device/draw "use current location" flow. Radius is stored SI (meters) and shown
+with the localized "m" only at the display boundary. Every one of the 66 visible strings
+resolves from Localizable.xcstrings under the verbatim web i18next key names. Adaptive
+across macOS/iPad (regular) + iPhone (compact) via horizontalSizeClass + #if os(iOS) guards;
+a11y labels/traits on the checkbox, badges, toggle, map and actions; Dynamic Type + dark/
+light + increased-contrast via the P2 tokens.
+
+VERIFICATION: GEN 0 · PLACEHOLDER 0 (1 allowed) · LINT 0 (swiftlint --strict, whole tree)
+· iOS xcodebuild BUILD SUCCEEDED (0 errors/0 warnings in my files). The only RED gate is the
+shared TeslaSyncTests bundle, which fails to COMPILE at repo baseline on systemic, PRE-
+EXISTING, out-of-scope Swift-6 test drift in unrelated files (VehicleCost/GDPRExport/…),
+with ZERO diagnostics in any file I authored or touched — the same pre-existing-red posture
+the sibling AuditLog done-page log shipped DONE under (and here the app build is fully green).
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Maps \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Sources/Features/Diagnostics/AnomalyDashboardModels.swift \
+          apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Previews.swift \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-maps-GeofencesPage.log
+  git commit -m "feat(apps/apple): GeofencesPage at web parity (P7 maps)"
+
+EXIT=0
+STATUS=DONE

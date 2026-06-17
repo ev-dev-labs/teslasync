@@ -1,0 +1,159 @@
+=== P4 Dashboard widget 0028 ClimateStatusWidget (Apple) ===
+Date: 2026-06-08 (PDT)
+Prompt: .github/prompts/.../p4-apple-dashboard-widgets-0028-ClimateStatusWidget
+Web source (spec): web/src/features/dashboard/widgets/ClimateStatusWidget.tsx
+Native output: apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.*
+
+--------------------------------------------------------------------------------
+PLATFORM CAPABILITY (per prompt's capability clause)
+--------------------------------------------------------------------------------
+SwiftUI + Swift Charts + MapKit / iOS 18 / iPadOS 18 / macOS 15 toolchain ARE
+available on this runner — this is NOT a capability-blocked run:
+  Xcode 26.5 (Build 17F42)
+  Apple Swift 6.3.2
+  swiftlint /opt/homebrew/bin/swiftlint
+  swiftformat /opt/homebrew/bin/swiftformat
+  iOS Simulator "iPhone 16" present and booted
+  KMP Shared.xcframework built (gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL)
+
+--------------------------------------------------------------------------------
+DELIVERED SURFACE (7 files, the entire allowed scope)
+--------------------------------------------------------------------------------
+ClimateStatusWidget.Model.swift     — P1/S8 state-holder seam (ClimateSource/Update/Model),
+                                      DTO (inside/outside °C, hvac kW, defrost_mode, battery_heater_on),
+                                      ClimateUnitPrefs, registry (climate-status, 1x2 .. 2x40),
+                                      P1/S10 strings facade, P1/S11 telemetry (view.opened)
+ClimateStatusWidget.Adapter.swift   — convertTempFromSI port, fmtInt/fmtNumber port,
+                                      rows + chips projection, a11y summary (Foundation-only)
+ClimateStatusWidget.swift           — surface: header, freshness chip, loading/empty/error/
+                                      stale/offline/content states
+ClimateStatusWidget.Views.swift     — readout, label/value rows, defrost/heater chips
+ClimateStatusWidget.Previews.swift  — every state (content/chips/partial-°F/loading/empty/error/offline/stale)
+ClimateStatusWidget.Tests.swift     — 28 cases: adapter / model / phase / registry / a11y
+ClimateStatusWidget.strings         — i18n catalog (7 web-parity keys + native chrome)
+
+i18n parity keys reproduced from web source: widget.climate, widget.cabin, widget.outside,
+widget.hvac, widget.defrost, widget.batHeater, widget.noClimate.
+
+--------------------------------------------------------------------------------
+STATIC GATES (my surface) — PASS
+--------------------------------------------------------------------------------
+$ swiftlint lint --strict (ClimateStatusWidget.*.swift)
+  Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+$ swiftformat --lint (ClimateStatusWidget.*.swift)
+  0/6 files require formatting.
+FORMAT_EXIT=0
+
+$ check-placeholders.ps1 (ClimateStatusWidget.*.swift)
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(exact prompt gate command — `-Path ...ClimateStatusWidget` literal — also returns
+ PLACEHOLDER_EXIT=0)
+
+--------------------------------------------------------------------------------
+FULL-REPO GATE (as written) — FAILS on PRE-EXISTING, OUT-OF-SCOPE defects
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ** BUILD FAILED **  (compile errors in TRACKED SIBLING surfaces, not my files)
+IOS_EXIT=65
+
+The shared TeslaSync app module does not compile because of pre-existing duplicate
+symbols in sibling surfaces I am NOT permitted to edit (allowed files = ClimateStatusWidget.*):
+
+  feature-views/ChargingDetailSection.Adapter.swift:240: error: invalid redeclaration of 'ChargingProjection'
+  dashboard-widgets/ChargeStatusWidget.Adapter.swift:118:  error: invalid redeclaration of 'ChargingProjection'
+    -> 'ChargingProjection' is declared as a `struct` (ChargeStatusWidget) AND an `enum`
+       (ChargingDetailSection) in the same module.
+  dashboard-widgets/ChargeStatusWidget.Adapter.swift:163:  error: type 'ChargeStatusProjection' does not conform to protocol 'Equatable' (cascade)
+  dashboard-widgets/ChargeStatusWidget.Adapter.swift:164/177/299: error: 'ChargingProjection' is ambiguous
+  feature-views/ChargingDetailSection.Model.swift:193/198/203: error: type 'ChargingProjection' has no member ... (cascade)
+  dashboard-widgets/ChargeCostTrackerWidget.Adapter.swift:328: error: ambiguous use of 'miles'
+    -> two same-named `convertChargeDistanceFromSI` overloads (ChargeStatusWidget's
+       `ChargeDistanceUnit` vs ChargeCostTrackerWidget's `ChargeCostDistanceUnit`).
+
+PROOF these are NOT my changes (git status --porcelain — only my 7 files are added):
+  ?? apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Adapter.swift
+  ?? apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Model.swift
+  ?? apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Previews.swift
+  ?? apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Tests.swift
+  ?? apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.Views.swift
+  ?? apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.strings
+  ?? apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.swift
+  (ChargeStatusWidget.*, ChargingDetailSection.*, ChargeCostTrackerWidget.* are committed/tracked.)
+  0 compile errors are attributable to ClimateStatusWidget.*.
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+  ** BUILD FAILED **
+MAC_EXIT=65
+  Additional pre-existing ENVIRONMENT block (not a compile error, not my files):
+    error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing
+           with a development certificate (project DEVELOPMENT_TEAM="" — no signing identity).
+
+--------------------------------------------------------------------------------
+ISOLATED VERIFICATION — proves THIS surface is green on BOTH platforms
+--------------------------------------------------------------------------------
+Method: temporarily held ONLY the pre-existing-broken `ChargeStatusWidget.*` surface aside
+(reverted afterward — nothing committed), `xcodegen generate`, then ran the gate. Removing
+that one surface resolves BOTH collisions; the entire rest of the app (incl. ChargeCostTracker
++ ChargingDetailSection + ~430 sibling files + my ClimateStatusWidget) then compiles, proving
+there are no other hidden collisions.
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ** BUILD SUCCEEDED **
+  ** TEST SUCCEEDED **
+  Executed 6642 tests, with 0 failures (0 unexpected)
+  Test Suite 'ClimateStatusAdapterTests'       passed   (15 cases)
+  Test Suite 'ClimateStatusModelTests'         passed   (8 cases)
+  Test Suite 'ClimateStatusAccessibilityTests' passed   (2 cases)
+  Test Suite 'ClimateStatusPhaseTests'         passed   (1 case)
+  Test Suite 'ClimateStatusRegistryTests'      passed   (2 cases)
+  -> 28/28 ClimateStatusWidget cases passed.
+IOS_ISO_EXIT=0
+
+$ xcodebuild -scheme TeslaSync-macOS build test CODE_SIGNING_ALLOWED=NO (signing-block worked around)
+  ** BUILD SUCCEEDED **
+  Test Suite 'TeslaSync-macOSTests.xctest' passed
+  Test Suite 'All tests' passed
+  Executed 6642 tests, with 0 failures (0 unexpected)
+  -> all ClimateStatusWidget cases passed on macOS (0 Climate failures).
+MAC_ISO_EXIT=0
+  (xcodebuild process then stalled on post-test result-bundle finalization under heavy
+   multi-slot I/O load; the test run itself completed green — "All tests passed".)
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all states from the web source (loading/empty/error/stale/offline/content).
+[x] Hooks bind via the shared P1/S8 state-holder seam (ClimateSource); no HTTP in the view.
+[x] Every web i18n key has a matching catalog key (ClimateStatusWidget.strings).
+[x] Accessibility labels on interactive elements (refresh/retry) + combined readout summary.
+[x] Tests: adapter unit + per-state model + a11y label tests (28 cases) — all pass iOS & macOS.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] EXIT=0 on the FULL-REPO gate is BLOCKED by pre-existing OUT-OF-SCOPE sibling collisions
+    (ChargingProjection / convertChargeDistanceFromSI·miles) + macOS dev-signing — none of
+    which are this prompt's files or this prompt's allowed scope. The surface itself is
+    COMPLETE and VERIFIED GREEN on iOS and macOS (isolated build, 6642 tests, 0 failures).
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+ClimateStatusWidget (Apple) is implemented to full parity with the web source and is
+verified green on iOS and macOS (build + 28 surface tests + 6642 total, 0 failures),
+lint-clean, format-clean, placeholder-clean. The repo-wide gate command cannot return
+EXIT=0 from within this prompt's allowed files because the shared app module has
+PRE-EXISTING duplicate-symbol collisions in tracked sibling surfaces (ChargeStatusWidget /
+ChargingDetailSection / ChargeCostTrackerWidget) plus a missing macOS signing identity —
+both outside this prompt's scope and outside its allowed file set.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_ISO_EXIT=0
+MAC_ISO_EXIT=0
+EXIT=65
+STATUS=BLOCKED

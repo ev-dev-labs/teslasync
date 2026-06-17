@@ -1,0 +1,68 @@
+=== P4 Shared surface 0033 AINLGrafanaPanel (Apple) ===
+host: macOS 26.5.1; Xcode 26.5 Build version 17F42 ; swiftlint 0.63.3; swiftformat 0.61.1
+generated: 11 surface files (Adapter, Logic, Model, Source, swift, Views, Proposal, Chrome, Previews, Tests, ModelTests) + strings
+start: Thu Jun 11 06:07:02 PDT 2026
+
+### Prerequisite: KMP Shared.xcframework
+Scripts/build-shared-xcframework.sh -> BUILD SUCCESSFUL (staged Frameworks/Shared.xcframework); see run 05:40-05:48
+
+### Gate step 1 — iOS build test
+cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+result: ** TEST FAILED **   IOS_EXIT=65
+Cause (PRE-EXISTING, peer surfaces OUTSIDE this prompt's allowed scope of AINLGrafanaPanel.*):
+  - apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error:
+      escaping closure captures non-escaping parameter 'content'
+  - swift-frontend IRGen crash while compiling feature-views/AppearanceSettings.Controls.swift
+      (SIL thunk @$sSbScA_pSgIeAghyg_SbIeAghn_TR; Apple Swift 6.3.2)
+Errors referencing AINLGrafanaPanel.*: NONE (my 12 files compiled with zero diagnostics).
+Proof of pre-existence: with all AINLGrafanaPanel.* files moved aside + project regenerated,
+  the same AISignalExplorerNlFilter.swift:142 error still fails the build (baseline run 05:55).
+
+### Gate step 2 — macOS build test
+cmd: xcodebuild -scheme TeslaSync-macOS build test
+result: ** TEST FAILED **   MAC_EXIT=65
+Cause (ENVIRONMENT, not code): "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that
+  require signing with a development certificate; DEVELOPMENT_TEAM is "" on this runner.
+Supplementary: xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO -> BUILD FAILED
+  on the SAME peer error AISignalExplorerNlFilter.swift:142; zero AINLGrafanaPanel errors
+  => the macOS compile of this surface is clean; blockage is signing + the peer error.
+
+### Gate step 3 — swiftlint --strict (whole apps/apple)
+Done linting! Found 0 violations, 0 serious in 3961 files.   LINT_EXIT=0
+AINLGrafanaPanel.* violations: 0
+
+### Gate step 4 — swiftformat --lint apps/apple
+0/4259 files require formatting, 2 files skipped.   FORMAT_EXIT=0
+AINLGrafanaPanel.* needing format: 0
+
+### Gate step 5 — check-placeholders
+cmd (gate): ./apps/tools/check-placeholders.ps1 -Path apps/apple/.../AINLGrafanaPanel
+  PLACEHOLDER_COUNT=0  EXIT=0
+real scan of the 10 shipped AINLGrafanaPanel*.swift files (temp dir):
+  PLACEHOLDER_ALLOWED=1 (web i18n key 'promptPlaceholder', parity:allow) PLACEHOLDER_COUNT=0  EXIT=0
+
+### Surface-correctness evidence (this prompt's deliverable)
+Because the whole-app build/test is blocked by the peer factors above, the surface was verified
+in isolation against the REAL design tokens (apps/design/generated/apple/Tokens.swift) and the
+EXACT verified public signatures of the shared components it uses (TSButton/TSGlassPanel/TSSkeleton):
+  - swiftc -typecheck -swift-version 6 (pure Foundation: Adapter + Logic) ............ EXIT=0
+  - swiftc -typecheck -target arm64-apple-macos15.0 of all 9 SwiftUI source files .... EXIT=0
+  - swiftc -typecheck of both *Tests.swift bodies against the real surface symbols ... EXIT=0
+This standalone typecheck caught + fixed two real defects the blocked build had masked:
+  (a) method draft() collided with the stored property 'draft' -> renamed to draftPanel();
+  (b) two GrafanaPanelGridPos(x:y:w:h:) call sites not updated after the w/h->width/height
+      SwiftLint identifier rename.
+Surface isolation: no other file in apps/apple references AINLGrafanaPanel/NLGrafanaPanel/
+  GrafanaPanelDraft (it is wired in by the consuming page in a later step), so it cannot be the
+  cause of, nor be affected by, the peer build failures.
+
+### Verdict
+In-scope quality gates (lint / format / placeholder / per-file + per-test typecheck): ALL PASS.
+The two `build test` steps are RED solely due to (1) pre-existing compile errors in peer surfaces
+outside the allowed file scope and (2) a missing macOS development signing certificate on the
+runner — neither attributable to AINLGrafanaPanel. Per the Honesty Covenant (no red-as-green,
+no predecessor bypass, no out-of-scope edits) these are reported as BLOCKED rather than worked
+around by editing peer files.
+end: Thu Jun 11 06:16:57 PDT 2026
+EXIT=65
+STATUS=BLOCKED

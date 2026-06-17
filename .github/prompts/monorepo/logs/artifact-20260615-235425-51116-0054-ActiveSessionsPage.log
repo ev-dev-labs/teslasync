@@ -1,0 +1,166 @@
+================================================================================
+p4-apple · P7 · page:settings/ActiveSessions — SwiftUI / HIG
+Native SwiftUI parity of web ActiveSessionsPage (route /account/sessions),
+adaptive macOS + iOS (ADR-002/006). Generated prompt:
+.github/prompts/monorepo/p4-apple/pages/p4-apple-P7-page-settings-ActiveSessions.prompt.md
+================================================================================
+
+RUNNER
+  host            : macOS (Darwin, arm64)
+  Xcode           : 26.5 (17F42)  — Xcode runner AVAILABLE → gate is NOT BLOCKED
+  swift           : 6.3.2
+  swiftlint       : present (--strict)
+  pwsh            : present (placeholder gate)
+  KMP Shared.xcframework : built via Gradle (:core:assembleSharedXCFramework,
+                    BUILD SUCCESSFUL 11m47s) and staged into apps/apple/Frameworks/.
+
+PATH RECONCILIATION (binding, honest)
+  The generated prompt's templated Output/Allowed path
+  `apps/apple/TeslaSync/Features/Settings/**` does NOT exist in the project and
+  is NOT compiled by project.yml. Every shipped P7 page lives under
+  `apps/apple/Sources/Features/<Category>/` (ApiPlayground, AuditLog, DevTools…),
+  and project.yml compiles `Sources/`. The page is therefore implemented at the
+  REAL, compiled convention: apps/apple/Sources/Features/Settings/**. Navigation
+  registration (AppRoute/AppRouteParser/TeslaSyncApp) and the string catalog are
+  the prompt's other allowed surfaces.
+
+SCOPE (honesty covenant: no scope-narrowing, no stubs as final, ADR-011)
+  The web source ActiveSessionsPage.tsx wraps <ActiveSessionsSection/>. The thin
+  page manifest record lists only the 2 page strings, but a title-only screen
+  would be a stub. The FULL functional surface is reproduced natively: loading
+  branch, AUTH_MODE_OPEN advisory, forward-auth session list (device + IP +
+  signed-in + last-seen + "this device" badge), per-row "Sign out" and bulk
+  "Sign out all other devices", each behind a destructive confirmation
+  (web ConfirmDialog, no silence key), plus empty + error(retry) states.
+  (The web ActiveSessionsSection *component* is separately ported in the
+  experimental tree apps/apple/TeslaSync/feature-views/ActiveSessionsSection.*
+  using distinct types — no collision; this P7 PAGE is self-contained per the
+  canonical page pattern.)
+
+FILES (in scope)
+  A apps/apple/Sources/Features/Settings/ActiveSessionsPage.swift
+  A apps/apple/Sources/Features/Settings/ActiveSessionsPageModel.swift
+  A apps/apple/Sources/Features/Settings/ActiveSessionsRouteRegistration.swift
+  A apps/apple/Tests/Unit/Features/Settings/ActiveSessionsPageModelTests.swift
+  M apps/apple/Sources/App/AppRoute.swift              (+ .accountSessions case, path/icon/group .account)
+  M apps/apple/Sources/App/AppRouteParser.swift        (+ /account/sessions alias)
+  M apps/apple/Sources/TeslaSyncApp.swift              (+ ActiveSessionsRouteRegistration wiring)
+  M apps/apple/Localization/Localizable.xcstrings      (+ 35 keys, incl the 2 PARITY keys)
+  M apps/parity/apple-ledger.json                      (+ apple-macos & apple-ios rows, done 2/2)
+
+ADAPTIVE / HIG / a11y / units
+  - macOS/iPad (regular): panel header + bulk action side-by-side. iPhone
+    (compact, horizontalSizeClass): stacked. Driven by @Observable model (ADR-004),
+    no networking in the view.
+  - Materials via TSGlassPanel; tokens-only color/typography (P2). Destructive
+    confirms via .confirmationDialog (HIG). Timestamps formatted at the display
+    boundary only (Date.formatted) — never stored non-SI.
+  - VoiceOver labels/traits on panel + rows + actions, Dynamic Type, light/dark +
+    increased-contrast via tokens, ≥44pt targets (TSButton).
+  - Every visible string via LocalizedStringKey/String(localized:) from
+    Localizable.xcstrings with web-aligned key names; zero hardcoded literals.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+--------------------------------------------------------------------------------
+[x] string — account.sessions.title
+      catalog : apps/apple/Localization/Localizable.xcstrings  (key present, en="Active sessions")
+      binding : apps/apple/Sources/Features/Settings/ActiveSessionsPage.swift
+                symbol ActiveSessionsPage.header → TSPageTitle("account.sessions.title")  (L96)
+[x] string — account.sessions.subtitle
+      catalog : apps/apple/Localization/Localizable.xcstrings  (key present, en="Devices currently signed in to TeslaSync. Revoke individual sessions or sign out everywhere else.")
+      binding : apps/apple/Sources/Features/Settings/ActiveSessionsPage.swift
+                symbol ActiveSessionsPage.header → Text("account.sessions.subtitle")  (L97)
+--------------------------------------------------------------------------------
+PARITY_COVERED=2
+(PARITY_COVERED == PARITY_REQUIRED)
+
+================================================================================
+GATE
+================================================================================
+# placeholder scan (ADR-011)
+  pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Settings -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+# swiftlint --strict (this unit's touched .swift files; explicit paths so config
+# `included:` does not pull the whole tree)
+  Sources/Features/Settings/ActiveSessionsPage.swift
+  Sources/Features/Settings/ActiveSessionsPageModel.swift
+  Sources/Features/Settings/ActiveSessionsRouteRegistration.swift
+  Sources/App/AppRoute.swift  Sources/App/AppRouteParser.swift  Sources/TeslaSyncApp.swift
+  Tests/Unit/Features/Settings/ActiveSessionsPageModelTests.swift
+  → Found 0 violations, 0 serious in 7 files.
+  LINT_EXIT=0
+
+# xcodebuild BUILD — iOS Simulator (iPhone 16, iOS 26.5)
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  → ** BUILD SUCCEEDED **   (0 errors; full app target incl. the new page,
+     model, route case + parser alias, and registry wiring all compile)
+  BUILD_EXIT(ios)=0
+
+# xcodebuild BUILD — macOS (signing disabled; the only macOS failure mode here is
+# the absence of a dev signing certificate on this runner — an environment limit,
+# NOT a code error; it fails before Swift compilation)
+  xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build CODE_SIGNING_ALLOWED=NO
+  → ** BUILD SUCCEEDED **   (0 errors; the single adaptive SwiftUI source compiles
+     for the macOS idiom — #else horizontalSizeClass path)
+  BUILD_EXIT(macos)=0
+
+# xcodebuild TEST — iOS Simulator (iPhone 16)
+  -only-testing:TeslaSyncTests/ActiveSessionsPageModelTests
+  -only-testing:TeslaSyncTests/RouteTests
+  -only-testing:TeslaSyncTests/MenuCommandCatalogTests
+  -only-testing:TeslaSyncTests/ExploreCatalogTests
+  → ** TEST SUCCEEDED **
+      ActiveSessionsPageModelTests  16 tests, 0 failures   (states loading/open/empty/
+        error/loaded; per-row + bulk revoke flows; busy-flag lifecycle; action-error;
+        sample seed populated; SessionDeviceLabel browser/OS heuristic = web describeDevice)
+      RouteTests                     8 tests, 0 failures   (incl. unique pathSegment +
+        group membership for the new .accountSessions route)
+      MenuCommandCatalogTests        7 tests, 0 failures   (Navigate menu still == every AppRoute)
+      ExploreCatalogTests           13 tests, 0 failures   (Explore catalog still == every AppRoute)
+      TOTAL                         44 tests, 0 failures
+  TEST_EXIT=0
+
+  PRE-EXISTING OUT-OF-SCOPE NOTE (no red-as-green): the shared TeslaSyncTests
+  bundle has exactly ONE pre-existing compile blocker at HEAD —
+  apps/apple/Tests/Unit/Features/Notifications/WebhooksPageModelTests.swift
+  uses LocalizedStringKey without `import SwiftUI` (2 diagnostics). It is NOT this
+  unit's file and is forbidden to commit-fix (Out of Scope: other pages). The
+  44/44 run above was obtained after TEMPORARILY adding that one import locally;
+  that change was REVERTED and is NOT committed. There are ZERO diagnostics in any
+  of this unit's files.
+
+# ISOLATED MODEL HARNESS (committed-tree-independent — compiles THIS unit's real
+# ActiveSessionsPageModel.swift standalone via swiftc -parse-as-library, so the
+# evidence does not depend on the reverted import)
+  swiftc -parse-as-library ActiveSessionsPageModel.swift main.swift -o harness && ./harness
+  → 19 PASS / 0 FAIL   (10 device-label heuristic + 9 state-machine/revoke checks)
+  HARNESS_FAILURES=0
+
+ACCEPTANCE
+  [x] Every web region reproduced (header + loading + open-mode + list + per-row &
+      bulk revoke confirms + empty + error); no stub, no title-only screen.
+  [x] Both PARITY items render from the @Observable model state (header).
+  [x] loading / open / empty / error implemented for the sessions source.
+  [x] All strings from Localizable.xcstrings, web key names; zero hardcoded literals.
+  [x] Dark mode + Dynamic Type + a11y + SI display-boundary formatting; SwiftUI-native.
+  [x] build (iOS+macOS) + lint + placeholder green; tests 44/44 (16 this unit);
+      PARITY_COVERED == PARITY_REQUIRED (2).
+  [x] apple ledger rows (apple-macos + apple-ios) set covered 2/2, done.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Settings apps/apple/Tests/Unit/Features/Settings \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-settings-ActiveSessionsPage.log
+  git commit -m "feat(apps/apple): ActiveSessionsPage at web parity (P7 settings)"
+
+EXIT=0
+STATUS=DONE

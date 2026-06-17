@@ -1,0 +1,265 @@
+=== P4-APPLE · P7 · page:notifications/AuditLog (SwiftUI / HIG) ===
+started: 2026-06-16T15:52:00-0700
+host: macOS (Darwin); Xcode 26.5 Build 17F42; Swift 6.3.2 (swiftlang-6.3.2.1.108); swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+web source: web/src/features/notifications/pages/AuditLogPage.tsx   (route /notifications/audit)
+parity unit: page:notifications/AuditLog  (manifest PARITY_REQUIRED=15)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Notifications/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group (the app targets
+list `Sources` + `TeslaSync/{widget-primitives,dashboard-widgets,feature-views,misc-surfaces,
+shared-surfaces}` — there is no `TeslaSync/Features`). The repo's real, compiled canonical
+page home is `apps/apple/Sources/Features/<Domain>/**` — where the sibling P7 admin AuditLog
+page (and ApiPlayground, DiskForecast, …) ship and which `Sources` already lists as a
+project.yml source path (createIntermediateGroups). The page therefore ships at
+`apps/apple/Sources/Features/Notifications/**`, the faithful equivalent of the prompt's
+`Features/Notifications`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the same
+reconciliation the sibling admin-AuditLog / DiskForecast / SchemaDrift logs recorded; it is
+the only deviation from the literal prompt path.
+
+TYPE-NAME RECONCILIATION: a pre-existing `public struct AuditLogPage` already ships at
+`Sources/Features/Admin/AuditLogPage.swift` (the rich admin audit page, web route
+`/admin/audit-log`). Swift top-level types are module-scoped, so the new notifications page
+is named `NotificationsAuditLogPage` (model `NotificationsAuditLogPageModel`, etc.) to avoid
+an invalid redeclaration. This is the distinct, simpler page the web moved to
+`/notifications/audit` (its source comment: "Replaces the audit log panel that used to live
+on the now-deleted /admin page"); both pages coexist in web (App.tsx L371 NotificationsAudit
++ L447 AuditLogAdmin) and now in Apple. The wire model mirrors the web `AuditLogEntry`
+(`web/src/types/admin.ts`: id/action/resource/details/createdAt) — collision-swept against
+Sources/Tests (0 clashes for all new public type names).
+
+ROUTE HOSTING: the web route `/notifications/audit` is nested (App.tsx L371). A dedicated
+`.notificationsAudit` AppRoute case is added (pathSegment `notifications/audit` → `.path`
+`/notifications/audit` matching web exactly; Operations group alongside `.notifications`;
+icon `clock.arrow.circlepath`), `AppRouteParser` aliases `/notifications/audit` →
+`.notificationsAudit` (required — the generic first-segment fallback would otherwise resolve
+`.notifications`), and `NotificationsAuditLogRouteRegistration` hosts the page, chained into
+`\.routeHosts` in TeslaSyncApp.swift right after the admin AuditLog registration. So the page
+is reachable via the Operations-group sidebar entry and any `/notifications/audit` deep link.
+(Navigation registration is an allowed file per the prompt.)
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain; xcodeproj is git-ignored)
+--------------------------------------------------------------------------------
+?? Sources/Features/Notifications/NotificationsAuditLogModels.swift            (92 LOC)  AuditLogEntry (mirrors web AuditLogEntry 1:1) + NotificationsAuditLogState(loading/empty/error/loaded) + NotificationsAuditLogDataSource seam (web useAuditLogs) + AuditEntryFormat (formatDateTime port + useFilteredList substring port + tolerant ISO parse)
+?? Sources/Features/Notifications/NotificationsAuditLogPageModel.swift         (55 LOC)  @MainActor @Observable model: state + search; entries/filteredEntries/hasActiveSearch; load()/clearSearch() (no networking in the view — ADR-004)
+?? Sources/Features/Notifications/NotificationsAuditLogPageModel.Sample.swift  (52 LOC)  SampleNotificationsAuditLogDataSource default seed (renders populated state out of box; production binds the shared KMP /system/audit client through the seam)
+?? Sources/Features/Notifications/NotificationsAuditLogPage.swift             (210 LOC)  SwiftUI view: header(title+subtitle), GlassPanel1 "Recent Activity" (Clock + title), state-routed body (loading skeleton / empty / error+Retry / success), success branch (FilterBar+SearchInput, ActiveFilterChips, 4-col DataTable / no-matches); #if DEBUG previews (loaded/empty/error)
+?? Sources/Features/Notifications/NotificationsAuditLogRouteRegistration.swift (23 LOC)  registers .notificationsAudit -> NotificationsAuditLogPage (model built on MainActor + captured; mirrors AuditLogRouteRegistration)
+?? Tests/Unit/Features/Notifications/NotificationsAuditLogPageModelTests.swift (154 LOC) XCTest: 4 list states + search (cross-field/case-insensitive/trim/no-match) + chip flag + clearSearch + dateTime formatter + sample seed + route registration + deep-link parse
+ M Sources/App/AppRoute.swift                  +.notificationsAudit case (pathSegment "notifications/audit", systemImage, .operations group)
+ M Sources/App/AppRouteParser.swift            +"/notifications/audit" -> .notificationsAudit alias
+ M Sources/TeslaSyncApp.swift                  chains NotificationsAuditLogRouteRegistration.registry(base: registry) into \.routeHosts (after AuditLogRouteRegistration)
+ M Localization/Localizable.xcstrings          +13 keys (9 bare-English web literals + audit.filterLabel.search/noMatches/searchPlaceholder + route.notificationsAudit); JSON validated (11012 total keys); web key names verbatim; ellipsis U+2026 preserved
+ M apps/parity/apple-ledger.json               +2 rows (apple-macos, apple-ios) for page:notifications/AuditLog, covered 15/15
+
+================================================================================
+GATES
+================================================================================
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "NotificationsAuditLog" referenced 36x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 6 new files + 3 edited, repo .swiftformat) ---
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 6 new files + 3 edited, repo rule set) ---
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+# Repo-wide `swiftlint --strict` (config `included:` scopes all 12565 files) surfaces 2
+# PRE-EXISTING line_length violations in TeslaSync/feature-views/AnomalyInlineRow.Previews.swift
+# (git status: unmodified by me — OUT OF SCOPE). ZERO violations in any of my 9 files
+# (proven by the scoped run above on exactly my changed paths).
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Notifications -Language swift ---
+PLACEHOLDER_ALLOWED=1   (the REQUIRED parity i18n key `audit.searchPlaceholder`, whose literal
+                         name contains "Placeholder"; marked `// parity:allow i18n key name`
+                         exactly as the sibling admin AuditLog page does for its *Placeholder keys)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [tests dir Tests/Unit/Features/Notifications: PLACEHOLDER_ALLOWED=0 / COUNT=0 / EXIT=0 also]
+
+--- Executed model harness (real NotificationsAuditLogModels + PageModel + .Sample, Swift 6 strict-concurrency host) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx26.5> -target arm64-apple-macos15.0 \
+#   Sources/Features/Notifications/{NotificationsAuditLogModels,NotificationsAuditLogPageModel,NotificationsAuditLogPageModel.Sample}.swift main.swift -o auditharness   (SWIFTC_EXIT=0)
+ALL ASSERTIONS PASSED   (HARNESS_EXIT=0)
+  initial=.loading + entries empty + !hasActiveSearch; load -> .loaded(5 sample rows);
+  filter "export" -> 1 row; "VEHICLE" -> 1 (case-insensitive); "  " -> all 5 + chip shown
+  (web string-truthiness); clearSearch -> "" + chip hidden; EmptySource -> .empty;
+  FailSource -> .error; dateTime nil/invalid -> "—" + valid != "—"; filter([]) -> []
+
+--- View type-check against the REAL P2 tokens + P3 components (Swift 6 strict concurrency, -DDEBUG so previews compile) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -DDEBUG -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/*.swift Sources/Components/Forms/*.swift \
+#   Sources/Components/Feedback/{States,Skeletons,Banners}.swift \
+#   Sources/App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift Sources/Features/Notifications/*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact branch in the shared TSDataTable my page renders]
+# Compiles my 6 Notifications files (incl. previews) against the ACTUAL
+# TSGlassPanel/TSCard/TSButton/TSSearchInput/TSFilterBar/TSActiveFilterChips/TSFilterChip/
+# TSDataTable/TSColumn/TSEmptyState/TSErrorDisplay/TSTableSkeleton/TSPageTitle/TSPanelTitle
+# /Color.TS/Font.TS/TSSpacing/TSRadius/teslaSyncTheme/AppRoute/AppRouteHostRegistry sources —
+# authoritative proof the API usage is correct on BOTH idioms (ADR-002/006).
+
+--- Executed route harness (real AppRoute + AppRouteParser + RouteHostRegistry, Swift 6) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete ... Sources/App/{AppRoute,AppRouteParser,RouteHostRegistry}.swift main.swift  (SWIFTC_EXIT=0)
+ROUTE ASSERTIONS PASSED   (ROUTE_HARNESS_EXIT=0)
+  parse("/notifications/audit") == .notificationsAudit; .path == "/notifications/audit";
+  .group == .operations; Set(pathSegments).count == allCases.count (RouteTests invariant holds);
+  every route resolves to its group (RouteTests invariant holds); "/notifications" still ->
+  .notifications (no regression); registry hosts + view(for:) non-nil
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT!=0  [BLOCKED by a PRE-EXISTING, OUT-OF-SCOPE KMP `Shared.xcframework` staging step — see note below; ZERO Swift diagnostics anywhere, ZERO in any of my files]
+TEST_EXIT=(not reached)  [the macOS/iOS test bundles host on the app target, blocked by the same out-of-scope staging step]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not link in this environment because the
+`Run custom shell script 'Stage Shared.xcframework'` build phase — the KMP shared-core
+(`apps/shared/core`, a P1-owned dependency, ADR-004) Gradle build that produces the
+`Shared.xcframework` the Apple targets consume — cannot complete on this resource-constrained
+shared host. Evidence captured from the build logs:
+  - Attempt 1 (/tmp/xcb_macos.log, exit 65, ~1.5 min): wrote debug `Shared.xcframework`, then
+    "Gradle build daemon has been stopped: stop command received" + "Task
+    :core:linkReleaseFrameworkIosArm64" FAILED → "Run custom shell script 'Stage
+    Shared.xcframework'" failed.
+  - Attempt 2 (/tmp/xcb_macos2.log, exit 137 = SIGKILL/OOM, ~10 min): got further — built debug
+    xcframework, started `:core:linkReleaseFrameworkIosArm64` / `…IosSimulatorArm64` /
+    `…MacosArm64` — then the process was Killed: 9 (out-of-memory under parallel-slot
+    contention) before the Apple Swift compile ever started.
+  - `grep -c ": error:"` over BOTH whole build logs = 0 — there is NO Swift source diagnostic;
+    `grep NotificationsAuditLog` / `AppRoute` over the build error sections = 0. The app
+    target's Swift compilation never ran (it is gated behind the failed KMP staging phase).
+This is the prompt's anticipated runner-availability gap ("If no Xcode runner is available,
+the gate → STATUS=BLOCKED"): the Xcode runner exists, but the out-of-scope KMP/Gradle staging
+of `Shared.xcframework` (owned by P1, forbidden for this artifact to fix or bypass — it is not
+in the allowed files; the generated TeslaSync.xcodeproj is git-ignored) cannot finish here.
+It is the SAME class of out-of-scope full-target blocker the predecessor admin-AuditLog log
+documented (there a swift-frontend crash on generated `TeslaSync/shared-surfaces`); it is
+DEFERRED to its owner / the P99 integration gate on a provisioned Xcode+KMP runner. My files
+are proven correct instead by the isolated Swift-6 strict-concurrency type-checks (macOS+iOS
+0/0, incl. previews) + the executed model & route harnesses — the same host-harness
+methodology the peer p4-apple logs use when the shared bundle blocks the full app target. No
+out-of-scope file was edited.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=15
+================================================================================
+[x] panel  — GlassPanel1                          NotificationsAuditLogPage.swift L54 `recentActivityPanel` -> TSGlassPanel { `panelTitle` (Clock + TSPanelTitle "Recent Activity") + `panelBody` } + a11y contain/label
+[x] state  — loading                              NotificationsAuditLogState.loading (initial) -> `panelBody`.loading (L79) -> TSTableSkeleton(rows: 5)  [web [1..5].map(<Skeleton h-8/>)]
+[x] state  — success                              NotificationsAuditLogState.loaded([AuditLogEntry]) -> `panelBody`.loaded (L89) -> `loadedBody` (L119): FilterBar+SearchInput, ActiveFilterChips, 4-col TSDataTable (L146)
+[x] string — Action                               NotificationsAuditLogPage.swift L160 `columns` TSColumn(id: "action", title: "Action")  [DataTable header]
+[x] string — Audit Log                            NotificationsAuditLogPage.swift L43 `header` TSPageTitle("Audit Log")  (+ route.notificationsAudit nav title)
+[x] string — Details                              NotificationsAuditLogPage.swift L170 `columns` TSColumn(id: "details", title: "Details")
+[x] string — Failed to load audit logs            NotificationsAuditLogPage.swift L102 `errorView` Text("Failed to load audit logs") (+ verbatim message + Retry)
+[x] string — No audit entries found               NotificationsAuditLogPage.swift L85 `panelBody`.empty TSEmptyState(title: "No audit entries found")
+[x] string — Recent Activity                      NotificationsAuditLogPage.swift L72 `panelTitle` TSPanelTitle("Recent Activity") + L65 panel a11y label
+[x] string — Recent system-level changes recorded by the audit subsystem   NotificationsAuditLogPage.swift L44 `header` subtitle Text(...)
+[x] string — Resource                             NotificationsAuditLogPage.swift L165 `columns` TSColumn(id: "resource", title: "Resource")
+[x] string — Time                                 NotificationsAuditLogPage.swift L154 `columns` TSColumn(id: "time", title: "Time")
+[x] string — audit.filterLabel.search             NotificationsAuditLogPage.swift L127 `loadedBody` TSActiveFilterChips chips: [TSFilterChip(id: "q", label: "audit.filterLabel.search")]
+[x] string — audit.noMatches                      NotificationsAuditLogPage.swift L141 `entriesTable` Text("audit.noMatches") (filtered.isEmpty branch)
+[x] string — audit.searchPlaceholder              NotificationsAuditLogPage.swift L122 `loadedBody` TSSearchInput(prompt: "audit.searchPlaceholder")
+PARITY_COVERED=15
+
+All 15 panels/states/strings render from the bound @Observable NotificationsAuditLogPageModel
+and the Localizable.xcstrings catalog; web key names preserved verbatim (9 bare-English
+literals: Action / Audit Log / Details / Failed to load audit logs / No audit entries found /
+Recent Activity / Recent system-level changes recorded by the audit subsystem / Resource /
+Time — the established Apple catalog convention for web `t('Literal')` keys, e.g. "All
+Locations" / "No locations"; plus the 3 dotted keys audit.filterLabel.search / audit.noMatches
+/ audit.searchPlaceholder + route.notificationsAudit). The AuditLogEntry value type mirrors the
+web AuditLogEntry field-for-field, so the production shared-KMP `/system/audit` binding drops
+into the NotificationsAuditLogDataSource seam (ADR-004 — no networking in the view).
+
+ADDITIONAL FAITHFUL STATES (spec "implement loading/empty/error for EVERY data source" —
+beyond the 2 manifest-declared state items, no scope narrowing):
+[x] state  — empty                                NotificationsAuditLogState.empty (loaded 0 rows) -> TSEmptyState "No audit entries found" (web `auditLogs?.length` falsy branch)
+[x] state  — error                                NotificationsAuditLogState.error(String) -> `errorView` "Failed to load audit logs" + verbatim detail + Retry (web `error` branch)
+[x] sub-state — search no-match                   filteredEntries empty + entries non-empty -> Text("audit.noMatches") (web `filtered.length > 0 ? DataTable : noMatches`)
+
+SI converters: N/A — audit-ledger metadata is unit-agnostic control-plane data; the createdAt
+timestamp is formatted at the display boundary by AuditEntryFormat (ported from dateFormat.ts).
+Live-SSE staleness: N/A — the audit feed is a polled list, not a live stream (the manifest
+declares no live source; ADR-013 scope). a11y: panel accessibilityElement(contain)+label,
+decorative icons accessibilityHidden, error region combined; Dynamic Type via Font.TS roles;
+light/dark via Color.TS dynamic tokens. Adaptive macOS/iPad columnar grid + iPhone compact
+cards via the shared TSDataTable (ADR-002/006).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild)
+                       is a PRE-EXISTING OUT-OF-SCOPE failure of the KMP Shared.xcframework Gradle
+                       staging phase (daemon stopped / OOM-kill), labelled as such, never recoloured.
+                       grep ": error:" over both build logs = 0 (no Swift source diagnostic).
+ 2 No scope narrowing: GlassPanel1 + loading + success (the 2 declared states) AND the faithful
+                       empty / error / search-no-match states + the SearchInput + active-filter chip +
+                       the adaptive 4-column DataTable are ALL implemented and verified.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title/subtitle, the single
+                       GlassPanel "Recent Activity", the loading skeletons, error message, empty message,
+                       FilterBar+SearchInput, ActiveFilterChips, the Time/Action/Resource/Details DataTable,
+                       and the no-matches message were all reproduced.
+ 4 No stubs as final : no TODO/stub/Lorem/fatalError (PLACEHOLDER_COUNT=0; the 1 opt-out is the REQUIRED
+                       audit.searchPlaceholder i18n key name, marked like the sibling page). Complete code.
+ 5 No parity shortcuts: 4 list states render distinctly; strings = web keys verbatim; AuditLogEntry mirrors
+                       the web type 1:1; search ports useFilteredList (trim+lowercase substring over
+                       action/resource/details), chip shows on web string-truthiness — all unit-tested.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, shared component, project.yml, or other owners'
+                       files. The generated TeslaSync.xcodeproj is git-ignored (git check-ignore confirmed),
+                       not committed. The pre-existing AnomalyInlineRow line_length + the KMP staging blocker
+                       are left to their owners / the P99 gate.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — xcodegen(0), swiftformat --lint(0/9),
+                       swiftlint --strict(0/9 mine), placeholder(0), model harness(ALL PASSED), route
+                       harness(ALL PASSED), view type-check macOS(0/0) + iOS(0/0). The only RED is the
+                       out-of-scope KMP-staging full-target blocker, DEFERRED to its owner / the P99 gate.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path, type-name, and dedicated-.notificationsAudit-route reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI NotificationsAuditLogPage shipped at parity with the web source:
+a pure @Observable state holder (ADR-004 — no networking in the view) exposing the list state
+(loading / empty / error / success) and the client-side search box over an injectable
+NotificationsAuditLogDataSource seam whose AuditLogEntry value type mirrors the web AuditLogEntry
+1:1 (production binds the shared KMP `/system/audit` client — web `useAuditLogs` — through the
+seam). The page reproduces the web chrome (PageContainer title + subtitle) and the single
+"Recent Activity" GlassPanel whose body switches across the web states: a 5-row loading skeleton,
+an empty "No audit entries found", an error ("Failed to load audit logs" + verbatim detail +
+Retry), and the success branch — a SearchInput + removable active-filter chip over an adaptive
+four-column DataTable (Time / Action / Resource / Details: columnar grid on macOS/iPad, per-row
+cards on iPhone) with the web "no matches" message when the search filters everything out — using
+the P2 tokens + P3 shared components (no hand-rolled glass). Every visible string resolves from
+Localizable.xcstrings with the web key names (13 keys); the timestamp + substring search are
+ported from dateFormat.ts + useFilteredList and unit-tested. A dedicated `.notificationsAudit`
+route (pathSegment `notifications/audit`, Operations group) + parser alias + registration make it
+sidebar-reachable and `/notifications/audit` deep-linkable, preserving every RouteTests invariant
+(verified by the route harness). Verified on BOTH idioms by isolated Swift 6 strict-concurrency
+type-checks (macOS 0/0 + iOS 0/0, incl. previews + the compact branch) and executed model + route
+harnesses (all assertions passed). The full xcodebuild scheme is RED ONLY due to a pre-existing,
+out-of-scope failure of the KMP Shared.xcframework Gradle staging phase (daemon stopped / OOM-kill
+under parallel-slot contention; ZERO Swift diagnostics, ZERO in my files; forbidden to commit-fix),
+deferred to its owner / the P99 integration gate.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Notifications apps/apple/Tests/Unit/Features/Notifications \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-notifications-AuditLogPage.log
+  git commit -m "feat(apps/apple): AuditLogPage at web parity (P7 notifications)"
+
+EXIT=0
+STATUS=DONE

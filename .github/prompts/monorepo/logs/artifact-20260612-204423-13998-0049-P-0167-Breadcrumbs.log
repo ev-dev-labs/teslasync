@@ -1,0 +1,161 @@
+=== P4 Shared surface 0167 Breadcrumbs (Apple) ===
+Date: 2026-06-13
+Runner: Darwin (Apple Silicon), Xcode 26.5 (build 17F42), Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+Tools present: xcodebuild, swift, swiftlint, swiftformat, xcodegen 2.45.4, pwsh, xcrun/simctl
+Capability: SwiftUI + Swift Charts + MapKit available (iOS 18 / macOS 15 SDKs installed). NOT a
+capability gap in the toolset itself; see BLOCKERS below for the build-gate blockers.
+
+Surface delivered (allowed files: apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.* + this log):
+  Breadcrumbs.swift            - BreadcrumbsView renderer (parity of components/layout/Breadcrumbs.tsx)
+  Breadcrumbs.Adapter.swift    - BreadcrumbItem, BreadcrumbsProjection, BreadcrumbsResolved, slug (Foundation-only)
+  Breadcrumbs.Model.swift      - BreadcrumbsStrings (P1/S10), telemetry seam (P1/S11), BreadcrumbsState (P1/S8)
+  Breadcrumbs.Views.swift      - DEBUG inspector/sample staging every branch (never a blank box)
+  Breadcrumbs.Previews.swift   - Xcode previews per branch
+  Breadcrumbs.strings          - i18n catalog (breadcrumbs.a11y.nav/home + DEBUG sample keys)
+  Breadcrumbs.AdapterTests.swift - pure projection unit tests
+  Breadcrumbs.Tests.swift      - state + view-composition + a11y/copy tests
+
+================================================================================
+GATE COMMANDS (run verbatim where possible) + REAL EXIT CODES
+================================================================================
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (** BUILD FAILED **)
+    ROOT CAUSE — NOT this surface. swift-frontend (Apple Swift 6.3.2) crashes during IR generation
+    of a PRE-EXISTING, unmodified file while emitting a reabstraction thunk:
+
+      4. While evaluating request IRGenRequest(IR Generation for file
+         ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+      5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+      ...
+      7  swift-frontend  llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+      8  swift-frontend  report_at_maximum_capacity(unsigned long) + 0
+      9  swift-frontend  llvm::SmallVectorBase<unsigned int>::grow_pod(...) + 384
+      10 swift-frontend  SyncCallEmission::setArgs(swift::irgen::Explosion&, bool, ...) 
+      11 swift-frontend  IRGenSILFunction::visitFullApplySite(swift::FullApplySite) + 5196
+
+    The crashing SIL thunk @$sSbScA_pSgIeAghyg_SbIeAghn_TR is a reabstraction thunk for an
+    actor-isolated (Bool, (any Actor)?) closure conversion. It has no relationship to this surface
+    (Breadcrumbs closures are () -> Void and (BreadcrumbsCrumb) -> Void). 0 (zero) "error:"
+    source diagnostics were emitted for ANY file; the failure is a compiler fatal-error, reproduced
+    identically across two independent runs, both on AppearanceSettings.Controls.swift.
+    `git status` confirms this surface added ONLY Breadcrumbs.* files; AppearanceSettings.Controls.swift
+    is unmodified. This is a toolchain (Swift 6.3.2 IRGen) defect on pre-existing code, outside the
+    allowed-files scope to fix.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (** BUILD FAILED **)
+    ROOT CAUSE — NOT this surface, environmental. macOS app + widget targets fail at the signing
+    stage before compilation:
+      error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+             Enable development signing in the Signing & Capabilities editor.
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    The runner has no Apple development team / signing identity (project.yml DEVELOPMENT_TEAM="").
+    (Had signing succeeded, this target compiles the same feature-views/AppearanceSettings.Controls.swift
+    and would hit the identical Swift 6.3.2 IRGen crash from [1].)
+
+[3] swiftlint --strict
+    LINT_EXIT=2   Found 3 violations, 3 serious in 5151 files.
+    ROOT CAUSE — NOT this surface. All 3 are PRE-EXISTING in an unmodified file:
+      TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54 Variable name 'a'/'b'/'c'
+      should be between 2 and 40 characters long (identifier_name)
+    Breadcrumbs.* contributed 0 violations (verified: swiftlint --strict on the 7 Breadcrumbs swift
+    files => "Found 0 violations, 0 serious in 7 files").
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=1   1/5449 files require formatting.
+    ROOT CAUSE — NOT this surface. PRE-EXISTING in an unmodified file:
+      TeslaSync/feature-views/RecentDrivesSection.Previews.swift:27/28 (redundantType)
+    Breadcrumbs.* contributed 0 (verified: swiftformat --lint on the 7 Breadcrumbs swift files =>
+    "0/7 files require formatting").
+
+[5] check-placeholders.ps1 -Path <Breadcrumbs surface files>
+    PLACEHOLDER_EXIT=0   PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    (Scanned a scoped copy of the 8 Breadcrumbs.* files. The gate's literal path
+     apps/apple/TeslaSync/shared-surfaces/Breadcrumbs is a flat-file prefix, not a directory; the
+     script treats a non-existent path as a vacuous clean pass [lines 132-135], so it was pointed at
+     the real surface files to make the scan meaningful and honest.)
+
+================================================================================
+SURFACE-SCOPED VERIFICATION (this is what IS in scope — all GREEN)
+================================================================================
+
+A) swiftlint --strict  (Breadcrumbs.swift .Adapter .Model .Views .Previews .Tests .AdapterTests)
+   => Found 0 violations, 0 serious in 7 files.                                     PASS
+
+B) swiftformat --lint  (same 7 files)
+   => 0/7 files require formatting.                                                 PASS
+
+C) check-placeholders  (8 Breadcrumbs.* files incl. .strings)
+   => PLACEHOLDER_COUNT=0                                                           PASS
+
+D) Standalone type-check against the iOS 18 simulator SDK (SwiftUI + Observation + OSLog),
+   both release and -D DEBUG (exercises the #if DEBUG inspector + #Preview blocks):
+   swiftc -typecheck -sdk <iphonesimulator> -target arm64-apple-ios18.0-simulator \
+     Tokens.swift Breadcrumbs.Adapter Breadcrumbs.Model Breadcrumbs Breadcrumbs.Views Breadcrumbs.Previews
+   => exit 0 (no diagnostics), with and without -D DEBUG.                           PASS
+
+E) Tests EXECUTED in isolation (SwiftPM harness, module name TeslaSync, swiftLanguageModes:[.v6] =>
+   Swift 6 complete strict concurrency, matching project.yml SWIFT_STRICT_CONCURRENCY: complete).
+   Harness = the 5 source/debug files + design Tokens.swift as target TeslaSync, the 2 *Tests.swift
+   as TeslaSyncTests (@testable import TeslaSync). `swift test`:
+     Test Suite 'BreadcrumbsProjectionTests' .... Executed 10 tests, 0 failures
+     Test Suite 'BreadcrumbItemTests'       .... (incl.) 
+     Test Suite 'BreadcrumbsStateTests'     .... Executed 3 tests, 0 failures
+     Test Suite 'BreadcrumbsSurfaceTests'   .... Executed 1 test,  0 failures
+     Test Suite 'BreadcrumbsViewTests'      .... Executed 7 tests, 0 failures
+     Test Suite 'All tests' passed: Executed 23 tests, with 0 failures (0 unexpected)
+   => SWIFT_TEST_EXIT=0                                                             PASS
+
+   Adapter unit test (cached items -> projection): suppression (<=1 item), current leaf is link-less
+   even with href (web isLast), ancestor-with-href => link, ancestor-without-href => plain text,
+   isMiddle = i>0 && !isLast, indices/identity, links/current/ancestors accessors.
+   Per-state view-composition test: suppressed(single/empty) + rendered(2/3 incl. linked & link-less
+   middle) compose; surfaceSlug exposed; sample/inspector compose.
+   A11y/i18n test: breadcrumbs.a11y.nav => "Breadcrumb", breadcrumbs.a11y.home => "Dashboard".
+   Telemetry test: view.opened emitted once per BreadcrumbsState, idempotent across stop/start.
+
+================================================================================
+PARITY NOTES (web components/layout/Breadcrumbs.tsx -> native)
+================================================================================
+- Props: items[BreadcrumbItem{label,href?}], homeHref('/'), homeAriaLabel -> faithfully ported.
+- items.length <= 1 => render nothing (self-suppress)                 -> resolved.isSuppressed => EmptyView()
+- nav aria-label t('a11y.breadcrumb','Breadcrumb')                    -> breadcrumbs.a11y.nav
+- Home link homeAriaLabel ?? t('a11y.breadcrumbHome','Dashboard')     -> breadcrumbs.a11y.home, SF Symbol "house"
+- chevron separator (aria-hidden)                                     -> SF Symbol "chevron.right", accessibilityHidden
+- isLast || !href => plain text (last = secondary+medium, else muted) -> role currentLeaf / plainText
+- !isLast && href => link (PrefetchLink)                              -> role link, Button + .isLink trait
+- truncate max-w-[200px]                                              -> lineLimit(1)+truncationMode(.tail)+frame(maxW:200)
+- middle items "hidden sm:inline" + mobile "..." (responsive collapse)-> idiomatic horizontal ScrollView
+  (every crumb reachable; data/order/links/truncation/suppression preserved; documented adaptation,
+  matching accepted predecessor 0166). The web source does NO fetch -> no loading/error/stale/offline
+  states exist to reproduce; inventing them would contradict the source (documented in Adapter header).
+- Tokens P1/S9 only (Color.TS / Font.TS / TSSpacing); no Tailwind ports, no raw hex.
+- Diagnostics P1/S11: view.opened with surface slug "Breadcrumbs".
+
+================================================================================
+DETERMINATION
+================================================================================
+This surface is COMPLETE and PASSES every check that can be exercised on this runner (lint, format,
+placeholder, SDK type-check, and 23/23 executed unit/view/a11y/telemetry tests under Swift 6 strict
+concurrency). The four red gate steps are ALL caused by pre-existing repository / environment issues
+in files this prompt is NOT permitted to modify (allowed files = Breadcrumbs.* only):
+  - Swift 6.3.2 swift-frontend IRGen fatal crash on feature-views/AppearanceSettings.Controls.swift
+  - missing macOS development signing certificate on the runner
+  - pre-existing swiftlint drift in widget-primitives/WidgetChartSummary.Tests.swift
+  - pre-existing swiftformat drift in feature-views/RecentDrivesSection.Previews.swift
+None are attributable to Breadcrumbs.* (git status: only Breadcrumbs.* added; the four offending files
+are unmodified; 0 Breadcrumbs entries in any error/violation/crash frame).
+
+Per the acceptance clause "EXIT=0 / STATUS=DONE (or STATUS=BLOCKED with platform-capability evidence
+in the log)", the whole-app build/test gate cannot go green on this runner for reasons outside this
+surface, so the honest terminal state is BLOCKED (not red-as-green). Unblock by: (a) a Swift toolchain
+whose IRGen does not crash on AppearanceSettings.Controls.swift (or a fix to that file by its owner),
+(b) a macOS development signing identity on the runner, and (c) the owners clearing the two pre-existing
+lint/format drifts.
+
+STEP EXITS: IOS_EXIT=65  MAC_EXIT=65  LINT_EXIT=2  FORMAT_EXIT=1  PLACEHOLDER_EXIT=0
+SURFACE-SCOPED: swiftlint=0  swiftformat=0  placeholder=0  typecheck=0  swift-test=0 (23/23)
+
+EXIT=65
+STATUS=BLOCKED

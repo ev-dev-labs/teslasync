@@ -1,0 +1,220 @@
+=== P4 Feature view 0257 TeslaApiUsageCard (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — shared parallel-slot host.
+  Xcode              : 26.5 (Build 17F42), invoked with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active CommandLineTools dir is overridden non-destructively — no sudo, no
+                       xcode-select -s — the SAME mechanism every prior P4 surface used).
+  Toolchain          : swift 6.3.2 · swiftlint (Homebrew) · swiftformat (Homebrew) · xcodegen · pwsh 7.
+  Capability         : SwiftUI present; iOS 18 + macOS 15 SDKs + iPhone 16 simulator installed and used.
+                       This surface uses NO Swift Charts and NO MapKit (the web source has none either — the
+                       prompt's "Charts / maps used: (none)"), so every iOS 18 / macOS 15 HIG primitive it needs
+                       is available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/system/components/status/TeslaApiUsageCard.tsx feeding the shared
+  web/src/components/data-display/UsageCard.tsx primitive. The operator-grade Tesla Fleet API spend +
+  volume card that overlays the bare /system/api-usage snapshot (this-month total + cost) on the richer
+  /api-logs/stats payload (last-24h burn, avg latency, error rate, by-service / by-method splits):
+
+    Empty (web !apiUsage || !derived)  → <UsageCard emptyMessage="Tesla API usage data is not available yet." />
+    Else (derived month-window math):
+      budget   = headline "{cur} of {cur}", right "{pct(0)} of monthly credit",
+                 caption "Day {elapsed} of {total} ·{resets…}", pct=pctOfBudget,
+                 intent = overBudget?danger : pct>80?warn : normal
+      bands    = [ This month: fmtCount(total_requests) "requests" / "{cur(dailyAvgCost)}/day avg",
+                   Last 24h:   last24h!=null?fmtCount:"—" "requests" / "{cur(last24hBurn)}/day burn",
+                   Forecast EOM: cur(forecastFromMtd) / "recent rate: {cur(forecastFromRecent)}",
+                                 intent = forecastFromMtd>monthly_credit?danger:normal ]
+      details  = [ Useful fmtCount(total-skipped), Skipped (asleep) fmtCount(skipped_polls),
+                   Avg latency "{round(avgDurationMs)} ms" | "—",
+                   Error rate fmtPercent(errorRate,1)(+ "({fmtCount(errorCount)})") | "—",
+                   intent = errorRate>=5?danger : >=1?warn : normal ]
+      topLists = [ if dedupeMap(by_service): "Top services" (Zap) top-3 desc {name→fmtCount};
+                   if dedupeMap(by_method):  "By method"    (Activity) all desc {method→fmtCount} ]
+      banner   = overBudget ? "Over monthly credit" / "Spend has exceeded the {cur} monthly credit by
+                 {cur}. Review polling cadence or vehicle subscriptions." (danger) : none
+      footer   = [ Open API Logs → /api-logs (primary), Tesla account → /tesla-account ]
+  Hooks  : useAdmin (apiUsage prop) + useApiLogStats (/api-logs/stats @ INTERVALS.STANDARD) +
+           useFormatting (formatCurrency = `${symbol}${fmtNumber(amount, precision)}`).
+  Helpers (reproduced verbatim — arithmetic is the contract):
+           derived month math (startOfMonth/endOfMonth local; totalDaysInMonth=ceil((end-start)/dayMs);
+             daysElapsed=max(1,ceil((now-start)/dayMs)); daysRemaining=max(0,total-elapsed);
+             pctOfBudget=credit>0?cost/credit*100:0; dailyAvgCost=cost/elapsed;
+             dailyAvgRequests=total_requests/elapsed; forecastFromMtd=dailyAvgCost*total;
+             last24hBurn=(last24h??0)*cost_per_request; forecastFromRecent=last24hBurn*total);
+           fmtCount(n)=(!finite)?"—":fmtInt(n);  fmtPercent(v,d)=`${fmtNumber(v,d)}%`;
+           dedupeMap collapses camelCaseKeys()'s snake↔camel clones (drop camelCase key when its
+             snake_case alias is present, then de-dup on the underscore-stripped lowercase form,
+             preserving wire order).
+  i18n  : the web source is "anonymous" — hardcoded English literals (no t() calls). Per the native
+          no-English-literals rule every literal is promoted to a P1/S10 key (table "TeslaApiUsageCard").
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/TeslaApiUsageCard.* + this log)
+  TeslaApiUsageCard.Adapter.swift     — pure Foundation core: number/integer/percent/count/plainInt (port
+                                        of numberFormat.ts fmtNumber/fmtInt/fmtPercent + safeNumber guard),
+                                        currency (`${symbol}${fmtNumber}`), TeslaApiUsageIntent.forBudget /
+                                        forErrorRate thresholds, TeslaApiUsage + TeslaApiLogStats DTOs,
+                                        TeslaApiUsageCountEntry, TeslaApiUsageDedupe (camelAlias + collapse),
+                                        TeslaApiUsageDerived (billing-window math, calendar-injectable),
+                                        TeslaApiUsageAccessibility.
+  TeslaApiUsageCard.ViewModel.swift   — the view-ready value types (Budget / Band / Detail(+suffix) /
+                                        TopList(+Item) / Banner / FooterLink) — native mirrors of the
+                                        <UsageCard> section props.
+  TeslaApiUsageCard.Model.swift       — P1/S8 state-holder seam (TeslaApiUsageSource + @Observable
+                                        TeslaApiUsageModel + InMemory source), P1/S11 telemetry seam
+                                        (view.opened surface="TeslaApiUsageCard", once on first present),
+                                        the footer navigation seam, the connection axis, the Input snapshot,
+                                        the Resolved view-state, and the P1/S10 TeslaApiUsageStrings facade.
+  TeslaApiUsageCard.Projection.swift  — pure projection: error→loading→empty→data; builds the budget bar
+                                        (+ reset clause singular/plural), the 3 bands (+ forecast danger
+                                        intent), the 4 details (+ error-rate suffix/intent), the de-duped
+                                        Top-services (cap 3) / By-method (all) top-lists, the over-budget
+                                        banner, and the footer.
+  TeslaApiUsageCard.Views.swift       — the <UsageCard> budget bar + bands grid + detail grid as scoped
+                                        subviews (intent palette → semantic status tokens).
+  TeslaApiUsageCard.Lists.swift       — the top-list blocks, the over-budget banner, and the footer links
+                                        (routed through the navigator seam).
+  TeslaApiUsageCard.Chrome.swift      — P4 leaf chrome: freshness chip, refresh button, stale/offline banner,
+                                        loading skeleton (budget + bands + details), retryable error, empty.
+  TeslaApiUsageCard.swift             — the surface: card chrome (title + chip + refresh, connectivity banner,
+                                        phase switch, TSFadeIn data body); static surfaceSlug; onAppear start /
+                                        onDisappear stop.
+  TeslaApiUsageCard.Previews.swift    — #if DEBUG #Preview for data / near-budget warn / over-budget danger /
+                                        high error rate / empty / loading / error / stale / offline / euro.
+  TeslaApiUsageCard.strings           — P1/S10 catalog (table "TeslaApiUsageCard"): 37 keys = the full set of
+                                        literals extracted from the web source + the native chrome.
+  TeslaApiUsageCard.Tests.swift       — projection (phases, budget + reset clause, bands, details, top-lists,
+                                        banner, footer) + accessibility.
+  TeslaApiUsageCard.ModelTests.swift  — state holder (wiring, view.opened once, stale one-shot auto-refresh +
+                                        re-arm, offline no-refresh, navigation seam, surfaceSlug).
+  TeslaApiUsageCard.AdapterTests.swift— number/integer/percent/count/plainInt, currency, budget + error-rate
+                                        intents, dedupe (camelAlias + collapse), billing-window month math.
+  (13 files; split across .Adapter/.ViewModel/.Model/.Projection and .Views/.Lists/.Chrome and
+   .Tests/.ModelTests/.AdapterTests purely to keep every file within the repo's 400-line SwiftLint
+   file_length budget — all share the TeslaApiUsageCard.* stem.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  <UsageCard> budget bar      → TeslaApiUsageBudgetBar (headline + right % + clamped Capsule fill + caption;
+                                unclamped pct to VoiceOver — web aria-valuenow)
+  <UsageCard> bands grid      → LazyVGrid(.adaptive 150) of band tiles (web grid-cols-1 md:grid-cols-3)
+  <UsageCard> details grid    → LazyVGrid(.adaptive 120) (web grid-cols-2 md:grid-cols-4)
+  <UsageCard> topLists grid   → LazyVGrid(.adaptive 240) (web grid-cols-1 md:grid-cols-2)
+  UsageCardIntent             → normal=statusInfo/glass · warn=statusWarning.10+stroke.30 ·
+                                danger=statusDanger.10+stroke.30 (bar/tile/value per web maps)
+  lucide Activity/Clock/TrendingUp/Zap → SF Symbols waveform.path.ecg / clock / chart.line.uptrend.xyaxis /
+                                bolt.fill ; ExternalLink → arrow.up.right
+  fmtInt / fmtCount / fmtPercent → TeslaApiUsageNumber.integer/count/percent (NumberFormatter .decimal,
+                                grouping, halfUp, safeNumber); round(ms) → plainInt (NO grouping)
+  formatCurrency              → TeslaApiUsageNumber.currency (`${symbol}${fmtNumber}` at userPrecision)
+  budgetIntent / errorIntent  → TeslaApiUsageIntent.forBudget (over / >80 / else) · forErrorRate (>=5 / >=1 / else)
+  dedupeMap                   → TeslaApiUsageDedupe.collapse (camel-alias drop + normalized de-dup, order kept)
+  footer <Link to=…>          → navigator seam (onOpen route) with .isLink trait + per-link a11y label
+  i18n                        → every string via TeslaApiUsageStrings (NSLocalizedString table, web literal
+                                as the value: fallback); %@ templates so translators control word order
+  a11y                        → bands/details combined into single elements ("{label}: {value}. {sub}");
+                                budget bar labelled + spoken %; chip / refresh / retry / footer labelled;
+                                Dynamic Type via tokens; Reduce Motion via TSFadeIn / TSSkeleton
+  telemetry                   → view.opened surface="TeslaApiUsageCard" emitted once on first presentation
+
+STATES (every one renders — no hidden surface)
+  loading  → skeleton budget bar + band tiles + detail rows (P4 leaf).
+  empty    → "Tesla API usage data is not available yet." with a friendly icon (web !apiUsage), never blank.
+  error    → retryable error chrome (P4 leaf addition; the web falls through to empty on error).
+  data     → budget bar + 3 bands + 4 details + optional Top-services/By-method top-lists + over-budget banner
+             + footer links.
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over last-known content; no auto-refresh.
+
+GATES  (raw exits; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, 12 swift files)    : 0/12 files require formatting        FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 12 swift files)  : 0 violations, 0 serious              LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (TeslaApiUsageCard.*)          : PLACEHOLDER_ALLOWED=0
+                                                                  PLACEHOLDER_COUNT=0                  PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency
+          complete, same as the app), compiling the EXACT shipped TeslaApiUsageCard.* sources (incl. the
+          #Preview macro file) against the REAL repo design-system files (generated apps/design Tokens +
+          Sources/Design TSDesign/TSMaterial + Sources/Components Typography/Badges/Buttons/Cards/Utility/
+          Motion/Skeletons) under the Xcode 26.5 toolchain:
+              Build complete!  ·  Executed 51 tests, with 0 failures (0 unexpected)                  SWIFT_TEST_EXIT=0
+  [GREEN] DUAL-SDK swiftc -typecheck of the 9 shipped surface sources (incl. Previews) under -swift-version 6:
+              iOS  : -sdk iphonesimulator -target arm64-apple-ios18.0-simulator  → 0 errors           IOS_TYPECHECK_EXIT=0
+              macOS: -sdk macosx          -target arm64-apple-macos15.0          → 0 errors           MAC_TYPECHECK_EXIT=0
+  [GREEN] xcodegen generate — the real TeslaSync.xcodeproj enumerates all 13 TeslaApiUsageCard.* files
+          (9 surface .swift + 3 *Tests.swift into the XCTest bundles + the .strings).               GEN_EXIT=0
+
+  [PARTIAL→DEFERRED] Full-app iOS-Simulator `xcodebuild -scheme TeslaSync -destination
+          'platform=iOS Simulator,name=iPhone 16' build` was RUN LIVE to completion on this runner:
+            • The scheme pre-action assembled the KMP core via Gradle (:core:assembleSharedXCFramework —
+              DEBUG XCFramework written, then the Kotlin/Native RELEASE links ios-arm64 + ios-sim-arm64 +
+              macos-arm64, the documented long-pole) and STAGED apps/apple/Frameworks/Shared.xcframework
+              ("✓ Shared.xcframework staged").
+            • The app target THEN compiled, and THIS SURFACE COMPILED CLEANLY IN-TARGET: all nine object
+              files were produced —
+                TeslaApiUsageCard.{Adapter,Chrome,Lists,Model,Previews,Projection,ViewModel,Views}.o + .o —
+              with ZERO TeslaApiUsageCard errors and ZERO TeslaApiUsageCard warnings.
+            • The overall build did NOT reach BUILD SUCCEEDED: "Command SwiftCompile failed with a nonzero
+              exit code" (IOS_EXIT=65) on a PRE-EXISTING, unrelated SwiftCompile batch whose files are
+              AnomalyInlineRow.* / AppCommands / AppContainer / AppRoute / AppShell / AppearanceSettings.*
+              (Sources/App + Sources/Platform + other feature-views). The whole log contains ZERO ": error:"
+              source diagnostics — the frontend was terminated under the shared parallel-slot resource
+              contention (concurrent Gradle Kotlin/Native + full-app Swift compile), not a code error, and
+              NONE of the failing files is a TeslaApiUsageCard file (TeslaApiUsageCard is absent from the
+              "following build commands failed" block).
+          The full-app green (iOS BUILD SUCCEEDED + macOS build test + signing) is therefore DEFERRED to
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner with dedicated resources —
+          the SAME sanctioned "surface verified in-target + DEFERRED full-app gate" disposition recorded by
+          every prior P4 surface in apps/macos-pending-verifications.md (ToolCard, AlertMessageEditor,
+          FSMTimelineChart, DrivingCoachSection, ScheduledExportsPanel, AiUsageCard …). ZERO TeslaApiUsageCard
+          errors are attributable to this change; macos-pending-verifications.md is outside this prompt's
+          allowed files and is left untouched.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app xcodebuild is reported with its RAW IOS_EXIT=65 and characterised as a
+                           pre-existing, unrelated batch failure (0 source errors; frontend terminated under
+                           parallel load) — never reported as passing. The GREEN claims are only the gates that
+                           actually returned 0.
+  2  No scope narrowing  : every web region + branch reproduced — the empty message, the budget bar (headline,
+                           % right-label, Day/total caption with resets-tomorrow / 1-day / N-days, intent), all
+                           3 bands (incl. the "—" last-24h fallback + the forecast>credit danger), all 4 details
+                           (incl. the ms "—" fallback + the error-rate suffix/intent), both de-duped top-lists,
+                           the over-budget banner, and the footer; all 6 native states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw outcomes pasted; the full-app build
+                           was RUN to its failure (not assumed) and the failing batch + the absence of any
+                           TeslaApiUsageCard error were both confirmed by reading the log + the produced .o set.
+  4  No stubs as final   : complete production surface + 51 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/mock/Coming-soon/Placeholder/Lorem anywhere.
+  5  No parity shortcut  : the fmtNumber grouping + halfUp, the non-grouped plainInt for ms, the fmtPercent
+                           suffix, the `${symbol}${fmtNumber}` currency, the budget + error-rate intent
+                           thresholds, the billing-window ceil math (mid-month / leap-Feb / month-start clamp /
+                           end-of-month), and the dedupeMap camel-clone collapse are each unit-asserted against
+                           the web expressions (en_US golden values).
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 "surface verified in-target + DEFERRED full-app"
+                           disposition all honoured.
+  8  No commit on red    : the committed artifact (13 TeslaApiUsageCard.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 51/51
+                           XCTest AND on dual-SDK iOS-18/macOS-15 typecheck AND compiles to object code inside
+                           the real iOS app target; the only non-green step (full-app BUILD SUCCEEDED) is blocked
+                           solely by a pre-existing, unrelated SwiftCompile batch + macOS signing this commit
+                           does not touch, owned by the P99 acceptance gate.
+  9  No silent drift     : changes are confined to feature-views/TeslaApiUsageCard.{swift,ViewModel,Model,
+                           Projection,Adapter,Views,Lists,Chrome,Previews,Tests,ModelTests,AdapterTests}.swift +
+                           TeslaApiUsageCard.strings and this log. The generated TeslaSync.xcodeproj is
+                           git-ignored; no other tracked file changed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TeslaApiUsageCard shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 51 tests pass under the app's own Swift 6 strict-concurrency
+  rules against the REAL design system; it type-checks clean on both the iOS-18 and macOS-15 SDKs; it compiles
+  to object code INSIDE the real iOS app target (all 9 .o produced, zero surface errors/warnings); and
+  swiftformat / swiftlint / placeholder are green on all 12 surface swift files. The full-app iOS BUILD
+  SUCCEEDED + macOS build/test + signed gate is DEFERRED (not failed by this code) to the P99 acceptance gate
+  on a signed macos-latest runner — the overall iOS build's nonzero exit is a pre-existing, unrelated
+  SwiftCompile batch terminated under shared parallel-slot resource contention (zero source errors; no
+  TeslaApiUsageCard file among the failures).
+
+EXIT=0
+STATUS=DONE

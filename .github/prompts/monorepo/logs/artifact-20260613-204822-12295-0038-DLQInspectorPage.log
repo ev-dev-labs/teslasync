@@ -1,0 +1,206 @@
+================================================================================
+P4-APPLE · P7 · page:admin/DLQInspector — SwiftUI / HIG parity
+================================================================================
+Artifact      : page:admin/DLQInspector
+Web source    : web/src/features/admin/pages/DLQInspectorPage.tsx  (route /admin/dlq)
+Output (apple): apps/apple/Sources/Features/Admin/DLQInspector*.swift
+                (convention = sibling admin pages DiskForecast / FeatureFlags / AuditLog;
+                 the manifest's apps/apple/TeslaSync/Features/Admin path is reconciled to
+                 the in-repo apps/apple/Sources/Features/Admin source root that the build
+                 globs via project.yml `- path: Sources`.)
+Runner        : Xcode 26.5 (xcodebuild), swift 6.3.2, swiftlint, swiftformat, pwsh 7.6.2 — AVAILABLE.
+
+Files created (apps/apple/Sources/Features/Admin/):
+  DLQInspectorModels.swift            — value types, data-source seam, state enums, DLQFormat
+  DLQInspectorPageModel.swift         — @Observable model (ADR-004, no networking in view)
+  DLQInspectorPageModel.Sample.swift  — actor sample seam (preview/test default)
+  DLQInspectorPage.swift              — page chrome + replay-blocked banner + 2 GlassPanels + sheet
+  DLQInspectorPage.Status.swift       — status header (3 stat cards + disabled banner)
+  DLQInspectorPage.Entries.swift      — GlassPanel1 adaptive table (macOS grid / iPhone cards)
+  DLQInspectorPage.Audit.swift        — GlassPanel2 adaptive table + result badge
+  DLQInspectorPage.Drawer.swift       — entry inspector sheet (KV + tabbed payload + replay CTA)
+  DLQInspectorPage.Confirm.swift      — replay confirmation alert modifier
+  DLQInspectorRouteRegistration.swift — registers the .dlq route
+Files created (tests):
+  apps/apple/Tests/Unit/Features/Admin/DLQInspectorPageModelTests.swift
+Files edited (navigation registration + strings — within "Allowed files"):
+  apps/apple/Sources/App/AppRoute.swift        — added .dlq (pathSegment "dlq", System group, icon)
+  apps/apple/Sources/App/AppRouteParser.swift  — alias "/admin/dlq" → .dlq
+  apps/apple/Sources/TeslaSyncApp.swift         — DLQInspectorRouteRegistration in the registry chain
+                                                  (inserted as Settings.base → ZERO re-indent churn)
+  apps/apple/Localization/Localizable.xcstrings — +59 native keys (55 admin.dlq.*, route.dlq,
+                                                  common.yes/no/close; common.cancel pre-existed)
+
+--------------------------------------------------------------------------------
+GATE COMMANDS (actual outputs)
+--------------------------------------------------------------------------------
+$ xcodegen generate
+  Created project at .../apps/apple/TeslaSync.xcodeproj   (grep DLQInspector project.pbxproj = 66)
+  XCODEGEN_EXIT=0
+
+$ check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+  PLACEHOLDER_ALLOWED=6      (all 6 are pre-existing FeatureFlags `// parity:allow` markers; ZERO mine)
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+$ swiftformat --lint <14 new/edited files>
+  0/14 files require formatting.
+  FORMAT_EXIT=0
+
+$ swiftlint lint --strict <14 new/edited files>
+  (no output)
+  LINT_EXIT=0
+
+$ xcodebuild build -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' \
+      CODE_SIGNING_ALLOWED=NO ...
+  ** BUILD FAILED **   BUILD_EXIT=65
+  grep "error:" = 48 diagnostics, ALL in TWO out-of-scope files:
+      apps/apple/TeslaSync/feature-views/AuditPanel.swift
+      apps/apple/TeslaSync/feature-views/AuditPanel.Previews.swift
+  (a DIFFERENT page's legacy generated web-clone surface — `cannot infer contextual base in
+   reference to member 'offline'/'failed'/'network'`). ZERO diagnostics in any of my 11 files.
+  This breakage is pre-existing + out-of-scope (untouched by my changeset — `git status` confirms
+  feature-views is unmodified) and is documented in apps/macos-pending-verifications.md. Forbidden
+  to commit-fix (Out-of-Scope: "Other pages … Parity only"). The iOS `TeslaSync` scheme fails on the
+  identical out-of-scope files (both targets include the TeslaSync/* surfaces).
+
+$ xcodebuild test  (TeslaSyncTests)
+  TEST_EXIT=blocked — the XCTest target `@testable import`s the full app module, which cannot link
+  while the out-of-scope feature-views/AuditPanel files are RED. The test LOGIC is instead proven by
+  the executed model harness below (the same mitigation the sibling DiskForecast/AuditLog logs used).
+
+--------------------------------------------------------------------------------
+POSITIVE PROOF MY CODE COMPILES + RUNS (in-scope, GREEN)
+--------------------------------------------------------------------------------
+Isolated whole-module Swift-6 strict-concurrency type-check of the ENTIRE clean Sources/** layer
+(280 files) + design tokens against the real, freshly built Shared.xcframework — excludes ONLY the
+broken legacy TeslaSync/* web-clone surfaces:
+
+  macOS  (-target arm64-apple-macos15.0,           -F Shared.xcframework/macos-arm64):
+         DLQ_ERRORS=0   (total 6 errors, ALL in sibling Sources/Features/Admin/TeslaOrdersPage.swift
+                         — a cross-root dep on ActiveOrders* defined in the excluded legacy tree, not mine)
+  iOS    (-target arm64-apple-ios18.0-simulator,   -F Shared.xcframework/ios-arm64-simulator):
+         DLQ_ERRORS=0   (same single out-of-scope TeslaOrdersPage artifact; exercises the
+                         #if os(iOS) horizontalSizeClass compact-layout branches)
+
+Executed model harness (compiled the 3 SwiftUI-free model files + a main.swift driver; ran it):
+  25/25 PASS, FAILURES=0, HARNESS_EXIT=0 — covering list/audit/entry loading·empty·error·success,
+  inspect→entry load, discard-after-close, askReplay, confirmReplay (ok closes drawer; `disabled`
+  soft-result + 403 raise the banner & keep the drawer), status derivations, canReplaySelected, and
+  DLQFormat.bytes/int/dateTime/decodeBase64Utf8 + the SampleDLQInspectorDataSource seed+replay.
+  (The harness surfaced and I fixed a real edge bug: loadEntry now guards `selected?.id == id`
+   BEFORE setting .loading so a load invoked after close never clobbers the closed state.)
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=15
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1
+      DLQInspectorPage.swift:78 `entriesPanel` (TSGlassPanel + panelHeader "admin.dlq.panels.entries")
+      → DLQInspectorPage.Entries.swift:7 `struct DLQEntriesTable` (adaptive grid/cards, 8 cols + Inspect)
+[x] panel  — GlassPanel2
+      DLQInspectorPage.swift:114 `auditPanel` (TSGlassPanel + panelHeader "admin.dlq.panels.audit")
+      → DLQInspectorPage.Audit.swift:7 `struct DLQAuditTable` (adaptive grid/cards, 7 cols + DLQResultBadge)
+[x] state  — loading
+      DLQInspectorPage.swift:93/129 `case .loading` → TSTableSkeleton (entries + audit);
+      DLQInspectorPage.Drawer.swift `content .loading` → TSSpinner;
+      model DLQListState/DLQAuditState/DLQEntryState `.loading` (DLQInspectorModels.swift)
+[x] state  — error
+      DLQInspectorPage.swift:103/139 `case let .error(message)` → TSErrorDisplay(onRetry:) (+ a11y value);
+      DLQInspectorPage.Drawer.swift `content .error` → TSInlineCallout + Retry → model.loadEntry(id:);
+      model `.error(String)`
+[x] state  — success
+      DLQInspectorPage.swift:107/143 `case let .loaded(...)` → DLQEntriesTable / DLQAuditTable;
+      DLQInspectorPage.Drawer.swift metadataPanel + payloadPanel from model.selectedFull;
+      model `.loaded(...)`
+[x] string — admin.dlq.banners.replayBlockedMessage   DLQInspectorPage.swift:71 `replayBlockedBanner` (TSAlertBanner message)
+[x] string — admin.dlq.banners.replayBlockedTitle     DLQInspectorPage.swift:70 `replayBlockedBanner` (title)
+[x] string — admin.dlq.confirm.confirm                DLQInspectorPage.Confirm.swift:19 confirm Button
+[x] string — admin.dlq.confirm.message                DLQInspectorPageModel.swift:215 `confirmMessage(id:)` ← Confirm.swift message (id interpolated)
+[x] string — admin.dlq.confirm.title                  DLQInspectorPage.Confirm.swift:15 alert title
+[x] string — admin.dlq.pageTitle                      DLQInspectorPage.swift:55 `header` TSPageTitle
+[x] string — admin.dlq.panels.audit                   DLQInspectorPage.swift:117 auditPanel panelHeader
+[x] string — admin.dlq.panels.entries                 DLQInspectorPage.swift:81 entriesPanel panelHeader
+[x] string — admin.dlq.subtitle                       DLQInspectorPage.swift:56 `header` subtitle Text
+[x] string — common.cancel                            DLQInspectorPage.Confirm.swift:22 Cancel Button (role: .cancel)
+
+All 15 strings resolve from Localizable.xcstrings as native keys (verified present, 1 occurrence each;
+common.cancel pre-existed). Web key names preserved verbatim.
+PARITY_COVERED=15
+
+Beyond the 15 minimum, every anonymous region of the web source is reproduced (no scope narrowing):
+the status header's 3 StatCards + "DLQ replay is disabled" banner (DLQInspectorPage.Status.swift), the
+entries table's 8 columns + Yes/No replayable badge + Inspect action, the audit table's 7 columns +
+result badge, and the entry drawer's KVList metadata + tabbed (inner/raw) payload viewer with
+copy-to-clipboard + the Replay/Close footer. 55 admin.dlq.* native keys total.
+
+Data sources (web hook names preserved at Swift call sites): useDLQList→loadList,
+useDLQEntry→loadEntry(id:), useDLQAudit→loadAudit(dlqID:limit:), useDLQReplay→replay(id:)
+(DLQInspectorDataSource). Charts: none. Maps: none. Live SSE / >2-min staleness: N/A — DLQ feeds are
+polled queries, not a live stream (manifest declares no live source; ADR-013 scope). SI converters:
+N/A — DLQ payload sizes are unit-agnostic control-plane byte counts (DLQFormat.bytes, binary units),
+formatted only at the display boundary; no SI-bearing field is stored or computed.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+ 1 No red-as-green   : every exit code above is a real command result. The full xcodebuild is reported
+                       RED (BUILD_EXIT=65) and NOT recoloured. grep "error:" attributes all 48 to two
+                       out-of-scope feature-views/AuditPanel files; ZERO in my 11 files.
+ 2 No scope narrowing: all data sources, both GlassPanels, all 3 declared data states (×3 feeds:
+                       list/audit/entry), and adaptive macOS-regular + iPhone-compact layouts are
+                       implemented; plus the status header, drawer, and confirmation the web renders.
+ 3 No skip-and-assume: web page + its 4 sub-components (StatusHeader/EntriesTable/AuditPanel/EntryDrawer)
+                       + ConfirmDialog + the replay-blocked banner + PageContainer query semantics
+                       (body never gates) were read end-to-end and reproduced.
+ 4 No stubs as final : PLACEHOLDER_COUNT=0, ZERO `// parity:allow` opt-outs in my files; complete code.
+ 5 No parity shortcuts: 4 list/audit/entry states render distinctly; the result badge prints the raw
+                       server token verbatim (web `{row.result}`) with the RESULT_VARIANT tone; strings
+                       = web keys verbatim.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling page, shared component, or out-of-scope surface. The
+                       generated TeslaSync.xcodeproj is git-ignored (not committed).
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — xcodegen(0), swiftformat --lint(0/14),
+                       swiftlint --strict(0), placeholder(0), whole-Sources type-check (macOS 0 + iOS 0
+                       DLQ errors), executed harness (25/25). The ONLY RED is the pre-existing,
+                       out-of-scope feature-views/AuditPanel breakage — DEFERRED to its owner / P99,
+                       exactly as the sibling DiskForecast / FeatureFlags / AuditLog logs recorded.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + dedicated-.dlq-route reconciliations recorded above. TeslaSyncApp
+                       was edited with ZERO re-indent churn (registration inserted at Settings.base).
+10 EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI DLQInspectorPage shipped at parity with the web source: a pure
+@Observable DLQInspectorPageModel (ADR-004 — no networking in the view) over an injectable
+DLQInspectorDataSource seam whose value types mirror the web types/admin-diagnostics.ts 1:1, exposing
+the list / global-audit / lazy-drawer-entry states plus the drawer selection, the replay-confirmation
+target, and the replay-blocked banner. The page reproduces the web chrome (PageContainer title +
+subtitle, body never gated), the dismissible replay-blocked banner, the status header (3 stat cards +
+the replay-disabled banner), and the two GlassPanels — the dead-letter entries table and the recent
+replay-activity feed — each with an adaptive layout (columnar Grid on macOS/iPad, per-row cards on
+iPhone) and full loading/empty/error/success states, using the P2 tokens + P3 shared components (no
+hand-rolled glass). The entry inspector is an HIG sheet (KVList metadata + tabbed inner/raw payload
+viewer with copy + a guarded Replay CTA); the replay confirmation is a stacked alert carrying the
+interpolated `entry #{{id}}` message. Every visible string resolves from Localizable.xcstrings with the
+web key names; bytes/dateTime/base64-decode formatting is ported and harness-tested. Verified on BOTH
+idioms by an isolated whole-Sources Swift-6 strict-concurrency type-check (macOS 0 + iOS 0 DLQ errors)
+and an executed model harness (25/25). The full xcodebuild scheme is RED ONLY due to pre-existing,
+out-of-scope errors in apps/apple/TeslaSync/feature-views/AuditPanel*.swift (forbidden to commit-fix),
+with ZERO diagnostics in any of my files — deferred to its owner / the P99 integration gate.
+
+--------------------------------------------------------------------------------
+COMMIT
+--------------------------------------------------------------------------------
+  git add apps/apple/Sources/Features/Admin/DLQInspector*.swift \
+          apps/apple/Tests/Unit/Features/Admin/DLQInspectorPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-DLQInspectorPage.log
+  git commit -m "feat(apps/apple): DLQInspectorPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

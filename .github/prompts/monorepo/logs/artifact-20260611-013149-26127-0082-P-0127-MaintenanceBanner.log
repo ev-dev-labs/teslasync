@@ -1,0 +1,152 @@
+=== P4 Shared surface 0127 MaintenanceBanner (Apple) ===
+Date: 2026-06-11
+Prompt: .github/prompts/monorepo/... p4-apple-shared-surfaces-0127-MaintenanceBanner
+Web source (specification): web/src/components/feedback/MaintenanceBanner.tsx (191 lines)
+Native output: apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.*
+
+------------------------------------------------------------------------------
+VERDICT: STATUS=BLOCKED — platform/toolchain capability mismatch.
+  The MaintenanceBanner surface is COMPLETE, parity-faithful, lint-clean,
+  format-clean, placeholder-clean, and its logic is INDEPENDENTLY VERIFIED
+  (44/44 unit tests pass under the runner's own Swift 6.3.2 — see §5).
+  The full-scheme `xcodebuild build test` gate cannot go green on this runner
+  because the repository is LOCKED to Swift 6.0.1 (ADR-012 / versions.lock.md)
+  but the only toolchain installed is Xcode 26.5 / Swift 6.3.2, which fails to
+  compile MULTIPLE pre-existing sibling files that are OUTSIDE this prompt's
+  allowed-files scope (apps/apple/.../MaintenanceBanner.* + this log). Evidence
+  below.
+------------------------------------------------------------------------------
+
+== §1. Environment / toolchain capability evidence ==
+$ xcodebuild -version
+  Xcode 26.5 / Build 17F42
+$ swift --version
+  Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+$ cat apps/apple/versions.lock.md   (ADR-012 — Apple Version Lock)
+  | Xcode | 26 |
+  | Swift | 6.0.1 (strict concurrency) |
+Installed toolchains: only /Applications/Xcode.app (Swift 6.3.2).
+  /Library/Developer/Toolchains: absent.  ~/Library/Developer/Toolchains: absent.
+  swiftly: not installed.
+=> The locked Swift 6.0.1 toolchain is NOT available; the runner provides the
+   newer, stricter Swift 6.3.2, which rejects / crashes on pre-existing code.
+
+== §2. Gate steps (exit codes) ==
+  IOS_EXIT=65       xcodebuild -scheme TeslaSync  -destination 'iOS Simulator,iPhone 16' build test   → BUILD FAILED (pre-existing sibling compile failures under Swift 6.3.2; §3)
+  MAC_EXIT=65       xcodebuild -scheme TeslaSync-macOS build test                                       → BUILD FAILED (code-signing: no dev certificate for entitlements; §4)
+  LINT_EXIT=0       swiftlint --strict                                                                  → 0 violations, 0 serious in 4286 files  ✅
+  FORMAT_EXIT=0     swiftformat --lint apps/apple                                                        → 0/4584 files require formatting        ✅
+  PLACEHOLDER_EXIT=0 check-placeholders.ps1 -Path apps/apple/.../MaintenanceBanner                       → PLACEHOLDER_COUNT=0                     ✅
+                     (also scanned the real MaintenanceBanner.* files directly: PLACEHOLDER_COUNT=0)
+
+== §3. iOS blocker — pre-existing Swift 6.3.2 failures in OUT-OF-SCOPE files ==
+The TeslaSync iOS scheme contains 100+ pre-existing surfaces. Under Swift 6.3.2
+the shared module fails to compile with THREE distinct, independent failure
+modes, none of which is in this prompt's allowed files. (Swift batch-mode
+surfaces them in varying order across runs; all are present.)
+
+  (a) Swift compiler CRASH in IRGen (segfault) — UNFIXABLE from source:
+      4.  While evaluating request IRGenRequest(IR Generation for file
+          ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+      5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+          (a Bool / `any Actor`? reabstraction thunk — a known class of
+           Swift codegen crash; "Please submit a bug report …" emitted.)
+
+  (b) Expression type-check timeout — pre-existing:
+      .../TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20:
+        error: the compiler is unable to type-check this expression in
+        reasonable time; try breaking up the expression …
+
+  (c) Escaping-closure capture errors — pre-existing (4 sibling AI* surfaces
+      whose `@ViewBuilder _ content: () -> some View` helper wraps content()
+      inside TSGlassPanel's @escaping init):
+        .../shared-surfaces/AISuggestNewGeofences.swift:129
+        .../shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141
+        .../shared-surfaces/AISignalExplorerNlFilter.swift
+        .../shared-surfaces/AIAutoNameUnnamedLocations.swift
+        error: escaping closure captures non-escaping parameter 'content'
+
+  Investigation note (transparency): to confirm (a) was the terminal wall and
+  not merely (c), the four (c) helpers were TEMPORARILY patched with `@escaping`
+  in a throwaway probe build; compilation then progressed and the compiler
+  CRASHED in IRGen on AppearanceSettings.Controls.swift (a). Those probe edits
+  were REVERTED — they are out of this surface's allowed-files scope and do not
+  unblock the build. `git status` shows only MaintenanceBanner.* as changed.
+
+  git diff --stat HEAD -- AppearanceSettings.Controls.swift  → (empty: unmodified)
+  git diff --stat HEAD -- AISuggestNewGeofences.swift         → (empty: unmodified)
+  => All §3 failures are pre-existing baseline files, untouched by this prompt.
+
+== §4. macOS blocker — code-signing capability ==
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require
+    signing with a development certificate. Enable development signing …
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that
+    require signing with a development certificate …
+  => No development signing identity is available on this runner; the macOS
+     app/widget entitlements cannot be signed. (DEVELOPMENT_TEAM="" in project.yml.)
+     This is an environment capability gap, independent of §3.
+
+== §5. POSITIVE verification of the delivered surface (Swift 6.3.2) ==
+The surface's pure core (Adapter + Model + Seams) was compiled and its ACTUAL
+test files (MaintenanceBanner.AdapterTests.swift + MaintenanceBanner.Tests.swift)
+were run via a standalone SwiftPM package on this same Swift 6.3.2 toolchain
+(only a one-line shim supplies the SwiftUI surface's `surfaceSlug`):
+
+  $ swift test   (Tests/MaintenanceCoreTests)
+    Test Suite 'All tests' passed.
+    Executed 44 tests, with 0 failures (0 unexpected) in 0.009 seconds
+    SWIFT_TEST_EXIT=0   ✅
+
+  Coverage: service-mode fallback; dismissal fingerprint (u:/s: forms);
+  formatRemaining rollover + zero-pad + clamp; countdown boundary ladder
+  (>1000 / >-1000 / else) + localized {{time}} label; RFC3339 parse
+  (plain / fractional / empty / invalid); title/body (`message.trim() || default`);
+  VoiceOver banner label; projection (loading/loaded/failed × ok/active/dismissed,
+  incl. cached-banner-survives-failure); dismissal store; model start telemetry +
+  seeded dismissal + apply + dismiss-persist + new-snapshot-resurface +
+  same-snapshot-stay-dismissed + stale auto-refresh + stop.
+
+Static gates over the delivered files (subset of §2 whole-tree runs):
+  swiftlint --strict  (9 swift files)            → 0 violations  ✅
+  swiftformat --lint  (9 swift files)            → 0 require formatting  ✅
+  check-placeholders  (MaintenanceBanner.*)      → PLACEHOLDER_COUNT=0   ✅
+
+== §6. Delivered files (apps/apple/TeslaSync/shared-surfaces/) ==
+  MaintenanceBanner.Adapter.swift        303  pure core (Foundation only)
+  MaintenanceBanner.Model.swift          294  P1/S8 state-holder + P1/S11 telemetry + P1/S10 facade + projection
+  MaintenanceBanner.Seams.swift          142  source protocol + static/in-memory sources + dismissal store
+  MaintenanceBanner.States.swift         145  loading / empty / error leaf chrome
+  MaintenanceBanner.Views.swift          184  active banner (live countdown) + freshness chip
+  MaintenanceBanner.swift                 78  public surface (phase switch, view.opened, freshness)
+  MaintenanceBanner.Previews.swift       113  8 state previews + lone banner
+  MaintenanceBanner.AdapterTests.swift   276  pure adapter/projection tests
+  MaintenanceBanner.Tests.swift          182  dismissal-store + state-holder tests
+  MaintenanceBanner.strings               42  18 i18n keys (P1/S10)
+  TOTAL                                  1759
+
+== §7. Parity & acceptance-criteria mapping ==
+  [x] All states from the web source reproduced (loading, empty/ok, error,
+      active banner, + P4 stale/offline freshness axis). Web `mode==='ok'` →
+      friendly "all systems operational" empty bar (native improvement; never blank).
+  [x] Hooks bound via shared P1/S8 state-holder (MaintenanceBannerModel /
+      MaintenanceBannerSource); no direct HTTP in the view. Mirrors web
+      useSystemHealth + useTranslation (useAdmin is the hook's home module).
+  [x] Every i18n key from source resolves via the P1/S10 facade
+      (serviceMode.banner.maintenanceTitle/degradedTitle/defaultMaintenance/
+       defaultDegraded/endsIn/endingNow/ended, common.dismiss) + leaf chrome keys.
+      No English literals in Swift code.
+  [x] Accessibility: VoiceOver labels on the banner (combined, updatesFrequently)
+      and the dismiss + freshness controls; Dynamic Type fonts; reduce-motion-safe
+      (no motion introduced); iOS 18 / macOS 15 minimums.
+  [x] Tests: adapter unit tests + projection branch tests + state-holder tests
+      (44 total) + per-state previews. (Snapshot/UI execution is gated by §3/§4.)
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0).
+  [x] Telemetry: `view.opened` emitted with surface slug "MaintenanceBanner"
+      (P1/S11) on model.start(); asserted by a unit test.
+  [ ] EXIT=0 — NOT achievable on this runner; blocked by §3 (Swift 6.3.2 vs
+      locked 6.0.1) and §4 (signing), both outside the allowed-files scope.
+
+------------------------------------------------------------------------------
+EXIT=65
+STATUS=BLOCKED
+------------------------------------------------------------------------------

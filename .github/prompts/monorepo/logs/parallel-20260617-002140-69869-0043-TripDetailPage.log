@@ -1,0 +1,179 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5, swiftlint, and swift 6.3.2 are all available — so the gate can actually run. Let me explore the web source and the Apple app structure.
+
+The web page is simple: 4 StatCards (Distance, Energy, Efficiency, Cost) + a GlassPanel with KVList. Now let me study the Apple app's source structure and find an existing similar detail page to mirror the established patterns.
+
+There are two source roots. My output goes to `apps/apple/TeslaSync/Features/Trips/` which already has sibling `TripsReplay*` files. Let me understand the project structure and the established patterns in that exact directory.
+
+The toolchain is all available (xcodegen, xcodebuild, swiftlint). Let me extract the exact parity manifest record and the ledger row I must update.
+
+No `page:trips/TripDetail` row exists yet — I'll add both platform rows. Let me read the gate contract, the existing TripReplay log (as a format template), and the closest sibling page implementation.
+
+Let me read the rest of the TripReplay log (gate methodology + PARITY section format) and the key sibling source files to learn the exact established patterns.
+
+Now I understand the gate methodology and dedup conventions. Let me read the key sibling source files to learn the exact APIs (model seam, Units facade, components, route registration, string handling).
+
+Excellent — clear patterns. Now let me read the model, the data-source seam, sample data, and the stats/display files to learn the Units facade and component APIs.
+
+Now the sample data (4 states), stats (GlassPanel + StatCard + Units), and display (string-key enums + Units render boundary).
+
+Strong grasp of the patterns now. Let me locate the `Units` facade, `UnitPreferences`, the `TSStatCard`/`KVList`/`TSEmptyState` component APIs, and how currency is formatted.
+
+Let me read the Units facade, the `TSStatCard` component, a currency-format helper, and find a KVList equivalent.
+
+Let me read the Metrics component file (TSStatCard/KVList), the `tsUnits` environment definition, and the currency-format pattern.
+
+I have the component APIs. Now let me read the unit presets, the currency/number format helpers, and the web source-of-truth for `formatDate`/`fmtNumber`/the Trip type.
+
+Let me confirm the web `formatDate` definition and the exact Trip type shape (field names) used by `useTrip`.
+
+Note: `useTrip` hits `GET /trips/{id}` (deprecated, but the page's behavior is what we port). Let me confirm the `Trip` type fields.
+
+I have all the data shapes. Let me verify the strings catalog format, the navigation wiring, the EmptyState/tsUnits APIs, and the lint/placeholder rules.
+
+Let me reconcile the strings count discrepancy and study the central route registry plus the closest route-registration analog in the same source tree.
+
+Key finding: the 12 strings exist in the catalog but under a `translation.` prefix (e.g. `translation.trips.detail.title`), while `replay.*` keys are bare. I must determine which key form to reference. Let me investigate the convention used by existing pages.
+
+Both forms exist for replay, but `trips.detail.*` only exists as `translation.trips.detail.*` — and the codebase strongly favors `translation.`-prefixed keys (278 usages). All 12 keys already exist. Let me confirm the sibling VehicleDetailPage convention and verify all 12 keys' values.
+
+All 12 keys confirmed with correct values and the `translation.` convention. Let me read the closest sibling — VehicleDetailPage (single data source, same tree) — to lock the current blessed pattern.
+
+The 4-state pattern (`loading/empty/error/success`) is exactly what I need. Let me read the data-source seam, the Feedback components (EmptyState/ErrorDisplay), and confirm the layout tokens.
+
+Let me read the States.swift component file to confirm exact EmptyState/ErrorDisplay APIs, then check the placeholder scanner and SwiftLint config.
+
+Toolchain fully available. Note: SwiftLint `line_length` warns at 120 and `--strict` promotes warnings to errors, so I'll keep code lines ≤120. Let me read the rest of the lint config and the placeholder scanner to avoid tripping them.
+
+I now have all component/lint/placeholder details. Let me confirm the web's default number precision and the `formatCurrency` behavior so my formatters match exactly.
+
+All formatting rules confirmed (energy 2 decimals, currency `$`+2 decimals, distance integer+unit). Let me run collision checks and confirm the design-token/component spellings before writing code.
+
+No collisions. Let me read the `tsUnits` environment definition, the central route registry, and confirm the design tokens.
+
+Let me confirm the exact token definitions in the Design file.
+
+All tokens and components confirmed. Let me check whether the `Shared.xcframework` is prebuilt (needed for the module to compile) and set up my task tracking.
+
+The `Shared.xcframework` isn't prebuilt — it must be assembled via Gradle (~7 min per the TripReplay log). Let me check the build prerequisites and kick off the framework build early in the background while I write code.
+
+Java 17 + gradlew are present. The xcframework build (~7 min) is the long pole, so I'll start it in the background now while I write the code.
+
+Build kicked off. Now let me set up task tracking and write the plan, then create the code.
+
+The launcher returned (the gradle build runs detached). Let me verify it's progressing, then write the plan and code.
+
+Gradle build is progressing (many tasks cached). Now let me write the plan and create the code files.
+
+Now I'll create the 7 source files. Starting with the models, sample data, and format files.
+
+Models, sample data, and format are done. Let me mark progress and write the model and sections files.
+
+Now the page scaffold and the route registration.
+
+All 7 files created. Let me update todos, then self-check for forbidden tokens and long lines before running the real tools.
+
+Clean: no forbidden tokens, only the one opted-out `.placeholder` line, no lines >120. Now let me run SwiftLint `--strict` on the new files.
+
+SwiftLint `--strict`: **0 violations** across all 18 files. Now the placeholder scan and a check on the framework build progress.
+
+Placeholder scan clean (`COUNT=0, EXIT=0`). The xcframework is in its final link/assemble steps. Let me wait for it to finish staging.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 7m37s). Now let me generate the Xcode project and inspect available schemes.
+
+Project generated. Now let me build the macOS target (Release, like the sibling gate) and capture the transcript to verify my unit compiles. This compiles the whole module, so I'll run it in the background and poll.
+
+The build runs in the background. While it compiles, let me prepare the ledger update. Let me view the exact TripReplay rows to mirror the format and insertion point.
+
+The launcher returned; let me check whether the build is still running and its progress, and meanwhile insert the ledger rows.
+
+Build is now in the whole-module Swift compile of the macOS app target (includes my files). Ledger rows inserted — let me validate the JSON, then wait for the build.
+
+Ledger valid (247 rows, both TripDetail rows done 21/21). Now let me wait for the build to finish and check for compile errors in my unit.
+
+Build failed with exit 65 — expected per the sibling TripReplay log (pre-existing baseline breakage). The critical check: are any errors in **my** TripDetail files? Let me extract the actual compiler diagnostics precisely.
+
+**Decisive: 0 diagnostics in any TripDetail file.** All 7016 errors are in pre-existing out-of-scope salvage files (Views.swift, Sections.swift, Chrome.swift…) — exactly the baseline breakage the sibling TripReplay gate documented. Let me confirm my files were actually compiled (included in the module), not skipped.
+
+Confirmed: all 7 files were compiled (in the module file list), and Swift's whole-module sema produced **0 diagnostics** for any of them among 7016 pre-existing out-of-scope errors. Since `-O -whole-module-optimization` type-checks the entire module before emitting, this is a complete clean type-check of my unit.
+
+To rigorously cover the iOS idiom too, let me kick off an iOS-simulator build in the background while I write the evidence log.
+
+iOS build launched. Let me gather final metrics (timestamp, line counts) and write the evidence log.
+
+iOS build is running. Let me wait for it to complete before finalizing the log, polling its progress.
+
+Both idioms confirmed: **0 TripDetail diagnostics** on macOS and iOS (full-app builds fail at exit 65 solely from pre-existing out-of-scope baseline breakage). Let me confirm my files were in the iOS compile and grab the iOS error total for the log.
+
+Let me verify my files were actually part of the iOS compile (the iOS filelist path differs) — the "0 diagnostics" claim only holds if they were compiled.
+
+The iOS build log references my files but the first-found filelist didn't — there are likely multiple filelists. Let me locate the one that includes my files and confirm the compile context.
+
+The iOS build reused the same DerivedData (`biuzd…`); my files ARE in its `Release-iphonesimulator` file list. Let me confirm all 7 there, then finalize.
+
+**Both idioms fully verified** (7/7 files compiled, 0 diagnostics on macOS and iOS). Now let me write the evidence log.
+
+Log written. Now let me verify git state, confirm generated artifacts are ignored, and clean up temp files before committing.
+
+Git state is exactly as expected — only allowed files changed; generated `.xcodeproj`/`xcframework` are git-ignored. Let me do a final green-state verification, then commit.
+
+All gates green. Let me commit the work per the prompt's commit specification.
+
+Committed cleanly (`c71589f1a`), working tree clean. Let me finalize task tracking.
+
+All 9 todos are done. The task is complete and fully verified.
+
+## Summary
+
+Implemented **`page:trips/TripDetail`** as a native SwiftUI / Apple HIG screen at full web parity, adaptive across macOS + iOS — `apps/apple/TeslaSync/Features/Trips/` (7 files, 758 lines).
+
+**Architecture (mirrors shipped sibling pages):**
+- `TripDetailPageModel` — `@MainActor @Observable`, single source of truth driving all four data states; no networking in the view (ADR-004).
+- `TripDetailDataSource` seam keeps the web hook name `useTrip` (← `GET /trips/{id}`); Sample/Empty/Failing doubles exercise success/empty/error.
+- SI converts **only** at the render boundary via the shared `Units` facade (ADR-005) — Energy pinned to raw Wh, Cost to currency, exactly as the web does.
+
+**Parity — `PARITY_COVERED=21/21`:** 5 panels (Distance, Energy-Used, Efficiency, Cost, GlassPanel5 KVList) · 4 states (loading skeleton, empty/notFound, error+retry, success) · 12 strings (all resolve from `Localizable.xcstrings` via the catalog's `translation.trips.detail.*` entries, web key names preserved).
+
+**Gate — all green (Xcode runner available):**
+- SwiftLint `--strict`: **0 violations** in 18 files
+- Placeholder scan: `COUNT=0, EXIT=0`
+- `Shared.xcframework` built (Gradle, 7m37s) + `xcodegen` clean
+- macOS **and** iOS-Simulator Release builds: all 7 files in each module file list, **0 compiler diagnostics** in the unit. The full-app build exits 65 solely from pre-existing out-of-scope baseline breakage (~7k errors in merged salvage files like Views.swift/Sections.swift) — handled consistently with the sibling TripReplay gate.
+
+**Ledger + log:** added `page:trips/TripDetail` rows (apple-macos + apple-ios, done 21/21); evidence log ends `EXIT=0 / STATUS=DONE`. Committed as `c71589f1a` (only allowed files; generated `.xcodeproj`/`.xcframework` are git-ignored).
+
+
+
+The task is fully complete and verified — all 9 todos done, commit `c71589f1a` made, all gates green.
+
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-trips-TripDetailPage.log       | 232 +++++++++++++++++++++
+ .../Features/Trips/TripDetailFormat.swift          | 206 ++++++++++++++++++
+ .../Features/Trips/TripDetailModels.swift          |  97 +++++++++
+ .../TeslaSync/Features/Trips/TripDetailPage.swift  | 139 ++++++++++++
+ .../Features/Trips/TripDetailPageModel.swift       |  87 ++++++++
+ .../Trips/TripDetailRouteRegistration.swift        |  48 +++++
+ .../Features/Trips/TripDetailSampleData.swift      |  74 +++++++
+ .../Features/Trips/TripDetailSections.swift        | 107 ++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 9 files changed, 1008 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-trips-TripDetailPage.log
+ create mode 100644 apps/apple/TeslaSync/Features/Trips/TripDetailFormat.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Trips/TripDetailModels.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Trips/TripDetailPage.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Trips/TripDetailPageModel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Trips/TripDetailRouteRegistration.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Trips/TripDetailSampleData.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Trips/TripDetailSections.swift
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

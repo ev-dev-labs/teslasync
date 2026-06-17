@@ -1,0 +1,248 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+Let me explore the web source page and the Apple app structure in parallel.
+
+Now let me explore the Apple app structure to understand existing patterns.
+
+Let me look at the existing System feature directory and find a similar simple page to use as a reference pattern.
+
+Let me read the parity manifest, ledger, and find similar reference pages in parallel.
+
+Now let me look at the apple ledger and a good reference page. Let me find a page that fetches vehicles and shows metric cards.
+
+Let me examine the Vehicles feature for the vehicle-fetching pattern and look at a representative page+model structure.
+
+Let me study a representative page+model in the System folder and how routes are registered. Reading several reference files in parallel.
+
+Let me understand the data-fetching facade and route registration patterns. Reading several reference files in parallel.
+
+Let me examine a route registration file, a real data-fetching model, and the design tokens.
+
+Let me find the AppRoute enum and check if a `commands` route already exists, plus the data source pattern.
+
+I need to understand the build environment and route wiring. Let me check tooling availability and the route registry aggregation in parallel.
+
+Xcode toolchain is available. Let me check the project generation setup (XcodeGen) and the gate contract from the README.
+
+XcodeGen uses globs, so new files are auto-included. Let me check the gate contract, placeholder script, PowerShell availability, and an existing log for format.
+
+Let me read an existing log to mirror its format and see how the build gate was handled.
+
+The full build compiles the KMP `Shared.xcframework` via Gradle. Let me check the README gate contract and whether the shared framework/build is feasible here.
+
+Let me examine the route host registry, how registrations aggregate, the route parser, and route tests.
+
+Now I understand the wiring. Let me check the route parser, route tests, and whether any exhaustive switches over `AppRoute` exist that I'd need to update.
+
+Let me check RouteTests and search for any exhaustive `switch` over AppRoute values that lack a `default` (which a new case would break).
+
+Let me check the web sidebar grouping for `/commands` to assign the correct route group.
+
+"Commands" maps best to the `.operations` group. Now let me study the real data-fetching pattern (VehicleDetail) and the available shared components (MetricCard).
+
+Let me examine the DataSource seam pattern, the Vehicle model, and check for a MetricCard component.
+
+Let me find the Apple shared components (MetricCard/StatCard) and any existing Vehicle model used by pages.
+
+Let me read the MetricCard projection types (colors/values) and find the design tokens file.
+
+MetricCard is a perfect fit. Now let me find the design tokens (glass card) and inspect the Localizable.xcstrings for the key convention and any existing `commands.*` keys.
+
+The xcstrings uses a `translation.` prefix for many keys. Let me check how page keys like `roadmap.title` and the web `commands.*` keys are actually stored, and whether `String(localized:)` keys match.
+
+The catalog uses a `translation.` prefix and already has some `commands.*` keys. Let me check the web locale defaults for the bare keys and how existing pages’ keys resolve, plus look at the design tokens for glass cards.
+
+I have all 13 string defaults. Now let me study the design tokens and glass-panel styling used by System pages.
+
+I have a thorough understanding of tokens, MetricCard, and the data-source pattern. Let me check whether `VehicleCommandCenter` is a separate parity unit/component before deciding how to render the per-vehicle region.
+
+A native `VehicleCommandCenter` component already exists. Let me inspect its public API to reuse it in the success state.
+
+Let me inspect the `VehicleCommandCenterModel` init and the shared primitives (`TSGlassPanel`, `TSFadeIn`, `TSSpacing`, `PageContainer`).
+
+Let me find how `VehicleCommandSource` is constructed (a sample/concrete source) so I can render real command centers per vehicle.
+
+Let me read the VCC Previews (model construction) and the `InMemoryVehicleCommandSource` init to learn how to build a center from a vehicle snapshot.
+
+I now know how to reuse `VehicleCommandCenter`. Let me confirm the shared primitives (`TSGlassPanel`, `TSFadeIn`, `TSSpacing`, `TSTone`) and check for a `PageContainer` equivalent.
+
+There's a `PageContainer` shared surface. Let me read its public API plus `TSGlassPanel`, `TSFadeIn`, and the stagger primitives.
+
+`PageContainer` is a full web-parity component. Let me check how the web `PageContainer` handles the `loading` prop (whether it hides children) so I mirror state behavior faithfully.
+
+Let me check `check-placeholders.ps1` rules and find a precedent page that uses `PageContainer` with loading/empty states.
+
+The scanner forbids "Placeholder"/"TODO"/etc. — note `redacted(reason: .placeholder)` would trip it, so I'll use `.privacy`. Let me establish the baseline by running both fast gates on the System dir and reading the lint config.
+
+Baseline placeholder scan already fails on existing `TeslaAccountPage.swift`. Let me investigate — this affects whether the gate can pass at all. Let me read the scanner's allowlist logic and the offending lines.
+
+The scanner allows lines with a `// parity:allow <reason>` marker. The existing `TeslaAccountPage.swift` has 4 unmarked "Placeholder" hits. Let me inspect them.
+
+The hits are legitimate `placeholderAvatar` identifiers, not stubs — pre-existing and unmarked. Let me get the FULL baseline violation list to understand scope (13 violations reported).
+
+These are pre-existing false-positives on legit identifiers (`placeholderAvatar`, field prompts) from sibling slots, making the dir-wide gate red. Let me read the full lint config and the sibling lines to plan surgical `// parity:allow` fixes.
+
+Key finding: no explicit `file_length` rule, so SwiftLint's default (400 lines, strict→error) applies — I must keep each file ≤400 lines with small `body` properties. Let me run the baseline lint on the System dir to check for pre-existing violations.
+
+SwiftLint expanded to the whole project (6380 files) via the config's `included`, and found 4 pre-existing violations. Let me identify them.
+
+The 4 lint violations are in files OUTSIDE my allowed scope (`Sources/Features/System/`, `dashboard-widgets/`) — picked up because I ran from `apps/apple` where the config's `included` expands to the whole project. The gate runs from repo root. Let me test that exact invocation.
+
+Critical clarification: run from **repo root** (the gate's actual CWD), the lint gate is GREEN (22 files, 0 violations). Only the placeholder gate is red — 13 false-positives (`placeholderAvatar`, field prompts) in two sibling files within my allowed `Features/System/**` scope. The build is the long pole and the KMP xcframework is independent of my Swift code, so I'll start it now while I write code. Let me check the gradle/pre-build wiring and kick off the xcframework build.
+
+Java 17 and gradle are available; the xcframework isn't built yet. Let me kick off the KMP xcframework build in the background now (it's independent of my Swift code), then write code while it runs.
+
+Let me check the xcframework build started cleanly, then set up task tracking.
+
+The xcframework build is compiling (using build cache). While it runs, let me read the VCC data types I'll map to, and the web Vehicle/VehicleState shapes.
+
+The xcframework build completed. Let me verify it succeeded and check the VCCUpdate init.
+
+The build script exited 0. Let me verify the xcframework was staged correctly.
+
+The background build was killed when its session ended (mid-build, not staged). `xcodebuild` runs the gradle pre-build script itself, so I'll let it handle staging during the real build. Let me set up task tracking, then write all the code.
+
+Let me read the remaining APIs I need: VCC state init, glass/fade/stagger/empty primitives, TSTone, and the web Vehicle types.
+
+Let me read the shared UI primitives (glass/fade/stagger/empty/tone) and the web Vehicle types in parallel.
+
+Let me check how the app shell renders an unregistered route (to decide the "View History" navigation target), and look at the EmptyState/feedback component.
+
+Let me verify `CommandHistory` is a separate parity unit and read the `TSEmptyState` API, plus the web Vehicle types.
+
+I have everything needed. `CommandHistory` is a separate parity unit (so an unregistered `.commandHistory` route is correct). Let me start writing the code, beginning with the data source seam.
+
+Now the model with per-vehicle command-center construction:
+
+Let me refine the data source errors to keep the parity strings exclusively in the view (non-visible diagnostic details), then write the page view.
+
+Now the main page view. Writing `CommandsPage.swift` with small computed properties to respect lint limits:
+
+Now the route registration. Let me check the VehicleDetail registration to mirror access levels (since my `CommandsDataSource` is internal).
+
+Now wire navigation — add `commands` and `commandHistory` to `AppRoute` (cases, pathSegment, systemImage, group):
+
+Now register the route in `TeslaSyncApp.swift`:
+
+Navigation wired. Let me verify the route-title string convention before adding catalog entries.
+
+Route titles use bare keys (`route.dashboard`). I need `route.commands`/`route.commandHistory` plus the 13 parity strings. Let me check which of the 15 keys already exist to avoid duplicates.
+
+Two keys (`Refresh`, `common.noData`) already exist. Let me confirm their values match my defaults, then insert the 13 missing keys surgically (preserving file format).
+
+`Refresh` and `common.noData` match. Now let me insert the 13 missing keys, matching the existing catalog format, and validate JSON.
+
+Strings added and validated. Now let me check git state to understand the baseline before deciding on the sibling placeholder false-positives.
+
+The sibling files are committed baseline with pre-existing "Placeholder" false-positives blocking the dir-wide gate. Let me verify they're genuinely legit identifiers (not real stubs) before adding sanctioned `// parity:allow` markers.
+
+All 13 are confirmed false-positives (doc comments, `.redacted(reason: .placeholder)`, `placeholderAvatar`, TextField `placeholder:`). Some sit mid-expression so a trailing marker would break compilation. Let me inspect the ScheduledExportsPanelForm context to choose safe fixes.
+
+Confirmed: all 13 are false-positives that all accept a trailing line comment safely (the existing marker on line 25 was misplaced — the matches are on lines 22–23). Let me add the scanner's sanctioned `// parity:allow` markers to the exact flagged lines via a precise, idempotent script.
+
+Markers added. Let me verify the placeholder gate is now green and run swiftlint on my new files (from repo root, the gate's CWD).
+
+Placeholder gate is green (0 violations). Now swiftlint `--strict` from repo root:
+
+Two fixable lint issues: a too-long marker line and a trailing-closure style. Let me fix both.
+
+Let me re-run swiftlint to confirm both fixes resolved the violations:
+
+Lint green for the gate path. Let me also lint the two modified `Sources/` files (navigation wiring) to keep the project clean:
+
+I spotted two issues to fix before building: (1) `Text` concatenation with `.foregroundStyle` won't compile, and (2) the `LazyVGrid` needs the 4 cards as direct children (the grid must live inside `CommandsStatPanels`). Let me view and fix.
+
+Now let me fix the `onlineCounter` (use HStack instead of `Text` concatenation) and move the grid into `CommandsStatPanels`:
+
+Now move the `LazyVGrid` into `CommandsStatPanels` so the 4 cards are direct grid children:
+
+Let me re-lint and check how a sibling page with a `@MainActor` model handles `@State` init under strict concurrency (to avoid a default-argument isolation error).
+
+Let me check the project's default-actor-isolation setting and mirror VehicleDetail's proven init pattern for the `@MainActor` model.
+
+VehicleDetail builds its `@MainActor` model inside a plain `init` body (View inits are main-actor isolated here). Let me mirror that exact pattern to avoid a `@MainActor` default-argument issue:
+
+`CommandsDataSource` is internal, so a `public init` exposing it is invalid. Like `VehicleDetailPage`, this page should be internal. Let me drop `public`:
+
+Let me re-lint the full System dir after the structural edits, then generate the Xcode project:
+
+Lint is clean. Now let me generate the Xcode project (XcodeGen picks up my new files via globs):
+
+Project generated with my 4 files included. Let me check the scheme/destinations before the build (to pick a no-signing destination):
+
+Building the iOS `TeslaSync` scheme (the gate's scheme) for the simulator with signing disabled. This runs the Gradle xcframework pre-build then compiles ~6380 files — the long pole. Starting it now:
+
+The build failed, but **all errors are in pre-existing baseline files** (widget-primitives, feature-views, dashboard-widgets) — none in my Commands files. The root looks like an ambiguous `TSSpacing`/token symbol. Let me determine whether this is a pre-existing baseline break (not caused by me).
+
+The build break is **pre-existing and not mine**: a sibling page, `StatusApiDocsPage.swift` (line 399), redefines `enum TSSpacing`, colliding with the canonical token enum and poisoning the whole iOS target. Zero errors are in my files. Let me assess the extent of the conflicting definitions.
+
+`StatusApiDocsPage.swift` (a sibling page, unmodified by me) redefines `TSSpacing` and `TSRadius`, colliding with the canonical token enums and breaking the entire iOS target. This is a pre-existing baseline bug in my allowed scope. Let me inspect its local definitions to choose the safest fix.
+
+The collision is the root cause cascading into many downstream files. `StatusApiDocsPage`'s local `TSSpacing` values match canonical, but `TSRadius` differs — so a rename (not removal) preserves its exact appearance. First, let me confirm ALL build errors stem from this single root cause (no other independent baseline breaks).
+
+All 469 errors are the ambiguity cascade from one root cause; **zero are in my files**. Let me confirm `StatusApiDocsPage` is the only duplicate-token source in the iOS target before applying a safe rename fix.
+
+Confirmed: `StatusApiDocsPage`'s local `TSSpacing`/`TSRadius` are the **single root cause** of all 469 cascade errors — they're the only duplicate token enums in the iOS target. This breaks the entire target (not just my page). Since `TSRadius` values differ from canonical, I'll do a behavior-preserving **rename** (not deletion) scoped to that one file. Let me see all occurrences first.
+
+I'm confident: this one sibling file's duplicate token enums break the entire iOS target (469 cascade errors), it's in my allowed scope, and a rename is behavior-preserving. Let me apply the rename (scoped to that file) and verify lint.
+
+Rename applied cleanly. Let me re-lint the System dir, then rebuild (incremental — the xcframework and unchanged files are cached):
+
+Lint clean. Now rebuilding (restricting to arm64 to match the xcframework's simulator slice). This recompiles the previously-failed files — starting it with a long wait:
+
+Fixing the token collision surfaced a **deeper layer** of pre-existing baseline corruption: multiple duplicate types (`HeroStatus`, `TirePressureUnit`, `StatusHero`/`StatusHeroModel`, `Preview` helpers) from the "parallel salvage" merges — across `shared-surfaces`/`dashboard-widgets` (outside my allowed scope). Let me assess the full magnitude.
+
+Major progress — from 469 to **25 errors**, now from just two more duplicate types (`HeroStatus`, `TirePressureUnit`). Let me locate where each is defined to see if the duplicates are in my allowed scope.
+
+Excellent progress — the token fix resolved 444 of 469 errors. Only **25 errors remain from 2 duplicate types**: `HeroStatus` (one copy in my scope: `Features/System/SystemStatusModels.swift`) and `TirePressureUnit` (both copies outside my scope). Let me examine both duplicates and their usage to plan minimal, behavior-preserving renames.
+
+Now I have the full map:
+- **HeroStatus**: the duplicate is entirely in my scope (`SystemStatusModels.swift` defines it, `SystemStatusPageModel.swift` uses it) — a clean in-scope rename.
+- **TirePressureUnit**: both copies are outside my scope; the `dashboard-widgets` copy is isolated (only used by `TirePressureHistoryWidget.*`), so renaming it is bounded.
+
+Let me apply the in-scope HeroStatus rename and the isolated dashboard-widgets TirePressureUnit rename, then rebuild to see if the target is clean.
+
+Both renames are bounded and behavior-preserving. Applying them:
+
+Both duplicates resolved (0 leftover collisions). Rebuilding to check if the target now compiles cleanly:
+
+Still failing — a **third layer**: `ambiguous use of 'x2xl'` means there's yet another duplicate `TSSpacing` I haven't found, plus duplicate `Preview`/`accessibilityAddTraits` helpers. This baseline has systematic duplicate-symbol corruption. Rather than chase it layer-by-layer, let me statically find ALL duplicate top-level type definitions in the iOS target at once.
+
+This is decisive: the build is blocked by **systemic, pre-existing baseline corruption** — duplicate type definitions from the "parallel salvage" merges. My static analysis found 7 non-test duplicate types affecting the app build (`GlassPanelStyle`, `NotificationSoundChannelRow`, `NotificationSoundsSection`, `SpeedDistributionChart`, `TirePressureConvert/Status/Thresholds`), spanning 5+ feature areas **outside my allowed `Features/System/**` scope** (feature-views, dashboard-widgets, Features/{Notifications,Driving,VehicleSystems}). Making the build green requires extensive out-of-scope edits, which the allowed-files contract prohibits.
+
+My CommandsPage files are clean (0 errors across all 3 builds). Let me revert my exploratory duplicate-chasing edits to keep a clean, in-scope diff, then verify.
+
+My diff is now clean and in-scope: 4 CommandsPage files + navigation (AppRoute, TeslaSyncApp) + strings (xcstrings) + placeholder markers. Build3 already proved my files compile cleanly (0 errors in them when baseline blockers were temporarily resolved). Let me re-verify the lint + placeholder gates are green in this final state.
+
+Both fast gates are green (PLACEHOLDER=0, LINT=0). For the strongest, cleanest BLOCKED evidence, I'll re-apply only the **in-scope** duplicate fixes (so the build reaches my files and only out-of-scope blockers remain), using `private` to avoid the member-collision my earlier rename caused. This stays strictly within `Features/System/**`.
+
+In-scope token + HeroStatus fixes re-applied cleanly. The last in-scope duplicate is `GlassPanelStyle` (HelpPage + StatusApiDocsPage, both in my scope). Let me check its usage and rename StatusApiDocsPage's copy.
+
+`GlassPanelStyle` is `private` in BOTH files — fileprivate types don't collide, so it's a false alarm. My static finder over-counted private types. Let me re-run the analysis excluding `private`/`fileprivate` defs to get the TRUE set of module-level conflicts and confirm they're all out-of-scope.
+
+**Definitive result**: after every in-scope fix, the build is blocked by exactly **7 out-of-scope duplicate types** (`TirePressure*` ×4, `NotificationSound*` ×2, `SpeedDistributionChart`), all spanning `feature-views`/`dashboard-widgets`/`Features/{Notifications,Driving,VehicleSystems}` — **none in my allowed `Features/System/**` scope**. Let me re-lint (after re-applying in-scope fixes), then run the final build to capture this definitive BLOCKED state.
+
+Lint clean. Now the final build to capture the definitive evidence — it should show only out-of-scope duplicate errors with zero in my files:
+
+The final build confirms it: every error is in out-of-scope files (`shared-surfaces`, `feature-views`, `dashboard-widgets`), zero in mine. Let me get the definitive breakdown for the log.
+
+23 errors, all in 7 out-of-scope files (`dashboard-widgets`, `feature-views`, `shared-surfaces`); **zero in my Commands files and zero anywhere in `Features/System`**. Let me confirm my files were actually fed to the compiler (to strengthen the "my files are clean" claim).
+
+The final build is definitive: **23 errors, 100% in out-of-scope files** (duplicate-symbol/ambiguity class), **zero in my Commands files or anywhere in `Features/System`**, and zero in my nav changes. My deliverable is clean; the build is blocked by pre-existing baseline corruption I'm not permitted to fix.
+
+Let me update task tracking and write the comprehensive evidence log.
+
+Let me get accurate line numbers from my final `CommandsPage.swift` for the parity evidence.
+
+I have all evidence. Let me write the comprehensive, honest evidence log.
+
+Log written. Let me verify the final working-tree state and confirm no stray build artifacts are tracked.
+
+The working tree is clean and fully within the allowed scope (`Features/System/**`, navigation, xcstrings, log); the generated `.xcodeproj` and `Shared.xcframework` are correctly git-ignored. Per honesty covenant #8 ("no commit on red"), I will not commit while the build gate is BLOCKED.
+
+Let me finalize task tracking.
+
+The implementation is complete and all todos are resolved (build correctly marked blocked). Let me do a final confirmation of the two passing gates in the exact final state to include fresh output in my summary.
+
+I've completed the implementation to the fullest extent possible within scope. Here's my final assessment.
+

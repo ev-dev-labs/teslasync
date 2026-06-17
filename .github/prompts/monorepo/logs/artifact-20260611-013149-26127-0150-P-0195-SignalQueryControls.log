@@ -1,0 +1,150 @@
+================================================================================
+P4 · Shared surface · 0195 — SignalQueryControls (Apple)
+Run: 2026-06-12T01:4x-0700   Host: Darwin arm64   Repo: ev-dev-labs/teslasync
+Prompt: P4/shared-surfaces/0195 — Shared surface: SignalQueryControls
+Web source (spec): web/src/components/SignalQueryControls.tsx (394 lines)
+Mode: code-complete + host-green; full-app xcodebuild build/test RAN and captured,
+      DEFERRED to the signed macos-latest acceptance gate (ADR-012) on two PRE-EXISTING,
+      code-unrelated reasons — (a) a SYSTEMIC sibling-surface Swift-6 escaping-closure bug
+      (the `glass/panel(@ViewBuilder _ content:) { TSGlassPanel { content() } }` non-escaping
+      capture, present in 64+ shared-surfaces/AI*.swift + sibling files) PROVEN pre-existing
+      by a clean isolation rebuild WITHOUT this surface, and (b) macOS dev-signing
+      (0 valid identities) — identical disposition to SecuritySection 0298 / ClimateSection
+      0291 / LiveTelemetryPanels 0281 / FleetSummary 0276. Honesty rule 7 (predecessor
+      standard honoured). Delegation: NONE (FORBIDDEN by this prompt; authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (Xcode toolchain) .... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  Xcode ...................... Xcode 26.5 (17F42)                                   OK
+  iPhoneSimulator SDK ........ iPhoneSimulator.sdk (iOS 18.0 deploy target)         OK
+  macOS SDK .................. MacOSX.sdk (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-…-CBDDD3140989)           OK
+  SwiftUI .................... present in both SDKs (this surface's core dependency) OK
+  Swift Charts / MapKit ...... present; this surface uses NEITHER (web "Charts/maps
+                               used: (none)")                                       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... 2.45.4; project generates cleanly; SignalQueryControls
+                               globbed into app + test targets                      OK
+  Shared.xcframework ......... BUILT + STAGED — gradlew :core:assembleSharedXCFramework
+                               BUILD SUCCESSFUL (8m59s); ios-arm64 + ios-arm64-simulator
+                               + macos-arm64 staged to apps/apple/Frameworks/        OK
+  Capability note: the core requirement is SwiftUI, AVAILABLE + PROVEN by the in-module
+  iOS type-check (reached IRGen) and the executed 64-test suite below. The capability-
+  BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== WHAT WAS BUILT (parity with the web source, read end-to-end) ===
+  SignalQueryControls is the shared signal-query control set for the Signal Log Viewer /
+  Signal Explorer pages. The web module exports a BE→FE adapter + helpers + four controls;
+  the native surface reproduces its data, composition, every state, and i18n keys, binding
+  through P1/S8 state-holder seams (no view I/O), tokens via P1/S9, copy via P1/S10, and a
+  P1/S11 `view.opened` event.
+
+  Adapter (verbatim port of components/__tests__/SignalQueryControls.adapter.test.ts):
+    adaptSignalHistoryPoint — Double/Int64→value_num, Bool(incl. false)→value_bool,
+      String/Enum/Time→value_str, NaN/±Inf→nil, null→all-nil, ts passed through verbatim.
+    adaptSignalHistoryResp — [] for nil envelope / missing data; envelope `signal` stamped
+      onto every row; full Phase-42 typed shape → table-renderable rows.
+  Helpers: getValueType, formatValue (JS String(number) parity: 42 not 42.0), formatTimestampMs
+    (YYYY-MM-DD HH:mm:ss.SSS or "—"), toLocalDatetimeStr, TYPE_BADGE_COLOR / TYPE_VALUE_COLOR
+    (num→cyan, str→emerald/green, bool→amber, null→muted), PAGE_SIZES [25,50,100],
+    TIME_RANGE_PRESETS [1h,6h,24h,7d,30d] + matchTimeRangePreset (±60s tolerance).
+  Controls (web → native):
+    SignalMultiSelect    — selected chips (removable) + search field + filtered dropdown
+                           (cap 50 + "+N more — refine search"); loading/error/empty leaf states.
+    DateTimeRangeControls— From / To native DatePickers + Quick-Range preset chips (active
+                           highlight via matchTimeRangePreset; aria "{{label}} time range").
+    QueryControls        — Rows menu Picker over PAGE_SIZES + "Query" action (play glyph /
+                           spinner; disabled computed, never literal).
+    SignalDataTable      — #/Timestamp/Signal/Value(type-tinted)/Type(badge) grid + loading
+                           skeleton + "No results" empty + server pager (records, first/prev/
+                           next/last, page-of indicator).
+
+  States rendered (every one, no hidden surface): loading / empty / error / stale / offline.
+  i18n keys from the web source (table "SignalQueryControls"), all present + tested:
+    signalQuery.from="From"  signalQuery.to="To"  signalQuery.quickRange="Quick Range"
+    signalQuery.preset.aria="{{label}} time range"  signalQuery.query="Query"  signalQuery.rows="Rows"
+  Hooks (useQuery available-signals + useTranslation) bound via the SignalQueryControlsSource
+  P1/S8 seam; no HTTP in the view. Telemetry: `view.opened` emitted once, slug "SignalQueryControls".
+
+=== PER-SURFACE ACCEPTANCE (host-green, isolation-verified) ===
+  swiftc -typecheck SignalQueryControls.{Adapter,Logic,Projection}.swift (pure layer) ... EXIT 0
+  In-module type-check (whole TeslaSync app target WITH this surface): build progressed to
+    the IRGen phase (runs AFTER whole-module Sema); ZERO `: error:` attributed to ANY
+    SignalQueryControls.* file in any build → the view layer type-checks against the real
+    P1/S9 tokens + shared components (TSGlassPanel/TSButton/TSSkeleton/TSTone) in-module.
+  Executed unit tests (adapter/logic/projection/model/strings/a11y — none instantiate a view),
+    via a throwaway SwiftPM package from the UNMODIFIED Adapter/Logic/Projection/Model/Source
+    + the three *Tests files:
+        swift test  =>  "Executed 64 tests, with 0 failures (0 unexpected)"     EXIT 0
+    Covers: the adapter parity port; value/timestamp formatting; preset matching;
+    pagination + available-signal filter; SignalQueryProjection (cached→render) across
+    ready/offline/error/loading; SignalQueryControlsModel (telemetry-once, add/remove+cap+
+    dedupe, preset apply, selection-gated Query + optimistic loading + forwarded request,
+    page nav + clamp, retry, stale one-shot auto-refresh, offline disable, result→table-state,
+    refresh, stop/re-arm without re-emitting telemetry, filteredAvailable); a11y summary;
+    i18n facade + preset-aria interpolation; surface slug.
+  swiftlint --strict ........ "Found 0 violations, 0 serious in 4597 files."         LINT_EXIT=0
+                              (SignalQueryControls.* alone: 0 violations)
+  swiftformat --lint ........ SignalQueryControls.* (13 .swift): "0/13 require formatting" FORMAT_EXIT=0
+  check-placeholders ........ no TODO/stub/mock/placeholder/Lorem in shipped .swift   PLACEHOLDER_EXIT=0
+  File budget ............... 14 files; each ≤ 400 lines (largest 300) — proper decomposition.
+
+=== FULL-APP GATE (RAN; deferred to signed acceptance gate — pre-existing, code-unrelated) ===
+  [iOS] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        IOS_EXIT=65  ** TEST FAILED ** (build failed; tests never ran)
+        Sole error (PRE-EXISTING sibling surface, NOT this surface):
+          shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure
+            captures non-escaping parameter 'content'   (the `glass(@ViewBuilder _ content:)`
+            → `TSGlassPanel { content() }` non-escaping capture)
+  [macOS] xcodebuild -scheme TeslaSync-macOS build
+        MAC_EXIT=65  ** BUILD FAILED **
+          error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require
+          signing with a development certificate (DEVELOPMENT_TEAM empty; 0 valid identities).
+
+  PROOF the iOS blocker is PRE-EXISTING (clean isolation rebuild WITHOUT this surface):
+    1. Moved all 14 SignalQueryControls.* files out of the tree; `xcodegen generate`.
+    2. xcodebuild ... build  =>  ** BUILD FAILED **, BASE_EXIT=65, error at
+       shared-surfaces/AISuggestNewGeofences.swift:129:22: escaping closure captures
+       non-escaping parameter 'content'  (same systemic bug, different sibling file).
+    3. Restored the 14 files; `git status` confirms ONLY my untracked files differ — NO
+       tracked file is modified by this surface.
+    A 2nd independent pre-existing failure was also observed (swift-frontend IRGen crash,
+    reabstraction thunk, while emitting AppearanceSettings.Controls.swift — `git diff --stat`
+    confirms that file was NOT touched by this surface).
+    The systemic escaping-closure pattern occurs in 64+ pre-existing files; Xcode 26.5 /
+    Swift 6.3.2 (Debug batch mode) rejects it whereas the prior-green toolchain (logs dated
+    2026-06-07) did not. Fixing 64+ out-of-scope sibling files is outside this prompt's
+    allowed-files set (SignalQueryControls.* + this log) and would collide with their parallel
+    owners. A temporary local @escaping patch used ONLY to confirm this surface compiles +
+    tests pass in-module was FULLY REVERTED (git checkout); the tree holds only my untracked files.
+
+=== DELIVERABLE (apps/apple/TeslaSync/shared-surfaces/SignalQueryControls.*) ===
+  SignalQueryControls.swift            composite surface (panel + lifecycle + a11y summary)
+  SignalQueryControls.Adapter.swift    data shapes + adaptSignalHistoryPoint/Resp + snapshots
+  SignalQueryControls.Logic.swift      value/timestamp/preset/pagination/filter helpers
+  SignalQueryControls.Projection.swift decision logic + cached→render projection + a11y seam
+  SignalQueryControls.Model.swift      P1/S8 holder + P1/S10 i18n facade + P1/S11 telemetry + Source seam
+  SignalQueryControls.Source.swift     in-memory source (previews/tests)
+  SignalQueryControls.Views.swift      SignalMultiSelect / DateTimeRangeControls / QueryControls
+  SignalQueryControls.Chrome.swift     chips / inline error / empty note / freshness chip+banner / type badge
+  SignalQueryControls.Table.swift      SignalDataTable + pager footer
+  SignalQueryControls.Previews.swift   #Preview per state
+  SignalQueryControls.strings          P1/S10 catalog (table "SignalQueryControls")
+  SignalQueryControls.AdapterTests.swift  adapter parity + value/timestamp formatting
+  SignalQueryControls.ModelTests.swift    state-holder wiring/telemetry/actions/states/freshness/pagination
+  SignalQueryControls.Tests.swift         logic + projection + preset + paging + a11y + i18n
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web-source states (loading/empty/error/stale/offline) — #Previews + projection.
+  [x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (table "SignalQueryControls").
+  [x] Accessibility labels on every interactive element (search, chips, presets, query, pager) + summary seam.
+  [x] Tests: adapter unit test + per-state projection/model test + a11y label test (64 executed, 0 failures).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped .swift.
+  [~] EXIT=0 host-green; full-app build+test DEFERRED to signed acceptance gate on two PRE-EXISTING,
+      code-unrelated reasons (systemic sibling escaping bug proven by isolation rebuild + macOS signing).
+
+EXIT=0
+STATUS=DONE

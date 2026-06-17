@@ -1,0 +1,131 @@
+=== P4 Shared surface 0231 Tooltip (Apple) ===
+Fri Jun 12 07:25:36 PDT 2026
+
+VERDICT: surface COMPLETE and clean on every per-surface gate; shared-scheme build+test is RED
+due to PRE-EXISTING, OUT-OF-SCOPE failures in sibling files (not Tooltip). STATUS=BLOCKED.
+
+Allowed files for this prompt: apps/apple/TeslaSync/shared-surfaces/Tooltip.* + this log.
+Delegation FORBIDDEN; sibling surfaces may not be modified to unblock the shared scheme.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT / CAPABILITY (all required tooling present)
+--------------------------------------------------------------------------------
+  Xcode 26.5
+  Build version 17F42
+  swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint:   0.63.3
+  swiftformat: 0.61.1
+  xcodegen:    Version: 2.45.4
+  Shared.xcframework: assembled via Gradle (BUILD SUCCESSFUL) and staged.
+
+--------------------------------------------------------------------------------
+PER-SURFACE VERIFICATION (Tooltip.* only) — ALL GREEN
+--------------------------------------------------------------------------------
+[1] swiftc -typecheck (Swift 6 language mode, -strict-concurrency=complete)
+    macOS  (arm64-apple-macos15.0)         : TYPECHECK_MAC_EXIT=0
+    iOS    (arm64-apple-ios18.0-simulator) : TYPECHECK_IOS_EXIT=0
+    (validates Tooltip.Adapter/Projection/Model/Views/Tooltip.swift against the SDK)
+
+[2] swiftformat --lint (my files)
+    === swiftformat --lint (my files) ===
+    Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/apps/apple/.swiftformat
+    SwiftFormat completed in 10.15s.
+    0/8 files require formatting.
+    FORMAT_EXIT=0
+
+[3] swiftlint --strict (my files)
+    === swiftlint --strict (my files) ===
+    Linting 'Tooltip.swift' (6/8)
+    Linting 'Tooltip.Tests.swift' (7/8)
+    Linting 'Tooltip.Views.swift' (8/8)
+    Done linting! Found 0 violations, 0 serious in 8 files.
+    LINT_EXIT=0
+
+[4] check-placeholders.ps1 (my files, isolated scan)
+    === placeholder scan (my files, isolated dir) ===
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+
+[5] module-wide type-name collision check (16 public types vs all targets): NONE
+[6] full-module compile: ZERO diagnostics reference any Tooltip.* file (see gate logs below)
+
+--------------------------------------------------------------------------------
+GATE STEP 1 — iOS:  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+--------------------------------------------------------------------------------
+RESULT: ** BUILD FAILED ** -> ** TEST FAILED ** ; IOS_EXIT=65
+
+Root cause = a Swift COMPILER CRASH (LLVM fatal abort) during IR Generation of a SIBLING
+feature-view file. NO Tooltip.* file appears in any diagnostic. Decisive excerpt:
+
+    11208:4.	While evaluating request IRGenRequest(IR Generation for file "/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/a
+    11209:5.	While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+    11218:7  swift-frontend           0x000000010ac70b44 llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+    11219:8  swift-frontend           0x000000010aca81cc report_at_maximum_capacity(unsigned long) + 0
+    11220:9  swift-frontend           0x000000010aca7edc llvm::SmallVectorBase<unsigned int>::grow_pod(void*, unsigned long, unsigned long) + 384
+    11222:11 swift-frontend           0x0000000104f31668 (anonymous namespace)::IRGenSILFunction::visitFullApplySite(swift::FullApplySite) + 5196
+    11240:Command SwiftCompile failed with a nonzero exit code
+    22286:4.	While evaluating request IRGenRequest(IR Generation for file "/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/a
+    22287:5.	While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+
+    (file under IRGen when the compiler aborted:)
+    11208:4.	While evaluating request IRGenRequest(IR Generation for file "/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/apps/apple/TeslaSync/feature-views/Appearance
+
+    failed-command summary:
+    13221:	Building project TeslaSync with scheme TeslaSync
+    13222:(2 failures)
+    Tooltip diagnostics in this run: 0 source errors total; Tooltip-specific: 0
+
+--------------------------------------------------------------------------------
+CONTROL EXPERIMENT — same iOS build with ALL Tooltip.* files REMOVED (proves pre-existing)
+--------------------------------------------------------------------------------
+RESULT: ** BUILD FAILED ** ; BUILD_NOMINE_EXIT=65  (still fails with zero Tooltip files present)
+
+Deterministic source error in a SIBLING shared-surface (out of scope):
+    5732:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures no
+    5735:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:141:39: note: parameter 'content' is implic
+    5736:    private func glass(@ViewBuilder _ content: () -> some View) -> some View {
+
+    => The shared scheme does not compile even WITHOUT this surface; the breakage
+       is in AISignalExplorerNlFilter.swift / AppearanceSettings.Controls.swift, which
+       this prompt's allowed-files contract forbids modifying.
+
+--------------------------------------------------------------------------------
+GATE STEP 2 — macOS:  xcodebuild -scheme TeslaSync-macOS build test
+--------------------------------------------------------------------------------
+RESULT: ** BUILD FAILED ** -> ** TEST FAILED ** ; MAC_EXIT=65
+
+Root cause = runner CODE-SIGNING capability (empty DEVELOPMENT_TEAM, no signing identity);
+again NO Tooltip.* file in any diagnostic. Excerpt:
+    1745:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require sign
+    1747:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that requi
+    3500:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-186/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require sign
+    Tooltip-specific source errors (macOS): 0
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The Tooltip surface is production-complete and passes EVERY check within its allowed scope
+(typecheck x2 SDKs, swiftformat, swiftlint --strict, placeholder, collision, full-module
+compile with zero Tooltip diagnostics). The two shared-scheme gate steps (iOS build/test and
+macOS build/test) are RED for reasons entirely outside this surface and outside the allowed
+files: (a) a Swift IRGen compiler crash + a deterministic escaping-closure source error in
+sibling surfaces (AppearanceSettings.Controls.swift, AISignalExplorerNlFilter.swift), proven
+pre-existing by the control build with all Tooltip files removed; and (b) a macOS code-signing
+environment limitation. Per Honesty Covenant rule 1 (no red-as-green) and rule 8 (no commit on
+red), the shared gate is reported RED and the surface is NOT committed as green.
+
+PRECEDENT / POLICY: apps/macos-pending-verifications.md already records the full-app
+"iOS-Simulator + macOS xcodebuild build test" as a deferred-verification category for prior P4
+surfaces (e.g. ToolCard, AlertMessageEditor: "the surface itself is verified green"). Its
+committable bar is "all host-runnable gates are green" — which is NOT met here because the
+host-runnable iOS build is RED on out-of-scope sibling code, so this surface is left staged
+(uncommitted) pending a clean tree, rather than recorded as a clean deferral.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0    (swiftlint --strict, Tooltip.* files)
+FORMAT_EXIT=0  (swiftformat --lint, Tooltip.* files)
+PLACEHOLDER_EXIT=0  (Tooltip.* files)
+EXIT=65
+STATUS=BLOCKED

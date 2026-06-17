@@ -1,0 +1,133 @@
+=== P4 Shared surface 0057 AIVampireDrainExplanation (Apple) ===
+Timestamp : 2026-06-10T17:00:29-0700
+Runner    : macOS 26.5.1 (25F80) · Xcode 26.5 (17F42) · Swift 6.3.2 · xcodegen 2.45.4 · swiftlint + swiftformat present
+Capability: SwiftUI / Swift Charts / MapKit + iOS 18 / iPadOS 18 / macOS 15 SDKs ARE available on this runner.
+            (This surface needs no chart/map — "Charts / maps used: (none)" in the prompt.)
+
+----------------------------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION (allowed files only)
+----------------------------------------------------------------------------------------------------
+Native parity of web/src/components/ai/AIVampireDrainExplanation.tsx. 10 files created under
+apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.* mirroring the proven P4 narrator
+template (sibling 0008 AIBatteryHealthForecastNarrative), uniquely prefixed `VampireDrainNarrative*`
+/ `AIVampireDrainExplanation` / `VampireDrainExplainRequest` (no collision with the existing
+`VampireDrainWidget*` dashboard-widget types):
+
+  AIVampireDrainExplanation.swift            — the SwiftUI surface (gated card chrome + state switch)
+  AIVampireDrainExplanation.Model.swift      — P1/S8 state-holder seam, P1/S10 i18n facade,
+                                               P1/S11 view.opened telemetry, in-memory source
+  AIVampireDrainExplanation.Adapter.swift    — pure core: request body, SSE frame parse, stream
+                                               reducer, output + action derivations
+  AIVampireDrainExplanation.Projection.swift — pure input→view-state projection (localized)
+  AIVampireDrainExplanation.Chrome.swift     — freshness chip / refresh / connectivity banner /
+                                               loading skeleton / gate-error
+  AIVampireDrainExplanation.Views.swift      — Helix badge, Ask-Helix button, thinking indicator,
+                                               output panel, ready body
+  AIVampireDrainExplanation.Previews.swift   — 10 #Previews (every state)
+  AIVampireDrainExplanation.strings          — P1/S10 catalog contribution (table
+                                               "AIVampireDrainExplanation")
+  AIVampireDrainExplanation.Tests.swift      — projection + state-holder + a11y XCTest
+  AIVampireDrainExplanation.AdapterTests.swift — request/SSE/reducer/output/action XCTest
+
+Web-parity reproduced:
+  - withAiFeature('vampire-drain-explanation') gate  → native `.gated` phase (renders nothing).
+  - useAiStream POST /ai/charging/vampire-drain/explain, body { vehicle_id: numericVehicleId || 0 }
+    plus lookback_days ONLY when finite & > 0  → `VampireDrainExplainRequest` (unit tested:
+    present/absent/zero/negative, snake_case, sorted-key JSON).
+  - AIFeatureCard title "Explain the recent vampire drain", the full description, button
+    "Narrate drain", badge "Helix"  → projected, localized via the P1/S10 facade (no English
+    literals in Swift; the .strings table carries the web values verbatim incl. — and ’).
+  - canStart = numericVehicleId > 0; Ask-Helix label flips to "Helix is thinking…" while streaming;
+    disabled = !canStart || streaming.
+  - AiOutputPanel branches (empty / thinking / prose / "Helix error: {message}") + P4 "never a
+    blank box" friendly hints.
+  - States rendered: gated / loading / error(gate) / ready × (idle / thinking / prose / stream-error
+    / no-vehicle) × connectivity (live / stale / offline) with stale one-shot auto-refresh.
+  - view.opened telemetry (surface slug "AIVampireDrainExplanation"), deferred past the gate.
+  - Accessibility: header trait, badge/button/output VoiceOver labels + hint, Dynamic Type fonts,
+    Reduce-Motion respected (thinking dots/symbol pulse), iOS 18 / macOS 15 minimums.
+
+----------------------------------------------------------------------------------------------------
+GATE RESULTS
+----------------------------------------------------------------------------------------------------
+xcodegen generate ......................................................... OK (surface present: 60 pbxproj refs)
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+                                                                            IOS_EXIT=65   (BUILD FAILED)
+xcodebuild -scheme TeslaSync-macOS build test ............................. MAC_EXIT=65   (BUILD FAILED)
+swiftlint --strict ........................................................ LINT_EXIT=0   (0 violations / 3539 files)
+swiftformat --lint apps/apple ............................................. FORMAT_EXIT=0 (0/3769 require formatting)
+check-placeholders.ps1 -Path .../AIVampireDrainExplanation ................ PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+
+Surface-scoped re-verification (just the 10 new files):
+  swiftformat --lint <10 files> ........ 0/9 require formatting
+  swiftlint  --strict <9 swift files> .. 0 violations, 0 serious
+  grep (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|fatalError("unimpl|
+       fatalError("not|Text("TODO|EmptyView() // placeholder) over the 10 files .. 0 matches
+
+----------------------------------------------------------------------------------------------------
+BUILD-GATE FAILURE ANALYSIS  (both failures are PRE-EXISTING / ENVIRONMENTAL and OUTSIDE this
+                              prompt's allowed file scope — this surface is uninvolved)
+----------------------------------------------------------------------------------------------------
+[iOS — IOS_EXIT=65] Duplicate PUBLIC top-level types in the shared TeslaSync app module.
+  The same domain types are declared in BOTH `TeslaSync/dashboard-widgets/*` and
+  `TeslaSync/feature-views/*` (both globbed into the one app target by project.yml), so the Swift
+  compiler reports "'<Type>' is ambiguous for type lookup", failing SwiftCompile of unrelated files
+  (YearlyTrendChart.*, globalShortcuts.*, helpers.*, selectedVehicle.*, StateTimelineWidget.*, …).
+  None of those are this surface's files.
+
+  Colliding definitions (file:line) — all committed, all `public`, no #if guards:
+    RecentDrivesConnection : dashboard-widgets/RecentDrivesListWidget.Model.swift:54
+                             feature-views/RecentDrivesSection.Adapter.swift:49
+    RecentDrivesLoadStatus : dashboard-widgets/RecentDrivesListWidget.Model.swift:45
+                             feature-views/RecentDrivesSection.Adapter.swift:41
+    RecentDrivesUpdate     : dashboard-widgets/RecentDrivesListWidget.Model.swift:137
+                             feature-views/RecentDrivesSection.Seams.swift:90
+    RecentDrivesModel      : dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+                             feature-views/RecentDrivesSection.Model.swift:23
+    StateTimelineConnection: dashboard-widgets/StateTimelineWidget.Model.swift:52
+                             feature-views/StateTimeline.Adapter.swift:125
+    StateTimelineLoadStatus: dashboard-widgets/StateTimelineWidget.Model.swift:44
+                             feature-views/StateTimeline.Adapter.swift:117
+    StateTimelineUpdate    : dashboard-widgets/StateTimelineWidget.Model.swift:61
+                             feature-views/StateTimeline.Source.swift:44
+    StateTimelineModel     : dashboard-widgets/StateTimelineWidget.Model.swift:104
+                             feature-views/StateTimeline.Model.swift:64
+
+  PROOF it is independent of this surface (no skip-and-assume):
+    1. `git status` shows the ONLY new files in the tree are the 10 AIVampireDrainExplanation.* files.
+    2. The 10 files were MOVED OUT, the project REGENERATED (0 AIVampireDrainExplanation refs in the
+       .pbxproj), and the baseline rebuilt:
+         xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+       → ** BUILD FAILED ** (exit 65) with the IDENTICAL StateTimeline*/RecentDrives* ambiguity, e.g.
+         StateTimelineWidget.Previews.swift:46: 'StateTimelineUpdate' is ambiguous for type lookup
+           note: feature-views/StateTimeline.Source.swift:44 / dashboard-widgets/StateTimelineWidget.Model.swift:61
+         StateTimelineWidget.swift:42: 'StateTimelineModel' is ambiguous for type lookup
+           note: feature-views/StateTimeline.Model.swift:64 / dashboard-widgets/StateTimelineWidget.Model.swift:104
+    3. This surface's types are uniquely prefixed and collide with nothing.
+  → The shared baseline does not compile regardless of this surface. The 10 files were then restored
+    and the project regenerated.
+
+[macOS — MAC_EXIT=65] Code-signing capability gap on this runner.
+  ** BUILD FAILED ** before reaching compilation, with:
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  project.yml sets DEVELOPMENT_TEAM="" + ENABLE_HARDENED_RUNTIME=YES + CODE_SIGN_ENTITLEMENTS; no
+  development signing identity/team is provisioned on this runner, so the macOS app/extension cannot
+  be signed. This is a runner platform-capability gap (the prompt's sanctioned BLOCKED trigger). It
+  is configured in project.yml — outside this prompt's allowed files — and even if editable would
+  still require a real certificate. (After signing it would additionally hit the same duplicate-type
+  collision above.)
+
+----------------------------------------------------------------------------------------------------
+SCOPE
+----------------------------------------------------------------------------------------------------
+This prompt's Allowed files: apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.* + this
+log. The RecentDrives*/StateTimeline* collisions live in the RecentDrivesSection /
+RecentDrivesListWidget / StateTimeline / StateTimelineWidget surfaces (each its own prompt), and the
+macOS signing lives in project.yml — all out of scope. Fixing them here would violate the allowed-file
+boundary and risk clobbering parallel surface work (covenant rules 2/6/7 + "Out of Scope"). No commit
+is made because the build gate is red and not within this surface's power to green (covenant rule 8,
+"No commit on red"). The 10 surface files + this log are left in the working tree for inspection.
+
+EXIT=65
+STATUS=BLOCKED

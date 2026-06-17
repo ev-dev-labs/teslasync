@@ -1,0 +1,203 @@
+=== P4-APPLE · P7 · page:admin/System (SwiftUI / HIG) ===
+started: 2026-06-12T13:47:00-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat + xcodegen + pwsh present
+web source: web/src/features/admin/pages/SystemPage.tsx   (web const SYSTEM_PAGE_PATH = '/admin/system'; manifest route = (unrouted))
+parity unit: page:admin/System  (manifest PARITY_REQUIRED=2 — strings: system.page.subtitle, system.page.title)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`. That
+path does NOT exist in this repo and is NOT a project.yml source group. The repo's real,
+compiled canonical admin-page home is `apps/apple/Sources/Features/Admin/**` — where every
+shipped sibling P7 admin page lives (ApiPlayground, DiskForecast, FleetTelemetryCoverage,
+LiveSignalInspector), and which `Sources` already lists as a project.yml source path. The
+page therefore ships at `apps/apple/Sources/Features/Admin/**`, the faithful equivalent of
+the prompt's `Features/Admin`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the identical
+reconciliation every sibling admin-page log recorded; it is the only deviation from the
+literal prompt path.
+
+ROUTE HOSTING: the web route is the admin sub-path `/admin/system` (web SYSTEM_PAGE_PATH).
+A top-level `.system` AppRoute already exists (System group, `server.rack` icon, canonical
+`/system` segment, `route.system` title) but was unregistered (rendered the pending state).
+`SystemRouteRegistration` hosts `SystemPage` on `.system`, and `AppRouteParser` gains the
+alias `/admin/system → .system` (mirroring the sibling `/admin/live-signals → .liveSignals`
+and `/admin/telemetry/coverage → .fleetTelemetryCoverage` aliases), so the page is reachable
+via the System-group sidebar entry and any `/admin/system` deep link. Recorded per covenant #9.
+
+PARITY SCOPE NOTE (no scope narrowing — covenant #2): the web `SystemPage` is a pure
+composition — `PageContainer` (title + subtitle) wrapping a `FadeIn` + `Stack` (`gap-6`) of
+`<RateLimitStatusPanel />` and `<QueueStatusPanel />`. Those two panels are SEPARATE shipped
+P3 component parity units (apps/apple/TeslaSync/feature-views/RateLimitStatusPanel*.swift,
+QueueStatusPanel*.swift); the manifest record for THIS page unit declares no panels/charts/
+maps/data-sources of its own and lists exactly the 2 page strings. The native SystemPage
+reproduces the full web composition 1:1 — header (title+subtitle) + FadeIn + VStack(gap x2xl=
+24pt = web gap-6) of the two real panels in the same order — so nothing is narrowed; each
+panel keeps its own loading/empty/error/data + stale/offline states from its P3 unit.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/SystemPage.swift              ( 66 LOC) SwiftUI view: ScrollView + header(TSPageTitle(model.title) + Text(model.subtitle)) + TSFadeIn{ VStack gap x2xl: RateLimitStatusPanel(model:) ; QueueStatusPanel(model:) }; Color.TS.bg; adaptive (panels reflow, page scrolls on macOS/iPad/iPhone); a11y combine on header; #if DEBUG #Preview
+?? apps/apple/Sources/Features/Admin/SystemPageModel.swift         (174 LOC) @MainActor @Observable model: title/subtitle LocalizedStringKey (default = web keys via SystemPageStrings) + child RateLimitModel + QueueStatusModel; designated init(rateLimit:queues:title:subtitle:) for live/test injection (ADR-004) + convenience init() seeded via SystemPageSamples (representative budgets so the surface renders populated out of the box — sibling SampleDiskForecastDataSource convention); SystemPageStrings (raw web keys) + SystemPageSamples (rate-limit + queue seeds)
+?? apps/apple/Sources/Features/Admin/SystemRouteRegistration.swift ( 25 LOC) registers .system -> SystemPage (model built on MainActor + captured; mirrors DiskForecast/FleetTelemetryCoverage route registrations)
+?? apps/apple/Tests/Unit/Features/Admin/SystemPageModelTests.swift ( 83 LOC) XCTest: parity string keys == web keys; default title/subtitle; holds both child models; child models loading until started; seeded models -> .data on start + rows/workers non-empty; seed well-formedness (unique ids, positive limits, non-empty names)
+ M apps/apple/Sources/App/AppRouteParser.swift          +1 alias  "/admin/system": .system
+ M apps/apple/Sources/TeslaSyncApp.swift                wraps SystemRouteRegistration.registry(base: LiveSignalInspectorRouteRegistration.registry(...)) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings        +2 keys (system.page.title, system.page.subtitle) — web key names + web English defaults verbatim; JSON validated (8215 total keys)
+ M apps/parity/apple-ledger.json                        +2 rows (apple-macos, apple-ios) for page:admin/System, covered 2/2
+
+(generated TeslaSync.xcodeproj + staged Frameworks/Shared.xcframework are git-ignored — confirmed via git check-ignore — and NOT committed.)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (scheme pre-action, run standalone) ---
+# apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 7m 44s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; System{Page,PageModel,RouteRegistration} referenced 24x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 6 in-scope swift files) ---
+0/6 files require formatting.
+FORMAT_EXIT=0
+(also whole Sources/Features/Admin dir: 0/19 files require formatting — FORMAT_DIR_EXIT=0)
+
+--- swiftlint --strict (my 6 in-scope swift files, repo .swiftlint.yml) ---
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+(whole-repo config lint surfaces 3 PRE-EXISTING, OUT-OF-SCOPE violations — see note below; ZERO in my files)
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in shipped code; Tests/Unit/Features/Admin also COUNT=0/EXIT=0]
+
+--- Isolated swiftc -typecheck of my view+model+registration against the REAL P2 tokens + P3 components + BOTH panels (Swift 6 strict concurrency) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/*.swift Sources/Components/DataDisplay/*.swift(-UnitFormatters) Sources/Components/Feedback/*.swift Sources/Components/Motion/*.swift \
+#   Sources/App/{AppRoute,RouteHostRegistry}.swift TeslaSync/feature-views/{RateLimitStatusPanel,QueueStatusPanel}*.swift(-Tests) \
+#   Sources/Features/Admin/System{Page,PageModel,RouteRegistration}.swift   (44 files)
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0
+# Compiles SystemPage/SystemPageModel/SystemRouteRegistration against the ACTUAL
+# TSGlassPanel/TSPageTitle/TSText/TSFadeIn/TSMetricBar/TSBadge/TSButton/TSTone/TSSpinner/
+# TSEmptyState/TSErrorDisplay + Color.TS/Font.TS/TSSpacing/TSRadius + AppRoute/AppRouteHostRegistry
+# + the real RateLimitStatusPanel(model:)/QueueStatusPanel(model:) P3 components — authoritative
+# proof the API usage is correct on BOTH idioms (ADR-002/006). (UnitFormatters.swift excluded:
+# it couples to the KMP SharedFacade UnitPreferences and is unused by this surface.)
+
+--- Executed model harness (the REAL SystemPageModel.swift, Swift 6 strict-concurrency macOS executable) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   <same 44-file closure, -Previews> /tmp/SystemPageHarness.swift -o sysharness   (HARNESS_BUILD_EXIT=0)
+16 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  title key == system.page.title; subtitle key == system.page.subtitle;
+  seeded rateLimit/queues initial == .loading -> .data on start + rows/workers non-empty;
+  injected child models stay .loading until driven; rate-limit + queue seeds non-empty,
+  ids unique, scopes have positive limits + non-empty names, workers have non-empty names
+HARNESS_RUN_EXIT=0   (temp harness binary + source removed after run)
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [RED by ONE PRE-EXISTING, OUT-OF-SCOPE error — see note below; ZERO errors/warnings in any of my files]
+My files WERE compiled in this build: a real "SwiftCompile … SystemPage.swift, SystemPageModel.swift, … SystemRouteRegistration.swift …"
+batch ran (+ TeslaSyncApp.swift x4) and produced 0 diagnostics. grep of the full build log for my files -> ZERO error:/warning: lines.
+TEST_EXIT=(not reached)  [the macOS/iOS test bundles host on the app target, blocked by the same out-of-scope error; the model is instead
+exercised by the executed harness above + SystemPageModelTests.swift, ready to run once the integration build is green at P99]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+1) Full xcodebuild app target does not compile at this HEAD due to a defect in a sibling
+   surface OUTSIDE this artifact's allowed files. The build halted on exactly one diagnostic:
+     TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+         error: escaping closure captures non-escaping parameter 'content'
+   This is the SAME systematic `glass(@ViewBuilder _ content: () -> some View)` bug class the
+   predecessor admin-page logs documented across the generated shared-surfaces files. Grep of
+   the full build log: total `error:` lines = 1; unique message = "escaping closure captures
+   non-escaping parameter 'content'"; unique erroring file = shared-surfaces/AISuggestNewGeofences.swift.
+   NONE are in my files. My files' correctness is instead proven by the isolated Swift 6
+   type-check (0/0 on macOS+iOS) and the executed model harness (16/16).
+2) Whole-repo `swiftlint --strict` (the config's `included` scope, 4871 files) surfaces 3
+   PRE-EXISTING serious violations, all in an untouched widget test:
+     TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52-54 identifier_name (vars a/b/c)
+   ZERO are in my files (my 6-file targeted lint = 0 violations).
+Both REDs are out-of-scope and DEFERRED to their owners / the P99 integration gate; neither was
+recoloured green and neither was committed-fixed.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+================================================================================
+[x] string — system.page.subtitle   SystemPageStrings.subtitle = "system.page.subtitle" -> SystemPageModel.subtitle (default LocalizedStringKey) -> SystemPage.swift `header` renders Text(model.subtitle); catalog "system.page.subtitle" = "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment." (web t() default verbatim)
+[x] string — system.page.title      SystemPageStrings.title = "system.page.title" -> SystemPageModel.title (default LocalizedStringKey) -> SystemPage.swift `header` renders TSPageTitle(model.title); catalog "system.page.title" = "System budgets" (web t() default verbatim)
+PARITY_COVERED=2
+
+Both parity strings render from the bound @Observable SystemPageModel and resolve from
+Localizable.xcstrings with the web key names preserved verbatim. Beyond the 2 required strings,
+the page reproduces the FULL web composition: the PageContainer chrome (title+subtitle) over a
+FadeIn + Stack of the two shipped P3 panels (RateLimitStatusPanel + QueueStatusPanel) in web
+order, each retaining its own loading/empty/error/data + stale/offline states (their own P3
+units). No networking lives in the view (ADR-004); production composition injects the live,
+signal-store-backed RateLimitSource/QueueStatusSource through SystemPageModel(rateLimit:queues:).
+SI converters: N/A — rate-limit counters + queue depths/counts are unit-agnostic control-plane
+values, formatted at the display boundary inside each panel. Live-SSE staleness: the panels
+already carry the P4 stale/offline overlays their auto-refresh hooks imply (ADR-013).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The two REDs (full xcodebuild=65;
+                       whole-repo swiftlint=3) are PRE-EXISTING + OUT-OF-SCOPE, labelled as such, never recoloured.
+ 2 No scope narrowing: the full web composition is reproduced — header(title+subtitle) + FadeIn +
+                       Stack of BOTH real P3 panels in web order; the 2 manifest strings are covered.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title/subtitle + FadeIn + Stack +
+                       RateLimitStatusPanel + QueueStatusPanel composition all reproduced 1:1.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code; the
+                       seeded sources are a representative default (sibling SampleDiskForecast convention), not a stub.
+ 5 No parity shortcuts: 2 strings bind through the @Observable model + resolve from the catalog with web
+                       key names verbatim; both child panels render with their own complete state machines.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, shared-surfaces, widget-primitives, project.yml,
+                       or other owners' files. Generated TeslaSync.xcodeproj is git-ignored (confirmed) + uncommitted.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/6, dir 0/19), swiftlint --strict
+                       (0/6 in-scope), placeholder(0), isolated type-check macOS(0/0)+iOS(0/0), model harness(16/16).
+                       Both REDs are out-of-scope + DEFERRED to their owners / the P99 integration gate.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + .system route-hosting reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI SystemPage shipped at parity with the web source: a pure
+@Observable state holder (ADR-004 — no networking in the view) that carries the two web parity
+strings (title + subtitle) and composes the two shipped P3 panel components — RateLimitStatusPanel
+and QueueStatusPanel — in the same order, data, and grouping as the web `FadeIn` + `Stack`, so the
+operator sees the throttle budgets + worker-queue health exactly as on the web. The page reproduces
+the web PageContainer chrome (title/subtitle), uses the P2 tokens + P3 materials (no hand-rolled
+glass), is adaptive across macOS/iPad/iPhone (panels reflow, page scrolls), and resolves every
+visible string from Localizable.xcstrings with the web key names (2 keys added, web English defaults
+verbatim). It is reachable via the existing System-group sidebar `.system` route + a new
+`/admin/system` deep-link alias. Verified on BOTH idioms by isolated Swift 6 strict-concurrency
+type-checks (0/0 macOS + iOS) and an executed model harness (16/16); my files also compiled clean
+inside the full xcodebuild app target (zero in-scope diagnostics). The full xcodebuild scheme is RED
+ONLY due to one pre-existing, out-of-scope shared-surfaces error (forbidden to commit-fix), and the
+whole-repo strict lint shows 3 pre-existing out-of-scope violations in an untouched widget test —
+neither in any of my files. apple-ledger rows for page:admin/System set covered 2/2 on both targets.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin apps/apple/Tests/Unit/Features/Admin \
+          apps/apple/Sources/App/AppRouteParser.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-SystemPage.log
+  git commit -m "feat(apps/apple): SystemPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

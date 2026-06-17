@@ -1,0 +1,196 @@
+# p4-apple · P7 · page:charging/TeslaChargingSessionsMap — SwiftUI / HIG — execution log
+
+Artifact: native SwiftUI parity of web `web/src/features/charging/pages/TeslaChargingSessionsMap.tsx`
+(route: unrouted — rendered with navigation/local-state sessions). Target(s): apple
+(apple-macos + apple-ios, one adaptive SwiftUI layer). Prompt: p4-apple/P7/page:charging/
+TeslaChargingSessionsMap. Delegation: FORBIDDEN (implemented + verified directly).
+
+================================================================================
+PATH NOTE (no silent drift)
+================================================================================
+The generated prompt lists the output under `apps/apple/TeslaSync/Features/Charging/**`.
+That directory is NOT a configured source root in the XcodeGen spec (`apps/apple/project.yml`),
+so a file placed there would never compile into either app target — the same reconciliation the
+sibling `page:charging/ChargingDetail` P7 log records. The real, build-wired home for this parity
+unit is the surface tree `apps/apple/TeslaSync/feature-views/**` (a configured `sources:` path for
+BOTH the iOS `TeslaSync` and `TeslaSync-macOS` targets), where the page already lives — authored by
+the predecessor P4 feature-view prompt 0120 as `TeslaChargingSessionsMap.*`. This P7 page prompt
+therefore VERIFIES that the existing build-wired implementation meets the P7 `=== PARITY ===`
+contract (7 items), runs the full apple gate against it (placeholder + macOS build + iOS build +
+swiftlint + swiftformat + test), independently verifies its test logic, and sets the apple ledger
+rows. No duplicate file was created under `TeslaSync/Features/Charging` — doing so would add a
+non-compiling duplicate at a non-source-root path and collide on every `TeslaChargingSessionsMap*`
+type name. `git status` confirms the page sources are already committed + unmodified; the only
+working-tree changes are the ledger rows + this log.
+
+================================================================================
+FILES (all under apps/apple/TeslaSync/feature-views/ — already committed, build-wired)
+================================================================================
+TeslaChargingSessionsMap.swift            -- root View: phase switch (loading/error/empty/loaded),
+                                             loaded MapKit canvas, top overlays (freshness chip +
+                                             marker callout), plotted-count chip, a11y wiring
+TeslaChargingSessionsMap.Views.swift      -- MapKit canvas (web MapContainer + MapTileLayer +
+                                             MarkerCluster), marker pin, count chip, callout card
+TeslaChargingSessionsMap.States.swift     -- freshness chip, hard-error (web QueryError), empty
+                                             (ContentUnavailableView / web EmptyState), skeleton
+TeslaChargingSessionsMap.Model.swift      -- @Observable @MainActor model + source seam (P1/S8) +
+                                             surface identity (P1/S11) + i18n facade (P1/S10)
+TeslaChargingSessionsMap.Adapter.swift    -- Foundation domain core: numeric guard, session record,
+                                             derived marker (web clusterPoints[i]), charger display
+TeslaChargingSessionsMap.Projection.swift -- pure projection: markers (web clusterPoints) + center
+                                             memo (mean coord, SF default) — Equatable
+TeslaChargingSessionsMap.Labels.swift     -- pure label/VoiceOver builders + {{token}} interp +
+                                             callout display model (web popupHtml)
+TeslaChargingSessionsMap.Formatting.swift -- display-boundary formatters (currency / Wh→kWh / date)
+                                             + P1/S11 view.opened telemetry sink
+TeslaChargingSessionsMap.Previews.swift   -- SwiftUI previews (loaded / empty / error / stale)
+TeslaChargingSessionsMap.strings          -- per-surface i18n table "TeslaChargingSessionsMap"
+                                             (web tesla_sessions.* keys + reproduced/native chrome)
+TeslaChargingSessionsMap.Tests.swift      -- XCTest: adapter/projection/formatting/labels/callout
+TeslaChargingSessionsMap.ModelTests.swift -- XCTest: model phase resolution / telemetry / camera-fit
+
+Feature LOC (12 files): 1804  (web source: 101 lines -> faithful native decomposition; the page is a
+single Leaflet map, expanded into HIG-native model + states + adapter + projection + tests).
+
+================================================================================
+ARCHITECTURE / PARITY NOTES
+================================================================================
+* Data binds through `@Observable TeslaChargingSessionsMapModel` (ADR-004 — no networking in the
+  view). The web component takes a `sessions: TeslaChargingSession[]` prop and renders from local
+  state; the native model is driven by a `TeslaChargingSessionsMapSource` seam (P1/S8) over the
+  charging slice (previews/tests use the in-memory source). Manifest declares NO API data sources.
+* The map uses the P3 native MapKit `Map` wrapper only (never a WKWebView). Web Leaflet
+  `MapContainer`+`MapTileLayer` -> `Map(position:).mapStyle(.standard(...))`; web `MarkerCluster`
+  point -> `Annotation` + brand-accent bolt pin + plotted-count chip; web Leaflet popup / `popupHtml`
+  -> a native callout card built from the pure `TeslaChargingSessionCalloutDisplay`.
+* Web `center` memo (mean of `lat ?? 0`/`lng ?? 0`, SF `{37.77,-122.42}` default) and `clusterPoints`
+  filter (`typeof === 'number' && !Number.isNaN`) are reproduced exactly in `Projection` /`Adapter`,
+  covered by unit tests. The camera frames every plotted marker via the shared `TSGeo.boundingRegion`,
+  falling back to the `center` memo at a zoom-5-equivalent continental span.
+* Units: energy stored SI (Wh) and converted at the display boundary only — web
+  `fmtNumber(convertEnergyFromSI(wh,'kWh'),1)` -> `formatEnergyKwh(wattHours:)` (`wh/1000`, 1 dp).
+  No non-SI stored/computed (P1/S5, ADR-005).
+* Adaptive macOS + iOS (ADR-002/006): one SwiftUI layer; `.regularMaterial`/`.ultraThinMaterial`
+  glass (ADR-005), Dynamic Type, light/dark, VoiceOver labels on the map (`role=application` parity),
+  pins, count chip and callout; ≥44pt tap targets.
+* Three+ data states for the (single, local) data source: loading -> redacted skeleton; empty ->
+  ContentUnavailableView (web EmptyState); error -> retry surface (web QueryError); plus the loaded
+  map and a >2-min stale / offline freshness chip (ADR-013). Never a blank region (ADR-011).
+* i18n: every visible/spoken string resolves via the P1/S10 facade with the web English fallback
+  (ADR-014); the web `tesla_sessions.*` key NAMES are preserved verbatim. The 3 manifest keys also
+  pre-exist in the master `Localizable.xcstrings` under the web-bridge `translation.*` namespace.
+
+================================================================================
+GATE (apple triad: placeholder + build[macOS+iOS] + lint + format + test)
+================================================================================
+Host: macOS (Darwin), Xcode 26.5 (Build 17F42), swiftlint 0.63.3, swiftformat, xcodegen, OpenJDK 17.
+KMP shared core staged fresh as the static XCFramework (ADR-004) before the Apple builds:
+
+$ bash apps/apple/Scripts/build-shared-xcframework.sh
+  > Task :core:assembleSharedXCFramework
+  BUILD SUCCESSFUL in 16m 43s
+  ✓ Shared.xcframework staged (slices: ios-arm64, ios-arm64-simulator, macos-arm64)
+
+$ xcodegen generate   # apps/apple — regenerate TeslaSync.xcodeproj from project.yml
+  Created project at apps/apple/TeslaSync.xcodeproj
+
+--- placeholder scan (ADR-011) — scoped to this page's 12 files ---
+$ pwsh apps/tools/check-placeholders.ps1 -Path <this-page's files> -Language swift
+  PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  (a whole-tree scan reports only one UNRELATED, pre-existing TODO in
+   feature-views/TelemetryGrid.Tests.swift — outside this prompt's scope; this page's files: 0)
+
+--- macOS app build (entire app target incl. this page) ---
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS \
+      -destination platform=macOS,arch=arm64 -derivedDataPath build/DD-macos \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- build
+  ** BUILD SUCCEEDED **   (0 errors; real 30m59s)
+BUILD_EXIT(macos)=0
+
+--- iOS-Simulator app build (entire app target incl. this page) ---
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+      -destination "platform=iOS Simulator,name=iPhone 17 Pro" -derivedDataPath build/DD-ios3 \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- build
+  ** BUILD SUCCEEDED **   (0 errors; product: TeslaSync.app/TeslaSync = Mach-O 64-bit arm64)
+BUILD_EXIT(ios)=0
+  NOTE: this build was retried under heavy cross-slot memory contention (peak host free RAM ~63 MB
+  while a sibling slot spawned ~1.4k procs); the linked Mach-O product + clean incremental
+  ** BUILD SUCCEEDED ** (9.6s) confirm completion. CODE_SIGNING_ALLOWED=NO is the standard headless
+  flag (no dev signing identity on this host).
+
+--- swiftlint --strict (this page) ---
+$ swiftlint lint --strict --config apps/apple/.swiftlint.yml <this page's 11 .swift files>
+  Done linting! Found 0 violations, 0 serious.
+LINT_EXIT=0
+
+--- swiftformat --lint (this page) ---
+$ swiftformat --lint --config apps/apple/.swiftformat <this page's 11 .swift files>
+  0/11 files require formatting.
+SWIFTFORMAT_EXIT=0
+
+--- test (shared XCTest bundle) ---
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS \
+      -destination platform=macOS,arch=arm64 -derivedDataPath build/DD-macos \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- build-for-testing
+  ** BUILD FAILED **
+TEST_EXIT=65  (pre-existing, out-of-scope — see below)
+
+  The shared XCTest bundle does not compile under this Xcode 26.5 / Swift 6 strict-concurrency
+  toolchain because of PRE-EXISTING main-actor isolation errors in ONE unrelated test file:
+    Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10  main actor-isolated default value
+        in a nonisolated context
+    Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:21  main actor-isolated static property
+        'zeroTotals' cannot be accessed from a nonisolated context
+  `git status` proves this file is UNMODIFIED by this prompt (committed earlier in 4f6bcb56e
+  "feat(apps/apple): VehicleCostPage at web parity (P7 admin)") and it is OUTSIDE this prompt's
+  allowed-files scope (apps/apple/TeslaSync/Features/Charging/**). 0 of the bundle's compile errors
+  reference TeslaChargingSessionsMap; this page's own test files type-check. The whole bundle must
+  compile before any single class can run, so this unrelated file blocks my test class too. This is
+  the same pre-existing shared-test-bundle limitation the sibling Powershare/ChargingDetail P7 logs
+  record, matching the CI-deferred posture in apps/macos-pending-verifications.md. I did NOT edit the
+  unrelated file (scope + drift contract).
+
+  Self-verification of THIS prompt's test logic (independent of the broken bundle):
+    A standalone Swift program compiled with `swiftc -O` against the REAL Foundation-only source
+    files (Adapter/Projection/Labels/Formatting) ran the same 53 assertions the XCTest suite makes
+    (numeric guard, charger display, record/marker derivation, web `center` mean + `clusterPoints`
+    filter, currency/number, Wh→kWh, datetime, mapLabel/unknown/markerLabel + interpolation,
+    energy/count templates, populated + bare callout/popupHtml branches):
+        COMPILE_EXIT=0   ->   ALL LOGIC CHECKS PASSED (53/53)   ->   RUN_EXIT=0
+    The model/derivations/format also compile + type-check inside the real app module
+    (BUILD SUCCEEDED on both idioms above).
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=7
+- [x] **map** — MapContainer  → `Map(position: $camera) { … }` in `TeslaChargingSessionsMapCanvas.body` (TeslaChargingSessionsMap.Views.swift:44)
+- [x] **map** — MapTileLayer  → `.mapStyle(.standard(pointsOfInterest: .excludingAll))` on the `Map` in `TeslaChargingSessionsMapCanvas.body` (TeslaChargingSessionsMap.Views.swift:58)
+- [x] **map** — MarkerCluster  → `ForEach(projection.markers){ Annotation(…){ TeslaChargingSessionsMapMarkerPin } }` + `TeslaChargingSessionsMapCountChip` (web cluster point + count badge) (TeslaChargingSessionsMap.Views.swift:45-56,84,106); points = `Projection.markers`/`clusterPoints` (TeslaChargingSessionsMap.Projection.swift:56)
+- [x] **state** — empty data state  → `TeslaChargingSessionsMapEmptyState` (`ContentUnavailableView`, web EmptyState) (TeslaChargingSessionsMap.States.swift:107), reached via `.empty` phase (TeslaChargingSessionsMap.swift:59) from `Model.resolvePhase` (TeslaChargingSessionsMap.Model.swift:176)
+- [x] **string** — tesla_sessions.mapLabel  → `TeslaChargingSessionsMapLabels.mapLabel(localize:)` (TeslaChargingSessionsMap.Labels.swift:34) consumed as the map `.accessibilityLabel` (TeslaChargingSessionsMap.swift:87); key in TeslaChargingSessionsMap.strings:21
+- [x] **string** — tesla_sessions.markerLabel  → `TeslaChargingSessionsMapLabels.markerAccessibilityLabel(siteName:localize:)` ({{name}} interp) (TeslaChargingSessionsMap.Labels.swift:58) consumed as each marker's `.accessibilityLabel` (TeslaChargingSessionsMap.swift:127 / Views.swift:53); key in TeslaChargingSessionsMap.strings:20
+- [x] **string** — tesla_sessions.unknown  → `TeslaChargingSessionsMapLabels.unknownSite(localize:)` + `siteName(_:localize:)` falsy-name fallback (TeslaChargingSessionsMap.Labels.swift:39,46); key in TeslaChargingSessionsMap.strings:19
+
+PARITY_COVERED=7
+
+================================================================================
+VERDICT
+================================================================================
+Implementation COMPLETE and parity-covered 7/7. The build-wired native page
+(apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap.*) renders all three map parity items
+(MapContainer/MapTileLayer/MarkerCluster) from the bound @Observable model, implements the empty
+state (plus loading/error/loaded/stale), and resolves all three web strings (mapLabel/markerLabel/
+unknown) via the i18n facade with the web key names + English fallbacks — zero hardcoded literals.
+macOS + iOS app builds SUCCEEDED (0 errors, both idioms), swiftlint --strict clean (0 violations),
+swiftformat --lint clean (0/11), placeholder scan clean (0 for this page). The only non-green gate is
+the SHARED XCTest bundle, blocked by a PRE-EXISTING, out-of-scope Swift 6 isolation defect in
+Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift (unmodified by this prompt); this page's own
+test logic is independently verified green (53/53, real swiftc compile + run). Per the parity-ledger
+DoD (parity coverage + data states + no placeholders, both idioms build) the apple-macos + apple-ios
+rows for page:charging/TeslaChargingSessionsMap are set covered/done; the pre-existing shared-test-
+bundle compile defect is recorded here verbatim for the program-level CI gate.
+
+EXIT=0
+STATUS=DONE

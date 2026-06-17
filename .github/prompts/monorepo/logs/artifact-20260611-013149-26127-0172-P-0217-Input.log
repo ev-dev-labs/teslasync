@@ -1,0 +1,124 @@
+=== P4 Shared surface 0217 Input (Apple) ===
+Date: 2026-06-12
+Host: macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat (Homebrew)
+Surface: apps/apple/TeslaSync/shared-surfaces/Input.*  (parity of web components/ui/Input.tsx)
+
+----------------------------------------------------------------------------------------------------
+SUMMARY
+----------------------------------------------------------------------------------------------------
+The Input surface itself is COMPLETE and independently VERIFIED (builds clean, 41 unit tests pass,
+0 lint, 0 format, 0 placeholder). The literal full-scheme gate (xcodebuild build test) is BLOCKED by
+TWO causes that are OUTSIDE this prompt's allowed file scope (Input.* + this log) and unrelated to the
+Input surface:
+  (1) Pre-existing compile errors in out-of-scope AI* sibling surfaces (a systemic
+      "escaping closure captures non-escaping parameter 'content'" bug shared by several files,
+      each owned by its own prompt — see "Out of Scope" in the prompt).
+  (2) macOS app code-signing: the macOS targets carry entitlements (hardened runtime / sandbox) that
+      require a development certificate; this runner has DEVELOPMENT_TEAM="" / no signing identity
+      (platform-capability limitation).
+ZERO errors originate in any Input.* file (verified across both the iOS and macOS app builds).
+
+====================================================================================================
+GATE STEPS (as written in the prompt) — actual results
+====================================================================================================
+
+--- [1] iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+Prereq OK: KMP Shared.xcframework assembled + staged (gradle :core:assembleSharedXCFramework BUILD
+SUCCESSFUL in 8m29s; staged to apps/apple/Frameworks/Shared.xcframework).
+Result: BUILD FAILED. The whole-app Swift compile stops on a PRE-EXISTING, out-of-scope sibling:
+  apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure
+    captures non-escaping parameter 'content'
+Input.* files in this build: 0 errors, 0 warnings.
+IOS_EXIT=65
+
+--- [2a] macOS: xcodebuild -scheme TeslaSync-macOS build test   (as written)
+Result: BUILD FAILED at code-signing validation BEFORE compilation (runner has no dev certificate):
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+MAC_EXIT=65   (platform-capability: signing identity unavailable on this runner)
+
+--- [2b] macOS compile re-check: same command + CODE_SIGNING_ALLOWED=NO (to reach the Swift compile)
+Result: BUILD FAILED. With signing bypassed the macOS target compiles and stops on the SAME pre-existing
+bug pattern in a different out-of-scope sibling:
+  apps/apple/TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error:
+    escaping closure captures non-escaping parameter 'content'
+Input.* files in this build: 0 errors, 0 warnings.
+MAC_COMPILE_EXIT=65
+
+--- [3] swiftlint --strict
+Result: Done linting! Found 0 violations, 0 serious in 4684 files.
+LINT_EXIT=0
+
+--- [4] swiftformat --lint apps/apple
+Result: 0/4982 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--- [5] check-placeholders.ps1 (scoped to the Input surface files)
+Note: the prompt's literal `-Path .../Input` resolves to a non-existent path (files are Input.*), which
+the checker treats as a clean no-op. Ran against the actual Input.* files instead for real coverage:
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+====================================================================================================
+SUPPLEMENTARY VERIFICATION OF THE INPUT SURFACE (proves the surface is correct + complete)
+====================================================================================================
+
+--- [A] Isolated type-check against the real iOS SDK (Swift 6, -D DEBUG)
+Compiled Input.{Adapter,Model,swift,Views,Previews} + the DesignTokens/TSDesign/Motion helpers:
+  TYPECHECK_RC=0
+Combined with the test files (Input.{AdapterTests,Tests}) as one module:
+  TESTS_TYPECHECK_RC=0
+
+--- [B] Isolated SwiftPM harness — REAL unit-test run (Swift 6 strict concurrency, macOS host)
+Package: Input.{Adapter,Model,swift,Views,Previews} as the library; Input.{AdapterTests,Tests} as the
+test target; DesignTokens/TSDesign/Motion as the only shared deps (the exact deps the surface uses).
+  swift test ->  Executed 41 tests, with 0 failures (0 unexpected)
+  SWIFT_TEST_RC=0
+Suites: InputAdapterTests, InputResolveIDTests, InputMessageTests, InputDescribedByTests,
+        InputBorderRoleTests, InputLabelRowVisibilityTests, InputProjectionTests, InputValueTypeTests,
+        InputAccessibilityTests, InputModelTests, InputViewTests, InputStringsTests.
+
+====================================================================================================
+EVIDENCE THE BLOCKERS ARE PRE-EXISTING + OUT OF SCOPE (not caused by Input)
+====================================================================================================
+- git status: all Input.* files are NEW/untracked additions; AISuggestNewGeofences.swift and
+  AIGeofenceAwareAutomationSuggestions.swift are tracked baseline files NOT in this change.
+- The failing code is `private func glass(@ViewBuilder _ content: () -> some View)` passing a
+  non-escaping closure into TSGlassPanel — entirely self-contained to those AI* files, with no
+  reference to any Input symbol. The correct fix is `@escaping` IN THOSE files (each its own prompt).
+- The Input surface compiles + tests green in isolation (harness above), proving it has no compile
+  defect of its own.
+- Allowed files for THIS prompt: apps/apple/TeslaSync/shared-surfaces/Input.* + this log. The prompt's
+  "Out of Scope" explicitly excludes other surfaces ("each has its own prompt"), so the sibling bugs
+  are intentionally NOT fixed here.
+
+====================================================================================================
+ACCEPTANCE CRITERIA (surface scope)
+====================================================================================================
+[x] Surface renders every REAL state from the web source (label / required / help trigger / hint /
+    error-hides-hint / leading icon / trailing suffix / secure / disabled / sm,md,lg,auto sizes /
+    focus ring). The web <Input> is a pure presentational primitive with NO fetch, so it has no
+    loading/empty/stale/offline branch — reproducing such chrome would fabricate states the source
+    lacks (same precedent as Accordion 0203 + FormField 0154). Documented in Input.Adapter.swift.
+[x] Binds through the shared state-holder layer (InputModel, P1/S8); no direct HTTP from the view.
+[x] Every i18n key resolves through the P1/S10 facade (InputStrings); strings in Input.strings.
+    (web <Input> is anonymous; keys mirror the composed <Label> form.required + <HelpIcon>
+     a11y.helpFor / help.tooltip.iconLabel.)
+[x] Accessibility labels on every interactive element (field label folds the required word; help
+    trigger has a per-field "Help for {field}" label + help-text hint; error announced on appearance).
+[x] Tests: adapter unit tests + per-branch view-composition tests + a11y string tests + strings
+    facade tests (41 tests, all green in the isolated harness).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder checker = 0).
+[x] Telemetry: view.opened emitted once per instance with slug "Input" (P1/S11), verified by test.
+
+====================================================================================================
+DISPOSITION
+====================================================================================================
+Input surface: COMPLETE + VERIFIED (build green in isolation, 41/41 tests pass, lint/format/placeholder
+all green). Full-scheme iOS/macOS `build test` cannot reach EXIT=0 in this baseline because of the two
+out-of-scope blockers above (pre-existing sibling compile errors + macOS signing capability), neither of
+which is an Input.* file and neither of which this prompt is permitted to modify.
+
+EXIT=65
+STATUS=BLOCKED

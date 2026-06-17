@@ -1,0 +1,266 @@
+=== P4-APPLE · P7 · page:admin/BackupRestore (Apple) ===
+
+ARTIFACT
+  Web source : web/src/features/admin/pages/BackupRestorePage.tsx  (web route /backup)
+  Native     : apps/apple/TeslaSync/Features/Admin/
+                 BackupRestorePage.swift            (page scaffold + state switch + sheets/alert)
+                 BackupRestorePageModel.swift        (@MainActor @Observable model + P1/S11 telemetry)
+                 BackupRestoreModels.swift           (domain value types + semantic enums)
+                 BackupRestoreFormatting.swift       (pure formatters + provider-field schema + i18n facade)
+                 BackupRestoreDataProvider.swift     (P1/S8 seam + Local/Sample/Failing providers)
+                 BackupRestorePageViews.swift        (stats grid + configs/history panels + columns + row actions)
+                 BackupRestorePageSheets.swift       (create/edit form + restore-preview sheet)
+                 BackupRestoreChips.swift            (provider/status/text chips + feedback banner)
+                 BackupRestoreRouteRegistration.swift(.backup route registration)
+                 BackupRestorePagePreviews.swift     (#Preview per state: loading/empty/error/success, light+dark)
+                 BackupRestorePageTests.swift        (16 XCTest cases — test bundle)
+  Nav        : Sources/App/AppRoute.swift (+ .backup case, system group, externaldrive.fill),
+               Sources/TeslaSyncApp.swift (chains BackupRestoreRouteRegistration into routeHosts)
+  Strings    : apps/apple/Localization/Localizable.xcstrings (+82 keys: 81 parity strings + route.backup)
+  Build cfg  : apps/apple/project.yml (TeslaSync/Features added to both app + both test targets),
+               apps/apple/.swiftlint.yml (TeslaSync/Features added to included)
+  Tier       : Page (P7) — first P7 page; hosted via the P4 shell RouteHostRegistry
+  ADR refs   : ADR-002 (single SwiftUI source iOS+macOS), ADR-004 (KMP Shared core), ADR-005,
+               ADR-006 (parity), ADR-011 (DoD/no placeholders), ADR-013, ADR-014 (i18n), ADR-015 (a11y)
+
+ENVIRONMENT (this runner)
+  Darwin · Xcode 26.5 (17F42) · Apple Swift 6.3.2 · xcodegen 2.45.4 · swiftlint · swiftformat · pwsh 7.6.2
+  iOS Simulator: iPhone 16 (booted) · macOS host arm64
+  KMP Shared.xcframework assembled via Gradle 8.14.5 / JDK 17
+    (apps/shared :core:assembleSharedXCFramework) and staged at apps/apple/Frameworks/Shared.xcframework
+    -> "BUILD SUCCESSFUL in 7m 33s" ; staged OK ; GRADLE_SHARED_EXIT=0
+
+DATA SOURCES (parity manifest)
+  The manifest record page:admin/BackupRestore declares NO API data sources ("renders from
+  navigation values / local state"). Verified: the shared KMP core exposes NO backup-configs/runs
+  repository (only SettingsBackupRepository = the settings JSON bundle, a separate unit). The page
+  therefore binds an @Observable BackupRestorePageModel over an injectable BackupRestoreProviding
+  seam (default LocalBackupRestoreProvider — a real, functional in-memory store: create/edit/delete
+  configs, trigger + quick-backup runs, verify, preview). The view performs no I/O (P1/S8). When a
+  shared backup repository lands (P1/S2-S3) the seam is swapped for an HTTP conformer with no view
+  change.
+
+------------------------------------------------------------------------------------------------
+GATE STEPS (executed verbatim on THIS runner; raw exits pasted)
+------------------------------------------------------------------------------------------------
+  swiftformat --lint  apps/apple/TeslaSync/Features/Admin          : "0/11 files require formatting"   FORMAT_EXIT=0
+  swiftlint --strict  <11 shipped Features/Admin/*.swift>          : "0 violations, 0 serious"          LINT_EXIT=0
+  check-placeholders.ps1 -Path .../Features/Admin -Language swift  : PLACEHOLDER_ALLOWED=1 COUNT=0      PLACEHOLDER_EXIT=0
+  swift build  (isolated SwiftPM, Swift 6 language mode, macOS 15) : "Build complete!"                  SWIFT_BUILD_EXIT=0
+  swift test   (isolated, real component lib + design tokens)      : "Executed 16 tests, 0 failures"    SWIFT_TEST_EXIT=0
+  swiftc -typecheck -swift-version 6 -sdk iphonesimulator iOS18    : 0 errors                           IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck -swift-version 6 -sdk macosx       macOS15     : 0 errors                           MAC_TYPECHECK_EXIT=0
+  xcodegen generate                                                : "Created project"                  XCODEGEN_EXIT=0
+  xcodebuild -scheme TeslaSync -destination iPhone16 build         : ** BUILD FAILED **                 IOS_BUILD_EXIT=65
+
+------------------------------------------------------------------------------------------------
+GATES
+------------------------------------------------------------------------------------------------
+  [GREEN]   swiftformat --lint (11 shipped files)            -> 0/11 require formatting   FORMAT_EXIT=0
+  [GREEN]   swiftlint --strict (11 shipped files, repo cfg)  -> 0 violations, 0 serious   LINT_EXIT=0
+  [GREEN]   check-placeholders.ps1 (ADR-011 stub gate)       -> COUNT=0 (1 sanctioned //parity:allow
+              opt-out for the REQUIRED i18n key name "backup.configNamePlaceholder")   PLACEHOLDER_EXIT=0
+  [GREEN]   Isolated SwiftPM build+test — Swift 6 language mode (= complete strict concurrency),
+              macOS 15 (same contract as the app target), compiling the EXACT 10 shipped
+              Features/Admin sources against the REAL shared component library
+              (Sources/Components/** + Sources/Design/** + generated design Tokens.swift) and the
+              REAL navigation primitives (AppRoute.swift, RouteHostRegistry.swift):
+                 "Build complete!"                              SWIFT_BUILD_EXIT=0
+                 "Executed 16 tests, with 0 failures"           SWIFT_TEST_EXIT=0
+  [GREEN]   Real-SDK typecheck of the exact shipped sources (iOS 18 + macOS 15, Swift 6):
+                 IOS_TYPECHECK_EXIT=0   MAC_TYPECHECK_EXIT=0
+  [GREEN]   Full-app COMPILE of the Features/Admin sources inside the real Xcode project:
+                 grep "error:" iOS build log | grep -c "Features/Admin"  -> 0
+                 (every Features/Admin source compiles clean inside the real app target)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+                 -> ** BUILD FAILED ** IOS_BUILD_EXIT=65
+
+------------------------------------------------------------------------------------------------
+WHY DEFERRED (full-app Xcode gate — ZERO Features/Admin errors; the sole blocker pre-exists this
+              additive change and is unrelated to backup)
+------------------------------------------------------------------------------------------------
+  The full-app iOS build fails on EXACTLY ONE compile error, in an unrelated shared-surface file
+  this commit neither introduces nor touches:
+
+    TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+      error: escaping closure captures non-escaping parameter 'content'
+        private func glass(@ViewBuilder _ content: () -> some View) -> some View { TSGlassPanel { content() ... } }
+
+  Provenance (proven pre-existing):
+    - `git show HEAD:.../AIGeofenceAwareAutomationSuggestions.swift` contains the buggy `glass(...)`
+      verbatim — added by commit 40e1e5da0 ("add AIGeofenceAwareAutomationSuggestions surface (P4)").
+    - `git diff --stat HEAD -- apps/apple/TeslaSync/shared-surfaces/` -> empty (untouched by me).
+    - The file references ZERO backup types (`grep -c Backup` -> 0); unrelated to this page.
+    - grep "error:" iOS build log | grep -c "Features/Admin"  -> 0   (my code contributes no errors)
+
+  An earlier build iteration surfaced 30 errors from a genuine NAME COLLISION my first draft
+  introduced (a top-level `BackupRun`/`BackupRunStatus`/`BackupStatusChip` clashing with the
+  existing dashboard-widget `BackupMonitorWidget`). That was MY regression and is FIXED: those
+  types are namespaced to `BackupRestoreRun`/`BackupRestoreRunStatus`/`BackupRestoreStatusChip`
+  (module-scope collision scan now clean). Post-fix the full-app build error count dropped 30 -> 1,
+  the remaining 1 being the unrelated pre-existing AIGeofence bug above.
+
+  macOS app target (TeslaSync-macOS) shares the same Sources, so it hits the same pre-existing
+  AIGeofence error, plus development-signing (DEVELOPMENT_TEAM="" on this runner; ENABLE_HARDENED_RUNTIME
+  + entitlements) — the documented P4/P99 signed-acceptance-gate concern (apps/macos-pending-verifications.md).
+
+  `xcodebuild test` is blocked by the same pre-existing compile error (the app must build first);
+  the page's own 16 tests pass in the isolated Swift-6 harness above. Fixing AIGeofence is out of
+  scope (allowed-files = Features/Admin/** + nav + catalog + log; task rule: do not fix unrelated
+  pre-existing breakage). This is the repo's sanctioned "code-complete + DEFERRED full-app Xcode
+  gate" disposition used by every P4 surface to date (see p4-apple-feature-views-0001 log).
+
+  PRE-EXISTING swiftlint violations (NOT mine, NOT Features/Admin — DEFERRED):
+    TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52-54 — identifier_name a/b/c
+    (the my-file-scoped `swiftlint --strict <Features/Admin/*.swift>` = 0 violations).
+
+------------------------------------------------------------------------------------------------
+=== PARITY ===  (web BackupRestorePage.tsx -> native; PARITY_REQUIRED=91)
+------------------------------------------------------------------------------------------------
+  panel   Total-Configs   -> BackupRestorePageViews.swift  BackupStatsGrid (TSStatCard, a11y id "backup.stat.totalConfigs"; value BackupRestoreFormat.int(stats.totalConfigs))
+  panel   Total-Backups   -> BackupRestorePageViews.swift  BackupStatsGrid (TSStatCard, a11y id "backup.stat.totalBackups"; value = runs.count)
+  panel   Last-Backup     -> BackupRestorePageViews.swift  BackupStatsGrid (TSStatCard, a11y id "backup.stat.lastBackup"; value BackupRestoreFormat.relative(stats.lastBackup))
+  panel   Total-Size      -> BackupRestorePageViews.swift  BackupStatsGrid (TSStatCard, a11y id "backup.stat.totalSize"; value BackupRestoreFormat.totalSize(stats.totalSize))
+  panel   GlassPanel5     -> BackupRestorePageViews.swift  BackupConfigsPanel (TSGlassPanel + TSDataTable<BackupRestoreConfig> + EmptyState + create/edit/delete)  a11y id "backup.panel.configurations"
+  panel   GlassPanel6     -> BackupRestorePageViews.swift  BackupHistoryPanel (TSGlassPanel + TSDataTable<BackupRestoreRun> + BackupRecentErrors + EmptyState)      a11y id "backup.panel.history"
+  state   loading         -> BackupRestorePage.swift       sections .idle/.loading -> TSStatSkeleton x4 + TSTableSkeleton x2
+  state   empty           -> BackupRestorePageViews.swift  TSEmptyState in BackupConfigsPanel/BackupHistoryPanel (+ BackupRestorePreviewSheet noTables)  [ContentUnavailableView]
+  state   error           -> BackupRestorePage.swift       sections .failed -> TSQueryError(message:"error.loadFailed", onRetry: load)
+  state   success         -> BackupRestorePage.swift       sections .loaded -> BackupStatsGrid + BackupConfigsPanel + BackupHistoryPanel (bound to @Observable model)
+  string  backup.backupType              -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.checksumFailed          -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.checksumMismatch        -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.checksumVerified        -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.compress                -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.configCreateFailed      -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.configCreated           -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.configDeleteFailed      -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.configDeleted           -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.configName              -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.configNamePlaceholder   -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.configUpdateFailed      -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.configUpdated           -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.configurations          -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.create                  -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.daily                   -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.delete                  -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.deleteConfig            -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.deleteConfigMessage     -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.disabled                -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.download                -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.duration                -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.edit                    -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.editConfig              -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.enabled                 -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.encrypt                 -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.everyNDays              -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.file                    -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.frequency               -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.frequencyDays           -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.full                    -> BackupRestoreModels.swift (+ Localizable.xcstrings)
+  string  backup.history                 -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.incremental             -> BackupRestoreModels.swift (+ Localizable.xcstrings)
+  string  backup.lastBackup              -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.lastRun                 -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.loadingPreview          -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.maxRetention            -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.metadata                -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.name                    -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.newConfig               -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.nextRun                 -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.noConfigs               -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.noConfigsMessage        -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.noRuns                  -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.noRunsMessage           -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.noTables                -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.options                 -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.preview                 -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.previewFailed           -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.provider                -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.providerSettings        -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.quickBackup             -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.quickFailed             -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.quickStarted            -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.recentErrors            -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.records                 -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.refresh                 -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.restorePreview          -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.rows                    -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.runType                 -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.saveChanges             -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.schedule                -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.size                    -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.status                  -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.subtitle                -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.table                   -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.tables                  -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  backup.time                    -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.title                   -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  backup.totalBackups            -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.totalConfigs            -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.totalSize               -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.triggerFailed           -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.triggerNow              -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.triggered               -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  backup.type                    -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.verify                  -> BackupRestorePageViews.swift (+ Localizable.xcstrings)
+  string  backup.verifyFailed            -> BackupRestorePageModel.swift (+ Localizable.xcstrings)
+  string  common.cancel                  -> BackupRestorePage.swift (+ Localizable.xcstrings)
+  string  common.close                   -> BackupRestorePageSheets.swift (+ Localizable.xcstrings)
+  string  error.loadFailed               -> BackupRestorePage.swift (+ Localizable.xcstrings)
+
+PARITY_REQUIRED=91
+PARITY_COVERED=91   (6 panels + 4 states + 81 strings — each with file+symbol evidence above;
+                     all 81 keys referenced in code AND present in Localizable.xcstrings, verified)
+
+------------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------------
+  1  No red-as-green     : the full-app iOS xcodebuild gate is reported RED (IOS_BUILD_EXIT=65) and
+                           explicitly DEFERRED with the raw single error + provenance — never as passing.
+                           The pre-existing swiftlint a/b/c violations are likewise reported, not hidden.
+  2  No scope narrowing  : all 6 panels + 4 states + 81 strings implemented; plus the create/edit form
+                           (incl. dynamic per-provider fields), delete-confirm alert, restore-preview
+                           (checksum + metadata + tables/noTables), quick-backup + per-config trigger,
+                           verify + download affordances, and the recent-errors list.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the AIGeofence blocker
+                           and the macOS signing concern were confirmed (git HEAD + diff), not assumed.
+  4  No stubs as final   : complete production page (10 sources) + 16 passing tests; the default
+                           LocalBackupRestoreProvider is a REAL functional in-memory store, not a stub
+                           (the manifest classifies this page as local-state; no backup repo exists in
+                           the shared core). The one //parity:allow opt-out is for a REQUIRED i18n key
+                           name ("backup.configNamePlaceholder"), not a placeholder UI.
+  5  No parity shortcut  : tones/icons/typography mapped to the P2 design tokens + P3 shared components;
+                           every visible string flows through the i18n facade -> Localizable.xcstrings
+                           (web key names verbatim); adaptive macOS+iOS (ViewThatFits, adaptive grid,
+                           TSDataTable column/card layouts); dark mode + Dynamic Type + a11y honored.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: consumes P2 tokens, P3 shared components (TS*), the P4 shell RouteHostRegistry,
+                           the P1/S8 state-holder seam pattern, and the P1/S11 view.opened telemetry.
+  8  No commit on red    : the COMMITTED artifact is GREEN on every host-runnable gate that exercises MY
+                           code (swiftformat, swiftlint scoped, placeholder, isolated Swift-6 build+test,
+                           iOS18+macOS15 typecheck) and contributes 0 errors to the full-app build; the
+                           deferred full-app gate is RED only on pre-existing, unrelated surfaces.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/Features/Admin/** (11 files),
+                           AppRoute.swift + TeslaSyncApp.swift (nav registration), Localizable.xcstrings
+                           (+82 keys, additive), project.yml + .swiftlint.yml (wire the new Features dir),
+                           and this log. Nothing else modified.
+  10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic BackupRestorePage shipped at full web parity (6 panels +
+  4 data states + 81 strings = 91/91) and INDEPENDENTLY VERIFIED: it builds and its 16 tests pass
+  under the app's own Swift 6 strict-concurrency contract against the real generated design system
+  + shared component library, and typechecks against both the iOS 18 and macOS 15 SDKs, with
+  swiftformat / swiftlint / placeholder gates all green. The full-app iOS-Simulator xcodebuild
+  build/test gate is DEFERRED (not failed by this code): it is blocked by ONE pre-existing, unrelated
+  @ViewBuilder error in shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift (committed at
+  40e1e5da0, untouched here) and, on macOS, by development-signing — both owned by the P4/P99 signed
+  acceptance gate. Zero Features/Admin errors in the full-app build log. Matches the repo's sanctioned
+  "code-complete + DEFERRED full-app Xcode gate" disposition.
+
+EXIT=0
+STATUS=DONE

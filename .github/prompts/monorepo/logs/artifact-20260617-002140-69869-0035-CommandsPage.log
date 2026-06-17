@@ -1,0 +1,158 @@
+=== P7 apple page:system/Commands — 2026-06-17T14:15:33Z ===
+Target: apps/apple/TeslaSync/Features/System/CommandsPage.swift (+ model, data source, route registration)
+Web source: web/src/features/system/pages/CommandsPage.tsx  (route /commands)
+Delegation: NONE (FORBIDDEN) — implemented directly.
+
+=== Implementation ===
+Created (apps/apple/TeslaSync/Features/System/):
+  - CommandsPage.swift              (255 lines) — SwiftUI View, adaptive macOS + iOS
+  - CommandsPageModel.swift         (149 lines) — @MainActor @Observable state holder
+  - CommandsPageDataSource.swift    (200 lines) — KMP-core seam (ADR-004) + Sample/Empty/StatesFailing/Failing
+  - CommandsRouteRegistration.swift  (31 lines) — registers .commands route
+  Total 635 lines (page + model + data source + route registration; decomposed, not a monolith).
+
+Navigation registration (allowed-files: "navigation registration"):
+  - apps/apple/Sources/App/AppRoute.swift     — added `.commands` (pathSegment "commands" → /commands,
+        icon gamecontroller.fill, group .operations) and `.commandHistory` (pathSegment "command-history",
+        web /command-history; a SEPARATE parity unit page:system/CommandHistory — left unregistered so the
+        shell's standard pending-route surface renders it; the page's "View History" routes to it).
+  - apps/apple/Sources/TeslaSyncApp.swift     — CommandsRouteRegistration.registry(base:onNavigate:) wired
+        into the route-host registry (selection = $0).
+
+Component reuse (no clone, no stub): success state renders the existing native
+  feature-views/VehicleCommandCenter component (one VehicleCommandCenterModel per vehicle), the SwiftUI
+  parity of the web `<VehicleCommandCenter vehicle state/>` per-vehicle region.
+
+=== Localization (apps/apple/Localization/Localizable.xcstrings) ===
+Added 13 keys (web key names verbatim; "Refresh" + "common.noData" already present, reused):
+  Vehicles, Online, Asleep, online, commands.title, commands.pageTitle, commands.subtitle,
+  commands.viewHistory, commands.statesError, commands.noVehicles, commands.connectFleet,
+  route.commands, route.commandHistory
+JSON validated (json.loads round-trip OK; 11867 total strings).
+
+=== check-placeholders.ps1 (repo root; gate path apps/apple/TeslaSync/Features/System) ===
+PLACEHOLDER_ALLOWED=22
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+Note: the dir had 13 PRE-EXISTING false positives in sibling baseline files (legitimate identifiers —
+  `placeholderAvatar`, `.redacted(reason: .placeholder)`, a SwiftUI TextField prompt, doc comments) in
+  TeslaAccountPage.swift (11) + ScheduledExportsPanelForm.swift (2). Resolved with the scanner's sanctioned
+  `// parity:allow <reason>` opt-out (both files are within the allowed Features/System/** scope). No real
+  stubs were introduced or hidden; the CommandsPage files contain zero placeholder/TODO/stub markers.
+
+=== swiftlint --strict (repo root; gate path apps/apple/TeslaSync/Features/System) ===
+Done linting! Found 0 violations, 0 serious in 26 files.
+LINT_EXIT=0
+
+=== xcodebuild build (scheme TeslaSync, iOS Simulator, arm64, CODE_SIGNING_ALLOWED=NO) ===
+Shared.xcframework assembled via Gradle (:core:assembleSharedXCFramework) OK.
+** BUILD FAILED **  BUILD_EXIT=65
+Errors: 23 total — ALL in pre-existing, out-of-scope baseline files; 0 in any CommandsPage file; 0 anywhere
+  in Features/System. Error class: 100% duplicate-symbol "ambiguous … for type lookup" / "ambiguous use" /
+  "cannot infer contextual base" / result-builder cascades.
+
+  Files with errors (all OUTSIDE the allowed Features/System/** scope):
+    TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Model.swift
+    TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Previews.swift
+    TeslaSync/feature-views/ScheduledExportsPanel.Previews.swift
+    TeslaSync/shared-surfaces/AIPeriodCompareNarration.Views.swift
+    TeslaSync/shared-surfaces/CarAnimation.Previews.swift
+    TeslaSync/shared-surfaces/HelpIcon.Previews.swift
+    TeslaSync/shared-surfaces/SuspenseProgressBoundary.Previews.swift
+
+=== BUILD GATE ANALYSIS (root cause = pre-existing baseline corruption, NOT this change) ===
+The inherited branch (auto/20260617-002140-69869/35, built from "merge(parallel salvage)" commits) ships a
+TeslaSync iOS app target that does NOT compile at baseline: the parallel-salvage merges duplicated many
+module-level symbols across features. A first full build failed with 469 errors — 0 attributable to any
+CommandsPage file.
+
+To prove the CommandsPage deliverable is clean and to maximize buildability WITHIN the allowed scope, the
+in-scope duplicate-symbol blockers were fixed (all in Features/System/**, behavior-preserving):
+  - StatusApiDocsPage.swift  — local `enum TSSpacing` / `enum TSRadius` collided with the canonical design
+      tokens (apps/design/generated/apple/Tokens.swift), poisoning every TSSpacing/TSRadius user in the
+      target. Made file-private + uniquely named (StatusDocsSpacing / StatusDocsRadius). (469 → 25 errors.)
+  - SystemStatusModels.swift / SystemStatusPageModel.swift — local `enum HeroStatus` collided with the
+      canonical shared-surfaces/StatusHero `HeroStatus`. Renamed local → SystemHealthStatus.
+
+After every in-scope fix, a static scan (module-level, non-private, non-test type decls) shows the residual
+build blockers are EXACTLY 7 duplicate types, and ALL 7 are OUT-OF-SCOPE (cannot be touched under the
+allowed-files contract: Features/System/** + navigation + xcstrings + log):
+    TirePressureUnit        dashboard-widgets/TirePressureHistoryWidget.Projection.swift  +  Features/VehicleSystems/TirePressureModels.swift
+    TirePressureConvert     dashboard-widgets/TirePressureHistoryWidget.Projection.swift  +  Features/VehicleSystems/TirePressureModels.swift
+    TirePressureStatus      dashboard-widgets/TirePressureVisualWidget.Adapter.swift       +  Features/VehicleSystems/TirePressureModels.swift
+    TirePressureThresholds  dashboard-widgets/TirePressureVisualWidget.Adapter.swift       +  Features/VehicleSystems/TirePressureModels.swift
+    NotificationSoundChannelRow  feature-views/NotificationSettings.Projection.swift       +  Features/Notifications/BrowserNotificationsPage.Sections.swift
+    NotificationSoundsSection    feature-views/NotificationSettings.Sections.swift         +  Features/Notifications/BrowserNotificationsPage.Sections.swift
+    SpeedDistributionChart       feature-views/DrivingTab.Charts.swift                     +  Features/Driving/SpeedProfilePage.Charts.swift
+  (plus duplicate View-extension/Preview helpers in shared-surfaces — e.g. `accessibilityAddTraits`,
+   `#Preview` — same out-of-scope, parallel-salvage origin.)
+
+Conclusion: the CommandsPage deliverable is complete and clean (placeholder + lint green; 0 build/lint errors
+attributable to it or to anything in Features/System). The build gate cannot be turned green without editing
+files in feature-views / dashboard-widgets / Features/{Notifications,Driving,VehicleSystems}, which the
+allowed-files contract for this prompt forbids. Per honesty covenant #1 (no red-as-green) and #8 (no commit
+on red), this is reported as BLOCKED and NOT committed.
+
+=== xcodebuild test ===
+BLOCKED — cannot run: the app target does not link (build fails above), and the XCTest bundles additionally
+carry ~37 duplicated test-helper types (Fixture, SpyTelemetry, Recorder, ChangeRecorder, …) across sibling
+*Tests.swift from the same parallel-salvage merges. Out of scope for page:system/Commands.
+
+=== PARITY ===
+PARITY_REQUIRED=21
+
+[✓] panel — Vehicles
+    MetricCard(label: "Vehicles", value: vehicleCount, icon car.fill, color .cyan)
+    File: CommandsPage.swift  Symbol: CommandsStatPanels.body  Line: 207
+[✓] panel — Online
+    MetricCard(label: "Online", value: onlineCount, icon wifi, color .green)
+    File: CommandsPage.swift  Symbol: CommandsStatPanels.body  Line: 213
+[✓] panel — Asleep
+    MetricCard(label: "Asleep", value: asleepCount, icon powersleep, color .amber)
+    File: CommandsPage.swift  Symbol: CommandsStatPanels.body  Line: 219
+[✓] panel — Refresh
+    MetricCard(label: "Refresh", value "15s" (web refetchInterval 15s), icon arrow.clockwise, color .purple)
+    File: CommandsPage.swift  Symbol: CommandsStatPanels.body  Line: 225
+[✓] panel — GlassPanel5
+    TSGlassPanel error banner (web `statesError && <GlassPanel bg-neon-red/5 …>`), shown when the per-vehicle
+    state fan-out fails (model.statesError != nil).
+    File: CommandsPage.swift  Symbol: statesErrorPanel  Line: 143
+[✓] state — loading
+    PageContainer(loading: model.isInitialLoading) → shared loading surface (ProgressView); model.state == .loading.
+    File: CommandsPage.swift L44 + CommandsPageModel.swift Symbol: isInitialLoading L70 / CommandsState.loading L22
+[✓] state — empty
+    ContentUnavailableView ×2 — stats `common.noData` (noDataEmpty) + `commands.noVehicles`/`connectFleet`
+    (noVehiclesEmpty); model.state == .empty when useVehicles() returns [].
+    File: CommandsPage.swift  Symbols: noDataEmpty L127, noVehiclesEmpty L176  / CommandsState.empty L23
+[✓] state — success
+    CommandsStatPanels (4 MetricCards) + per-vehicle VehicleCommandCenter list; model.state == .success.
+    File: CommandsPage.swift  Symbols: statsSection L116, commandCentersSection L167 / CommandsState.success L25
+[✓] string — Asleep            String(localized: "Asleep", defaultValue: "Asleep")            CommandsPage.swift:220
+[✓] string — Online            String(localized: "Online", defaultValue: "Online")            CommandsPage.swift:214
+[✓] string — Refresh           String(localized: "Refresh", defaultValue: "Refresh")          CommandsPage.swift:226
+[✓] string — Vehicles          String(localized: "Vehicles", defaultValue: "Vehicles")        CommandsPage.swift:208
+[✓] string — commands.connectFleet  String(localized: "commands.connectFleet", …)            CommandsPage.swift:185
+[✓] string — commands.noVehicles    String(localized: "commands.noVehicles", …)              CommandsPage.swift:179
+[✓] string — commands.pageTitle     String(localized: "commands.pageTitle", …)               CommandsPage.swift:39
+[✓] string — commands.statesError   String(localized: "commands.statesError", …)             CommandsPage.swift:148
+[✓] string — commands.subtitle      String(localized: "commands.subtitle", …)                CommandsPage.swift:41
+[✓] string — commands.title         String(localized: "commands.title", …) (navigationTitle) CommandsPage.swift:50
+[✓] string — commands.viewHistory   String(localized: "commands.viewHistory", …)             CommandsPage.swift:70,78
+[✓] string — common.noData          String(localized: "common.noData", …)                    CommandsPage.swift:130
+[✓] string — online                 String(localized: "online", defaultValue: "online")      CommandsPage.swift:89,95
+
+PARITY_COVERED=21
+
+=== GATES ===
+PLACEHOLDER_EXIT=0   (0 violations)
+LINT_EXIT=0          (0 violations, 26 files; swiftlint --strict)
+BUILD_EXIT=65        (BLOCKED — 23 errors, ALL pre-existing out-of-scope baseline duplicate symbols; 0 in this change)
+TEST_EXIT=BLOCKED    (cannot run — app target does not build; sibling test bundles also duplicate-corrupted)
+
+PARITY_COVERED==PARITY_REQUIRED (21==21): the CommandsPage parity surface is fully implemented and is
+placeholder- + lint-clean with zero build/lint errors attributable to it. The build/test triad is BLOCKED
+strictly by pre-existing baseline duplicate-symbol corruption in files outside the allowed Features/System/**
+scope, which this prompt's allowed-files contract forbids modifying.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure to understand both the web source and the existing Apple app architecture.
+
+The web source is a JSON dashboard composer with 2 GlassPanels. Now let me explore the existing Apple app structure to follow established patterns.
+
+No PowerUser directory exists yet. Let me study existing page patterns, the parity manifest, and the navigation registration system.
+
+Let me look at the full parity manifest record, the route registration pattern, and check if a sibling power-user page (SqlPlayground) already exists as a reference.
+
+There's a `SqlPlaygroundPage.swift` sibling in `apps/apple/Sources/Features/PowerUser/` — the closest analog. Let me study it, the route registration, and the project config to understand the two-directory structure.
+
+This SqlPlaygroundPage is a near-perfect analog. Critically, it lives in `apps/apple/Sources/Features/PowerUser/` but my prompt mandates `apps/apple/TeslaSync/Features/PowerUser/`. I need to understand the project's source roots and which shared components exist. Let me investigate.
+
+The `AINLDashboardComposer` shared surface exists, and the route enum is in `Sources/App/AppRoute.swift` (no `.powerDashboards` yet). Let me read the project config to understand source roots, plus the route enum and AINLDashboardComposer's public API.
+
+Let me read the project config, the rest of AppRoute.swift, the parser, and the AINLDashboardComposer's public API.
+
+Both `Sources` and `TeslaSync/*` compile into the same `TeslaSync` module — so my new files in `TeslaSync/Features/PowerUser/` will share symbols with the existing `SqlPlayground` page. Now let me study the model/catalog/registration pattern, the AINLDashboardComposer API, the route parser, and registry composition.
+
+The SqlPlayground pattern maps almost 1:1. Dashboards differs by using a Copy-to-clipboard flow (4 copy messages) instead of Run, and a simpler panel catalog. Now let me examine the AINLDashboardComposer's public API, the route parser, registry composition, and the design-token components.
+
+Now let me examine the `NLDashboardComposerModel` (for the onApply/draft wiring), where route registries are composed, and the design-token components.
+
+Now let me find the `DashboardLayoutDraft` type (and its JSON serialization), the `InMemoryNLDashboardComposerSource`, and the registry composition root.
+
+Found the composition root in `TeslaSyncApp.swift`. Let me see the SqlPlayground registration there, the `DashboardLayoutDraft` type, and the in-memory source.
+
+Let me read the `DashboardLayoutDraft`/`DashboardEnvelope` types and the in-memory source to understand JSON serialization and the default model wiring.
+
+Let me read the `DashboardEnvelope`/`DashboardSlot` types, the design-token components, and an existing parity log to match the expected format.
+
+Let me find the SqlPlayground log (closest analog) and read the design-token component signatures.
+
+Let me read the SqlPlayground parity log (closest analog) and the Typography component signatures.
+
+The SqlPlayground log is large. Let me read its structure — particularly the `=== PARITY ===` section and the gate/EXIT/STATUS tail.
+
+This is the definitive template. Key finding: the SqlPlayground log (older) claimed `TeslaSync/Features` didn't exist and relocated to `Sources/Features/PowerUser`. But the **current** `project.yml` DOES compile `TeslaSync/Features` (lines 53-56, 114-117) and real pages live there now — so my prompt's mandated path is valid and I'll honor it directly. Let me read the rest of the log and check tool availability.
+
+All tools (including Xcode) are present. The sibling SqlPlayground concluded `STATUS=DONE` via isolated type-check + harness, treating the full `xcodebuild` as blocked on the out-of-scope KMP `Shared.xcframework` staging (which OOM-kills parallel slots). Let me verify that framework situation myself and the remaining API facts before writing.
+
+Confirmed: `Shared.xcframework` is absent (only `.gitkeep`), 17 files `import Shared`, and we're in a parallel slot — matching the sibling's KMP-staging blocker. Let me read the xcstrings format, the in-memory source's draft-push conveniences, and the TeslaSyncApp registration block.
+
+I now have the full picture. Let me read the SqlPlayground `.Sample.swift` (the in-memory double house pattern) and the tail of the envelope serializer, then I'll write a plan and start implementing.
+
+I have everything needed. Let me set up tracking, then check the lint config and ledger format before writing.
+
+Let me view the exact SqlPlayground ledger rows and the file tail to know insertion point.
+
+I have everything needed. Let me set up tracking and write the plan.
+
+Now I'll create the 5 implementation files. Starting with the catalog, model, and sample doubles.
+
+Now the navigation registration edits. Let me view the exact TeslaSyncApp context first, then make all edits.
+
+Navigation wired. Now let me add the 13 `powerDashboards.*` strings + `route.powerDashboards` to the xcstrings catalog (web defaults verbatim), inserting near the `powerSql` entries.
+
+Let me validate the xcstrings JSON and confirm my keys are present.
+
+All 14 keys valid. Let me update tracking and study the sibling test before writing my own.
+
+Now I'll write the test mirroring the sibling pattern, with hermetic clipboard/draft doubles.
+
+All files written. Now let me run the gates, starting with swiftformat and swiftlint on my files.
+
+swiftformat clean (0/9). Now swiftlint --strict.
+
+swiftlint clean (0 violations, 9 files). Now the placeholder scan.
+
+Placeholder scan passes (allowed=1 annotated key, count=0). Now let me generate the Xcode project to confirm my files are picked up (safe — no Kotlin staging triggered).
+
+Project generates cleanly; all 5 sources + test are included (6× each = iOS+macOS app + both test bundles). Now the key correctness proof: let me locate the AINLDashboardComposer model-layer dependencies to assemble an isolated type-check + executed harness.
+
+The model-layer files ({Adapter, Logic, Model, Source}) import only Foundation/Observation/OSLog — no SwiftUI/tokens — so they're self-contained for an executable harness. Let me build and run a model+route harness proving the core logic.
+
+Now compile and run the harness against the real model layer (Swift 6 strict concurrency, macOS target).
+
+The `@main` entry wasn't synthesized. Let me restructure as `main.swift` with top-level `MainActor.assumeIsolated` (more reliable for mixed-file executables).
+
+The model+route harness compiles under Swift 6 strict concurrency and **all 44 assertions pass**. Now let me attempt the harder View type-check against real tokens/components/composer. First, let me map the dependency closure.
+
+No Components/UI file imports Shared (good). Let me pin down the theme modifiers and verify the composer-View + Design/Theme files are Shared-free.
+
+The View closure is Shared-free. Let me map all Components subdirectories and any Shared imports to assemble a complete, safe type-check set.
+
+No Shared imports anywhere in Components. Let me attempt the full View type-check (macOS) with the broad token+component+composer closure.
+
+DataDisplay needs `UnitPreferences` (a units type I don't need). DashboardsPage only needs UI + Feedback + the composer. Let me find the exact homes of the composer's Feedback deps and prune DataDisplay/Charts/Maps.
+
+The composer View pulls in `AiOutputPanel` + `QueryError` shared-surfaces and `TSSkeleton` (Feedback). `UnitPreferences` (DataDisplay/FeedbackOverlays) is Shared-backed — exclude those. Let me verify the remaining deps are Shared-free and assemble the pruned closure.
+
+Pruned closure is Shared-free. Let me run the View type-check (macOS) with it.
+
+The glob `AINLDashboardComposer.*.swift` missed the bare `AINLDashboardComposer.swift` (the View itself). Let me fix the glob and re-run.
+
+View type-check passes for macOS (48 files, 0 errors). Now the iOS idiom (exercises the `#if os(iOS)` UIPasteboard + autocapitalization branches).
+
+Both type-checks pass (macOS + iOS, 0/0). Let me also verify the XCTest file type-checks against the real symbols (compiled in-module, stripping the self-import).
+
+XCTest needs the platform framework path. Let me add `-F` for it.
+
+All remaining errors are solely the XCTest C-macro overlay (`XCTAssertEqual` etc.) which raw `swiftc` can't import — **zero errors reference my symbols**. Let me prove the test body type-checks by shimming the XCTest assertions.
+
+The shimmed test type-checks cleanly — all my symbol usages resolve; only XCTest's C-macros needed shimming. Let me run the placeholder scan on the tests dir too, then update tracking.
+
+All gates green. Placeholder scan on tests dir clean (count=0). Git status shows exactly my in-scope changes; xcodeproj is ignored. Let me update tracking and gather LOC for the log.
+
+All gates green. Now let me write the evidence log following the established format.
+
+Now the 2 ledger rows, inserted after the SqlPlayground rows.
+
+Let me validate both modified JSON files and re-confirm lint/format are still clean before committing.
+
+All valid. Let me clean up temp files and review the full git status before committing.
+
+Git status is exactly the in-scope files (xcodeproj correctly ignored). Let me commit.
+
+Commit succeeded with exactly the 12 in-scope files. Let me confirm a clean tree and finalize tracking.
+
+Task complete. Here's a summary of what I delivered.
+
+## P4-APPLE · P7 · `page:power-user/Dashboards` — SwiftUI/HIG parity → **STATUS=DONE (16/16)**
+
+Native SwiftUI parity of `web/src/features/power-user/pages/DashboardsPage.tsx` (`/power/dashboards`) — a manual Grafana dashboard-JSON composer.
+
+**New files** (`apps/apple/TeslaSync/Features/PowerUser/`, the prompt's mandated path — now a compiled `project.yml` source group):
+- `DashboardsPanelCatalog.swift` — 6-panel curated catalog, name-sorted (web `CURATED_DASHBOARD_PANELS`)
+- `DashboardsPageModel.swift` — `@Observable` model: 13 i18n keys, `DashboardCopyMessage` (4 copy branches), injectable `DashboardDraftStore` (localStorage parity) + `DashboardClipboard` seam (UIPasteboard/NSPasteboard), `DashboardEnvelopeJSON.pretty` (web `JSON.stringify`), drafter hand-off
+- `DashboardsPageModel.Sample.swift`, `DashboardsPage.swift` (header + hosted **AINLDashboardComposer** + editor/​catalog GlassPanels), `DashboardsRouteRegistration.swift`
+- `Tests/Unit/Features/PowerUser/DashboardsPageModelTests.swift`
+
+**Edits:** `AppRoute.swift` (+`.powerDashboards`), `AppRouteParser.swift` (alias), `TeslaSyncApp.swift` (registration), `Localizable.xcstrings` (13 keys + route title, web defaults verbatim), `apple-ledger.json` (+2 rows 16/16).
+
+**Gates — all in-scope green** (real command output, pasted in the log):
+- swiftformat `0/9` · swiftlint `0 violations/9` · placeholder `0` · xcodegen `0` (files included 6×)
+- **Executed model+route harness: 44/44 assertions PASS** under Swift 6 strict concurrency
+- **View type-check: macOS 0/0 + iOS 0/0** (48-file real token/component/composer closure) · XCTest type-check 0
+- Full `xcodebuild build/test` = `NOT_RUN` — blocked on the out-of-scope KMP `Shared.xcframework` staging (absent; 17 files `import Shared`; OOM-kills parallel slots). Recorded honestly, never colored green — matching the sibling SqlPlayground methodology.
+
+Committed (`65757e7c`) with the Copilot co-author trailer; xcodeproj correctly git-ignored.
+
+
+
+All 13 todos are done and the work is committed and verified. The task is fully complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-power-user-DashboardsPage.log  | 298 ++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 154 +++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   8 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Features/PowerUser/DashboardsPage.swift        | 218 +++++++++++++++
+ .../PowerUser/DashboardsPageModel.Sample.swift     |  58 ++++
+ .../Features/PowerUser/DashboardsPageModel.swift   | 302 +++++++++++++++++++++
+ .../PowerUser/DashboardsPanelCatalog.swift         |  65 +++++
+ .../PowerUser/DashboardsRouteRegistration.swift    |  20 ++
+ .../PowerUser/DashboardsPageModelTests.swift       | 220 +++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 12 files changed, 1360 insertions(+), 3 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-power-user-DashboardsPage.log
+ create mode 100644 apps/apple/TeslaSync/Features/PowerUser/DashboardsPage.swift
+ create mode 100644 apps/apple/TeslaSync/Features/PowerUser/DashboardsPageModel.Sample.swift
+ create mode 100644 apps/apple/TeslaSync/Features/PowerUser/DashboardsPageModel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/PowerUser/DashboardsPanelCatalog.swift
+ create mode 100644 apps/apple/TeslaSync/Features/PowerUser/DashboardsRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/PowerUser/DashboardsPageModelTests.swift
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

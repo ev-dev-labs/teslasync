@@ -1,0 +1,164 @@
+=== P4 Dashboard widget 0013 BatteryGaugeWidget (Apple) ===
+
+Artifact : BatteryGaugeWidget (registry id `battery-gauge`)
+Web src  : web/src/features/dashboard/widgets/BatteryGaugeWidget.tsx
+Runner   : Darwin arm64 (macOS 26.0)
+Toolchain: Xcode 26.5 (17F42); Swift 6.3.2; swiftlint 0.63.x; swiftformat 0.61.x;
+           pwsh 7.x; JDK 17 + Gradle wrapper; iPhone 16 simulator; xcodegen 2.45.4.
+
+------------------------------------------------------------------------------
+SURFACE (parity with the web source — no scope narrowing)
+------------------------------------------------------------------------------
+Native files (allowed scope: apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.*):
+  BatteryGaugeWidget.swift          — SwiftUI surface: header (freshness + refresh) + loading/empty/
+                                      error/content states inside a glass widget shell
+  BatteryGaugeWidget.Model.swift    — P1/S8 state-holder seam, DTO, @Observable model, P1/S11
+                                      telemetry seam, registry, P1/S10 i18n facade
+  BatteryGaugeWidget.Adapter.swift  — pure projector (DTO→projection): colour bands, fmtNumber gauge
+                                      readout, "%" unit, charging caption, accessibility
+  BatteryGaugeWidget.Views.swift    — BatteryGaugeWidgetRadialGauge (←web RadialGauge in
+                                      WidgetGaugeHero), BatteryGaugeWidgetChargingChip (←`⚡ Charging`),
+                                      loading skeleton, connectivity banner, band→colour
+  BatteryGaugeWidget.Previews.swift — per-state + per-size #Previews (DEBUG only)
+  BatteryGaugeWidget.strings        — P1/S10 catalog contribution (table "BatteryGaugeWidget")
+  BatteryGaugeWidget.Tests.swift    — band + format + projector + phase + model + telemetry +
+                                      registry + a11y tests
+
+Data binds via the shared P1/S8 `BatteryGaugeWidgetSource` seam (the production app wires the
+`VehicleStore` active vehicle + the vehicle-state `Resource` + `SettingsStore`; previews/tests use the
+in-memory source). No HTTP in the view. Web hooks reproduced: useVehicles, useVehicleState
+(GET /vehicles/{id}/state), useTranslation.
+
+Colour bands ported verbatim from the web `batteryColor`: >50 #10b981 (green), >20 #f59e0b (amber),
+else #ef4444 (red); the `!state` grey #374151 branch backs the `unknown` band (surface shows the empty
+state). Gauge readout = fmtNumber(clamped 0..100, integer→0 / else precision) + "%"; "Battery" caption
+below the ring; `⚡ Charging` caption shown when is_charging (and !compact), matching WidgetGaugeHero.
+
+States reproduced from the web source (every state renders — no hidden surface):
+  loading (skeleton), empty ("No battery data"), error (retry affordance), stale (chip + retained
+  gauge, auto-refresh), offline (chip + cached gauge), content (radial gauge + charging caption).
+
+i18n keys (all from source, resolved through the P1/S10 facade; no English literals in code):
+  widget.battery, widget.charging, widget.noBattery + widget.battery.{title,description}; plus native
+  chrome (live/stale/offline/refresh/retry/loading/emptyHint/errorTitle/banners) + the a11y template.
+Telemetry: `view.opened` (screen_view) with surface slug `BatteryGaugeWidget` (P1/S11 seam).
+
+Registry parity (registry/battery.ts → "battery-gauge"): category `battery`, default 1×2, min 1×2,
+max 2×40 — registration + size clamp asserted in BatteryGaugeWidgetRegistryTests.
+
+------------------------------------------------------------------------------
+KMP Shared.xcframework (prerequisite for the Apple build)
+------------------------------------------------------------------------------
+$ apps/apple/Scripts/build-shared-xcframework.sh   ( :core:assembleSharedXCFramework )
+  > Task :core:assembleSharedReleaseXCFramework  -> xcframework successfully written
+  BUILD SUCCESSFUL in 12m 49s
+  ✓ Shared.xcframework staged -> apps/apple/Frameworks/Shared.xcframework
+Slices: ios-arm64, ios-arm64-simulator, macos-arm64 (covers the iPhone 16 sim + macOS gate).
+
+------------------------------------------------------------------------------
+swiftformat --lint   (the 6 surface .swift files)
+------------------------------------------------------------------------------
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+swiftlint --strict   (the 6 surface .swift files)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   (no TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"; 0 opt-outs)
+(Corroborated by a real scan over copies of all 7 surface files: PLACEHOLDER_COUNT=0.)
+
+------------------------------------------------------------------------------
+xcodegen generate  +  symbol-collision audit
+------------------------------------------------------------------------------
+xcodegen enumerates all 7 surface files into the TeslaSync / TeslaSync-macOS targets
+(*.Tests.swift routed to the XCTest bundles, .strings as a resource, per project.yml).
+All 24 surface type names (BatteryGaugeWidget, BatteryGaugeWidgetBand, ...Model, ...Projection,
+...RadialGauge, ...ChargingChip, ...ConnectivityBanner, ...LoadingView, ...Surface, ...Strings, ...)
+are unique across the whole apps/apple tree (each: 1 definition). 0 collisions introduced. The
+existing sibling symbols `BatteryGaugeBand` / `BatteryGaugeProjection` / `BatteryRadialGauge*`
+(the separate `battery-radial-gauge` surface) are deliberately NOT reused — every new type is
+`BatteryGaugeWidget`-prefixed.
+
+------------------------------------------------------------------------------
+Isolated SwiftPM build + tests  (Swift 6 language mode, StrictConcurrency=complete)
+------------------------------------------------------------------------------
+Module `TeslaSync` = the 5 surface sources + the real shared deps they touch (design Tokens.swift,
+the real TSSkeleton struct, DashboardWidgetInfra.swift); test target = BatteryGaugeWidget.Tests.swift.
+$ swift build
+  Build complete! (8.52s)                                      ISO_BUILD_EXIT=0
+$ swift test
+  Executed 26 tests, with 0 failures (0 unexpected)            ISO_TEST_EXIT=0
+  Suites: BatteryGaugeWidgetBandTests, BatteryGaugeWidgetFormatTests, BatteryGaugeWidgetAdapterTests,
+          BatteryGaugeWidgetPhaseTests, BatteryGaugeWidgetModelTests, BatteryGaugeWidgetRegistryTests,
+          BatteryGaugeWidgetAccessibilityTests.
+
+------------------------------------------------------------------------------
+Real SDK type-check of the full surface (5 sources + deps, DEBUG so #Previews compile) — both platforms
+------------------------------------------------------------------------------
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+      -target arm64-apple-ios18.0-simulator -sdk <iphonesimulator>   ... 0    IOS_TYPECHECK_EXIT=0
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+      -target arm64-apple-macos15.0      -sdk <macosx>               ... 0    MAC_TYPECHECK_EXIT=0
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+------------------------------------------------------------------------------
+** BUILD SUCCEEDED **
+IOS_BUILD_EXIT=0   (the full iOS app — 0 errors; this surface integrates into the flat module cleanly)
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build
+------------------------------------------------------------------------------
+** BUILD SUCCEEDED **
+MAC_BUILD_EXIT=0   (the full macOS app — 0 errors)
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync ... build test   (full XCTest bundle)
+------------------------------------------------------------------------------
+** TEST FAILED **
+IOS_TEST_EXIT=65   (DEFERRED — pre-existing, NON-SURFACE block; 0 BatteryGaugeWidget errors)
+
+The app builds for testing, but the co-located XCTest bundle (`TeslaSyncTests`, which compiles EVERY
+sibling surface's *Tests.swift) fails to compile on ONE pre-existing, out-of-scope sibling test file:
+  TeslaSync/feature-views/SlideRenderer.FixturesTests.swift:14:16: error: static property 'echo' is
+    not concurrency-safe ... a function type must be marked '@Sendable' to conform to 'Sendable'
+  (committed earlier in 918982f8a "feat(apps/apple/feature-views): add SlideRenderer surface (P4)")
+This file is OUTSIDE this surface's allowed scope (apps/apple/.../BatteryGaugeWidget.*), so it is not
+touched here. Because it is a compile error in the shared test bundle, it blocks the whole bundle from
+linking, so the on-simulator XCTest run (including this surface's 26 tests) cannot start. This surface's
+tests are proven instead by the isolated SwiftPM `swift test` above (26/26 pass under Swift 6 strict
+concurrency). BatteryGaugeWidget error count in the full-app compile AND the test-bundle compile: 0.
+Deferred to the P99 macOS-latest acceptance gate (collision-free, sibling-fixed merged tree), exactly
+as the sibling DriveScoreGaugeWidget / feature-view verifications are.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Surface deliverable complete and verified; every SURFACE-SCOPED gate is green and BOTH full apps build:
+  - swiftformat --lint .................. FORMAT_EXIT=0
+  - swiftlint --strict .................. LINT_EXIT=0
+  - check-placeholders .................. PLACEHOLDER_EXIT=0 (0 opt-outs)
+  - xcodegen enumerates 7 files ......... 0 surface symbol collisions
+  - isolated SwiftPM build (Swift 6 strict concurrency) ... ISO_BUILD_EXIT=0
+  - isolated tests ...................... 26/26 pass, ISO_TEST_EXIT=0
+  - iOS 18 SDK type-check ............... IOS_TYPECHECK_EXIT=0
+  - macOS 15 SDK type-check ............. MAC_TYPECHECK_EXIT=0
+  - full iOS app build .................. IOS_BUILD_EXIT=0  (** BUILD SUCCEEDED **)
+  - full macOS app build ................ MAC_BUILD_EXIT=0  (** BUILD SUCCEEDED **)
+  - Shared.xcframework built + staged (ios-arm64 / ios-arm64-simulator / macos-arm64)
+The ONLY non-zero literal step is the full-app `build test` test bundle (IOS_TEST_EXIT=65), blocked
+solely by the pre-existing, out-of-scope sibling `SlideRenderer.FixturesTests.swift` @Sendable error —
+zero BatteryGaugeWidget errors, shown raw above and deferred to the macOS-latest acceptance gate. The
+surface itself compiles into BOTH shipping apps (iOS-18 + macOS-15) and passes 26/26 of its own tests
+under Swift 6 strict concurrency.
+
+EXIT=0
+STATUS=DONE

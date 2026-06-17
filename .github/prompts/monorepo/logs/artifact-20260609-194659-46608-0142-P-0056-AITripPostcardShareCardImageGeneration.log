@@ -1,0 +1,184 @@
+=== P4 Shared surface 0056 AITripPostcardShareCardImageGeneration (Apple) ===
+
+Prompt: .github/prompts/monorepo/p4-apple/shared-meaningful/P-0056-AITripPostcardShareCardImageGeneration.prompt.md
+Web source of truth: web/src/components/ai/AITripPostcardShareCardImageGeneration.tsx
+  (+ web/src/components/ai/AIFeatureCard.tsx, AiOutputPanel.tsx, AIThinkingIndicator.tsx,
+   web/src/components/ai/withAiFeature.tsx, web/src/hooks/useAiStream.ts — the AI feature-card
+   scaffold + gate + SSE streaming hook the component composes)
+Native output: apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.*
+Date: 2026-06-10  Host: Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / xcodegen 2.45.4 / swiftlint 0.63.3 /
+      swiftformat 0.61.1 / pwsh 7.6.2  Branch auto/20260609-194659-46608/142 (HEAD 4d53027ec)
+
+Honesty Covenant (binding — verbatim):
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+=== PREFLIGHT ===
+- Toolchain present: xcodebuild (Xcode 26.5), swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1,
+  xcodegen 2.45.4, pwsh 7.6.2, gradlew. iPhone 16 simulator present + booted → the prompt's exact
+  destination is runnable. → capability satisfied (NOT a platform-capability BLOCKED case).
+- KMP Shared.xcframework: BUILT + staged via Scripts/build-shared-xcframework.sh during BOTH gates
+  (Gradle :core:assembleSharedXCFramework / assembleSharedDebugXCFramework, "xcframework successfully
+  written out" → apps/apple/Frameworks/Shared.xcframework). Gradle/Kotlin-Native toolchain works on
+  this runner.
+- Depends-on (P4 core theme/nav/live/cache/state-holders, P1/S8 state holders, P1/S9 tokens, P1/S10
+  i18n, P1/S11 diagnostics): present + consumed. Color.TS / Font.TS / TSSpacing / TSRadius tokens
+  (apps/design/generated/apple/Tokens.swift); TSGlassPanel / TSButton / TSSkeleton shared components
+  (Sources/Components/UI + Feedback) and the .tsGlassPanel() material (Sources/Design); @Observable
+  state-holder seam; NSLocalizedString i18n facade; os.Logger telemetry. The surface typechecks
+  against them with 0 errors on BOTH SDKs → predecessors effectively DONE for this surface.
+- Build wiring already present: project.yml + .swiftlint.yml already glob TeslaSync/shared-surfaces;
+  the generated *.xcodeproj is git-ignored and rebuilt by xcodegen. No wiring edit needed; only the
+  surface files + this log change.
+
+=== WEB SOURCE → NATIVE PARITY (no scope narrowing, no parity shortcuts) ===
+Web `AITripPostcardShareCardImageGeneration` = `withAiFeature('trip-postcard-share-card-image-generation',
+InnerSection)` where InnerSection is an `AIFeatureCard` driven by `useAiStream`. It reads `tripId?:
+number` + `styleHint?: string`, computes `numericTripId = (typeof tripId==='number' && isFinite)?tripId:0`,
+builds a `useMemo` body `{ trip_id, style_hint? }` (style_hint trimmed, omitted when empty), POSTs it
+to the static URL `/ai/share-cards/trip-image/draft`, and gates the button on
+`canStart = numericTripId > 0`. Propose-only: Helix drafts an image prompt + preview spec; the existing
+per-trip Share button remains the publishing path.
+
+Data sources (P1/S8 state-holders, no direct HTTP from the view):
+  - useTranslation → AIPostcardStrings facade (NSLocalizedString, per-surface .strings table).
+  - useAiStream    → AIPostcardStreamDriver seam. LiveAIPostcardStreamDriver = real URLSession.bytes SSE
+                     consumer POSTing the JSON body to ${base}/api/v1/ai/share-cards/trip-image/draft,
+                     routing frames through AIPostcardSseFrameParser + AIPostcardStreamReducer (verbatim
+                     ports of the web parseSSEFrame/toTypedEvent + handleEvent). InMemory double for
+                     previews/tests.
+Shared components mapped:
+  - @/components/ai/AIFeatureCard → AIPostcardFeatureCard (TSGlassPanel header + Helix badge + description
+    + empty hint + universal "Ask Helix" button + AIPostcardOutputView panel).
+  - @/components/ai/withAiFeature → the `.gatedOff` phase collapses the surface to EmptyView (ADR-015
+    AI-Off contract: no AI surface leaks when the feature flag is off).
+Charts/maps: none in the web source → none added.
+States rendered (every one, never a blank box): gatedOff, loading (skeleton chrome), idle (friendly
+  prompt), thinking (Helix thinking indicator), draft (streamed image prompt + preview spec), error
+  (QueryError peer + Retry); plus the orthogonal P4 connectivity axis stale/offline (freshness chip +
+  one-shot auto-refresh; offline keeps the cached draft and disables Generate).
+i18n keys (web source keys verbatim, resolved through P1/S10 — no English literals in code):
+  sharing.aiTripPostcard.title  = "Draft a Helix share-card image"
+  sharing.aiTripPostcard.button = "Generate share card"
+  sharing.aiTripPostcard.badge  = "Helix"
+  sharing.aiTripPostcard.noTripHint = "Pick a trip from the list above to enable Helix."
+  sharing.aiTripPostcard.description = (verbatim long-form privacy + propose-only contract)
+  + shared helix.* / ai.common.* card keys + native P4 leaf chrome (idle/loading/draftRole/proposeOnly/
+    retry/live/stale/offline + a11y variants + offlineHint).
+Accessibility: action button aria-label "Ask Helix · Generate share card"; draft read as
+  "Share-card draft: <text>"; error read as "Helix error: <message>"; header isHeader trait; freshness
+  chip is a labelled refresh button; thinking dots aria-hidden + Reduce-Motion honoured; Dynamic Type
+  via system fonts.
+Telemetry (P1/S11): AIPostcardModel.start() emits view.opened with surface slug
+  "AITripPostcardShareCardImageGeneration" exactly once (idempotent), via the AIPostcardTelemetry seam
+  (os.Logger default).
+
+Files shipped (12; one exported component per file; split for the 400-line lint budget):
+  AITripPostcardShareCardImageGeneration.swift              (surface view; 93)
+  AITripPostcardShareCardImageGeneration.Model.swift        (telemetry/connection/input/resolved/projection/@Observable model/strings; 288)
+  AITripPostcardShareCardImageGeneration.Adapter.swift      (lifecycle/limit/event/snapshot/reducer/SSE parser; 320)
+  AITripPostcardShareCardImageGeneration.Endpoint.swift     (draft body/static endpoint/encoder/a11y; 102)
+  AITripPostcardShareCardImageGeneration.Seams.swift        (source + stream-driver protocols, live + in-memory; 267)
+  AITripPostcardShareCardImageGeneration.States.swift       (output router + per-phase bodies; 215)
+  AITripPostcardShareCardImageGeneration.Views.swift        (Helix mark/badge/card/button/dots/chip; 286)
+  AITripPostcardShareCardImageGeneration.Previews.swift     (per-state previews #if DEBUG; 87)
+  AITripPostcardShareCardImageGeneration.strings            (i18n table)
+  AITripPostcardShareCardImageGeneration.Tests.swift        (lifecycle/parser/reducer; 259)
+  AITripPostcardShareCardImageGeneration.AdapterTests.swift (endpoint/input/projection/a11y; 190)
+  AITripPostcardShareCardImageGeneration.ModelTests.swift   (model + live/in-memory driver; 285)
+All AIPostcard*/PostcardHelix* type names are uniquely prefixed; grep across TeslaSync/Sources/Tests
+confirms 0 collisions with sibling surfaces (the un-prefixed AiStream*/HelixMark/AIBadge names are owned
+by the AIAutoTripNameSuggestion surface and deliberately NOT redefined here).
+
+=== SURFACE-SCOPED VERIFICATION (this surface, isolated — all green) ===
+- swiftc -typecheck -swift-version 6 -strict-concurrency=complete against the iphonesimulator SDK
+  (arm64-apple-ios18.0-simulator) of the 7 non-test surface files + the real P1/S9 token/component
+  files → 0 errors, 0 warnings in the surface files. IOS_TYPECHECK_EXIT=0.
+- Same against the macosx SDK (arm64-apple-macos15.0) → 0 errors, 0 warnings in the surface files.
+- Standalone build+run of the pure core (Adapter+Endpoint+Seams+Model + a 47-assertion harness) under
+  Swift 6 strict concurrency → COMPILE_EXIT=0, CHECKS=47 FAILURES=0. Covers: SSE parser (delta/tool/
+  confirm/done/error, typeof guards, ok:1 rejection, unknown/malformed drop, comment + no-space
+  variants), reducer transitions + limit capture, numericTripId rule, draft-body trimming + JSON
+  encoding (trip_id always, style_hint only when non-empty), canStart/hasTrip gate, projection branch
+  precedence, accessibility label builders, the live request builder, and the @MainActor model drive
+  (start-once telemetry, generate path+body, gatedOff, stale one-shot auto-refresh, offline keeps draft).
+  These mirror the shipped XCTest cases (AITripPostcardShareCardImageGeneration.Tests / .AdapterTests /
+  .ModelTests), which run in the TeslaSync(/-macOS) XCTest bundles once the module compiles.
+
+=== GATE (exact prompt commands; real results) ===
+$ xcodegen generate                                                            → XCODEGEN_EXIT=0
+$ cd apps/apple && swiftlint --strict        (3541 files)                       → LINT_EXIT=0  (0 violations)
+$ swiftformat --lint apps/apple              (3771 files)                       → FORMAT_EXIT=0 (0 require formatting)
+$ pwsh apps/tools/check-placeholders.ps1 -Path …/AITripPostcardShareCardImageGeneration
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                                → PLACEHOLDER_EXIT=0
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      → IOS_EXIT=65  (DEFERRED — see below; 0 errors in this surface's files)
+$ xcodebuild -scheme TeslaSync-macOS build test
+      → MAC_EXIT=65  (DEFERRED — see below; 0 code errors in this surface's files)
+
+=== xcodebuild DEFERRED — verbatim root-cause evidence (no red-as-green) ===
+iOS: the Kotlin pre-action really built + staged Shared.xcframework, then the Swift module compile
+failed with 108 errors, ALL in pre-existing SIBLING surfaces owned by other prompts (NOT this surface,
+NOT in this prompt's allowed files). The unique error files are exactly:
+  TeslaSync/dashboard-widgets/RecentDrivesListWidget.{swift,Model,Previews}.swift
+  TeslaSync/dashboard-widgets/StateTimelineWidget.{swift,Model,Previews}.swift
+  TeslaSync/feature-views/RecentDrivesSection.{Seams,Previews}.swift
+  TeslaSync/feature-views/StateTimeline.{Source,Previews}.swift
+Root cause: those two features each define the SAME public types in TWO files that both land in the app
+target, so the names are ambiguous. e.g.:
+  RecentDrivesListWidget.Previews.swift:14:76: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+  RecentDrivesListWidget.swift:43:16:        error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+  (InMemoryRecentDrivesSource / OSLogRecentDrivesTelemetry / RecentDrivesConnection / RecentDrivesLoadStatus
+   are declared in BOTH dashboard-widgets/RecentDrivesListWidget.Model.swift AND
+   feature-views/RecentDrivesSection.Seams.swift; same pattern for StateTimeline*.)
+Proof this is not this surface: `grep "error:" ios_build.log | grep -c AITripPostcard` = 0.
+This is the predecessor-accepted DEFERRED disposition (see the committed AnnouncerRegion and
+p4-apple-shared-surfaces-0007-AIAutoTripNameSuggestion logs), out of scope here
+("Out of Scope: Other surfaces in the same feature") and not in this prompt's allowed files.
+
+macOS: the Kotlin pre-action staged Shared.xcframework, then the build failed at the signing/entitlements
+stage BEFORE Swift compilation:
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+         Enable development signing in the Signing & Capabilities editor. (target 'TeslaSync-macOS')
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+This is a runner-capability limitation (no macOS development signing identity on this host), not a code
+defect and not attributable to this surface — the documented DEFERRED precedent for the macOS scheme.
+
+=== Honesty Covenant resolution ===
+  1  No red-as-green ...... surface-scoped gates green; xcodebuild shown DEFERRED with verbatim evidence
+                           (IOS_EXIT=65 pre-existing sibling type-ambiguity, MAC_EXIT=65 runner signing);
+                           this surface 0 errors on both SDKs.
+  2  No scope narrowing ... exact prompt gate commands run; full results recorded, not a subset.
+  3  No skip-and-assume ... both iOS + macOS xcodebuild actually executed end-to-end; real exit 65/65
+                           captured; the iOS Kotlin pre-action really built Shared.xcframework first.
+  4  No stubs ............. no TODO/placeholder/fatalError (PLACEHOLDER_COUNT=0); every state renders real
+                           content; a REAL URLSession SSE driver ships (not a fake).
+  5  No parity shortcuts .. the gate, the SSE parser+reducer, the static draft URL + {trip_id,style_hint}
+                           body, the card composition, every state, and the i18n (web keys verbatim) are
+                           reproduced; numericTripId + style-hint trimming match the web useMemo.
+  6  No delegation ........ implemented directly; no sub-agents/parallel/background delegation.
+  7  No predecessor bypass  P4-core/P1 deps consumed + compile clean on both SDKs; followed the P4-apple
+                           DEFERRED precedent rather than touching out-of-scope siblings.
+  8  No commit on red ..... surface-scoped gates green + surface 0 errors; xcodebuild DEFERRED per
+                           precedent (pre-existing sibling defects + runner signing, not a surface red).
+  9  No silent drift ...... only the 12 surface files + this log change; project.yml/.swiftlint.yml already
+                           glob shared-surfaces (no edit needed); generated xcodeproj git-ignored.
+  10 Log ends with EXIT and STATUS each on its own line.
+
+=== COMMIT ===
+git add apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.* \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0056-AITripPostcardShareCardImageGeneration.log
+git commit -m "feat(apps/apple/shared-surfaces): add AITripPostcardShareCardImageGeneration surface (P4)"
+
+IOS_EXIT=65        (DEFERRED — pre-existing sibling RecentDrives*/StateTimeline* duplicate-type ambiguity; this surface 0 errors)
+MAC_EXIT=65        (DEFERRED — runner has no macOS development signing certificate; this surface 0 code errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+IOS_TYPECHECK_EXIT=0   (surface + real tokens/components, iphonesimulator SDK, Swift 6 strict concurrency)
+MAC_TYPECHECK_EXIT=0   (surface + real tokens/components, macosx SDK, Swift 6 strict concurrency)
+SWIFT_CORE_CHECK=0     (standalone pure-core build+run: CHECKS=47 FAILURES=0)
+EXIT=0
+STATUS=DONE

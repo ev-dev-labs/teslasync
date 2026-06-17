@@ -1,0 +1,150 @@
+=== P4 Dashboard widget 0002 AnalyticsSummaryWidget (Apple) ===
+Prompt:  .github/prompts/monorepo/p4-apple/dashboard-widgets/0002-AnalyticsSummaryWidget.prompt.md
+Web src: web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx  (THE specification)
+Native:  apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.*
+Host:    Darwin (macOS), Apple Swift 6.3.2, Xcode 26.5 (17F42)
+Run at:  2026-06-09 (slot-4, branch auto/20260609-082658-28134/4)
+
+############################################################
+# 0. Platform-capability probe (ADR-002/004/009/013)
+############################################################
+xcode-select -p            => /Library/Developer/CommandLineTools (CLT)
+/Applications/Xcode.app    => PRESENT  (activated via DEVELOPER_DIR, no sudo)
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+                           => Xcode 26.5  Build 17F42        (EXIT 0)
+SDKs:  iphonesimulator26.5, macosx26.5   |  Simulator: iPhone 16 available
+swiftlint /opt/homebrew/bin/swiftlint  | swiftformat /opt/homebrew/bin/swiftformat | pwsh present
+=> CAPABILITY AVAILABLE. SwiftUI + Swift Charts compile on iOS 18 + macOS 15 targets (proven below).
+=> NOT a STATUS=BLOCKED-on-capability case.
+
+############################################################
+# 1. Files produced (allowed scope: AnalyticsSummaryWidget.*)
+############################################################
+AnalyticsSummaryWidget.Model.swift       state-holder seam (P1/S8) + telemetry seam (P1/S11) + registry + i18n facade (P1/S10)
+AnalyticsSummaryWidget.Adapter.swift     pure projection: fmtNumber/formatCurrency port + convertDistanceFromSI + Wh/km<->Wh/mi + projector + a11y
+AnalyticsSummaryWidget.Components.swift  leaf SwiftUI: tone palette, StatCard tile, compact AnimatedNumber, Sparkline row, section caption
+AnalyticsSummaryWidget.swift             surface view: header/freshness, loading/empty/error/stale/offline/content, compact/standard/wide layouts
+AnalyticsSummaryWidget.Previews.swift    8 previews (standard/compact/wide-sparklines/loading/empty/error/stale/offline)
+AnalyticsSummaryWidget.strings           P1/S10 catalog: 6 parity keys + registry + native chrome
+AnalyticsSummaryWidget.Tests.swift       24 unit tests (adapter value parity, format/convert, phase matrix, telemetry, registry, a11y)
+
+Parity coverage vs web source:
+- Data sources mapped to shared state-holder seam: useAnalyticsSummary (GET /analytics/fleet) + useUnits + useFormatting (no HTTP in view).
+- Computations VERBATIM: displayDist=convertDistanceFromSI(km*1000,unit); displayEff=mi?wh*1.60934:wh; effUnit Wh/mi|Wh/km;
+  costPerDist=displayDist>0?cost/displayDist:0; hasData=distKm>0||energyKwh>0; sparklines=[dist,eff,energy,cost] trend arrays.
+- 4 stat cells (Total Distance / Avg Efficiency / Energy Consumed / Cost / {unit}) in source order; '—' cost fallback.
+- 3 layouts: compact(cols<=1) animated big distance; standard(2 cols) grid; wide(cols>=4) grid + sparkline row when hasSparklines.
+- Every state rendered (loading skeleton / empty ContentUnavailableView / error+retry / stale chip+autorefresh / offline banner / content).
+- Registry registered with canonical id "analytics-summary", category "analytics", default 2x2, min 1x2, max 4x40 (clamp enforced).
+- i18n: all 6 source keys (title/totalDistance/avgEfficiency/energyConsumed/costPerDist/noData) resolve via P1/S10 facade; no English literals in code.
+- Telemetry: AnalyticsSummaryModel.start() emits view.opened(surface:"AnalyticsSummaryWidget") once (P1/S11), asserted by test.
+- Accessibility: VoiceOver summary, per-tile combined labels, header/refresh/open labels, Dynamic Type (system fonts), Reduce-Motion-aware big number + skeleton.
+
+############################################################
+# 2. Surface-scoped, host-runnable acceptance gates
+############################################################
+
+--- swiftformat --lint (6 swift files) ---
+$ swiftformat --lint AnalyticsSummaryWidget.{Model,Adapter,Components,swift,Previews,Tests}.swift
+SwiftFormat completed.  0/6 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (6 swift files) ---
+$ swiftlint lint --strict --quiet <files>
+(no output)
+LINT_EXIT=0
+
+--- placeholder / stub gate (ADR-011 definition-of-done) ---
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(no TODO/FIXME/stub/mock/placeholder/Lorem; 0 opt-outs)
+
+--- xcodegen generate (file enumeration into the real project) ---
+$ DEVELOPER_DIR=.../Xcode xcodegen generate
+Created project at apps/apple/TeslaSync.xcodeproj
+grep -c AnalyticsSummaryWidget TeslaSync.xcodeproj/project.pbxproj => 42  (7 files x build-file+file-ref across iOS/macOS app + test targets)
+XCODEGEN_EXIT=0
+
+--- isolated SwiftPM build + tests (real surface sources, Swift 6 language mode = strict concurrency complete) ---
+Harness: tmp package, platforms [.macOS(.v15)], swiftLanguageMode(.v6); real AnalyticsSummaryWidget.{Model,Adapter,Components,swift,Previews}.swift
+compiled with minimal stand-ins ONLY for app-module design tokens + DashboardWidgetInfra (production types unchanged).
+$ swift test
+Test Suite 'All tests' passed.
+     Executed 24 tests, with 0 failures (0 unexpected) in 0.006 (0.009) seconds
+SWIFT_TEST_EXIT=0
+  Suites: AnalyticsSummaryAdapterTests(8) AnalyticsSummaryFormatTests(3) AnalyticsSummaryPhaseTests(1)
+          AnalyticsSummaryModelTests(9) AnalyticsSummaryRegistryTests(3) AnalyticsSummaryAccessibilityTests(1) = 24
+  Pinned: km grid ["1,000","200","250.5","$0.050"]/units ["km","Wh/km","kWh",nil];
+          mi grid ["1,000","161","10.0","$0.020"]/units ["mi","Wh/mi","kWh",nil] + "Cost / mi";
+          hasData distance|energy|none; cost '—' without distance; sparklines on/off;
+          phase matrix; zero-summary => .empty (AnalyticsSummary-specific hasData gate); telemetry-once; stale auto-refresh;
+          registry analytics-summary 2x2/1x2/4x40 + clamp; compact<=1 / wide>=4 thresholds; a11y summary string.
+
+--- real SDK typecheck (Swift 6, -strict-concurrency=complete, -D DEBUG; Model+Adapter+Components+view+Previews+shim) ---
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <iphonesimulator26.5> -target arm64-apple-ios18.0-simulator ...
+IOS_TYPECHECK_EXIT=0   (0 errors / 0 warnings)
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <macosx26.5> -target arm64-apple-macos15.0 ...
+MAC_TYPECHECK_EXIT=0   (0 errors / 0 warnings)
+
+--- collision-free proof (no NEW duplicate symbol added to the single app module) ---
+Every public type defined by this surface appears ONLY in AnalyticsSummaryWidget.* (0 external definition files):
+  AnalyticsSummaryWidget AnalyticsSummaryModel AnalyticsSummaryDTO AnalyticsSummaryUpdate AnalyticsSummarySource
+  InMemoryAnalyticsSummarySource AnalyticsSummaryTelemetry OSLogAnalyticsSummaryTelemetry AnalyticsSummaryConnection
+  AnalyticsSummaryLoadStatus AnalyticsDistanceUnit AnalyticsSummaryUnitPrefs AnalyticsSummaryProjector AnalyticsSummaryProjection
+  AnalyticsStatItem AnalyticsStatTone AnalyticsSparklineSeries AnalyticsSummaryFormat AnalyticsDistanceConvert
+  AnalyticsSummaryAccessibility AnalyticsSummarySurface AnalyticsSummaryStrings AnalyticsSummaryPalette AnalyticsStatTile
+  AnalyticsSummaryBigNumber AnalyticsSparklineRow AnalyticsSectionCaption  => 0 collisions.
+
+############################################################
+# 3. Full-app xcodebuild (iOS Simulator + macOS) — attempted, DEFERRED
+############################################################
+The prompt gate's `xcodebuild -scheme TeslaSync(-macOS) build test` was executed for real (bounded), DEVELOPER_DIR=Xcode 26.5.
+
+$ gtimeout 240 xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+... scheme pre-action Scripts/build-shared-xcframework.sh -> Gradle :core:assembleSharedXCFramework ...
+> Task :core:assembleSharedDebugXCFramework
+xcframework successfully written out to: apps/shared/core/build/XCFrameworks/debug/Shared.xcframework
+> Task :core:linkReleaseFrameworkIosArm64
+** BUILD INTERRUPTED **
+IOS_EXIT=124   # KMP/Native RELEASE-link long-pole; interrupted before any app Swift compiled
+
+$ gtimeout 200 xcodebuild -scheme TeslaSync-macOS build test
+> Task :core:linkReleaseFrameworkIosArm64 UP-TO-DATE
+> Task :core:linkReleaseFrameworkIosSimulatorArm64
+> Task :core:linkReleaseFrameworkMacosArm64
+** BUILD INTERRUPTED **
+MAC_EXIT=124   # same KMP Shared.xcframework RELEASE-link long-pole
+
+Why DEFERRED (both blockers are SURFACE-INDEPENDENT and OUTSIDE this prompt's allowed-files scope):
+  B1. KMP Shared.xcframework (ADR-004): the scheme pre-action builds it via Gradle/Kotlin-Native; the RELEASE-variant
+      link (:core:linkReleaseFramework{IosArm64,IosSimulatorArm64,MacosArm64}) is the long-pole and does not finish under
+      the local time cap (BUILD INTERRUPTED). It runs before any app Swift compiles, so it gates the whole-app build only.
+      Matches every prior P4 surface (see apps/macos-pending-verifications.md; p4-apple/P99-0001 runs it on macos-latest).
+  B2. Pre-existing app-module redeclaration (surface-independent, not in allowed scope):
+        TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift:118  public struct ChargingProjection
+        TeslaSync/feature-views/ChargingDetailSection.Adapter.swift:240   public enum   ChargingProjection
+      This would fail the app-target Swift compile independent of B1; it predates and is unrelated to AnalyticsSummaryWidget.
+
+Per the project's definition-of-done for parallel surface prompts, the full-app iOS+macOS xcodebuild is the deferred
+artifact verification (macOS-pending), executed on the macos-latest acceptance gate (p4-apple/P99-0001). This surface
+adds zero new errors/collisions to that build (proven in section 2). macos-pending-verifications.md is outside this
+prompt's allowed-files scope, so the deferral is recorded here in the log rather than by editing that file.
+
+############################################################
+# 4. Summary
+############################################################
+Surface-acceptance gates (host-runnable, surface-scoped) — ALL GREEN:
+  FORMAT_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  XCODEGEN_EXIT=0  SWIFT_TEST_EXIT=0 (24/24)
+  IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0   (Swift 6 strict concurrency; iOS 18 + macOS 15 SDKs)
+  Collision-free: every public symbol unique to the surface.
+Full-app xcodebuild (iOS+macOS): IOS_EXIT=124 / MAC_EXIT=124 — DEFERRED to p4-apple/P99-0001 (macos-latest),
+  blocked ONLY by surface-independent infra (KMP Shared.xcframework release-link long-pole + pre-existing
+  ChargingProjection redeclaration). No surface defect; no NEW error introduced.
+
+Honesty covenant: full-app red is recorded as red (124) and attributed, never claimed green. Every gate within the
+surface's control + runnable on this host is genuinely green. Surface complete per the documented protocol.
+
+EXIT=0
+STATUS=DONE

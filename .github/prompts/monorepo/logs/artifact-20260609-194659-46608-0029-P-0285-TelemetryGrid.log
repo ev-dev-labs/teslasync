@@ -1,0 +1,126 @@
+=== P4 Feature view 0285 TelemetryGrid (Apple) ===
+Runner   : macOS (Darwin arm64, Mac Studio), Xcode 26.5 (17F42), Swift 6.3.2
+Tooling  : swiftlint + swiftformat (Homebrew), xcodegen, pwsh, KMP gradlew
+Web src  : web/src/features/vehicles/components/telemetry-panels/TelemetryGrid.tsx
+Date     : 2026-06-10
+
+Allowed-files scope (this prompt): apps/apple/TeslaSync/feature-views/TelemetryGrid.* + this log.
+
+--- Artifact files shipped (apps/apple/TeslaSync/feature-views/) ---
+TelemetryGrid.swift             surface view; freshness chip + banner; states switch; onAppear view.opened
+TelemetryGrid.Adapter.swift     VehicleState model + display-unit enums + SI formatters (pure port of useUnits/numberFormat)
+TelemetryGrid.Projection.swift  pure projection → the six tiles (web render body); tone/icon/sub/a11y
+TelemetryGrid.Model.swift       @Observable model; P1/S8 source seam; P1/S11 telemetry seam; P1/S10 i18n facade
+TelemetryGrid.Views.swift       responsive grid, InfoTile cell, skeleton grid, empty, error+retry, chip, banner
+TelemetryGrid.Previews.swift    7 previews: loading / content-driving / content-charging(imperial) / empty / error / stale / offline
+TelemetryGrid.strings           i18n catalog contribution (web-parity common.* keys + localized inline literals + native chrome)
+TelemetryGrid.Tests.swift       30 unit tests (format / projection / accessibility / phase / model)
+
+============================================================
+STEP 1 — swiftformat --lint apps/apple
+------------------------------------------------------------
+0/3081 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+STEP 2 — swiftlint --strict   (whole included tree; gate scope)
+------------------------------------------------------------
+Done linting! 0 violations.
+LINT_EXIT=0
+Note: TelemetryGrid.* linted clean only after splitting the unit/format core
+      (Adapter) and the tile projection into two files to satisfy file_length<=400.
+
+STEP 3 — check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TelemetryGrid
+------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+STEP 4 — Surface isolation proof  (KMP-free SwiftPM harness, swift-tools 6.0 = Swift 6 strict-concurrency=complete)
+------------------------------------------------------------
+Why: the TeslaSync app scheme compiles ~2340 feature-views + dashboard-widgets as ONE module.
+     To verify THIS surface independently of unrelated sibling breakage (see STEP 6), the six
+     source files were compiled + tested against the REAL design tokens (Tokens.swift), material
+     (TSMaterial.swift), motion (Motion.swift) and the three shared components actually used
+     (TSGlassPanel / TSEmptyState / TSSkeleton, extracted verbatim). No Tailwind ports, no KMP.
+
+$ swift build
+[13/13] Compiling TGSurface TelemetryGrid.swift
+Build complete! (9.39s)
+HARNESS_BUILD_EXIT=0
+
+$ swift test
+Test Suite 'All tests' passed.
+Executed 30 tests, with 0 failures (0 unexpected) in 0.007s
+  TelemetryGridFormatTests          8 passed  (SI convert + locale number format + precision + dash)
+  TelemetryGridProjectionTests      6 passed  (tile order/count, driving+charging values/subs/tones, battery thresholds, nil->dash)
+  TelemetryGridAccessibilityTests   2 passed  (composed "label: value, sub"; every tile has a non-empty label + icon)
+  TelemetryGridPhaseTests           7 passed  (resolvePhase: loading/empty/loaded/failed x with/without cached data)
+  TelemetryGridModelTests           7 passed  (wiring, view.opened once, units pass-through, refresh, empty, stale 1-shot auto-refresh, offline no-refresh)
+HARNESS_TEST_EXIT=0
+
+STEP 5 — xcodegen generate
+------------------------------------------------------------
+Created project at apps/apple/TeslaSync.xcodeproj   (git-ignored, regenerable)
+XCODEGEN_EXIT=0
+
+STEP 5a — Stage Shared.xcframework  (KMP core, scheme pre-action)
+------------------------------------------------------------
+:core:assembleSharedXCFramework  ->  BUILD SUCCESSFUL in 6m31s
+xcframework staged -> apps/apple/Frameworks/Shared.xcframework  (ios-arm64, ios-arm64-simulator, macos-arm64)
+SHARED_EXIT=0
+
+STEP 6 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------
+RESULT: FAILED.
+IOS_EXIT=65
+Errors: 104 total.  Errors attributed to TelemetryGrid.* files: 0.
+
+ROOT CAUSE (PRE-EXISTING, OUT OF ALLOWED-FILES SCOPE):
+  Duplicate type definitions across sibling surfaces that the single app module compiles together.
+  Confirmed duplicates (defined twice, verbatim):
+    enum StateTimelineLoadStatus  — feature-views/StateTimeline.Adapter.swift:117
+                                   — dashboard-widgets/StateTimelineWidget.Model.swift:44
+    enum StateTimelineConnection  — feature-views/StateTimeline.Adapter.swift:125
+                                   — dashboard-widgets/StateTimelineWidget.Model.swift:52
+    (also StateTimelineUpdate, StateTimelineModel — same two files)
+  Compiler:  "'StateTimelineLoadStatus' is ambiguous for type lookup in this context"  (+ cascade)
+  The ambiguity cascade implicates ~576 unrelated files. NONE are TelemetryGrid.*.
+  These colliding files are tracked/pre-existing and lie OUTSIDE this prompt's allowed-files scope
+  (apps/apple/TeslaSync/feature-views/TelemetryGrid.*), so they cannot be edited here.
+  git status confirms this surface added only untracked TelemetryGrid.* files; it did not modify any sibling.
+
+STEP 7 — xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------
+RESULT: FAILED.
+MAC_EXIT=65
+Errors: 8 — all code-signing/entitlements; build halted BEFORE the Swift compile phase:
+  "TeslaSync-macOS has entitlements that require signing with a development certificate.
+   Enable development signing in the Signing & Capabilities editor."  (x TeslaSync-macOS, TeslaSyncWidgets-macOS)
+  Cause: no development certificate / empty DEVELOPMENT_TEAM on this runner (environment/platform-capability
+  limitation). Had signing succeeded, this target shares the same module and would hit the STEP-6 collisions.
+
+============================================================
+VERDICT
+------------------------------------------------------------
+The TelemetryGrid surface is COMPLETE and INDEPENDENTLY VERIFIED:
+  - swiftformat --lint .............. PASS (0/3081)
+  - swiftlint --strict .............. PASS (0 violations)
+  - placeholder gate ................ PASS (COUNT=0)
+  - compiles, Swift 6 strict conc. .. PASS (isolated harness build)
+  - 30 parity unit tests ............ PASS (0 failures)
+  - errors/violations in my files ... 0
+  Parity reproduced: 6 tiles (Battery/Speed/Inside/Odometer/Charger/Sentry) with exact value, sub-label,
+  semantic tone and SI unit formatting; plus the Apple HIG states contract (loading/empty/error/stale/offline),
+  i18n facade (no English literals in code), VoiceOver labels, Dynamic Type, Reduce Motion, and the
+  P1/S11 view.opened diagnostics event with surface slug "TelemetryGrid".
+
+The full-app iOS + macOS gate could NOT reach green, for two reasons OUTSIDE this surface and its allowed scope:
+  (1) pre-existing duplicate-type collisions in UNRELATED sibling surfaces (StateTimeline*, and a broad
+      cascade of others) compiled into the same module; and
+  (2) macOS code-signing requiring a development certificate not provisioned on this runner.
+
+Per the Honesty Covenant (1 No red-as-green, 7 No predecessor bypass, 8 No commit on red, 10 log ends with
+EXIT/STATUS), this is reported as BLOCKED — not DONE — and the surface is left uncommitted.
+
+EXIT=65
+STATUS=BLOCKED

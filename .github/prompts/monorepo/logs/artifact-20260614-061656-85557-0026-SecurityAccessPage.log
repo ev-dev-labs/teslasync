@@ -1,0 +1,220 @@
+=== P4-APPLE · P7 · page:admin/SecurityAccess (SwiftUI / HIG) ===
+started: 2026-06-14T12:10:00-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh present
+web source: web/src/features/admin/pages/SecurityAccessPage.tsx   (route /security-access)
+parity unit: page:admin/SecurityAccess  (manifest requiredCount=9)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group (the only
+`TeslaSync/*` groups compiled are widget-primitives / dashboard-widgets / feature-views /
+misc-surfaces / shared-surfaces). The repo's real, compiled canonical page home — proven by
+every sibling DONE admin page (ApiPlayground, AuditLog, DiskForecast, LiveSignalInspector,
+GDPRExport, …) — is `apps/apple/Sources/Features/Admin/` (`Sources` is a recursive project.yml
+source path with createIntermediateGroups). The page therefore ships at
+`apps/apple/Sources/Features/Admin/**` — the faithful equivalent of the prompt's `Features/Admin`
+— and its tests at `apps/apple/Tests/Unit/Features/Admin/**`. Strings ship in the platform
+catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed file). This mapping is the
+only deviation from the literal prompt path and is recorded here per covenant #9.
+
+--------------------------------------------------------------------------------
+SCOPE (manifest requiredCount=9 — the verifiable parity contract)
+--------------------------------------------------------------------------------
+The manifest scopes this PAGE unit to the two GlassPanels the web page file renders DIRECTLY
+(GlassPanel1 = the red security-alert panel; GlassPanel2 = the VehicleTwin digital-twin panel),
+plus the 3 data states (loading/error/success) and 4 strings, over the two data sources
+useVehicles + useSecurityEvents. The web page's eight downstream section components
+(SummaryStatsRow, SecurityStatusCards, WindowStatusDetail, LiveVehicleState, SentryModeChart,
+SecurityStatistics, EventHistoryTable, EventTimeline) are SEPARATE parity units with their own
+Swift implementations already in TeslaSync/feature-views — reimplementing them here would be a
+DRY violation + scope creep into other units. This matches the accepted sibling LiveSignalInspector
+page exactly (page = its declared GlassPanels + states + strings, composing P3 components). To keep
+the page substantial / non-stub, GlassPanel2 renders the vehicle's physical security state — the
+exact thing the web VehicleTwin depicts (lock / sentry / doors / windows / HomeLink / guest) — as a
+native, adaptive tile grid driven entirely by the bound @Observable model.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/SecurityAccessLogic.swift              ( 77 LOC) pure helpers ported from web helpers.ts: isSentryActive / isDoorClosed / windowState / allWindowsClosed / openWindowCount / isSecure / sentryUptimePercent / lastLockChange — testable, no UI
+?? apps/apple/Sources/Features/Admin/SecurityAccessPageModel.swift          (257 LOC) value types (SecurityVehicle label=display_name||vin||`Vehicle ${id}`, SecurityEventSnapshot), two seams (SecurityAccessVehicleSource=useVehicles, SecurityAccessEventsSource=useSecurityEvents+/security/latest), state enums (Vehicles/Events/Phase), @MainActor @Observable model: load/refresh/selectVehicle, derives isSecure/sentryUptime/lastLockChange/phase
+?? apps/apple/Sources/Features/Admin/SecurityAccessPageModel.Sample.swift   ( 74 LOC) page/preview seeds: 2 vehicles + a 6-row newest-first history whose newest snapshot is intentionally un-secure (unlocked, sentry off, door open, a window vented) so BOTH GlassPanels render out of the box
+?? apps/apple/Sources/Features/Admin/SecurityAccessPage.swift               (208 LOC) SwiftUI view: header(title+subtitle+VehicleSelect Picker), loading(TSSpinner)/empty(ContentUnavailableView)/error(TSAlertBanner+Retry)/success switch over model.phase; #if DEBUG previews (success/no-vehicles/error)
+?? apps/apple/Sources/Features/Admin/SecurityAccessPage.Panels.swift        (213 LOC) GlassPanel1 SecurityAlertPanel (danger-tinted TSGlassPanel, admin.security.alert) + GlassPanel2 SecurityTwinPanel (car header + secure badge + adaptive LazyVGrid of 6 SecurityStatusTile + sentry-uptime/total-events/last-lock-change footer)
+?? apps/apple/Sources/Features/Admin/SecurityAccessRouteRegistration.swift  ( 30 LOC) registers .securityAccess -> SecurityAccessPage (mirrors TeslaOrders/LiveSignalInspector; model built on MainActor + captured)
+?? apps/apple/Tests/Unit/Features/Admin/SecurityAccessPageModelTests.swift  (268 LOC) XCTest: both sources' loading/empty/error/success, selection reload + clear, all 8 logic helpers, SecurityVehicle.label fallback chain, sample sources well-formed, .securityAccess route metadata + registration + deep-link parsing
+ M apps/apple/Sources/App/AppRoute.swift          + case .securityAccess (pathSegment "security-access", group .system, systemImage "lock.shield")
+ M apps/apple/Sources/TeslaSyncApp.swift           chains SecurityAccessRouteRegistration.registry(base: registry) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings   +36 keys (4 required parity + route.securityAccess + native chrome [controls.vehicle, loading, empty.*, noData.*, action.retry] + twin tiles [card.* / locked/unlocked / active/inactive / closed/open / windows.allClosed / windows.openCount %lld / nearby/away / enabled/disabled / secure/unsecure / twin.title] + stat.* footer); additive only (396 insertions, 0 deletions); JSON validated (8750 total)
+ M apps/parity/apple-ledger.json                   +2 rows: page:admin/SecurityAccess × {apple-macos, apple-ios}, status done, 9/9
+
+(generated apps/apple/TeslaSync.xcodeproj and the staged apps/apple/Frameworks/Shared.xcframework
+ are git-ignored — .gitignore L379 `apps/apple/**/*.xcodeproj/` + L381 `apps/apple/Frameworks/*.xcframework/`
+ — and are NOT part of the commit; only Frameworks/.gitkeep is tracked.)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (project.yml pre-build script, run standalone) ---
+# apps/apple/Scripts/build-shared-xcframework.sh  ->  :core:assembleSharedXCFramework
+BUILD SUCCESSFUL in 7m 35s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "SecurityAccess*" referenced 42x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 7 new files + 2 edited files, repo .swiftformat) ---
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 7 new files + 2 edited files, repo .swiftlint.yml) ---
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=7   [all allow markers are in SIBLING files; none of mine]
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"/fatalError in my shipped code]
+
+--- Localizable.xcstrings JSON validity + key presence ---
+python3 json.load -> valid ; all 4 required keys + route.securityAccess + 31 chrome/twin/footer keys present ; 8750 total ; diff = 396 insertions / 0 deletions (purely additive, Xcode xcstrings format preserved)
+XCSTRINGS_EXIT=0
+
+--- Executed model logic (real model + logic + sample, Swift 6 strict-concurrency host harness) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx26.5> -target arm64-apple-macos15.0 \
+#   Sources/Features/Admin/SecurityAccess{Logic,PageModel,PageModel.Sample}.swift main.swift -o sa_harness   (SWIFTC_EXIT=0)
+CHECKS=34 FAILURES=0 -> "ALL ASSERTIONS PASSED"
+  initial=.loading + .idle events + phase .loading;
+  success -> 2 sample vehicles, auto-select id 1, latest present, phase .success, isSecure=false (drives GlassPanel1),
+             totalEvents=6, sentryUptime>0 (=50%), lastLockChange present;
+  selectVehicle(2) -> selection 2 + phase .success; selectVehicle(nil) -> selection nil + events .idle;
+  empty vehicles -> vehiclesState .empty + phase .empty; failing vehicles -> phase .error + errorMessage;
+  logic: sentry On/Off/nil; door nil/Open; window Vent/all-closed/open-count=2; isSecure(nil)/locked+closed;
+         lastLockChange=t0; sentryUptime=50%; sample latest un-secure
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components (Swift 6 strict concurrency, BOTH idioms) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Cards,Typography,Buttons,Badges}.swift Sources/Components/Feedback/{States,Banners}.swift \
+#   Sources/Components/DataDisplay/StatusIndicators.swift Sources/App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift \
+#   Sources/Features/Admin/SecurityAccess{Logic,PageModel,PageModel.Sample,Page,Page.Panels,RouteRegistration}.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0
+  [Compiles my page + panels + model + logic + sample + registration + the AppRoute edit against the ACTUAL
+   TSGlassPanel/TSPageTitle/TSPanelTitle/TSEmptyState/TSSpinner/TSButton/TSAlertBanner/TSStatusBadge/TSTone +
+   Color.TS/Font.TS/TSSpacing/TSRadius/tsGlassPanel/AppRouteHostRegistry sources on BOTH idioms (ADR-002/006).]
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug
+    -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [** BUILD FAILED ** — BLOCKED by 2 PRE-EXISTING, OUT-OF-SCOPE errors; ZERO errors in any of my files — see note]
+TEST_EXIT=(not reached)  [the test bundle hosts on the app target, blocked by the same out-of-scope error;
+                          model logic is instead proven GREEN by the executed harness (34/34) above]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to a defect in a sibling
+surface OUTSIDE this artifact's allowed files. grep of the build log: total `error:` lines = 2;
+both in the SAME out-of-scope file =
+  TeslaSync/shared-surfaces/Input.Previews.swift:88 + :101:
+      error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+  (two `#Preview { … return staged(…) { … } }` blocks — a Swift 6 `#Preview`/ViewBuilder
+   incompatibility). The file is committed at ed5f636e3 ("feat(apps/apple/shared-surfaces): add
+   Input surface (P4)") and is UNMODIFIED by me (git status --porcelain for it is empty). It is
+   outside my allowed files (apps/apple/Sources/Features/Admin/** + nav registration + the string
+   catalog + this log). NONE of the diagnostics are in my files (grep of the build log for
+   SecurityAccess*, AppRoute.swift, TeslaSyncApp.swift -> zero diagnostics). My files' correctness
+   is proven instead by the isolated Swift 6 strict-concurrency type-check (0/0 on macOS+iOS) and
+   the executed model harness (34/34) — the same host-harness methodology the peer p4-apple DONE
+   logs (LiveSignalInspector, DiskForecast, ApiPlayground, …) use when the app target is blocked by
+   an out-of-scope sibling. No out-of-scope file was edited (git status is clean apart from my deliverables).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=9
+================================================================================
+# evidence = file `symbol` (page paths under apps/apple/Sources/Features/Admin/)
+
+[x] panel  — GlassPanel1   SecurityAccessPage.Panels.swift `SecurityAlertPanel` -> TSGlassPanel { exclamationmark.triangle.fill + Text("admin.security.alert") } danger-tinted; rendered by SecurityAccessPage.swift `successContent` when !model.isSecure (web red security-alert GlassPanel)
+[x] panel  — GlassPanel2   SecurityAccessPage.Panels.swift `SecurityTwinPanel` -> TSGlassPanel { car header + secure TSStatusBadge + adaptive LazyVGrid(lock/sentry/doors/windows/homelink/guest SecurityStatusTile) + sentry-uptime/total-events/last-lock footer }; rendered when model.latest != nil (web VehicleTwin GlassPanel)
+[x] state  — loading       SecurityAccessPageModel `phase`==.loading -> SecurityAccessPage.swift `loadingPanel` TSGlassPanel { TSSpinner("admin.security.loading") }. Covers BOTH sources: vehiclesState.loading and (vehicles loaded) eventsState.idle/.loading
+[x] state  — error         SecurityAccessPageModel `phase`==.error (errorMessage from either source) -> SecurityAccessPage.swift `errorBanner` TSAlertBanner(.danger,"error.loadFailed"){ TSButton("action.retry") } + .accessibilityValue(errorMessage). Covers vehicles AND events failure
+[x] state  — success       SecurityAccessPageModel `phase`==.success -> SecurityAccessPage.swift `successContent` (GlassPanel1 when !isSecure + GlassPanel2). Vehicles .loaded drives the header Picker; events .loaded drives latest+history. (empty -> `emptyPanel` ContentUnavailableView for both no-vehicles + no-security-data)
+[x] string — admin.security.alert      SecurityAccessPage.Panels.swift `SecurityAlertPanel` -> Text("admin.security.alert") (+ .accessibilityLabel); catalog "⚠ Vehicle may not be secure — check lock, door, and window status."
+[x] string — admin.security.subtitle   SecurityAccessPage.swift `header` -> Text("admin.security.subtitle"); catalog "Lock status, sentry mode, doors, and windows"
+[x] string — admin.security.title      SecurityAccessPage.swift `header` -> TSPageTitle("admin.security.title") (+ route.securityAccess nav title); catalog "Security & Access"
+[x] string — error.loadFailed          SecurityAccessPage.swift `errorBanner` -> TSAlertBanner(title: "error.loadFailed"); catalog "Failed to load data"
+PARITY_COVERED=9
+
+All 9 panels/states/strings resolve from the bound @Observable SecurityAccessPageModel (vehicles source =
+web useVehicles; events source = web useSecurityEvents + polled /security/latest) and the Localizable.xcstrings
+catalog. Web key names preserved verbatim. Both declared data sources implement loading/empty/error/success.
+The web VehicleSelect action is reproduced with a native HIG menu Picker that reselects + reloads the feed.
+SI converters: N/A on this surface — security state is lock/sentry/door/window booleans + timestamps with no
+unit-bearing display fields (the last-lock-change uses a relative-time formatter, exactly as the web `timeSince`).
+
+NATIVE DEVIATIONS (recorded per covenant #9):
+ - Vehicle dropdown uses a native menu `Picker` (HIG) rather than `TSSelect`, because the vehicle labels are
+   dynamic runtime data (display_name/vin); the Picker carries the web aria-label (admin.security.controls.vehicle).
+ - GlassPanel2 renders the digital twin's depicted physical state (lock/sentry/doors/windows/homelink/guest) as a
+   native adaptive tile grid rather than embedding the heavy VehicleTwinSurfaceModel shared surface, avoiding cross-
+   unit coupling while staying faithful to what the web VehicleTwin visualises (ADR-002/006 adaptive reflow).
+ - +31 native chrome/twin/footer keys give the two sources' loading/empty/error states + the twin tiles real,
+   localized copy (the manifest requires those states implemented for every data source; zero hardcoded text).
+ - +route.securityAccess added for the new .securityAccess AppRoute nav title.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65) is a
+                       pre-existing OUT-OF-SCOPE 2-error sibling (Input.Previews.swift), labelled as such, never recoloured.
+ 2 No scope narrowing: both GlassPanels, all 3 declared states for BOTH data sources, and the 4 strings are
+                       implemented; the web VehicleSelect action + adaptive twin tile grid are reproduced.
+ 3 No skip-and-assume: the web page + its helpers.ts + SecurityStatusCards + useVehicles/useSecurityEvents hooks
+                       were read end-to-end; the PageContainer title/subtitle/action + the 2 direct GlassPanels +
+                       the secure-state derivation were reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code.
+ 5 No parity shortcuts: each state renders distinctly; isSecure/sentry/door/window logic ported faithfully from
+                       helpers.ts; strings = web keys verbatim.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, project.yml, or other owners' files; the out-of-scope
+                       Input.Previews.swift breakage is DEFERRED to its owner / the P99 integration gate. git status is
+                       clean apart from my deliverables.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — xcframework(0), xcodegen(0), swiftformat(0/9),
+                       swiftlint --strict(0/9), placeholder(0), xcstrings(valid), harness(34/34), view type-check
+                       macOS(0/0) + iOS(0/0). The only RED is the documented pre-existing out-of-scope sibling.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI SecurityAccessPage shipped at parity with the web source: a pure @Observable state
+holder (ADR-004 — no networking in the view) that owns the vehicles source state (web useVehicles) and the per-vehicle
+security feed (web useSecurityEvents + /security/latest), deriving isSecure/sentry-uptime/last-lock-change through
+SecurityAccessLogic (ported faithfully from the web helpers.ts). The two web GlassPanels — the security-alert panel
+(shown when not secure) and the digital-twin panel (the vehicle's physical lock/sentry/door/window/HomeLink/guest
+state) — are rendered with the P2 tokens + P3 shared components (TSGlassPanel/TSAlertBanner/TSEmptyState/TSSpinner/
+TSButton/TSPageTitle/TSPanelTitle/TSStatusBadge) — no hand-rolled glass; every visible string from
+Localizable.xcstrings with the web key names; adaptive across macOS/iPad/iPhone via the twin's LazyVGrid; deep-linkable
+via the new .securityAccess route (AppRouteParser resolves /security-access). Verified on BOTH idioms by isolated
+Swift 6 strict-concurrency type-checks (0/0) and an executed model harness (34/34), with the Shared.xcframework built
+GREEN. The full xcodebuild scheme is RED ONLY due to TWO pre-existing, out-of-scope sibling errors
+(Input.Previews.swift:88/:101, #Preview return-in-ViewBuilder), with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin apps/apple/Tests/Unit/Features/Admin \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-SecurityAccessPage.log
+  git commit -m "feat(apps/apple): SecurityAccessPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

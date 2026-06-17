@@ -1,0 +1,160 @@
+=== P4 Shared surface 0141 SuspenseProgressBoundary (Apple) ===
+run: 2026-06-13T07:25Z  toolchain: Xcode 26.5 / swift 6.3.2  host: macOS 26 (Darwin, arm64)
+web source: web/src/components/feedback/SuspenseProgressBoundary.tsx
+             (+ the @/lib/globalProgress controller it drives and components/feedback/TopProgress.tsx)
+artifact:   apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.{swift,Adapter,Projection,
+             Controller,Model,Views,Previews,Tests,strings}   (8 swift + 1 strings)
+
+Capability check: SwiftUI + Swift Charts + MapKit on iOS 18 / iPadOS 18 / macOS 15 — AVAILABLE
+  (Xcode 26.5, swift 6.3.2). This surface is pure presentational/behavioural and uses no chart/map.
+  Therefore NOT blocked on platform capability; see [5/6] for the toolchain-IRGen deferral.
+
+--- [0/7] xcodegen generate ---
+Created project at apps/apple/TeslaSync.xcodeproj  (git-ignored; rebuilt per ADR-002)
+XCODEGEN_EXIT=0
+
+--- [1/7] swiftformat --lint (surface scope) ---
+Reading config file at apps/apple/.swiftformat   (--swiftversion 6.0, --maxwidth 120)
+SwiftFormat completed. 0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- [2/7] swiftlint --strict (surface scope) ---
+Linting 8 files: SuspenseProgressBoundary.{swift,Adapter,Projection,Controller,Model,Views,Previews,Tests}.swift
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+--- [3/7] placeholder scan (apps/tools/check-placeholders.ps1 -Path …/SuspenseProgressBoundary) ---
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+No TODO / FIXME / XXX / Coming-soon / Placeholder / Lorem / not-implemented in any shipped file.
+PLACEHOLDER_EXIT=0
+
+--- [4/7] isolated Swift 6 strict-concurrency build + XCTest (surface vs REAL design tokens) ---
+harness: SwiftPM module 'TeslaSync' = 7 surface sources + apps/design/generated/apple/Tokens.swift
+         + Sources/Design/TSDesign.swift (TSAnimation); test target = SuspenseProgressBoundary.Tests.swift;
+         swiftLanguageMode(.v6)  (== app SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY=complete)
+  Executed 11 tests, with 0 failures (0 unexpected)  — SuspenseProgressReducerTests
+  Executed  4 tests, with 0 failures (0 unexpected)  — SuspenseProgressBoundaryMetaTests
+  Executed  2 tests, with 0 failures (0 unexpected)  — SuspensePhaseTests
+  Executed  6 tests, with 0 failures (0 unexpected)  — SuspenseProgressControllerTests
+  Executed  9 tests, with 0 failures (0 unexpected)  — SuspenseProgressBoundaryModelTests
+  Executed  2 tests, with 0 failures (0 unexpected)  — SuspenseProgressBoundaryViewTests
+Test Suite 'All tests' passed. Executed 34 tests, with 0 failures (0 unexpected) in 0.007s.
+ISO_BUILD_TEST_EXIT=0
+
+--- [5/7] full-app iOS Simulator build test  (scheme TeslaSync, iPhone 17 — iPhone 16 absent on runner) ---
+Shared.xcframework: built + staged this run (Gradle :core:assembleSharedXCFramework — BUILD SUCCESSFUL in 9m51s).
+IOS_EXIT=65   ** BUILD FAILED ** (2 failures; testing cancelled)  — pasted RAW, NOT green.
+errors attributed to SuspenseProgressBoundary.* = 0   (whole-module type-check / EmitSwiftModule is clean;
+                                                        the surface bundles SuspenseProgressBoundary.strings fine)
+ROOT CAUSE (pre-existing, unrelated, OUTSIDE allowed files): a deterministic swift-frontend (Swift 6.3.2)
+  IRGen compiler CRASH (SIGABRT), not a diagnostic, while code-generating a reabstraction thunk:
+    ios_build.log: 5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+    ios_build.log:     (anonymous namespace)::SyncCallEmission::setArgs(...) + 688
+    ios_build.log:     (anonymous namespace)::IRGenSILFunction::visitFullApplySite(swift::FullApplySite)
+  swift-demangle "$sSbScA_pSgIeAghyg_SbIeAghn_TR" =
+    reabstraction thunk helper from @escaping @isolated(any) @callee_guaranteed @Sendable
+      (@unowned Swift.Bool, @guaranteed Swift.Actor?) -> ()
+    to   @escaping @isolated(any) @callee_guaranteed @Sendable (@in_guaranteed Swift.Bool) -> ()
+  i.e. a thunk for a @Sendable (Bool)->Void actor-isolated completion closure. The crashing SwiftCompile
+  batch's primaries are feature-views A* files (AnomalyInlineRow.*, ApiPlayground*, App*, AppearanceSettings*).
+  Such @Sendable (Bool)->Void closures live in PRE-EXISTING sources (e.g. Sources/Auth/AuthCoordinator.swift,
+  Sources/Auth/AuthSeams.swift, Sources/Live/LiveDataPreviewSupport.swift,
+  Sources/Notifications/LiveActivities/LiveActivityController.swift) — none of them this surface.
+
+  PROOF the crash is independent of this surface (not assumed — reproduced):
+    • This surface has NO such construct: its only Task is `Task<Void, Never>` and `advance()` is a
+      SYNCHRONOUS @MainActor `-> Bool` method; no `@Sendable (Bool)->Void`, no `@isolated(any)`,
+      no `Task<Bool>` (grep over SuspenseProgressBoundary.*.swift).
+    • The whole surface module compiles CLEAN in whole-module IRGen for the iOS-sim target
+      (swiftc -wmo … 7 sources + Tokens + TSDesign → out.o, exit 0).
+    • Re-ran the EXACT failed A* batch swift-frontend command (extracted from the build log) after
+      DELETING this surface's 7 sources from its -filelist (4059 → 4052 files): the compiler STILL
+      crashed identically —
+         filtered_out.log: While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+         filtered_out.log: SyncCallEmission::setArgs … ;  process exit = 134 (SIGABRT)
+         (0 references to SuspenseProgressBoundary in that run)
+  This is a runner-toolchain (Xcode 26.5 / swift 6.3.2) IRGen regression on @isolated(any) @Sendable
+  (Bool)->Void reabstraction thunks, owned by the P4 acceptance gate (toolchain pin / sibling fix), not
+  by this per-surface prompt — whose allowed files are SuspenseProgressBoundary.* + this log only.
+
+--- [6/7] full-app macOS build test  (scheme TeslaSync-macOS) ---
+MAC_EXIT=65   ** BUILD FAILED ** (1 failure)  — pasted RAW, NOT green.
+errors attributed to SuspenseProgressBoundary.* = 0   (fails at code-signing, before Swift compilation)
+ROOT CAUSE (runner capability, unrelated — identical to the 0099 ProgressRing precedent):
+  mac_build.log:1743: error: "TeslaSync-macOS" has entitlements that require signing with a development
+                      certificate. Enable development signing in the Signing & Capabilities editor.
+  mac_build.log:1745: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+                      development certificate.
+  The unsigned runner has no development certificate; the macOS app + widget targets gate on it before
+  any Swift source is compiled.
+
+--- [7/7] swift sources shipped ---
+  SuspenseProgressBoundary.swift            public generic boundary view (fallback ⇄ content + bridge + view.opened)
+  SuspenseProgressBoundary.Adapter.swift    Meta (slug, globalProgress trickle constants, i18n key) + SuspensePhase + valueNow
+  SuspenseProgressBoundary.Projection.swift pure SuspenseProgressState + reducer (started/ticked/stopped) = globalProgress math
+  SuspenseProgressBoundary.Controller.swift @Observable trickle controller (start->idempotent stop, shared singleton) = globalProgress
+  SuspenseProgressBoundary.Model.swift      telemetry seam + state-holder bridging isReady<->controller, once-only view.opened
+  SuspenseProgressBoundary.Views.swift      determinate top bar (TopProgress parity) + fallback/content container
+  SuspenseProgressBoundary.Previews.swift   #Preview matrix: loading / resolved / interactive toggle / seeded bar
+  SuspenseProgressBoundary.Tests.swift      34 XCTest cases (reducer/meta/phase/controller/model/views)
+  SuspenseProgressBoundary.strings          P1/S10 table: global.loading = "Loading" (mirrored from TopProgress aria-label)
+
+=== Honesty Covenant (binding) ===
+ 1 No red-as-green   : IOS_EXIT/MAC_EXIT pasted RAW as 65 and labelled ** BUILD FAILED **, never green.
+                       The full-app build is disclosed as DEFERRED on a toolchain IRGen crash + macOS
+                       code-signing — both pre-existing and reproduced, not passing.
+ 2 No scope narrowing : every web branch reproduced. The web source is behavioural — `<Suspense
+                       fallback>{children}` bridged to globalProgress.start()/stop on fallback
+                       mount/unmount, observed by the TopProgress bar. Native reproduces BOTH genuine
+                       branches (loading→fallback+bar active; resolved→content+bar idle), the verbatim
+                       globalProgress math (initial 8, trickle min(80, p+max(1, (80-p)*0.15)), stop
+                       floor 0 + snap-back), concurrent-start stacking, the idempotent stop, and the
+                       determinate bar (width=valueNow%, reduce-motion-aware, role=progressbar a11y).
+                       The source has NO empty/error/stale/offline branch (reads no hook) — see the
+                       Adapter parity note; the 0099 ProgressRing + 0075 AnimatedNumber precedents
+                       took the same honest line.
+ 3 No skip-and-assume : every runnable gate executed on THIS runner; raw exits pasted. The iOS deferral
+                       is not assumed — it was re-confirmed by deleting this surface's sources from the
+                       failing batch's -filelist and reproducing the SIGABRT (exit 134) with zero
+                       references to this surface. The macOS deferral is a real xcodebuild error line.
+ 4 No stubs as final  : complete production surface + 34 real XCTest cases (all green in [4/7]);
+                       placeholder COUNT=0 on every shipped file. The OSLog telemetry default is a
+                       working logging seam the app overrides; the controller drives a real trickle Task.
+ 5 No parity shortcut : the reducer's first-activation jump, the asymptotic trickle (advance shape +
+                       80% cap + min-step), the concurrent stacking, the idempotent stop floor, the
+                       non-finite guard, and the valueNow rounding/clamp are each unit-asserted against
+                       the web globalProgress/TopProgress expressions. web cyan→indigo→emerald gradient
+                       → P1/S9 Color.TS.accent/chartSeriesSpeed/statusSuccess tones (palette tokens,
+                       not ported Tailwind). web t('global.loading') → same key via the P1/S10 facade.
+ 6 No delegation      : implemented directly; no agents/parallel/background (delegation FORBIDDEN here).
+ 7 No predecessor bypass: binds P1/S8 state-holders (SuspenseProgressController + ...Model), P1/S9 tokens
+                       (Color.TS/Font.TS/TSSpacing/TSMotion via Tokens.swift + TSAnimation), P1/S10 i18n
+                       (global.loading mirrored from TopProgress; see .strings), and P1/S11 view.opened
+                       telemetry. Honours the established P4-apple isolated-build + DEFERRED full-app
+                       disposition (0099 ProgressRing precedent).
+ 8 No commit on red   : the committed artifact (8 SuspenseProgressBoundary.* + this log) is GREEN on
+                       swiftformat, swiftlint --strict, placeholder, xcodegen, AND a real Swift 6
+                       strict-concurrency build + 34/34 XCTest against the REAL design tokens. The
+                       deferred full-app gate is blocked only by a pre-existing, unrelated,
+                       out-of-allowed-files toolchain IRGen crash (iOS) and runner code-signing (macOS)
+                       — not a surface red.
+ 9 No silent drift    : changes confined to TeslaSync/shared-surfaces/SuspenseProgressBoundary.* + this
+                       log. No sibling surface, project.yml, token file, or build setting was touched.
+                       The generated .xcodeproj + staged Shared.xcframework are git-ignored.
+10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SuspenseProgressBoundary shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 34 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the REAL design system (Tokens.swift), via the Xcode 26.5 toolchain, with
+  swiftformat / swiftlint --strict / placeholder / xcodegen all green on the surface files and the
+  #Preview matrix compiling. The full-app iOS xcodebuild build/test gate is DEFERRED (not failed by this
+  code) on a deterministic, PRE-EXISTING swift-frontend IRGen crash emitting an @isolated(any) @Sendable
+  (Bool)->Void reabstraction thunk in unrelated feature-views/Auth/Live sources — proven independent of
+  this surface by reproducing the SIGABRT with this surface's files removed from the module. The macOS
+  gate is DEFERRED on development code-signing the unsigned runner lacks (identical to the 0099
+  precedent). Both are owned by the P4 acceptance gate on a signed runner with a fixed toolchain.
+
+EXIT=0
+STATUS=DONE

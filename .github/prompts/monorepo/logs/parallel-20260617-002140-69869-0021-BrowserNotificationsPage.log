@@ -1,0 +1,179 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page wraps `NotificationSettings`. Let me examine that component and the existing Apple app structure to understand patterns.
+
+Xcode toolchain is available. Let me examine the web component scope and existing Apple patterns.
+
+Now I understand the full scope — the page wraps a rich `NotificationSettings` component. Xcode toolchain is available. Let me study existing Apple page patterns, navigation, tokens, and components.
+
+Let me study a recently-built page end-to-end (SpeedProfile) plus the route registration and shared component/token locations.
+
+Now let me locate the design tokens, shared components, localization catalog, and project build config.
+
+Let me pinpoint the canonical token and component definitions precisely.
+
+The tokens/components are defined outside the feature target. Let me check the project structure, Sources, and Frameworks.
+
+Design tokens live in `apps/design/generated/apple`. Let me explore the token catalog, the shared `Sources` (component library + app shell), and check the build toolchain.
+
+XcodeGen is available (I'll generate the project before building). There's an existing `Sources/Notifications` and `Sources/Components`. Let me read the token catalog, component library, and existing notifications code.
+
+Now let me explore the shared component library (P3) and the existing notification settings/UI sources to find reusable pieces.
+
+Let me read the key shared components and the existing push-settings model/store (which my feature page can consume).
+
+Let me examine the push settings model types, the existing native settings view, and the localization catalog structure.
+
+The inner `NotificationSettings` strings already exist (`translation.browserNotifications.*`, `translation.notificationSounds.*`, `translation.settings.tab.*`). Only the 2 page-level keys are missing. Let me confirm existing values and read the native push types/view.
+
+All inner strings exist. Let me read the native push types and the existing settings view to understand reusable shared state holders.
+
+Let me discover the exact public APIs of the shared components I'll need (card/panel, toggle, button, badge, slider, typography, empty state).
+
+Let me read the exact initializers for the components I'll use.
+
+Let me read the toggle/text APIs, the page container, the existing settings view for reference, and the AppRoute enum.
+
+There's a shared `PageContainer` SwiftUI view matching the web one. Let me read it, the AppRoute enum, and the existing native settings view for composition reference.
+
+I now understand the architecture. Let me read the existing native settings/demo views for idiomatic patterns (authorization, sound test), then check the gate tooling.
+
+`pwsh` and the placeholder script are available. Let me read the gate contract, placeholder scanner, the apple ledger, and a sibling log for the exact format.
+
+Let me check the forbidden placeholder patterns, the parity ledger file(s), and a sibling log format.
+
+Now let me inspect the ledger structure around the SpeedProfile and BrowserNotifications rows.
+
+Let me read the sibling log format and confirm the manifest record for this unit.
+
+I have the full picture, including a key insight: the SpeedProfile log shows the full `xcodebuild` is **blocked by pre-existing, out-of-scope duplicate symbols** (`StatusApiDocsPage` redefines `TSSpacing`/`TSRadius`; `ScheduledExportsPanel` basename collision). Let me verify that pre-existing breakage and check how sibling feature pages structure themselves.
+
+Confirmed `StatusApiDocsPage.swift` redefines `TSSpacing`/`TSRadius`, and no feature page uses the shared `PageContainer` (all use inline `TSPageTitle`). Let me confirm the token redefinition scope to be certain it's a real module-level collision.
+
+Confirmed: `StatusApiDocsPage.swift` declares module-level `enum TSSpacing`/`TSRadius` colliding with the design tokens — a genuine pre-existing, out-of-scope, module-breaking redeclaration (not in my allowed scope). This matches the SpeedProfile precedent exactly.
+
+Let me generate the Xcode project and kick off a baseline build to honestly capture the pre-existing state while I write code.
+
+The project generates, but `Shared.xcframework` is **missing** from the environment — another pre-existing, out-of-scope blocker for the full `xcodebuild`. Let me capture the baseline build failure (before any of my changes) to prove it's pre-existing.
+
+My grep pattern errored (the build itself is fine and running). Let me stop and re-run, capturing full output to a file for reliable analysis.
+
+While the baseline build runs, let me peek at its progress and begin writing code in parallel.
+
+Build still initializing. Let me read the SwiftLint config (to pass `--strict`) and a sibling sections file for style, while the build runs.
+
+Let me see the rest of the SwiftLint config and check build progress.
+
+No disabled/custom rules — all default SwiftLint rules apply under `--strict` (notably file_length <400, function_body_length <50, line_length 120). I'll decompose accordingly. Let me read the web hooks to get faithful defaults/behavior before coding.
+
+All web defaults confirmed. Let me check the baseline build progress.
+
+The scheme stages `Shared.xcframework` via a pre-action script — so the build proceeds. It's now compiling the `TeslaSync` module where the duplicate-symbol error should surface. Let me wait for it to resolve.
+
+Baseline build failed with **EXIT=65** (before any of my changes). Let me confirm the errors are the pre-existing duplicate-symbol redeclarations.
+
+Baseline confirmed: **241 pre-existing errors (EXIT=65)** from out-of-scope duplicate symbols (`ambiguous use of 'sm'/'xs'/'md'/'lg'` from `StatusApiDocsPage`'s duplicate `TSSpacing`/`TSRadius`, plus duplicate `Preview` defs) — none in my (not-yet-created) feature dir. This is the documented sibling precedent.
+
+Let me check existing copy-link/common strings before finalizing the design.
+
+Existing copy-link strings exist (`translation.common.copyLink.*`). Let me read the existing native copy-link button implementation to mirror its clipboard handling.
+
+Let me check for a shared clipboard utility I can reuse rather than hand-rolling platform code.
+
+`TSClipboard` (same module) and `TSCopyButton` are available. Let me check `TSGlassPanel`'s internal padding so I lay out content correctly, then I'll write the files.
+
+I have everything needed. Let me set up tracking and create the implementation files.
+
+Now creating the implementation. First, the page model and value types:
+
+Now the data-source seams (permission provider, sound previewer, preferences store) with production + preview doubles:
+
+Now the page view with header, copy-link affordance, and the two parity strings:
+
+Now the section subviews (the settings card + three regions + channel row):
+
+Now the navigation route registration (mirroring the accepted sibling deep-link pattern):
+
+Now let me add the 2 page-level strings to the catalog. First, let me inspect the exact JSON shape of an existing key.
+
+Let me check the catalog's formatting and key ordering to produce a clean, Xcode-compatible diff.
+
+The catalog uses Xcode-style ` : ` separators and is unsorted — a JSON round-trip would corrupt formatting. I'll do a targeted text insertion of en-only entries (matching the recently-added SpeedProfile keys), then validate it parses.
+
+The keys are inserted and the catalog still parses (11808 keys). Let me verify the diff is clean (only the 2 entries added).
+
+Excellent — clean 22-line diff. Now let me fix a SwiftLint concern: the two-closure `TSButton` calls (action + label) would trip `multiple_closures_with_trailing_closure`. I'll pass `label:` as a labeled argument instead of trailing.
+
+Now the authoritative verification: an isolated Swift 6 strict-concurrency typecheck of my 5 files against the **real** design tokens plus accurate component stand-ins (isolating from the repo's pre-existing module-wide duplicate-symbol breakage). Let me set that up.
+
+Now the component stand-in (mirroring the exact real public signatures from `Sources/Components/**`):
+
+Isolated **Swift 6 strict-concurrency typecheck passed (EXIT=0)** for macOS. Now let me verify the iOS target (exercises the `#if os(iOS)` branches: size class, `AudioServices`, nav bar title mode).
+
+Both macOS and iOS isolated Swift 6 typechecks pass (EXIT=0). Now the placeholder gate and SwiftLint. First let me scan my own files for any forbidden words, then run the official gates.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now SwiftLint. Let me run the literal gate command, then an isolated lint of just my files with the repo ruleset.
+
+The literal gate falls back to the repo `included:` set (which excludes `TeslaSync/Features`), surfacing **pre-existing** violations in untouched files (`MyActivityPageModel`, `WeeklyDigestWidget.*`) — none are mine. This is the documented precedent. Let me lint **my** files in isolation with the identical ruleset.
+
+SwiftLint found 3 real violations — all the default `inclusive_language` rule flagging the identifier "master" (from the web `soundPrefs.master`). I'll rename those declarations to `enabled`/`setSoundEnabled`/`soundEnabledBinding` (keeping the localization key string unchanged) and reword comments.
+
+Now the Sections file:
+
+Let me re-sync the files and re-run both the isolated SwiftLint and the Swift 6 typecheck to confirm clean.
+
+Isolated SwiftLint: **0 violations in 5 files.** The lone remaining "master" is in a doc comment (not flagged), but I'll reword it for cleanliness. Then re-run the typecheck to confirm the renames are consistent.
+
+Both typechecks pass after the renames. Now, for an honest gate report, let me regenerate the project (to include my new files) and run the **actual** `xcodebuild build` — then analyze which errors (if any) touch my files vs. the pre-existing ambiguity. Kicking it off in the background:
+
+My 5 files are now in the project. Starting the full post-change build in the background:
+
+While the build runs, let me update the parity ledger. Let me inspect its formatting and notifications rows.
+
+The ledger uses standard JSON formatting. Let me verify a round-trip reproduces it exactly before inserting rows.
+
+Round-trip is byte-identical. Let me insert the 2 ledger rows (grouped after the other notifications rows) and validate.
+
+Let me verify the ledger diff is clean and check build progress.
+
+Ledger diff is clean. Let me update progress and wait for the build to finish.
+
+Post-change build: **EXIT=65** (identical to baseline). Let me analyze the error profile — total errors, and specifically whether any touch my files and of what kind.
+
+Key result: post-change build has **exactly 241 errors — identical to baseline — and ZERO touch my files.** Let me confirm my files were actually compiled (not skipped) and check whether the compiler hit an error cap.
+
+Let me rigorously confirm: (a) my files are wired into the compiled target, and (b) the set of error-bearing files didn't gain any of mine (the 105→107 shift).
+
+Confirmed: my 5 files are compiled into the target, the 241 errors are byte-identical in count to baseline, the error-set shift is entirely among **other** pre-existing out-of-scope files (the duplicate-token ambiguity is non-deterministic across whole-module runs), and **none of my files ever appear in errors**. Let me verify git status is clean (only intended changes) and grab exact line numbers for the parity evidence.
+
+Git status is clean — only my 2 modified files (catalog + ledger) and the new feature dir; `StatusApiDocsPage` (the pre-existing duplicate) is untouched by me. Let me get line counts and write the evidence log.
+
+My implementation is 866 lines across 5 files (vs. the web page's 24 + 263 = 287 lines it wraps) — comprehensive, not gutted. Now let me write the evidence log.
+
+Now let me re-run the placeholder and isolated SwiftLint gates against the final file state, and do a final read-through of the two most complex files.
+
+Final gates green (placeholder 0, lint 0). Let me do a final read-through of the page and sections to confirm correctness before committing.
+
+Code is complete and correct. Let me verify the final git status and commit the allowed files (including the catalog, which is explicitly in-scope).
+
+All clean. Let me stage the in-scope files (including the catalog) and commit.
+
+Committed (`749b0f9a1`). Let me clean up temp files and do a final verification.
+
+All complete and verified. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

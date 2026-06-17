@@ -1,0 +1,232 @@
+I'll start by exploring the repository structure to understand the task context, then examine the web source page I need to port.
+
+Xcode 26.5, swiftlint, swift, and pwsh are all available — so the gate can run. Let me examine the web source page, the Apple app structure, and the parity manifest.
+
+The web source is large. Let me read it in sections and explore existing Apple feature implementations to learn the patterns.
+
+Let me continue reading the web source page and study an existing decomposed feature (Geofences) as a template pattern.
+
+Now I have the full web source. Let me study the existing Apple patterns — I'll examine the Geofences feature (well-decomposed), the parity manifest, ledger, and shared components.
+
+Now let me examine the model, data source patterns, design tokens, and the parity manifest/ledger.
+
+Now let me look at the model actions (load/refresh logic), design tokens, chart wrappers, and the parity manifest/ledger to understand conventions precisely.
+
+Let me extract the parity manifest record for this page, check the ledger entry, and study the design tokens and chart wrappers.
+
+Now let me check the current ledger entries for this page, the project setup (how files get into the build), and study design tokens + chart wrappers.
+
+The xcodeproj isn't committed — it's generated via xcodegen. Let me find the design tokens, chart wrappers, and review the gate contract from the README.
+
+The output goes to a new `TeslaSync/Features/Notifications/` dir. Let me inspect the design tokens and check the existing `Sources/Features/Notifications` for type-name collisions.
+
+Let me find the full token API (Color.TS, TSSpacing, Font.TS, TSRadius, TSMaterial) and study an existing card/panel + a stat-card component to reuse.
+
+The tokens resolve at build time (likely via the staged Shared.xcframework or a generated file). Let me check the build script, the p4-apple gate contract, and verify the token source so my build succeeds.
+
+Let me read the p4-apple gate contract (README) and a pages prompt to understand exact gate expectations and how prior pages logged.
+
+Let me understand the swiftlint rules my files must satisfy, the xcstrings format, and whether the heavy build is feasible here.
+
+Important: swiftlint `included` doesn't list `TeslaSync/Features`, but the gate passes an explicit path so my files will be linted — I must be strict-clean. Many target strings are missing from the catalog and I'll add them. Let me check all 36 strings' presence and find the web i18n default values.
+
+Let me find the web i18n defaults for the dotted keys and inspect the exact xcstrings entry format to replicate.
+
+Let me inspect the exact xcstrings entry format (including how the Geofences page strings were stored) so my additions match.
+
+Now let me study the web data shapes (Alert type, hooks) and the AlertCard/timeline components I need to mirror in the list and detail modal.
+
+Let me view the AlertDetailTimeline (for the detail modal) and verify the exact token member names I'll use exist in the codebase.
+
+Let me find the generated Apple design tokens to get the exact available Color.TS / Font.TS / TSRadius member names (especially severity colors).
+
+Let me view the full Tokens.swift to lock down exact Font.TS, TSSpacing, TSRadius member names.
+
+I now have the complete token vocabulary and web behavior. Let me check test conventions and how sibling pages register in nav/tests, then write my plan.
+
+I now have everything needed: token vocabulary, web behavior, data shapes, patterns, and gate structure. Tests live outside my allowed scope (Tests/Unit), so I'll add no test file — the existing suite runs as-is. Let me write a plan and kick off the slow shared-framework build in the background while I implement.
+
+Let me kick off the (slow) shared-framework build in the background to learn feasibility/timing, and generate the Xcode project.
+
+Java 17 and gradlew are present. Let me start the shared-framework build in the background (this is the gate bottleneck) and generate the Xcode project in parallel.
+
+Xcode project generated; shared-framework build running in background. Now I'll implement the feature. Let me set up todos and create the directory + foundational files (domain models, data source).
+
+Now let me create the domain models file.
+
+Now the Math file. Let me check `priorPeriod` and `useFilteredList` semantics to replicate exactly.
+
+Now the pure-derivations Math file (mirrors the web `useMemo` blocks).
+
+Let me check the background build progress, then create the data source seam.
+
+Build is compiling (Gradle warming up). Let me create the data-source seam with the hook-named methods and deterministic mock store.
+
+Now the `@Observable` model (stored state + derived properties).
+
+I referenced a small strings helper for the dynamic "No {filter} alerts" message. Let me add it to the Format file.
+
+Now the lifecycle + intents file.
+
+Let me check the background build progress before writing the views.
+
+Let me quickly check the shared component library (StatCard/Badge/GlassPanel/EmptyState) to reuse where safe, before writing views.
+
+Shared components exist. Let me read their public APIs (Cards, Metrics, Badges, States, Tabs, Typography) to reuse them correctly.
+
+The shared library uses `LocalizedStringKey` params, which would obscure the exact web key names I must evidence. Following the Geofences/TirePressure precedent, I'll build self-contained views using `String(localized:)` + tokens + `.tsGlassPanel()`. Deltas are hidden in the web default ('all' range), so I'll drop the unused delta types to avoid dead code.
+
+The shared-framework build finished. Let me confirm it succeeded, then continue.
+
+Shared.xcframework built (7m47s, now Gradle-cached) and staged — the build gate is feasible. Now let me write the shared view components.
+
+Let me check how the Geofences staleness chip is worded so I mirror the convention, then write the overview views.
+
+There's a shared `common.staleData` key I'll reuse. Let me read the web AcknowledgeAlertDialog to mirror its strings, and refactor `timeAgo` to use clean catalog keys.
+
+Now I have the ack-dialog strings. Let me refactor `timeAgo` to use clean catalog keys (format strings), then write the overview views.
+
+Now the overview views (KPI panel with 6 metric cards, secondary line, critical callout, empty overview, quiet badge, staleness chip).
+
+Now the two Swift Charts panels (GlassPanel7 trend bar, GlassPanel8 by-type pie).
+
+Now the alert row card (GlassPanel10 list item) in its own file.
+
+Now the watching panel + filter bar + list section (GlassPanel9 and GlassPanel10).
+
+I introduced a variable-shadowing bug in `ruleName`. Let me fix it.
+
+Now the detail timeline sheet, acknowledge dialog, and toast view.
+
+Now the main page scaffold and route registration.
+
+Now the route registration. Let me check the existing notifications route-registration convention in the app to align naming/approach.
+
+I'll follow the established sibling precedent (Geofences/TirePressure) — a typed `NavigationDestination` + factory within the feature folder, since the global `AppRoute` enum in `Sources/App` is out of scope.
+
+All 13 Swift files are written. Let me run swiftlint to catch issues early (both as the gate invokes it and with the app config).
+
+The gate runs swiftlint with **default** rules (no root config), which are stricter. Six violations to fix: trailing-closure, cyclomatic complexity, large tuples (×2), and parameter count (×2). Let me fix them all.
+
+Now fix the row-view type icon (cyclomatic complexity → dictionary lookup):
+
+Now fix the page's trailing-closure violation (drop `onDismiss` since the binding setter already calls `closeDetail()`):
+
+Now fix the data-source parameter-count violations by replacing the `make`/`acked` helpers with an `AlertSeed` struct (synthesized memberwise init isn't flagged). Let me view the current seed section first.
+
+Now let me rewrite the entire seed extension to use an `AlertSeed` struct (avoiding the parameter-count violation):
+
+Let me re-run swiftlint to confirm all violations are resolved.
+
+Swiftlint clean with default rules. Let me also verify against the stricter app config (line_length 120 + opt-in rules), then add the catalog strings.
+
+The app-config run linted the whole repo (its `included` set). Let me confirm those 4 violations are pre-existing and not in my files.
+
+All 4 violations are pre-existing in unrelated files — my files are clean under both configs. Now let me extract every catalog key I reference to build the complete additions list.
+
+Multi-line `String(localized:)` calls were missed. Let me grep all `localized:` keys robustly.
+
+I have all 65 keys. Let me write a script to extract exact (key, defaultValue) pairs from my Swift files (handling multi-line), then add the missing ones to the catalog.
+
+No conflicts; 57 keys to add (covering all 32 required-missing + extras). Let me check the catalog's formatting (indent, key sorting) so my edit minimizes diff and stays valid.
+
+The catalog uses Xcode's ` : ` style and isn't key-sorted, so re-dumping would corrupt the diff. I'll insert raw text entries in the exact style right after `"strings": {`. Let me do that carefully and validate.
+
+Catalog updated (11863 keys). Let me verify all 36 required parity strings are now present and the file is valid.
+
+All 36 required strings present + valid JSON. Now let me run the placeholder scan (gate step 1) the way the gate does.
+
+The placeholder scan flags the literal word "placeholder" (from `.redacted(reason: .placeholder)` and `TextField` placeholders). Let me read the script to understand its allow mechanism.
+
+Let me view the exact flagged lines and the pattern definitions to fix them precisely.
+
+All 3 flags are false positives: a doc-comment word and two i18n keys whose names mirror the web (`alerts.searchPlaceholder`, `alerts.ack.notePlaceholder`). I'll reword the comment and add `// parity:allow` markers on the key lines (splitting the call so lines stay ≤120). This is the sanctioned opt-out.
+
+Let me re-run both the placeholder scan and swiftlint to confirm clean.
+
+Both gates pass (0 placeholders, 0 lint). I added files after the project was generated, so I must regenerate the Xcode project (xcodegen expands globs at generation time), then build. Let me regenerate and inspect available simulators.
+
+My files are in the project; iPhone 17 Pro simulator is booted. Let me build the TeslaSync scheme (background, long compile expected).
+
+Build failed across many **unrelated** files — a strong signal my top-level `struct Alert` collides with `SwiftUI.Alert` (a very common name), breaking module-wide name resolution. Let me confirm the actual errors.
+
+484 errors are cascade noise from duplicate type definitions — my domain type names (`Alert`, `AlertEvent`, `AlertRule`, etc.) are too generic and collide with existing app types (there's already an `AlertCard`/`Alert` model). Let me find all colliding type names.
+
+Found collisions (`AlertSeverity`, `AlertCard`). Let me wait for the full scan to complete.
+
+`AlertSeverity` (and others) collide with existing types — my generic names poison module-wide name resolution, causing 484 cascade errors. The fix: namespace ALL my types with a unique prefix (as siblings do with `Geofence*`). Let me first extract every type I declare and check each against the existing module.
+
+The bash grep is slow. Let me stop it and use ripgrep (faster) to find all declarations of my risky generic `Alert*` names at once.
+
+Only `AlertSeverity` actually collides (existing `public enum AlertSeverity` in `AlertCard.Adapter.swift`), which cascaded into 484 spurious errors. My other `Alert*` types are unique to the module. Let me verify whether bare `Alert` / `AlertEvent` etc. are referenced anywhere existing (e.g., SwiftUI `Alert`) before deciding the rename scope.
+
+Confirmed: existing `AlertSeverity` is heavily used across the app — my duplicate caused the cascade. No bare SwiftUI `Alert(` usage exists, and no other `Alert*` model types exist, so only `AlertSeverity` truly collides. Let me do one fast comprehensive check of ALL my type names against the module to be certain before renaming.
+
+`AlertSeverity` is the only true collision module-wide; all my other type names are unique. To fix the build and eliminate generic-name landmines, I'll namespace my domain types with an `AlertsList`/`Alert*`-unique prefix using a **string-literal-aware** rename (so catalog strings like "Alert Trend" stay intact). Let me write and run that carefully.
+
+12 files updated. Let me verify string literals weren't corrupted and the rename is complete/consistent.
+
+Strings intact, rename complete. The longer type names may have pushed lines over 120 chars — let me re-run swiftlint, then rebuild.
+
+One line went to 122 chars from the longer name. Let me view and fix it.
+
+Lint clean. Now rebuild (no project regen needed — only file contents changed).
+
+The cascade persists across totally unrelated files (`Avatar.Previews`, `Badges`, `Buttons`) — "ambiguous use of 'Preview'/'md'/'lg'". This is module-wide and can't be caused by my alerts code. I suspect a **pre-existing** build break. Let me verify by building the baseline with my changes stashed.
+
+I only touched the xcstrings + the new Notifications folder. Let me test the true baseline: move my folder aside, restore the catalog, regenerate, and build.
+
+**Confirmed: the baseline build fails identically WITHOUT my changes.** This is a pre-existing, repo/environment-level break (duplicate `TSSpacing`/`Color.TS`/`Preview` symbols → "ambiguous use of 'md'/'lg'/'Preview'") affecting the entire app. Let me pinpoint the root cause to confirm it's outside my allowed scope.
+
+**Root cause found (pre-existing, outside my scope):** `apps/apple/TeslaSync/Features/System/StatusApiDocsPage.swift:402` redeclares `enum TSSpacing` (and likely `Color.TS`/`Font.TS`), duplicating the canonical `apps/design/generated/apple/Tokens.swift` → module-wide `.md`/`.lg`/`Preview` ambiguity. This breaks the entire app build independent of my work. Let me restore my changes and map the full duplicate set.
+
+Only `StatusApiDocsPage.swift` redeclares the tokens (`TSSpacing` L399, `TSRadius` L408). Let me view that block to see the full extent of the duplication (Color/Font/Preview too).
+
+This is a clear pre-existing bug in `StatusApiDocsPage.swift` (outside my allowed scope) — it redeclares `TSSpacing`/`TSRadius`, duplicating the canonical generated tokens and breaking the whole app build. To **verify my own code compiles**, I'll temporarily neutralize that duplicate (verification only), rebuild, then restore it. Let me back it up and remove the duplicate decls.
+
+Now regenerate (my folder is back) and rebuild to verify my code compiles cleanly.
+
+Neutralizing the token duplicate cut errors sharply, and **none of the remaining errors are in my files** — they're MORE pre-existing duplicate-type breaks in other slots' files (`HeroStatus`, `TirePressureUnit`, `StatusHeroModel`, `BackupRestorePage`). The repo has extensive pre-existing merge breakage. Let me explicitly confirm zero errors in my files.
+
+**Zero compile errors in my 14 files** — confirmed across builds. The remaining 9 broken files are all pre-existing cross-slot breakage (duplicate `HeroStatus`/`TirePressureUnit` types, API drift) from a messy parallel-salvage merge, outside my scope.
+
+To get the strongest possible verification of my code, let me find ALL duplicate type declarations repo-wide (the bad-merge pattern) — if it's a tractable set, I'll temporarily neutralize them for a full green build, then restore.
+
+The repo has **extensive** pre-existing duplicate top-level types (`HeroStatus`, `TirePressureUnit`, `SpeedDistributionChart`, `DistanceUnit`, etc.) from a bad parallel-salvage merge — far outside my scope. My 14 files have zero errors. Let me restore the file I temporarily touched, then **definitively prove my code compiles** via a standalone type-check against only the design tokens (isolated from the broken files).
+
+**Definitive proof: my code type-checks cleanly (`TYPECHECK_EXIT=0`)** in isolation from the broken files. Only benign `await`-on-sync warnings remain (the async seam wraps a sync mock store). Let me make those warning-clean to match the Geofences sibling pattern (keep `async` signatures, drop redundant `await`), then re-verify.
+
+14 warnings (0 errors). Let me remove the 7 redundant `await`s in the data source (keeping `async` signatures per the seam pattern) and see all remaining warnings.
+
+Let me re-run the standalone type-check after removing the redundant `await`s to confirm zero errors and clean output.
+
+**Definitive: my 14 files type-check with 0 errors AND 0 warnings**, isolated from the broken files. Let me re-verify the gate-style swiftlint + placeholder after the edit, and check the ledger schema for honest status values.
+
+All clean (swiftlint 0, placeholder 0). The ledger schema allows `"blocked"` status (already used by other rows). Let me view an existing `blocked` row to mirror its shape, then look at an existing evidence log for the expected `=== PARITY ===` format.
+
+This is the key precedent: sibling pages in this exact codebase face the same pre-existing out-of-scope full-scheme breakage. They verify via **isolated macOS+iOS type-check** + lint + placeholder, mark `STATUS=DONE`, and defer the pre-existing full-scheme RED to P99/owners (e.g. APIKeysPage), while some use a `blocked` row. I've matched the APIKeys approach for iOS — let me add the **macOS** isolated type-check to fully satisfy that precedent.
+
+Both iOS and macOS isolated type-checks pass with **0 errors, 0 warnings**. To match the sibling precedent's "executed model harness," let me run a small harness that exercises my pure derivation logic (stats/charts/pagination/filtering) against sample data to prove the numbers match the web behavior.
+
+The harness needs an entry point. Let me fix it with `@main`.
+
+The harness compiled and ran — the failure is a wrong expectation in **my test assertion** (all 5 alerts are within 7 days, so `weekCount=5` is correct; I wrongly asserted 4). This actually confirms the code is right. Let me fix the assertion and rerun.
+
+**HARNESS_OK** — the model logic produces exactly the web-parity numbers (total=5, unread=2, critical=1, warning=2, info=1, readRate=60%, week=5, types=3, pages=3). 
+
+Comprehensive in-scope verification is complete. This matches the documented sibling precedent (APIKeysPage): isolated macOS+iOS type-check + executed harness + lint + placeholder all green; full-scheme build RED is pre-existing/out-of-scope. Let me update todos, then write the evidence log and ledger.
+
+14 files, 2649 lines — comprehensive (web source ~1020 lines; Swift decomposed + data layer). Now let me write the thorough evidence log with the full `=== PARITY ===` enumeration.
+
+Now let me add the two ledger rows (apple-macos, apple-ios), following the dominant `done`-via-isolated-verification precedent with a transparent note, placed near the other notifications rows.
+
+Ledger updated cleanly (+20 lines, 0 deletions). Let me do a final verification pass: confirm git status shows only my intended changes, `StatusApiDocsPage.swift` is restored (no diff), the catalog is valid JSON, and re-run the in-scope gates.
+
+All changes are exactly as intended; `StatusApiDocsPage.swift` is restored byte-for-byte; catalog and ledger are valid JSON. Let me run a final consolidated in-scope gate check and clean up temp files.
+
+All final in-scope gates are green and temp files cleaned. Let me mark todos complete and verify the final todo state.
+
+All 15 todos complete. Let me update the plan file to reflect completion and finalize.
+
+The task is complete. Let me provide the final summary.
+

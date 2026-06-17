@@ -1,0 +1,199 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app architecture.
+
+The web source is clear. Now let me explore the existing Apple app structure and recently implemented parity pages to follow established patterns.
+
+There's a substantial existing Apple app. Let me examine the existing Settings feature directory, a recently completed reference page, and the parity manifest/ledger.
+
+No `Settings` dir yet under Features. Let me find where settings-related pages live (ActiveSessionsPage exists per tests) and study a recent reference page (DashboardsPage) plus the parity manifest/ledger.
+
+Let me read the reference DashboardsPage, find the ActiveSessionsPage for the Settings-navigation pattern, and examine the parity manifest/ledger records.
+
+Now I understand the page structure. Let me study the model pattern, shared components, navigation registration, the ledger format, and the gate contract. Let me batch these reads.
+
+The model pattern is clear. Now I need to understand: data-loading models that consume the KMP core (loading/success/error), navigation registration, the gate contract, and the string catalog. Let me find the ActiveSessions sibling page and a data-driven settings page model.
+
+The ActiveSessions source isn't in this slot (only its test, from a merge) — these are independent parallel branches. Let me check what build tooling is actually available, since the gate needs xcodebuild/swiftlint/swift.
+
+`xcodebuild`, `swiftlint`, `swift`, `pwsh` exist, but there's no `.xcodeproj` — it's generated from `project.yml` (XcodeGen). Let me read the gate contract in the README and check whether the project can be generated/built.
+
+Let me assess buildability — check the Frameworks dir (KMP xcframework) and project.yml, since the gate needs a real xcodebuild.
+
+The `Shared.xcframework` (KMP core) isn't present — only `.gitkeep`. This is the crux for the build gate. Let me check how prior "done" pages recorded their gate, and how project.yml depends on the framework.
+
+This is the key precedent: prior pages verify via isolated Swift type-checks + model test harness + swiftlint + placeholder scan, and honestly record that full `xcodebuild` is deferred to the P1/P99 KMP-xframework owner (OOM on shared host), with EXIT=0/STATUS=DONE. Let me read the full reference log and the route-registration files.
+
+Let me view the full reference log via the saved file to extract the exact verification recipe.
+
+I now have the full methodology. Let me explore the shared component library (P2 tokens, P3 components), the navigation/route registration files, and how a data-loading page consumes the settings source. Batching reads.
+
+There's already a `Sources/Features/Settings/` group. Let me inspect it (may contain an existing SettingsPage/ActiveSessions) and the key shared components.
+
+The ActiveSessions page (settings sibling, data-loading) lives in `Sources/Features/Settings/`. The DashboardsPage precedent honored the prompt's `TeslaSync/Features/<domain>/` path even with a `Sources/Features/` twin. Let me read the ActiveSessions trio (my closest template) and the route-registration files.
+
+Excellent template. Now let me read the ActiveSessions model and route registration to understand the data-source seam, state enum, and shared-facade consumption.
+
+Now the route registration and how `/settings` data flows. Let me read the route files, the web `useSettings` hook, and check for a settings facade in the shared layer.
+
+There's already a `.settings` AppRoute case. I must check whether it's already hosted (to avoid conflict) and understand the web `PageContainer` loading behavior + `AppSettings` shape. Let me investigate.
+
+There's already a `.settings` host (`SettingsScene.swift`) and a `SettingsRouteRegistration`. I need to understand what currently renders for `.settings` and how `/settings` resolves, to avoid a conflicting duplicate. Let me investigate.
+
+Now I understand: the existing `.settings` route hosts the **native** `AppSettingsView` (macOS Preferences / iOS settings idiom, reached via `/account`), which is a different concept from the web `/settings` parity page. Let me read the full AppRoute + AppRouteParser to design routing for `/settings`.
+
+`.settings` resolves to pathSegment `settings` (→ `/settings`) and hosts the native `AppSettingsView`. I must read the parser to see exactly how `/settings` resolves before deciding routing. Let me read AppRouteParser and the route host registry.
+
+Routing detail: `/settings` resolves to `.settings` (pathSegment default) which hosts native `AppSettingsView`. There's no existing parity ledger row for `page:settings/Settings`, so it's genuinely uncovered. I need to see what `AppSettingsView` renders and what route invariants exist before choosing routing. Let me read those.
+
+Key invariant confirmed: unique pathSegment per route. Let me read `AppSettingsView` to see what the native settings surface already renders (does it cover the 3 web panels?).
+
+`AppSettingsView` is the native settings idiom (Appearance/Units/Privacy/etc.) — it does NOT contain the web page's 3 unique panels (Data Export, Tour, Checklist) or the web string keys. So `page:settings/Settings` is genuinely uncovered. Before choosing routing, let me check what tests assert about `.settings` and how the macOS settings scene is wired.
+
+`.settings` (native) is referenced by Explore catalog + Onboarding + macOS ⌘, scene, so it must stay intact. No test asserts `parse("/settings")`. I'll add a dedicated `.settingsPage` route for the web-parity page (DashboardsPage precedent). Now the critical string-key convention: the web uses `useTranslation('settings')` with short keys. Let me confirm the i18n defaults and the xcstrings namespacing convention.
+
+Let me extract the exact `settings` namespace defaults from the web `en.json` and confirm the xcstrings key convention used by a sibling ported page.
+
+The web `settings` namespace relies on inline `t()` defaults (the keys aren't in en.json). The xcstrings already uses a `settings.` namespace prefix (via `AppSettingsView`). Let me check the xcstrings format and which `settings.*`/related keys already exist, to namespace correctly and avoid collisions.
+
+`settings.title` already exists (I'll reuse it for the page `title`). Let me check its value and the exact xcstrings entry JSON format so I add new entries correctly.
+
+I have the xcstrings format and confirmed `settings.title`="Settings" (reusable). Now let me verify the shared components I'll use (TSIconBox tones, TSButton API, FadeIn, typography, navigation-between-routes pattern). Let me locate and read the key component definitions.
+
+`TSIconBox` supports `.success` (green) and `.accent` (cyan) tones — maps to the web IconBox colors. Let me read the web `PageContainer` (loading behavior), the Motion/States/Typography components, the onNavigate registration pattern, and any native tour/checklist infra to wire the actions faithfully.
+
+The web `PageContainer` shows ONLY a spinner while `loading` (children hidden), then content — so my states map cleanly to `.loading`→spinner / `.ready`→panels (matching the manifest's 2 states). Now let me read the onboarding skip-store (to reuse for checklist reset), the onNavigate registration pattern, and the Motion/States/Typography component APIs.
+
+Now I have the onNavigate pattern. Let me read the Motion, States, and Typography component APIs to finalize the page design.
+
+Let me read the Typography component APIs and the Color/Font/Spacing tokens to finalize symbol usage.
+
+Let me confirm the `TSGlassPanel` API, `teslaSyncTheme()` location, and the design tokens (Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion).
+
+Let me confirm the design tokens (colors, fonts, spacing, radius) available in the generated Tokens file so my code compiles cleanly.
+
+I have all component/token APIs confirmed. Let me quickly check how the sidebar is built (whether `.settings` is shown or special-cased) to finalize the routing/title choice, then I'll write the code.
+
+Let me check the sidebar filtering and whether a native edit-conflict/edit-lease component exists (the web page renders `EditConflictBanner` with the `editConflict.resource.settings` string).
+
+Native edit-conflict infra exists (used by AutomationBuilderPage). Let me read its component + usage to reuse it (DRY) for the `editConflict.resource.settings` banner.
+
+Let me read the `TSEditConflictBanner` init and how `AutomationBuilderEditConflictBanner` wraps it, to reuse the exact pattern for `editConflict.resource.settings`.
+
+Let me read the `TSAlertBanner` init signatures so I use the correct overloads.
+
+I have all component APIs. Before finalizing structure, let me check whether the existing native settings section surfaces (General/Appearance/Advanced/Reset/Search) are composable Views (and whether they import `Shared`, which would break the isolated type-check). This decides whether I host them or treat them as separate shipped units.
+
+Let me check whether the settings sub-surfaces transitively import `Shared`, their init signatures, and whether anything already hosts them — this determines if I can faithfully compose them.
+
+None of the settings sub-surfaces import `Shared`, each is a composable `View(model:)`, and **nothing currently hosts them** — they're shipped P3 surfaces awaiting a page. To faithfully reproduce every web region (covenant #2/#5), I should host them. Let me check their model constructors to confirm they're composable with defaults.
+
+The sub-surface models have parameterized inits. Let me read the page-model class constructors to see if they compose with defaults/sample sources (low-risk to host) or need heavy KMP wiring.
+
+The prompt explicitly scopes this unit to exactly 3 panels (GlassPanel1/2/3 = Data Export, Tour, Checklist) — the settings sections are separate shipped units and would redundantly duplicate the native `AppSettingsView`, so faithful native design is the 3 panels + chrome + edit-conflict + states. Let me read the web `restartChecklist`/`dispatchTourLauncherOpen` to replicate their side effects faithfully, then I'll write the code.
+
+I have all the details needed. Let me verify the `editConflict.resource.*` key convention in xcstrings, then write the plan and start implementing.
+
+I have everything needed. Let me set up the plan and todos, then implement.
+
+Now I'll implement. Starting with the model.
+
+Now the Sample seams file (the `SampleSettingsPageDataSource` default plus test/preview doubles).
+
+Now the main view.
+
+Now the route registration.
+
+Now wire navigation. Editing AppRoute.swift (case + pathSegment + icon + group).
+
+Now the parser aliases (web `/settings` deep-link + canonical nested path → `.settingsPage`).
+
+Now chain the registration in TeslaSyncApp. Let me view the exact context.
+
+Now add the strings to the xcstrings catalog. Let me first check the key ordering convention so my additions match Xcode's format.
+
+Let me verify a Python round-trip preserves the xcstrings format byte-for-byte (so my additions produce a clean diff), before modifying it.
+
+The xcstrings uses Xcode's ` : ` separator format, so a full re-dump would reformat everything. I'll do a targeted textual insertion matching Xcode's exact format. Let me write a script to insert the 12 new entries.
+
+The top-level uses `"strings": {` (no space before colon) while inner entries use ` : `. Let me fix the marker and re-run.
+
+12 entries added cleanly. Let me verify the diff is additions-only and JSON is valid.
+
+xcstrings diff is clean (+132/−0). Now the tests. Let me check how a sibling test compares `LocalizedStringKey` and tests route registration to mirror exactly.
+
+I have the patterns. Now the test file.
+
+Now let me run the verification gates. Starting with swiftformat --lint and swiftlint --strict on the new/edited files.
+
+swiftformat clean (0/8). Now swiftlint --strict.
+
+Two `multiple_closures_with_trailing_closure` violations on the `TSButton` calls — I need explicit `label:` args (matching the ActiveSessions pattern). Let me fix both.
+
+Both clean. Let me run swiftlint on all 8 files together, then the placeholder scan.
+
+swiftlint 0 violations, placeholder scan clean. Now the heavy verification: isolated type-checks. First let me identify which candidate files import `Shared` (to exclude), and run `xcodegen generate`.
+
+Let me check the xcodegen result and confirm my files are in the generated project.
+
+xcodegen GEN_EXIT=0, files included, xcodeproj git-ignored. Now the critical isolated Swift 6 type-checks against the real tokens + components. Let me build the macOS type-check first.
+
+macOS type-check passes (0 errors). Now the iOS simulator type-check.
+
+Both type-checks pass (macOS + iOS, 0/0). Now the executed model & route harness to prove the logic (not just types). Let me create and run it.
+
+Swift 6 top-level code is `@MainActor`; I need `check` to be `@MainActor` too and can drop the `MainActor.run` wrappers. Let me fix the harness.
+
+Top-level vars are implicitly main-actor-isolated and can't take an explicit annotation. Let me use a top-level closure (which inherits main-actor isolation) for `check`.
+
+Harness: 34/34 passed, EXIT=0. Now the XCTest file type-check (in-module, with an XCTest shim since `swiftc` can't import the assertion C-macros).
+
+XCTest type-check passes. Let me run the placeholder scan on the tests dir and review the full change set.
+
+All gates green. Let me gather tool versions for the log header, then update the ledger and write the evidence log.
+
+Now update the ledger. Let me check its format and insert the two `page:settings/Settings` rows next to the ActiveSessions rows.
+
+Clean round-trip confirmed. Let me insert the two `page:settings/Settings` ledger rows after the ActiveSessions rows.
+
+Ledger updated cleanly (+18/−0). Now the comprehensive evidence log.
+
+Log written. Let me do a final consolidated verification run to confirm the committed state is green (re-run lint + both type-checks + harness), then clean up temp files.
+
+All final gates green (format 0/8, lint 0/8, macOS+iOS type-check 0/0, harness 34/34). Let me review the source diffs, update todos, and clean up temp files.
+
+All diffs are clean and correct. Let me commit the complete change set with the conventional-commit message and co-author trailer.
+
+Committed cleanly, working tree clean. Let me finalize todos and do a last sanity check on the log's parity counts and tail.
+
+Everything is consistent and verified: PARITY_COVERED=17/17, EXIT=0, STATUS=DONE, ledger updated for both idioms, committed cleanly. The task is complete.
+
+All verification complete. The `loading` a11y key exists, the commit is in place, and the working tree is clean.
+
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-settings-SettingsPage.log      | 253 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 132 +++++++++++
+ apps/apple/Sources/App/AppRoute.swift              |   9 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   2 +
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../TeslaSync/Features/Settings/SettingsPage.swift | 218 ++++++++++++++++++
+ .../Settings/SettingsPageModel.Sample.swift        |  84 +++++++
+ .../Features/Settings/SettingsPageModel.swift      | 238 +++++++++++++++++++
+ .../Settings/SettingsPageRouteRegistration.swift   |  27 +++
+ .../Features/Settings/SettingsPageModelTests.swift | 142 ++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 11 files changed, 1121 insertions(+), 3 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-settings-SettingsPage.log
+ create mode 100644 apps/apple/TeslaSync/Features/Settings/SettingsPage.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Settings/SettingsPageModel.Sample.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Settings/SettingsPageModel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Settings/SettingsPageRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Settings/SettingsPageModelTests.swift
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

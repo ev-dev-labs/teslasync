@@ -1,0 +1,226 @@
+I'll start by exploring the repository structure to understand the existing Apple app, the web source page, and supporting infrastructure.
+
+Let me read the web source page and explore the Apple app structure in detail.
+
+The Battery directory doesn't exist yet. Let me study existing feature implementations to understand the conventions. The TirePressure and TripsReplay features look like good references (charts, models, data sources, live data).
+
+Excellent reference pattern. Now let me study the chart components, route registration, design tokens, and the TirePressure views/charts for panel patterns.
+
+Now let me examine route registration, design tokens, the TripsReplay charts (for AreaChart pattern), and locate the strings catalog.
+
+Two component conventions exist. TripsReplay uses the shared P3 library (`TSGlassPanel`, `TSEmptyState`, `TSChartPalette`, `tsUnits`, `Units.convert*`) which matches the prompt's P1/P2/P3 architecture. Let me locate these shared components and the design system.
+
+The shared components live in `apps/apple/Sources/Components/` but my target is `apps/apple/TeslaSync/Features/Battery/`. I need to understand the project structure. Let me read project.yml and the key shared files.
+
+Both source trees compile into the same `TeslaSync` module, so I can use shared `Sources/` components from my `Features/Battery/` files. Let me read the web energy types, shared components (TSGlassPanel, TSEmptyState, charts, Units), and the navigation/routing system.
+
+Let me read the design tokens, SI converters, routing system, and remaining UI components in parallel.
+
+Now let me examine the routing system, tsUnits environment, the string catalog format, and the remaining UI components (Buttons, Badges, Typography, StatCard).
+
+There's an existing `Sources/Features/Battery/` with a `BatteryHealthPage`. Let me examine it for routing/registration patterns and check whether PowerFlow already exists, plus read the unit formatters, metrics, and typography components.
+
+Critical: there's an existing `EnergyFlowPage` in the Battery feature and PowerFlow references in nav files. Let me examine these to understand the routing system and avoid duplication.
+
+`/power-flow` maps to a `.powerFlowDashboard` route — distinct from the existing `/energy-flow`. Let me examine the AppRoute enum, parser, and how route registrations are aggregated into the app shell.
+
+No `.powerFlowDashboard` case exists in `AppRoute` yet — nav/breadcrumbs reference `/power-flow` but the enum lacks it. "Navigation registration" is in scope. Let me read the parser, registry, app wiring, and an example registration.
+
+Let me read the app wiring, the closest analog (EnergyFlowPage view + diagram + charts), and how the nav references work.
+
+This `EnergyFlowPage` is the ideal analog. Let me read its supporting files (diagram, charts, sections, models, sample data), the remaining components (Select, FadeIn, StatCard, Badge, Button, Typography), and check tooling availability.
+
+All tooling is available (xcodebuild, xcodegen, swiftlint, pwsh), so the gate can actually run. Let me read the chart wrappers, the design tokens, UI components, sample data pattern, and strings catalog structure.
+
+Let me read the typography, metrics (StatCard/MetricCard), badges, design tokens, and check the strings catalog format and swiftlint config.
+
+Let me read the design tokens, badges, EnergyFlow models + sample data, the strings catalog format, and swiftlint config.
+
+Let me check the Color.TS token names, the strings catalog format, swiftlint config, and the EnergyFlow models + sample data pattern.
+
+Let me check for exhaustive switches over `AppRoute` (which would break when I add a case), route-registration tests, the BatteryVehicle model, strings catalog format, and lint/placeholder configs.
+
+I need to understand the blast radius of adding an `AppRoute` case. Let me inspect each exhaustive switch to see if they have `default:` clauses.
+
+Most dependents use `allCases`/`AppRouteParser` or have `default:`. The exhaustive switches needing updates are `systemImage` and `group` in AppRoute.swift. Let me confirm there are no other exhaustive switches and check what RouteTests asserts (critical — it may require every route to be registered).
+
+RouteTests only requires unique path segments and group resolution — both satisfied. The only required nav-registration edits are in `AppRoute.swift` (add case) + a new RouteRegistration + wiring in `TeslaSyncApp.swift`. Now let me examine the strings catalog format, swiftlint rules, and the placeholder checker.
+
+No `powerFlow.*` keys exist yet — I'll add all 33. Let me check what the 41 "powerFlow" lines are, view an existing catalog entry's exact format, and read the strings-file pattern used by sibling features.
+
+The 33 strings already exist as `translation.powerFlow.*` (web's i18next `translation` namespace). Let me extract all of them with their values and confirm the route title key status.
+
+31 of 33 strings exist; I need to add 2 aria keys + `route.powerFlowDashboard`. Now let me read the swiftlint config, placeholder checker, and remaining reference files (sections, format, derivations) to finalize my design.
+
+Let me read the forbidden placeholder patterns and the remaining reference files (sections, format, derivations, BatteryVehicle).
+
+I have the full picture now. The placeholder gate (case-insensitive) forbids "placeholder" — so `.redacted(reason: .placeholder)` needs a `// parity:allow` opt-out. Let me read the remaining components I'll use: Skeletons, Button, Select, FadeIn, RadialGauge, and the EnergyFlow summary sections.
+
+Let me read the TSButton signature and the EnergyFlow summary sections to finalize patterns, then I'll start building.
+
+I now have a thorough understanding. Let me do a few final checks: the chart palette color order, existing range/preset string keys to reuse, and whether any test asserts an exact route count.
+
+Key finding: chart palette index 1=amber(solar), 2=green(battery), 4=blue(load/home), 6=purple(grid) — matching the web hues. Let me verify the Spotlight/Explore/Menu tests won't break from adding an energy-group route, then I'll write the plan and build.
+
+All tests are safe with an energy-group route addition. Let me verify the reusable catalog keys exist (staleness, error, chart, spotlight description pattern), then write the plan and start building.
+
+Some shared-component keys (`chart.noData`, `error.queryTitle`) appear absent — I need to verify so my visible strings all resolve. Let me grep the raw catalog.
+
+I have a complete understanding of the architecture, components, tokens, routing, strings, and gates. Let me set up a plan and todo tracking, then build.
+
+Let me study an existing battery page log format and the apple-ledger.json to match the expected output.
+
+Key insight from the sibling log: the literal prompt path `TeslaSync/Features/` IS now a valid compiled source group (TirePressure/TripsReplay P7 pages live there). I'll use the literal prompt path. Let me check the Shared.xcframework staging, the ledger format, and potential symbol collisions before naming types.
+
+The Shared.xcframework isn't staged — the build's preAction builds it via Gradle/KMP. Let me probe the toolchain, read the build script, check my ledger row, and scan for symbol collisions.
+
+Two collisions found: `PowerFlowStrings` and `PowerFlowFormat` already exist in dashboard widgets. I'll prefix mine with `PowerFlowDashboard`. Let me scan all symbols in those widget files to avoid every collision.
+
+The widget namespace is crowded — I'll prefix all my types with `PowerFlowDashboard` (and use `TeslaEnergyLiveStatus*` for data models). Let me verify the Gradle wrapper works and kick off the KMP framework build in the background while I write code. First, a quick toolchain probe and read two more references.
+
+I have all references needed. Let me kick off the KMP framework build in the background (the long pole), then write the Swift files while it compiles.
+
+Gradle works. Let me start the KMP framework build in the background, then write all the Swift files while it compiles.
+
+KMP build is running in the background. Now let me write the Swift files. Starting with the models.
+
+The detached launcher returned (gradle continues independently). Let me write the models file while it builds.
+
+I used `LocalizedStringKey` (SwiftUI) in the models — let me fix the import.
+
+Now the format + strings file (centralizing the catalog keys for clean parity evidence).
+
+Now the @Observable page model with phase + derivations.
+
+Let me quickly check the KMP build progress, then write the sample data sources.
+
+KMP build is nearly done (release linking phase). Let me continue with the sample data sources.
+
+Now the charts file (Power Over Time area chart + SOC line chart via P3 wrappers).
+
+Now the sections file (status badges, 4 stat cards, battery state panel, flow diagram). Let me also check the KMP build finished.
+
+KMP build is on its final target (macos-arm64 link). Let me write the sections file.
+
+Now the main page view with header, refresh, phase switching, live polling, and previews.
+
+Now the route registration, then wire up the AppRoute and app.
+
+Now let me wire the navigation: add the `.powerFlowDashboard` case to `AppRoute` (case + pathSegment + systemImage + group).
+
+Now wire the registry in TeslaSyncApp.swift next to the EnergyFlow registration.
+
+Now let me add the new strings to the catalog via a safe Python script (validates JSON after insertion).
+
+All 11 strings added and JSON validated. Let me update todos and check the KMP build, then start the gate.
+
+KMP framework built successfully (6m38s). Now let me run the fast gates first: placeholder scan and swiftlint.
+
+Placeholder gate green (0 violations, 3 allowed). Now swiftlint --strict.
+
+Swiftlint linted everything and found 1 violation — but the exit code I captured was `tail`'s. Let me find that violation and confirm whether it's in my files.
+
+The 1 violation is pre-existing in `MyActivityPageModel.swift` (a file I didn't touch) — my files are clean. The config's `included` made swiftlint scan everything. Let me check how the gate actually scopes it (root config?) and run it as specified.
+
+Swiftlint passes — 0 violations in my 8 files (the lone repo violation is pre-existing in an untouched file). Now let me prepare the full build: stage the framework, then regenerate the Xcode project.
+
+Framework staged. Now let me generate the Xcode project with xcodegen.
+
+Project generated with my files included (48 references). Now let me build. I'll start with the macOS target (most reliable for CLI compilation verification), code-signing disabled.
+
+Build failed — but on a **pre-existing** duplicate-filename collision (`ScheduledExportsPanel.swift` exists in both `feature-views/` and `Features/System/`), unrelated to my work. Let me confirm it's pre-existing and not caused by me.
+
+Confirmed: both `ScheduledExportsPanel.swift` files are pre-existing (committed, unmodified by me) — the only duplicate basename in the app target, blocking the whole-module build independent of my work. Let me inspect both files' declarations to understand the collision and verify my code compiles via a temporary workaround.
+
+Both files are pre-existing (committed at HEAD) and declare **different** types — it's purely a filename collision (Swift needs unique filenames per module), blocking the entire app build independent of my task. To deliver a green build, this pre-existing collision must be resolved. First let me verify my code compiles by temporarily renaming the colliding file, then decide disposition.
+
+Now let me rebuild the macOS target to verify compilation (this is the authoritative whole-module type-check).
+
+The collision fix revealed MORE pre-existing breakage: "ambiguous use of 'Preview'" across many pre-existing `*.Previews.swift` files (none mine). The macOS target is broadly broken at HEAD. Let me find the root cause — likely a single rogue `Preview` symbol.
+
+469 pre-existing errors across 76 `*.Previews.swift` files in `TeslaSync/shared-surfaces` and `feature-views` (ambiguous `Preview`/`lg`/`init`, type-check timeouts) — none in my files. Let me check if these preview files are `#if DEBUG`-gated, which would let a Release build validate my code cleanly.
+
+All 534 preview files are `#if DEBUG`-gated, and the SDK here is a beta (`MacOSX26.5.sdk`) — the `#Preview` ambiguities are a beta-toolchain artifact in DEBUG-only, out-of-scope files. A **Release** build skips them and validates my production code. Let me run it.
+
+Now even Release fails — but in pre-existing `TeslaSync/shared-surfaces` files with "ambiguous use of 'md'/'sm'" (duplicate design-token symbols) and compiler crashes ("failed to produce diagnostic... submit a bug report") — hallmarks of a beta toolchain choking on pre-existing out-of-scope code. Let me map exactly which directories are broken and whether my files ever errored.
+
+There's a real error in my code: `PowerFlowDashboardFormat.swift:88` — `static let` of non-Sendable `LocalizedStringKey` isn't Swift-6 concurrency-safe. Let me see all errors in my Battery files specifically.
+
+All 126 errors in my files trace to one root cause: `PowerFlowDashboardStrings` uses `static let` of non-Sendable `LocalizedStringKey` (not Swift-6-concurrency-safe). Let me confirm the cascading errors and check for any other distinct issues.
+
+The non-Format errors ("ambiguous use of 'lg'/'md'/'sm'", compiler crashes) match the broken shared-surfaces failures — likely cascades from the broken module's type-checker, but I must confirm whether design tokens are genuinely duplicated. Let me check, and fix the definite LocalizedStringKey issue.
+
+Found a second root cause: `TeslaSync/Features/System/StatusApiDocsPage.swift` defines duplicate `enum TSSpacing`/`TSRadius` (pre-existing, out-of-scope). Let me check their visibility, then fix my definite LocalizedStringKey issue.
+
+Root causes are clear: (1) my real bug — `static let` of non-Sendable `LocalizedStringKey`; (2) a pre-existing module poisoner — duplicate internal `TSSpacing`/`TSRadius` in `StatusApiDocsPage.swift` making `TSSpacing.lg` ambiguous everywhere (my files, shared-surfaces, etc.). Let me first fix my real bug: convert the string keys to computed properties.
+
+My LocalizedStringKey bug is fixed (43 converted to computed vars). Now let me test whether the pre-existing duplicate `TSSpacing`/`TSRadius` in `StatusApiDocsPage.swift` is poisoning `TSSpacing.lg` module-wide. I'll temporarily scope them private and measure the impact on the build.
+
+Massive progress: scoping `StatusApiDocsPage`'s duplicate tokens private dropped errors from **8000+ to 48**, and **my Battery files now have 0 errors**. The token duplication was poisoning `TSSpacing.lg` module-wide. Let me see what the remaining 48 (all outside my files) are.
+
+Decisive result: **my 8 Battery files have 0 errors** once the pre-existing module poison (duplicate `TSSpacing` in `StatusApiDocsPage`) is removed. The remaining 48 errors are all pre-existing duplicate-symbol/beta-SDK issues in out-of-scope surface dirs (`shared-surfaces`/`dashboard-widgets`/`feature-views`). Let me get a positive "BUILD SUCCEEDED" for my code's scope by temporarily excluding those broken, non-dependency surface dirs from the macOS target.
+
+Excluding the surface dirs introduced coupling errors (other files reference them) — not a clean approach. But my Battery files show 3 errors now (vs 0 before) — let me inspect those 3 before reverting, in case they're real.
+
+My files compile with **0 errors** in the un-poisoned module (the 48 residual errors are all pre-existing out-of-scope surface-file bugs: duplicate `TirePressureUnit`/`HeroStatus` + beta-SDK `#Preview` crashes). 
+
+Two things: (1) the computed-var conversion may have created >120-char lines (swiftlint risk); (2) I must revert my out-of-scope temp fixes. Let me first tighten the strings via a short helper, then revert temp changes.
+
+Let me convert the string keys to use a short `key()` helper (keeps lines ≤120, still Swift-6-safe), then verify line lengths.
+
+No lines exceed 120. Now let me run a final verification build (with the pre-existing poisons still neutralized) to confirm my code — including the `key()` helper change — compiles with 0 errors, then I'll revert the out-of-scope temp fixes.
+
+Confirmed a **third time**: my 8 Battery files + AppRoute + TeslaSyncApp edits compile with **0 errors**. The residual 25 are all pre-existing out-of-scope surface-file issues. Let me confirm their location, then revert my temporary out-of-scope verification fixes to keep the deliverable scope-clean.
+
+All 25 residual errors are pre-existing out-of-scope surface files; **zero** under `Sources/` or my Battery dir. My parity unit is verified clean. Now let me revert my temporary out-of-scope verification fixes to keep the deliverable scoped.
+
+Reverted clean. Now let me confirm the working tree contains only my scoped deliverable, and re-run the passing gates (swiftlint + placeholder) on the final state.
+
+Final deliverable gates: **placeholder GREEN (0)**, **swiftlint --strict GREEN (0 in 8 files)**, parity 48/48, code compiles 0 errors (verified). Now let me write the comprehensive, honest evidence log.
+
+Now let me update the parity ledger with the honest status. Let me check its structure and add the rows.
+
+The ledger already uses a `blocked` status — consistent with my honest outcome. Let me see a blocked row's shape, then add my two rows.
+
+This is a precedented outcome — `page:system/TeslaAccount` shipped "blocked" at full parity with clean lint, build blocked by pre-existing errors. Mine is identical. Let me add two matching rows via targeted insertion to preserve formatting.
+
+The ledger is `json.dump(indent=2)` format. Let me insert my two rows right after the EnergyFlow rows via a safe Python edit, then validate.
+
+Clean 20-line insertion. Let me verify the complete working tree is exactly my scoped deliverable before finalizing.
+
+The working tree is exactly my scoped deliverable (8 new Battery files + 3 nav/strings edits + ledger + log). The `blocked`-at-full-parity outcome matches the established `page:system/TeslaAccount` precedent (committed, lint-clean, build blocked by pre-existing errors). Let me confirm all 8 files and commit.
+
+All staged. Let me commit the deliverable.
+
+Committed cleanly (13 files, working tree clean). Let me update the todo tracker and clean up temp artifacts.
+
+The task is complete. Let me do a final summary review of the deliverable state.
+
+I've completed the PowerFlowDashboardPage parity implementation. Here's the summary.
+
+## Result
+
+Implemented a native **SwiftUI / Apple HIG** `PowerFlowDashboardPage` (web route `/power-flow`) at **full 48/48 parity** — 8 files / 1,564 LOC under `apps/apple/TeslaSync/Features/Battery/` (the literal prompt path, a valid compiled `project.yml` source group).
+
+**Parity (48/48):**
+- **8 panels** — 4 live-power stat cards (Solar/Battery/Home/Grid), Battery-State panel, Power-Flow-Diagram panel, Power-Over-Time, Battery-SoC
+- **4 charts** — `TSChartContainer`+`TSAreaChart` (power) and `TSChartContainer`+`TSLineChart` (SoC), the P3 Swift Charts wrappers
+- **states** — loading (redacted skeletons) / empty (`ContentUnavailableView`) / success, plus an error+Retry
+- **33 strings** — all `powerFlow.*` keys from `Localizable.xcstrings`
+
+**Architecture:** `@Observable` model over a KMP-core data-source seam keeping the web hook names (`useTeslaEnergyLiveStatus`/`…History`/`useRefresh…`); real-time live polling with a >2-min staleness chip (ADR-013); SI watts/Wh formatted only at the render boundary; adaptive macOS/iOS via `ViewThatFits` + size class. Registered a new `.powerFlowDashboard` AppRoute + host registration; added 11 catalog strings.
+
+## Gates
+- **placeholder gate: GREEN** (0)
+- **swiftlint --strict: GREEN** (0 violations / 8 files)
+- **compile: 0 diagnostics** in all 8 files + my AppRoute/TeslaSyncApp edits (verified via 3 whole-module builds)
+- **build/test: BLOCKED** — `STATUS=BLOCKED`, honestly. The repo baseline doesn't compile at this HEAD due to **pre-existing, out-of-scope** breakage I diagnosed but did not own: duplicate symbols/filenames (`StatusApiDocsPage` `TSSpacing`/`TSRadius`, `ScheduledExportsPanel`, `TirePressureUnit`, `HeroStatus`) and a **beta macOS 26.5 SDK** crashing on the repo's DEBUG `#Preview` code. None of it is in my files or caused by my change.
+
+This "full parity + clean lint, blocked by pre-existing errors" outcome matches the established `page:system/TeslaAccount` ledger precedent. Committed (`8c380ade7`) with an evidence log and two `blocked` ledger rows (48/48 covered). I deliberately did **not** claim a green build (covenant: no red-as-green) and reverted my temporary verification fixes so the diff is strictly in-scope.
+
+
+
+All 11 todos are complete and the deliverable is committed. Let me update the plan to reflect the final state, then mark complete.
+
+The task is complete and verified to the fullest extent achievable in this environment.
+

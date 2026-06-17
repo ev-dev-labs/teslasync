@@ -1,0 +1,260 @@
+=== P4 Widget primitive 0013 WidgetShell (Apple) ===
+Date: 2026-06-14
+Slot: auto/20260613-204822-12295/34
+Prompt: .github/prompts/monorepo/p4-apple/widget-primitives/0013-WidgetShell.prompt.md
+Web source (spec): web/src/features/dashboard/widgets/WidgetShell.tsx
+Native output: apps/apple/TeslaSync/widget-primitives/WidgetShell.*
+
+--------------------------------------------------------------------------------
+ CAPABILITY CHECK (Apple toolchain required by this prompt)
+--------------------------------------------------------------------------------
+  Xcode 26.5 (Build 17F42)             — present
+  Apple Swift 6.3.2                    — present
+  swiftlint 0.63.3 / swiftformat 0.61.1 — present (/opt/homebrew/bin)
+  iPhone 16 simulator (iOS 26.5)       — present (destination resolves, booted)
+  xcodegen 2.x                         — present (project is generated, .xcodeproj git-ignored)
+  KMP shared core (Shared.xcframework) — built locally this run (see below)
+  => Platform capability is AVAILABLE. This run is NOT blocked on capability.
+
+--------------------------------------------------------------------------------
+ KMP Shared.xcframework (ADR-004 scheme pre-build dependency)
+--------------------------------------------------------------------------------
+  apps/shared/gradlew :core:assembleSharedXCFramework
+    > Task :core:assembleSharedXCFramework
+    BUILD SUCCESSFUL in 10m 8s
+  Staged release slice -> apps/apple/Frameworks/Shared.xcframework
+  (ios-arm64, ios-arm64-simulator, macos-arm64 present)
+
+--------------------------------------------------------------------------------
+ FILES ADDED (allowed: apps/apple/TeslaSync/widget-primitives/WidgetShell.*)
+--------------------------------------------------------------------------------
+  WidgetShell.Model.swift     — SwiftUI-free: WidgetHelp/WidgetHelpLink, WidgetShellState,
+                                WidgetShellFreshnessStatus, WidgetShellRelativeTimeBucket,
+                                WidgetShellFreshnessLabel, WidgetShellPulse, WidgetShellLayout,
+                                WidgetShellAccessibility, WidgetShellSurface (slug),
+                                WidgetShellTelemetry + OSLog default (P1/S11 view.opened),
+                                WidgetShellStrings (P1/S10 facade)
+  WidgetShell.Views.swift     — WidgetShellFreshnessChip (DataFreshness port, 4 states + relative
+                                time + manual refresh, Reduce-Motion-aware dot/icon animation),
+                                WidgetShellHelpButton (HelpTooltip + WidgetHelp + Learn-more link),
+                                WidgetShellPinButton (PinButton port)
+  WidgetShell.swift           — generic WidgetShell<Content,Actions,Icon> surface: loading skeleton /
+                                query-error / titled header / title-less overlay / pulse-on-update /
+                                noPadding; WidgetShellFreshness + WidgetShellPin inputs; 4 inits
+  WidgetShell.Previews.swift  — DEBUG previews for every render branch (loading, error ±retry,
+                                titled-plain, full-chrome, 4 freshness states, title-less, noPadding)
+  WidgetShell.strings         — P1/S10 table "WidgetShell" (freshness.*, a11y.dataFreshness, pin.*,
+                                common.learnMore, widget.shell.help.ariaLabel, error.query*)
+  WidgetShell.Tests.swift     — 42 XCTest cases (state / freshness status / relative-time bucket /
+                                freshness label / pulse / layout / help / a11y / strings / telemetry /
+                                per-state ImageRenderer render)
+
+ NO project.yml CHANGE REQUIRED (disclosure):
+  In this slot the "TeslaSync/widget-primitives" group is ALREADY wired into both app targets
+  (TeslaSync, TeslaSync-macOS) and both unit-test targets (TeslaSyncTests, TeslaSync-macOSTests),
+  with **/*Tests.swift excluded from the app targets and included in the test targets. The new
+  WidgetShell.* files are therefore compiled by the app targets and their tests by the XCTest
+  bundles with ZERO out-of-surface edits. git status confirms the ONLY changes this run are the six
+  apps/apple/TeslaSync/widget-primitives/WidgetShell.* files (+ this log).
+
+--------------------------------------------------------------------------------
+ PARITY MAPPING (web source is THE spec)
+--------------------------------------------------------------------------------
+  Web component is a PURE PRESENTATIONAL widget-chrome shell (no data source / no hooks). Every
+  render branch is reproduced 1:1:
+    web if (loading) <Skeleton h-full rounded-xl/>     -> WidgetShellState.loading -> TSSkeleton (full-bleed, GeometryReader, radius lg)
+    web if (error) <QueryError/>                       -> WidgetShellState.error  -> TSQueryError(onRetry:) / TSErrorDisplay (centered, p-4)
+    web title ? header : overlay                       -> WidgetShellLayout.showsTitleHeader(title:)
+    web header: icon + title(uppercase tracking) + help-> titledHeader: icon()+Text(label, .textCase(.uppercase) kerning) + WidgetShellHelpButton
+    web header right: freshness + pin + actions        -> WidgetShellFreshnessChip(compact:false) + WidgetShellPinButton + actions()
+    web title-less overlay freshness (top-1.5 right-1.5)-> ZStack(topTrailing) overlay chip, compact = true
+    web DataFreshness 4-state (fresh/fetching/stale/err)-> WidgetShellFreshnessStatus.resolve (error>fetching>stale>fresh); SF wifi/refresh/wifi/wifi.slash; tones success/info/warning/danger
+    web formatRelativeTime (<60s..weeks)               -> WidgetShellRelativeTimeBucket.bucket + P1/S10 freshness.justNow/minutes/hours/days/weeks
+    web relativeTime ternary (updating/error/'')       -> WidgetShellFreshnessLabel.resolve
+    web justUpdated 1.5s green glow on updatedAt change -> WidgetShellPulse.shouldPulse + .shadow(statusSuccess .15) animation (Reduce-Motion safe)
+    web !noPadding ? 'px-4 pb-3' : ''                  -> bodyInsets (lg/​md) vs EdgeInsets()
+    web HelpTooltip (text/i18nKey/defaultValue/learnMore)-> WidgetShellHelpButton (resolvedText facade + Link)
+    web PinButton (pin/unpin, aria-pressed)            -> WidgetShellPinButton (pin / pin.slash, .isSelected trait)
+  Shared components used by web -> native counterparts:
+    @/components/feedback  Skeleton / QueryError  -> TSSkeleton / TSQueryError / TSErrorDisplay (real shared components)
+    @/components/ui        HelpTooltip / PinButton-> WidgetShellHelpButton / WidgetShellPinButton (TSHelpTooltip cannot carry WidgetHelp.learnMore; no shared TSPinButton — built faithfully, view-only, host owns persistence)
+    @/components/data-display DataFreshness        -> WidgetShellFreshnessChip (no shared 4-state chip; TSFreshnessIndicator is the per-datum web FreshnessIndicator, a different component)
+  Charts/maps: none in this primitive.
+  i18n: web WidgetShell is anonymous; the strings it renders come from the composed chrome
+    (DataFreshness/HelpTooltip/PinButton/QueryError) and are captured verbatim in the "WidgetShell"
+    table. No hardcoded English remains in native code (every literal goes through WidgetShellStrings).
+  Telemetry: emits P1/S11 view.opened with surface slug "WidgetShell" on appear (OSLog default sink).
+  Accessibility: freshness chip is one combined element ("Refresh" when interactive, else
+    "Data freshness: <state>"); help/pin carry labels; decorative dot/icon hidden; Dynamic Type via
+    design-token fonts; pulse/spin/ping honor Reduce Motion.
+  States: loading / error(±retry) / ready(titled) / ready(title-less) and the freshness sub-states
+    fresh/fetching/stale/error are ALL implemented, previewed, and render-tested. (The prompt's
+    generic "empty"/"offline" states are not branches of THIS shell — they are the child content's
+    responsibility; the shell's error chip with wifi.slash is the closest native analog and is shown.)
+
+================================================================================
+ IN-SCOPE GATE (host-runnable, authoritative for this surface)
+================================================================================
+
+--- swiftlint --strict ---------------------------------------------------------
+  whole-tree `swiftlint --strict` => exit 0
+  focused on the 5 shipped Swift files: "Done linting! Found 0 violations, 0 serious in 5 files."
+  LINT_EXIT=0
+
+--- swiftformat --lint apps/apple ----------------------------------------------
+  "0/5842 files require formatting, 2 files skipped."
+  FORMAT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives/WidgetShell ---
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  (No TODO/FIXME/stub/mock/placeholder/Lorem/fatalError-unimpl in shipped code.)
+
+================================================================================
+ FULL-SCHEME GATE (xcodebuild) — reported VERBATIM (no red-as-green)
+================================================================================
+
+--- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+  ** BUILD SUCCEEDED **            <-- the iOS app target (incl. all WidgetShell.* sources) COMPILES + LINKS clean
+  Testing failed:
+  	Invalid redeclaration of 'RecentActivityFeedProjectionTests'
+  	Testing cancelled because the build failed.
+  ** TEST FAILED **
+  IOS_EXIT=65
+
+  THIS SURFACE: 0 errors / 0 warnings in WidgetShell.* — grep ' error:' over
+  widget-primitives/WidgetShell.* in the build log => 0 matches. All four source files
+  (WidgetShell.Model.swift, WidgetShell.swift, WidgetShell.Views.swift, WidgetShell.Previews.swift)
+  appear as successful `SwiftCompile … (in target 'TeslaSync')` entries inside this GREEN app build.
+
+  ROOT CAUSE OF THE TEST-ACTION RED — 100% EXTERNAL, OUTSIDE THIS PROMPT'S ALLOWED FILES:
+    The shared iOS XCTest bundle (TeslaSyncTests) fails to COMPILE because TWO pre-existing sibling
+    test files each declare the SAME XCTestCase class name:
+      apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Tests.swift:106
+        final class RecentActivityFeedProjectionTests: XCTestCase { … }
+      apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift:103
+        @MainActor final class RecentActivityFeedProjectionTests: XCTestCase { … }
+    => "invalid redeclaration of 'RecentActivityFeedProjectionTests'" fails the whole test-bundle
+    compile, so the `test` action is cancelled before ANY test (including this surface's 42) runs.
+    Both files are committed baseline (HEAD 1b2fbf00d "style(apps/apple): swiftformat + swiftlint
+    --strict clean (P4 baseline)") and were NOT touched by this work (git status: only the six
+    WidgetShell.* files are added). They belong to their own P4 prompts; fixing them here is
+    forbidden (out of allowed files) and is DEFERRED to their owners / the P4/P99 integration gate,
+    the same disposition as every prior P4 surface.
+
+--- xcodebuild -scheme TeslaSync-macOS build test ------------------------------
+  ** BUILD FAILED **  /  ** TEST FAILED **
+  MAC_EXIT=65
+
+  ROOT CAUSE — ENVIRONMENTAL (no Apple development certificate on this runner):
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+      development certificate. Enable development signing in the Signing & Capabilities editor.
+    TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing …
+    This fails at the signing step BEFORE compilation, unrelated to any source in this prompt
+    (0 WidgetShell errors). It is the documented "environmental macOS code-signing gap" deferred to
+    the signed macos-latest acceptance gate (P4/P99), identical to prior P4 surfaces.
+
+  NOTE ON ENVIRONMENT: this run shares the host with other parallel slot agents. A first iOS
+  `build test` produced a transient diagnostic-less `Command SwiftCompile failed` on an UNRELATED
+  external batch (DriveStatCards/DriveTelemetryWidget/DriveTimeline) — a compiler process terminated
+  under concurrent-build memory pressure (no source `error:` emitted). Re-running on a dedicated
+  -derivedDataPath once contention cleared produced the deterministic ** BUILD SUCCEEDED ** above.
+  Disclosed for full transparency; it is environmental, not a defect in any source file.
+
+================================================================================
+ SUPPLEMENTARY VERIFICATION (real evidence this surface is complete + correct)
+================================================================================
+ Because the full iOS scheme's `test` action is blocked by the external duplicate-class compile
+ error above (the test bundle must compile before tests run), this surface's tests were executed in
+ an isolated SwiftPM package containing the EXACT shipped sources (WidgetShell.Model.swift +
+ WidgetShell.swift + WidgetShell.Views.swift + WidgetShell.Previews.swift) compiled against the REAL
+ shared component library (apps/apple/Sources/Components/** + Sources/Design/** + the generated
+ design Tokens.swift — the genuine TSSkeleton / TSQueryError / TSErrorDisplay / TSButton / TSTone /
+ token dependencies my surface uses) and the EXACT shipped WidgetShell.Tests.swift, built for
+ arm64-apple-macos15 under Swift 6 language mode (strict concurrency = complete):
+
+   swift build  => Build complete!   (my 4 surface files compile against the real shared kit)
+   swift test
+     WidgetShellStateTests                 4 tests  (loading>error>ready precedence; empty error falsy)
+     WidgetShellFreshnessStatusTests       5 tests  (4-state mapping + localization key)
+     WidgetShellRelativeTimeBucketTests    5 tests  (justNow/minutes/hours/days/weeks thresholds)
+     WidgetShellFreshnessLabelTests        5 tests  (relative / updating / error / none composition)
+     WidgetShellPulseTests                 4 tests  (first-value guard / change / positive guard)
+     WidgetShellLayoutTests                2 tests  (title-header + compact-freshness)
+     WidgetShellHelpTests                  3 tests  (i18nKey / literal / empty->nil)
+     WidgetShellAccessibilityTests         2 tests  (help / data-freshness label builders)
+     WidgetShellStringsTests               2 tests  (table name / web-English fallback resolves)
+     WidgetShellTelemetryTests             2 tests  (stable slug / seam records slug)
+     WidgetShellRenderTests                8 tests  (ImageRenderer: loading / error ±retry /
+                                                     titled-plain / full-chrome / 4 freshness states /
+                                                     title-less overlay / no-padding)
+     Executed 42 tests, with 0 failures (0 unexpected)
+   SWIFT_TEST_EXIT=0
+
+ The per-state render tests exercise the view body in every web branch, so each state is proven to
+ render (no blank/hidden surface). The most authoritative compile evidence is the full-app
+ ** BUILD SUCCEEDED ** above: the surface integrates and links in the real iOS TeslaSync app target.
+
+================================================================================
+ DEFECT CAUGHT + FIXED BY THE REAL BUILD (honest disclosure)
+================================================================================
+ The first real iOS app build (pre-fix) FAILED with errors IN THIS SURFACE:
+   'FreshnessStatus' is ambiguous / 'FreshnessLabel' is ambiguous / invalid redeclaration of 'FreshnessDot'
+ Root cause: a sibling surface (TeslaSync/shared-surfaces/FreshnessIndicator.*) already declares the
+ module-level types FreshnessStatus, FreshnessLabel, FreshnessDot. The isolated SwiftPM package did
+ not surface this because it excludes that sibling. FIX (within allowed files only): the generically
+ named helper types were namespaced with a WidgetShell prefix —
+   FreshnessStatus -> WidgetShellFreshnessStatus,  FreshnessLabel -> WidgetShellFreshnessLabel,
+   FreshnessDot -> WidgetShellFreshnessDot,        FreshnessIcon -> WidgetShellFreshnessIcon,
+   RelativeTimeBucket -> WidgetShellRelativeTimeBucket.
+ After the rename the app target reaches ** BUILD SUCCEEDED ** and all 42 isolated tests still pass.
+ This is reported (not hidden) per Covenant rule 1/9.
+
+================================================================================
+ HONESTY COVENANT COMPLIANCE
+================================================================================
+  1  No red-as-green ...... iOS test-action and macOS scheme are reported RED verbatim
+                            (IOS_EXIT=65, MAC_EXIT=65). The in-surface collision the first build
+                            found is disclosed and was fixed, not buried.
+  2  No scope narrowing .... Every render branch + freshness sub-state of the web source is
+                            implemented + previewed + tested. Nothing skipped.
+  3  No skip-and-assume .... Web source (WidgetShell.tsx) + composed chrome (DataFreshness,
+                            HelpTooltip, PinButton, QueryError) read end-to-end; each conditional
+                            reproduced; exact i18n keys/fallbacks extracted from source.
+  4  No stubs as final ..... Full implementation; PLACEHOLDER_COUNT=0; no TODO/stub/mock markers.
+  5  No parity shortcuts ... Loading skeleton, query error, titled + title-less headers, 4-state
+                            freshness chip + relative time + refresh, help + learn-more, pin toggle,
+                            pulse-on-update, noPadding, i18n, a11y, Reduce Motion — all ported.
+  6  No delegation ......... Implemented directly in this run.
+  7  No predecessor bypass . widget-primitives wiring already present in this slot; relied on it
+                            honestly (disclosed) and added zero out-of-surface edits.
+  8  No commit on red ...... The RED is entirely EXTERNAL (pre-existing duplicate test class in two
+                            sibling files) + ENVIRONMENTAL (macOS signing), outside allowed files;
+                            THIS surface BUILD SUCCEEDED and its 42 tests pass. Per the sanctioned
+                            P4 disposition the in-scope deliverable is complete and the external RED
+                            is deferred to its owners / the P4/P99 signed gate.
+  9  No silent drift ....... Zero out-of-surface edits (git status: only WidgetShell.* added). The
+                            type-rename fix is disclosed above.
+  10 EXIT/STATUS present ... below.
+
+================================================================================
+ DISPOSITION
+================================================================================
+  In-scope, host-runnable gates: LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0.
+  Real iOS app target: ** BUILD SUCCEEDED ** — the surface compiles + links in the production app
+    module (0 errors / 0 warnings in WidgetShell.*).
+  Surface tests: 42/42 PASS in an isolated XCTest harness against the REAL shared component library
+    (Swift 6, strict concurrency = complete).
+  Full iOS `test` action: RED only because of a pre-existing duplicate XCTestCase class in two
+    EXTERNAL sibling test files. Full macOS scheme: RED only because of the environmental
+    code-signing gap. Both are outside this prompt's allowed files and are deferred to their owners /
+    the P4/P99 signed acceptance gate, consistent with every prior P4 surface.
+
+  COMMIT
+    git add apps/apple/TeslaSync/widget-primitives/WidgetShell.* \
+            .github/prompts/monorepo/logs/p4-apple-widget-primitives-0013-WidgetShell.log
+    git commit -m "feat(apps/apple/widget-primitives): add WidgetShell surface (P4)"
+
+EXIT=0
+STATUS=DONE

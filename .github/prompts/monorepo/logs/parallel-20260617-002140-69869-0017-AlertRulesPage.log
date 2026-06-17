@@ -1,0 +1,213 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+The web page is clear. Now let me explore the Apple app structure to understand existing patterns, especially recently-implemented pages.
+
+There are two structures: `TeslaSync/Features/` (the prompt's target) and `Sources/Features/`. Let me examine both, plus the recently-merged Driving pages as reference patterns.
+
+The recently-merged Driving pages are the ideal reference pattern. Let me read them to understand the exact conventions for a P7 parity page.
+
+Now let me examine the data source pattern and the shared component library (P3) I'll need — especially for tables, badges, bulk toolbars, and editable text.
+
+Let me locate the design tokens and key shared components I'll reuse (TSGlassPanel, TSEmptyState, TSErrorDisplay, TSFadeIn, spacing), plus check existing AlertStudio rules patterns.
+
+Let me read the design token definitions and the key shared component implementations to understand the exact API surface.
+
+Let me check whether an Xcode toolchain is available (determines gate viability) and find the canonical token/component definitions.
+
+Key findings: `xcodebuild`, `swift`, `swiftlint` are all available. There's no `.xcodeproj` (uses `project.yml` via XcodeGen). Let me read the core component/token definitions and project config.
+
+`Color.TS`/`Font.TS` only appear defined in the Watch target — the merged Driving pages may reference tokens absent from the main target. Let me inspect `project.yml` and confirm what the `TeslaSync` target compiles, and whether these tokens resolve.
+
+The design tokens come from `../design/generated/apple` (the `DesignTokens` group). Let me inspect that and the key shared components (Badges, DataTable, States, Motion).
+
+I now have the canonical tokens. Note: there's a pre-existing duplicate `TSSpacing`/`TSRadius` in `StatusApiDocsPage.swift` colliding with `Tokens.swift` — I must not add new collisions. Let me set up a plan and gather the remaining shared-component/tooling references in parallel.
+
+`pwsh` is available, so all gates are runnable. Let me read the remaining shared components (Cards, Badges, Buttons, Motion, Typography) and the existing AlertStudio rules patterns.
+
+Let me read Typography, Buttons, Motion, the existing AlertStudio rules, and the BulkActionsToolbar to maximize reuse.
+
+Let me read the existing AlertStudio rules/models (for severity + AlertRule reuse), TSButton, and the BulkActionsToolbar surface.
+
+Rich AlertStudio infra exists (`ASSeverity`, `ASSeverityVisual`, `TSBulkActionsToolbar`). Let me inspect those plus `TSButton` and the theme/units preview modifiers to decide reuse vs. self-contained.
+
+Let me read the theme modifiers, TSButton API, the BulkActionsToolbar component, and the existing Notifications route registration to finalize my approach.
+
+Let me read the bulk toolbar component, the AppRoute system, and the units facade to finalize navigation and reuse decisions.
+
+Let me read the full AppRouteParser, confirm how DrivingDynamics deep-links, and the UnitPreferences facade.
+
+I now have enough architecture understanding. Let me read the reference log format, the ledger, the swiftlint config, and check which of my 26 strings already exist in the catalog.
+
+Let me examine the xcstrings catalog format carefully — the key namespacing (`translation.` prefix vs bare) is critical for string resolution.
+
+The catalog uses a `translation.`-prefixed convention (the sibling DrivingDynamics page added `translation.dynamics.*`). Let me check which of my 26 keys already exist with that prefix, so I only add missing ones.
+
+Most `translation.alertRules.*` keys are already pre-seeded. Only 3 appear missing. Let me confirm and check the existing values match web defaults.
+
+Excellent — 23 of 26 strings are pre-seeded; only 3 need adding. Let me verify web details for the SeverityBadge, the AlertRule type, and the notification hooks to ensure data-shape parity.
+
+I have full clarity on data shapes. Let me read the swiftlint config and the reference log format, then start building.
+
+I now have a complete reference. The sibling pages document that the full `xcodebuild` is RED from **pre-existing** parallel-merge breakage (e.g., the `TSSpacing` token shadowing I found), while their own unit lints clean and type-checks clean. Let me verify the framework/tooling and write my plan.
+
+I have everything I need. `Shared.xcframework` is absent (KMP build needed) and the full build is already RED from pre-existing token collisions — matching what sibling logs document. My gate strategy mirrors them: **swiftlint --strict + placeholder scan green on my unit, isolated type-check of my files, honest build reporting**. Let me write the plan and todos.
+
+Let me check the web `BulkActionToolbar` to render the selection summary faithfully (how the noun is used).
+
+Now I understand all string nuances. Let me create the foundational files — Models, Strings, and DataSource — following the sibling pattern exactly.
+
+Now the data source seam. Since this page mutates (enable/disable/delete/rename), the sample source needs a mutable store — I'll use an `actor` for strict-concurrency safety.
+
+Foundational files done. Let me update todos and build the `@Observable` page model.
+
+Page model done. Let me check the web `EditConflictBanner` for faithful banner text before building the components file.
+
+The banner interpolates the resource label (required string) into the shared body. Let me check the input field component and `TSInlineCallout` for reuse in the rename UI and banner.
+
+I have all component APIs. Let me create the components file (severity badge, status badge, edit-conflict banner) and a separate file for the rename cell + sheet.
+
+Now the rename cell + sheet (web `EditableText` with validation). Let me create it.
+
+I must verify: `ARStrings.key(...)` (a `LocalizedStringKey`) renders the raw key if absent from the catalog — unlike `ARStrings.text(...)` which has a fallback. Let me audit every `ARStrings.key(...)` usage against the catalog.
+
+`translation.editableText.rename.title` is absent. I'll reuse the required parity string `editableText.rename.alertRule` for the sheet title instead (faithful + avoids a raw-key render).
+
+Now the bulk action toolbar with delete confirmation. Let me create it.
+
+Now the adaptive rules table (header + rows, columnar on regular width, stacked cards on compact). Let me create it.
+
+The page ties it together. Let me first check the placeholder-scan patterns so I don't trip them (e.g., on `.redacted(.placeholder)` or comments).
+
+`.placeholder` (in `.redacted`) trips the "Placeholder" pattern and needs a `// parity:allow` marker. Let me scan my files for any flagged tokens before writing the page.
+
+Clean. Now the main page that wires everything together with all four states.
+
+Now the navigation registration (typed link + factory, mirroring the sibling) plus the AppRouteParser deep-link alias.
+
+Now let me add the 3 missing catalog strings. First, let me inspect the exact formatting of an existing `alertRules` entry to match it precisely (the file has mixed formatting).
+
+Now I'll insert the 3 missing strings at their sorted positions, matching the existing `ar`/`en`/`he` block format exactly, via a targeted Python script (no full re-dump, preserves formatting).
+
+All 26 strings present and JSON valid. Let me update todos and run the lint + placeholder gates.
+
+Swiftlint scanned the whole project (config `included:` overrides the path). 4 violations found — let me see exactly which files, focusing on mine.
+
+All 4 violations are in **pre-existing** files (`MyActivityPageModel`, `WeeklyDigestWidget`) — **zero in my Notifications files**. The config's `included:` makes swiftlint scan the whole repo. Let me get a clean path-scoped run like the sibling did.
+
+The scoped lint (project rules, my files only) reveals **10 real violations I must fix** for genuine `--strict` cleanliness: multiple-closures (4), unneeded init (1), `body_` name (1), and `inclusive_language` "master" (4). Let me fix all of them.
+
+Now the `inclusive_language` "master" renames across PageModel and Table. Let me apply them with surrounding context.
+
+Now fix the 4 multiple-closures violations (Toolbar's 3 buttons + Page footer) by using labeled `action:`/`label:` args.
+
+Now let me re-run the scoped strict lint on my files to confirm 0 violations.
+
+Scoped strict lint is now **0 violations / EXIT=0** — my files are genuinely clean. Now the placeholder gate.
+
+Placeholder gate: **EXIT=0** (the 1 allowed is my `// parity:allow` shimmer). Now let me assess a feasible type-check. Let me check whether the component library I depend on is `Shared`-framework-free (since `Shared.xcframework` is absent).
+
+Components are `Shared`-free; only previews (`#if DEBUG`) pull `UnitPreferences` (which needs `Shared`). I can type-check my feature + the real component library against the iOS SDK **without `-D DEBUG`** (excludes previews). Let me locate the glass-panel modifier and assemble the file set.
+
+All dependencies are SwiftUI-only. Let me run a strict (Swift 6) type-check of my feature + the real component library against the iOS SDK, excluding previews (no `-D DEBUG`).
+
+**TYPECHECK_EXIT=0** — all 10 feature files type-check cleanly against the real component library under Swift 6 strict concurrency. The `#if DEBUG` previews/sources were excluded (they reference the `Shared`-coupled `UnitPreferences`). Let me verify those too via a tiny shim.
+
+Even the DEBUG previews type-check clean. My unit is genuinely green on lint + placeholder + strict Swift 6 type-check. Now let me honestly capture the full `xcodebuild` state (expected RED from the absent `Shared.xcframework` + pre-existing collisions). First, parse-check my AppRouteParser edit and confirm the pre-existing `TSSpacing` collision.
+
+Confirmed: KMP toolchain (gradle/kotlin) is absent → `Shared.xcframework` can't be built; plus the pre-existing `TSSpacing` collision. Both are out-of-scope blockers. Let me generate the project and attempt a time-boxed build to capture a concrete `BUILD_EXIT`.
+
+Project generated. Now let me run the build (time-boxed) to capture the concrete failure mode.
+
+While the build runs, let me prepare the ledger update and draft the log. Let me check the build progress shortly.
+
+The build is actually bootstrapping the KMP framework via Gradle (downloading Kotlin/Native, compiling). That'll take a while — I'll let it run and do the ledger + log meanwhile. Let me inspect the ledger formatting to insert my 2 rows cleanly.
+
+No AlertRules row exists. Let me insert 2 rows (macos + ios) before the AuditLog rows, then validate.
+
+Ledger updated and valid. Let me check the build progress.
+
+The KMP `Shared.xcframework` built successfully via Gradle — the toolchain *is* present. Now the app target compiles, where the pre-existing collisions live. Let me wait for that phase.
+
+Still assembling the multi-platform KMP framework (release variant now). The app compile hasn't started. Let me wait longer.
+
+The first-time KMP release link is slow. Let me wait further for the app-compile phase.
+
+Build finished: **BUILD_EXIT=65**, but now with a **real collision in my code** — `AlertRuleSeverity` (and likely `AlertRule`) clashes with an existing type in the TeslaSync module. The isolated type-check missed it (didn't include the whole module). Let me find the conflicting definitions.
+
+Found it: `AlertMessageEditor.Models.swift:22` already defines `public enum AlertRuleSeverity`. The DRY fix is to **reuse** it rather than duplicate. Let me inspect it and check the full set of my-file errors.
+
+Only collision is `AlertRuleSeverity` — my `AlertRule` struct is unique. The existing `public enum AlertRuleSeverity` has the exact cases I need, so I'll **reuse it** (DRY) and keep my `tone`/`systemImage` extension. Let me first scan for any OTHER name collisions before fixing.
+
+No other collisions. I'll remove my duplicate `AlertRuleSeverity` and reuse the canonical one. Let me rewrite the Models file.
+
+Let me view the current Models file (it changed after my earlier init removal).
+
+Now `AlertRuleSeverity` resolves to the canonical enum. Let me confirm no existing `tone`/`systemImage` extension collides, and re-run the isolated type-check including the file that defines the canonical enum.
+
+No existing extension collision. Let me check the canonical-enum file's imports and re-run the isolated type-check including it.
+
+**TYPECHECK_EXIT=0** with the canonical enum. The collision is fixed. Now let me re-run the real build (KMP framework is cached now, so it'll be faster) to confirm **0 errors in my files** in the full module context.
+
+While the build runs, let me draft the evidence log. Let me check build progress first.
+
+The launcher returned but the detached build is still compiling (exit file empty). 0 errors so far. Let me wait for it to finish.
+
+**MY_ERR=0** across both arm64 and x86_64 slices, while 500 pre-existing errors exist elsewhere — confirming my unit is clean and the build RED is entirely pre-existing. Let me wait for final completion to record exact numbers.
+
+Build finished: **BUILD2_EXIT=65, MY_ERR=0, 500 pre-existing errors elsewhere** — the exact sibling pattern. Let me analyze the pre-existing error breakdown for honest documentation.
+
+Conclusive: the 500 errors are all pre-existing parallel-generated breakage (411 "ambiguous use" token/symbol shadowing, concentrated in `*.Previews.swift` bulk surfaces) — **0 in my unit**. Let me re-verify my lint/placeholder after the Models edit, then write the log.
+
+All gates green on my unit (lint 0, placeholder 0, 10 files / 1148 LOC). Let me write the evidence log with the full 31-item PARITY section.
+
+Log written. Now let me check git status, ensure generated artifacts (xcodeproj, Shared.xcframework) are ignored, and stage only the allowed scope.
+
+All generated artifacts are git-ignored. My changes are exactly the allowed scope (5 paths). Let me do a final JSON validation and commit.
+
+Committed (`b4a5e9a42`, 14 files, +1503). Let me clean up temp artifacts and verify the final working-tree state.
+
+Working tree clean. Let me verify all todos are complete and do a final confirmation of the committed state.
+
+All 14 todos complete. Let me do a final confirmation of the committed deliverable.
+
+Let me confirm all 10 feature files are in the commit (the `--stat` abbreviates paths).
+
+All 10 feature files committed, ledger covered 31/31 (both platforms), route alias in place. The task is complete and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../apple-page-notifications-AlertRulesPage.log    | 267 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  69 ++++++
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Notifications/AlertRulesDataSource.swift       | 130 ++++++++++
+ .../Features/Notifications/AlertRulesModels.swift  |  28 +++
+ .../Notifications/AlertRulesPage.Components.swift  | 129 ++++++++++
+ .../Notifications/AlertRulesPage.NameCell.swift    | 118 +++++++++
+ .../Notifications/AlertRulesPage.Table.swift       | 150 ++++++++++++
+ .../Notifications/AlertRulesPage.Toolbar.swift     | 114 +++++++++
+ .../Features/Notifications/AlertRulesPage.swift    | 175 ++++++++++++++
+ .../Notifications/AlertRulesPageModel.swift        | 206 ++++++++++++++++
+ .../AlertRulesRouteRegistration.swift              |  47 ++++
+ .../Features/Notifications/AlertRulesStrings.swift |  51 ++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 14 files changed, 1503 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-notifications-AlertRulesPage.log
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesDataSource.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesModels.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.Components.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.NameCell.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.Table.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.Toolbar.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesPageModel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesRouteRegistration.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Notifications/AlertRulesStrings.swift
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

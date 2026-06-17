@@ -1,0 +1,255 @@
+=== P4-APPLE · P7 · page:automations/TriggerConfigurator (SwiftUI / HIG) ===
+started: 2026-06-15T16:21:00-0700
+host: macOS (Darwin); Xcode 26.5 (Build 17F42) + swiftc (Apple Swift 6.3.2, swift-version 6,
+      strict-concurrency=complete); swiftlint + swiftformat + xcodegen + pwsh 7 + JDK 17 present
+repo HEAD at execution: a525b68ca
+web source: web/src/features/automations/pages/TriggerConfigurator.tsx   (route: (unrouted))
+parity unit: page:automations/TriggerConfigurator  (manifest requiredCount=23 = 2 states + 21 strings;
+             0 panels / 0 charts / 0 maps; data source: useGeofences → GET /geofences)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Automations/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group. The repo's real,
+compiled canonical page home is `apps/apple/Sources/Features/<Domain>/` — proven by every DONE
+sibling page (ActionBuilderPage, AutomationsListPage, AutomationActivityFeedPage, … all under
+Sources/Features/<Domain>). `Sources` is a project.yml source path (createIntermediateGroups),
+shared by the iOS + macOS app targets (ADR-002). The page therefore ships at
+`apps/apple/Sources/Features/Automations/**` — the faithful equivalent of the prompt's
+`Features/Automations`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This mapping is the only
+deviation from the literal prompt path and is recorded here per covenant #9 (identical to the
+DONE sibling ActionBuilder's reconciliation).
+
+REUSE / DRY (engineering principles — no duplication of the proven domain core):
+The pure, Foundation-only projection layer for this surface already ships, module-public, in the
+P4 feature-view (`apps/apple/TeslaSync/feature-views/TriggerConfigurator.{Adapter,Catalog}.swift`):
+the discriminated `AutomationTrigger` union, `TriggerKind`, `SignalTrigger`/`SignalValue`/
+`SignalOperator`, the `CronExpression.build/parse` schedule helpers + `SimpleSchedule`, the
+`TriggerAdapter` weekday-toggle + `signalValue`/`displayValue`/`parseLeadingDouble` coercions, the
+`AutomationTrigger.createDefault` seeds, the `Geofence` wire model, the
+`VehicleEventCatalog`/`GeofenceEventCatalog`/`SignalOperatorCatalog`/`SignalCatalog`/
+`TimezoneCatalog`/`WeekdayCatalog`/`TriggerTypeCatalog` option catalogs, `TriggerOption`, and the
+injectable-localizer `TriggerConfiguratorAccessibility` VoiceOver summaries — all take an INJECTED
+`localize` closure. This unit REUSES that core (one source of truth, zero type collisions — every
+new symbol is `TriggerConfiguratorPage*` / `TriggerConfiguratorGeofence*`) and feeds it a
+`Localizable.xcstrings` localizer, then ships a fresh page/model/editors/views/registration that
+resolve every string from the platform catalog (the P7 string requirement). No feature-views file
+was edited (out of allowed scope).
+
+NAVIGATION (the unit is (unrouted)):
+The web `TriggerConfigurator` is a composable SECTION the `/automations` builder page renders inline
+— NOT a standalone route. So this unit does NOT take a top-level `AppRoute` (that would hijack a
+sibling unit's route). Instead it ships a typed `NavigationDestination` seam —
+`TriggerConfiguratorPageLink` + `View.triggerConfiguratorDestination()` +
+`TriggerConfiguratorPageRouteRegistration.make(...)` — that any `NavigationStack` adopts to deep-link
+the full-screen trigger editor. No edits to the P4 shell (AppShell/AppRoute/TeslaSyncApp) were made —
+correct for an unrouted unit (covenant #7).
+
+SCREEN COMPOSITION (faithful to the bare web component):
+The web component returns a bare `space-y-4` stack with no panel chrome (the host supplies it) and
+switches on `trigger.kind`. As a self-contained P7 screen this page hosts the web source's exported
+`TRIGGER_TYPES` picker (reused `TriggerTypeCatalog`) above the per-kind editor inside a `tsGlassPanel`
+(the host chrome), so every one of the four editors (schedule / event / geofence / signal) is reachable
+and every region the web `switch` renders is reproduced in the same data + grouping + order.
+
+UNITS / LIVE DATA (honest scope):
+TriggerConfigurator has NO unit-bearing display values — the signal threshold is a raw user-entered
+comparison value (web stores `value_num` verbatim), so no SI conversion is applied at the boundary
+(P1/S5 not needed here; nothing is computed/stored non-SI). `useGeofences` (`GET /geofences`) is a
+one-shot fetch, NOT a live SSE source, so no SSE subscription / >2-min staleness overlay is modeled
+(ADR-013 applies only to live streams) — load()/refresh() mirror the hook's query/refetch.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain; .xcodeproj/build/Frameworks are git-ignored)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Automations/TriggerConfiguratorPageModel.swift        (282 LOC) @MainActor @Observable TriggerConfiguratorPageModel: owns editable `trigger` (web controlled prop) + typed geofence render state (loading/empty/success/error) over an injectable TriggerConfiguratorGeofenceProviding seam (Default/Empty/Failing); load()/refresh(); every web edit rule (setScheduleTime/toggleScheduleDay/setScheduleCron/toggleScheduleMode/setScheduleTimezone/setEventType/setGeofencePlace/setGeofenceEvent/setDwellMinutes/setSignal/setOperator/setSignalValue/setChangedOnly) + setTriggerKind (createDefaultTrigger); reuses CronExpression/TriggerAdapter/catalogs; TriggerConfiguratorPageStrings localizer (String(localized:) ← Localizable.xcstrings)
+?? apps/apple/Sources/Features/Automations/TriggerConfiguratorPage.swift             (165 LOC) SwiftUI page View: ScrollView + navigationTitle; trigger-type picker (reused TRIGGER_TYPES) + per-kind editor switch in tsGlassPanel; adaptive maxContentWidth (macOS/iPad regular vs iPhone compact, #if os(iOS) horizontalSizeClass); .task load(); .refreshable; #if DEBUG previews (Schedule / Event / Geofence-success / Geofence-empty / Geofence-error / Signal)
+?? apps/apple/Sources/Features/Automations/TriggerConfiguratorPage.Editors.swift     (274 LOC) The 4 per-kind editors (web switch trigger.kind): Schedule (time DatePicker + weekday toggles vs advanced cron field + mode toggle + timezone), Event (select), Geofence (stateful geofence picker + event select + dwell Stepper), Signal (signal select + operator select + bool/state/numeric value control + change-only Toggle); TriggerConfiguratorPagePromptKeys (verbatim web *Placeholder keys behind parity:allow)
+?? apps/apple/Sources/Features/Automations/TriggerConfiguratorPage.Views.swift       (311 LOC) Token-driven primitives: FieldLabel, TriggerConfiguratorPagePicker (web Select over reused TriggerOption catalogs), TriggerConfiguratorPageField (web Input + numeric keyboard #if os(iOS)), TriggerConfiguratorPageDaysRow (web day buttons; reuses TriggerConfiguratorAccessibility), TriggerConfiguratorPageGeofencePicker (web geofence Select + loading/empty/error[retry]/success branches); P2 tokens, a11y labels/values/traits
+?? apps/apple/Sources/Features/Automations/TriggerConfiguratorRouteRegistration.swift (44 LOC) NavigationDestination seam for the unrouted unit (TriggerConfiguratorPageLink + View.triggerConfiguratorDestination + make factory)
+?? apps/apple/Tests/Unit/Features/Automations/TriggerConfiguratorPageModelTests.swift (226 LOC) XCTest: geofence states (initial loading / load empty→empty / load success→success / load failure→error / default provider / refresh); trigger-kind reseed (+same-kind no-op); schedule time/day/mode/timezone edits; event; geofence place/event(dwell seed 5 / clear)/dwell clamp; signal typed defaults / operator changed-drop + recoerce / value coercion (numeric/bool/text) / changed-only round-trip (web drops value → default 20); reused-catalog cardinalities
+ M apps/apple/Localization/Localizable.xcstrings   +72 plain keys (18 required + 9 vehicle-event + 3 geofence-event + 9 operator + 9 signal + 11 timezone + 7 weekday + 1 native page title + 3 native geofence chrome [loading/error/empty] + 2 a11y day-state); web key names verbatim; 8 referenced keys already present (common.true/false, automations.builder.value, the 4 trigger-type keys, automations.builder.triggerType) + action.retry reused; JSON validated (9829 → 9901 keys)
+ M apps/parity/apple-ledger.json                   +2 rows: page:automations/TriggerConfigurator {apple-macos, apple-ios} status=done covered=23/23
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (scheme pre-build script, run standalone) ---
+# apps/apple/Scripts/build-shared-xcframework.sh  →  apps/shared/gradlew :core:assembleSharedXCFramework
+BUILD SUCCESSFUL in 8m13s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; TriggerConfiguratorPage referenced 30x in pbxproj
+(iOS+macOS apps + both test bundles), TriggerConfiguratorPageModelTests referenced 6x
+GEN_EXIT=0
+
+--- swiftformat --lint (my 6 files; config .swiftformat maxwidth 120, swiftversion 6) ---
+0/6 files require formatting.   (auto-fixes hand-applied — sandbox blocks swiftformat's in-place write;
+the 4 initial findings [2 wrap, 1 redundantType, 1 wrapFunctionBodies] were corrected by hand, then clean)
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 6 files) ---
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Language swift ---
+Sources/Features/Automations -> PLACEHOLDER_ALLOWED=9 (verbatim web *Placeholder i18n keys behind
+  `// parity:allow verbatim web i18n key`; my 2 = cronPlaceholder + statePlaceholder), PLACEHOLDER_COUNT=0, EXIT=0
+Tests/Unit/Features/Automations -> PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0, EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- Executed model harness (real TriggerConfiguratorPageModel.swift + reused Adapter/Catalog, Swift 6 strict-concurrency host) ---
+# swiftc -swift-version 6 -strict-concurrency=complete -parse-as-library \
+#   TriggerConfigurator.{Adapter,Catalog}.swift TriggerConfiguratorPageModel.swift main.swift   (SWIFTC_EXIT=0)
+ALL 26 ASSERTIONS PASSED
+  schedule default/time/day-toggle/mode-keeps-simple/mode-resets-advanced/timezone;
+  kind reseed event/geofence/signal; event set; geofence place/dwell-seed-5/dwell-clamp-1/dwell-cleared;
+  signal bool|state|numeric defaults; operator changed-drops-value + recoerce; value coerce numeric;
+  changedOnly on→changed, off→re-coerce as `=` over default 20 (web drops value_num on `changed`);
+  geofence load: initial .loading, empty→.empty, default-provider success(3)→.success, failure→.error
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens (design/generated/apple/Tokens.swift) + Sources/Theme + Sources/Design + the full P3 Sources/Components tree (minus UnitFormatters.swift) + the reused feature-views Adapter/Catalog (Swift 6 strict concurrency) ---
+# swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Theme.swift Sources/Design/*.swift \
+#   $(find Sources/Components -name '*.swift' ! -name UnitFormatters.swift) \
+#   TeslaSync/feature-views/TriggerConfigurator.{Adapter,Catalog}.swift Sources/Features/Automations/TriggerConfigurator*.swift
+macOS  (arm64-apple-macos15.0, MacOSX26.5.sdk)         -> 0 errors   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator, iPhoneSim26.5)  -> 0 errors   VIEW_TYPECHECK_IOS_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact + keyboardType branches]
+# Compiles my page+model+editors+views+registration against the ACTUAL tsGlassPanel / TSButton /
+# Color.TS / Font.TS / TSSpacing / TSRadius / TSTone sources — authoritative proof the view's API
+# usage is correct on BOTH idioms (ADR-002/006).
+
+--- Full-target build (xcodebuild -scheme TeslaSync-macOS -configuration Debug ARCHS=arm64 build, CODE_SIGNING_ALLOWED=NO) ---
+# Standard config (DEBUG previews ON, default compilation conditions), Shared.xcframework staged, xcodegen regenerated.
+** BUILD SUCCEEDED **   BUILD_EXIT=0   errors=0
+# AUTHORITATIVE in-module proof: the ENTIRE macOS app target — INCLUDING all five of my source files —
+# COMPILES AND LINKS cleanly in the STANDARD configuration, no flag overrides. (A supplementary build with
+# SWIFT_ACTIVE_COMPILATION_CONDITIONS="" also SUCCEEDED, exit 0.) The pre-existing Input.Previews /
+# LayoutSwitcher reds noted by the older sibling ActionBuilder log are no longer present at this HEAD.
+
+--- Tests (xcodebuild test -scheme TeslaSync-macOS -only-testing:.../TriggerConfiguratorPageModelTests) ---
+TEST_EXIT=65   [the test BUNDLE fails to COMPILE — but ONLY because of PRE-EXISTING, OUT-OF-SCOPE Swift-6
+                strict-concurrency errors in sibling unit test files that are co-compiled into the single
+                TeslaSync-macOSTests target; my TriggerConfiguratorPageModelTests.swift compiled with ZERO
+                errors (it is absent from every failing-command list). The model logic it asserts is
+                independently EXECUTED green by the 26/26 harness above. Reproduced under BOTH the standard
+                config and the conditions="" override — i.e. the blocker is the sibling tests, not my flags.]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE TEST-BUNDLE BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+At this HEAD the single TeslaSync-macOSTests bundle fails to COMPILE for reasons entirely OUTSIDE this
+artifact's allowed files, with ZERO involvement of my code (git status: both files UNMODIFIED BY ME):
+
+  1. Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10:13 —
+       error: main actor-isolated default value in a nonisolated context
+  2. Tests/Unit/Features/Analytics/TimelinePageModelTests.swift:318 (call site) —
+       error: Call to main actor-isolated static method 'utcDayKey' in a synchronous nonisolated context
+
+Both are pre-existing Swift-6 strict-concurrency violations in sibling parity units' tests; because the
+whole test target compiles as one module, either one fails the bundle and prevents ANY test (including
+mine) from executing. They are deferred to their owners / the P99 integration gate. PROOF MY FILES ARE
+CLEAN — every in-scope gate that DOES isolate my code passes: swiftformat(0/6), swiftlint --strict(0/6),
+placeholder(COUNT=0), dual-platform Swift-6 strict-concurrency type-check against the REAL P2/P3 sources
+(macOS 0 + iOS 0), executed model harness (26/26), AND the full macOS app target BUILD SUCCEEDED in the
+STANDARD configuration with my files compiled + linked in.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=23
+================================================================================
+[x] state  — empty data state
+        evidence: TriggerConfiguratorPageModel.swift → `TriggerConfiguratorPageGeofenceState.empty`
+                  (geofence query resolved to zero rows, web `useGeofences` → `geofences ?? []` empty);
+                  rendered by TriggerConfiguratorPage.Views.swift → `TriggerConfiguratorPageGeofencePicker`
+                  `.empty` branch (picker + "No geofences defined yet."). Test: testLoadEmptyYieldsEmptyState
+[x] state  — success data state
+        evidence: TriggerConfiguratorPageModel.swift → `TriggerConfiguratorPageGeofenceState.success`
+                  (geofences present); rendered by TriggerConfiguratorPage.Views.swift →
+                  `TriggerConfiguratorPageGeofencePicker` `.success` picker (web geofenceOptions list).
+                  Tests: testLoadSuccessYieldsSuccessState / testDefaultProviderLoadsRepresentativeGeofences
+[x] string — automations.builder.advancedCron
+        evidence: TriggerConfiguratorPage.Editors.swift → ScheduleEditor.modeToggle key when simple ("automations.builder.advancedCron")
+[x] string — automations.builder.changedOnly
+        evidence: TriggerConfiguratorPage.Editors.swift → SignalEditor Toggle label "automations.builder.changedOnly"
+[x] string — automations.builder.cronExpr
+        evidence: TriggerConfiguratorPage.Editors.swift → ScheduleEditor advanced TriggerConfiguratorPageField labelKey "automations.builder.cronExpr"
+[x] string — automations.builder.cronHint
+        evidence: TriggerConfiguratorPage.Editors.swift → ScheduleEditor advanced field hintKey "automations.builder.cronHint"
+[x] string — automations.builder.cronPlaceholder
+        evidence: TriggerConfiguratorPage.Editors.swift → TriggerConfiguratorPagePromptKeys.cron (verbatim; behind parity:allow), prompt of the advanced cron field
+[x] string — automations.builder.days
+        evidence: TriggerConfiguratorPage.Views.swift → TriggerConfiguratorPageDaysRow FieldLabel "automations.builder.days"
+[x] string — automations.builder.dwellHint
+        evidence: TriggerConfiguratorPage.Editors.swift → GeofenceEditor.dwellField hint "automations.builder.dwellHint"
+[x] string — automations.builder.dwellMinutes
+        evidence: TriggerConfiguratorPage.Editors.swift → GeofenceEditor.dwellField label + a11y "automations.builder.dwellMinutes"
+[x] string — automations.builder.event
+        evidence: TriggerConfiguratorPage.Editors.swift → EventEditor picker labelKey "automations.builder.event"
+[x] string — automations.builder.geofence
+        evidence: TriggerConfiguratorPage.Views.swift → TriggerConfiguratorPageGeofencePicker FieldLabel + picker a11yLabel "automations.builder.geofence"
+[x] string — automations.builder.geofenceEvent
+        evidence: TriggerConfiguratorPage.Editors.swift → GeofenceEditor event picker labelKey "automations.builder.geofenceEvent"
+[x] string — automations.builder.operator
+        evidence: TriggerConfiguratorPage.Editors.swift → SignalEditor operator picker labelKey "automations.builder.operator"
+[x] string — automations.builder.selectGeofence
+        evidence: TriggerConfiguratorPage.Views.swift → TriggerConfiguratorPageGeofencePicker.picker sentinel tag("") "automations.builder.selectGeofence" (+ reused TriggerConfiguratorAccessibility.geofenceValue)
+[x] string — automations.builder.signal
+        evidence: TriggerConfiguratorPage.Editors.swift → SignalEditor signal picker labelKey "automations.builder.signal"
+[x] string — automations.builder.simpleCron
+        evidence: TriggerConfiguratorPage.Editors.swift → ScheduleEditor.modeToggle key when advanced ("automations.builder.simpleCron")
+[x] string — automations.builder.statePlaceholder
+        evidence: TriggerConfiguratorPage.Editors.swift → TriggerConfiguratorPagePromptKeys.state (verbatim; behind parity:allow), prompt of the signal state value field
+[x] string — automations.builder.time
+        evidence: TriggerConfiguratorPage.Editors.swift → ScheduleEditor.timeField label + a11y "automations.builder.time"
+[x] string — automations.builder.timezone
+        evidence: TriggerConfiguratorPage.Editors.swift → ScheduleEditor timezone picker labelKey "automations.builder.timezone"
+[x] string — automations.builder.value
+        evidence: TriggerConfiguratorPage.Editors.swift → SignalEditor.valueControl labelKey "automations.builder.value" (bool picker + state/number field)
+[x] string — common.false
+        evidence: TriggerConfiguratorPage.Editors.swift → SignalEditor.boolOptions → TriggerOption("false","common.false","False")
+[x] string — common.true
+        evidence: TriggerConfiguratorPage.Editors.swift → SignalEditor.boolOptions → TriggerOption("true","common.true","True")
+PARITY_COVERED=23
+(all 21 required keys added/reused as PLAIN keys in Localizable.xcstrings, web key names verbatim, +
+ 54 supporting option-label/native-chrome/a11y keys added so ZERO literals are hardcoded. The pre-existing
+ `translation.automations.builder.*` web-mirror namespace is a separate set and left untouched.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit code is the real tool output. BUILD_EXIT=0 (standard config, my files
+                       linked in). TEST_EXIT=65 is recorded verbatim with its precise root cause — two
+                       pre-existing out-of-scope sibling test-compile errors (VehicleCostPageModelTests,
+                       TimelinePageModelTests), reproduced under BOTH standard + override configs, never
+                       my code. The GREEN claim is scoped to my files + the in-scope gates + the full-app
+                       BUILD SUCCEEDED + the executed 26/26 harness.
+ 2 No scope narrowing : 2 states (empty/success) + 21 strings = 23/23; loading + error geofence states
+                        ALSO implemented (no blank control), and all four web trigger-kind editors +
+                        the cron parse/build + day-toggle + signal value coercion reproduced.
+ 3 No skip-and-assume : the web source read end-to-end; createDefaultTrigger, buildCronExpr/parseCronExpr,
+                        handleDayToggle, signalValueFromInput, the value-display derivation, and the
+                        dwell-seed/clear + changed-drops-value rules all ported (reused from the
+                        module-public projection core), verified by the harness.
+ 4 No stubs as final  : no TODO/FIXME/Placeholder/Lorem/fatalError in shipped code (PLACEHOLDER_COUNT=0);
+                        complete code; every state renders distinctly; empty/error are full inline states.
+ 5 No parity shortcuts: 4 geofence states render distinctly; strings = web keys from Localizable.xcstrings;
+                        the type picker reuses the web-source-exported TRIGGER_TYPES so all editors render.
+ 6 No delegation      : implemented here; no sub-agents.
+ 7 No predecessor bypass: no edits to the P4 shell or any sibling surface/owner file; the unrouted unit
+                        ships a NavigationDestination seam; the two pre-existing sibling test reds are NOT
+                        commit-fixed.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — swiftformat(0/6), swiftlint --strict(0/6),
+                        placeholder(0), harness(26/26), dual-platform type-check(macOS 0 + iOS 0), AND the
+                        full macOS app target BUILD SUCCEEDED (standard config) with my files compiled+linked.
+                        The only red (test bundle) is a pre-existing out-of-scope blocker I am forbidden to fix.
+ 9 No silent drift    : the output-path + strings-catalog mapping is recorded above (covenant #9).
+10 Log ends with EXIT + STATUS below.
+
+EXIT=0
+STATUS=DONE

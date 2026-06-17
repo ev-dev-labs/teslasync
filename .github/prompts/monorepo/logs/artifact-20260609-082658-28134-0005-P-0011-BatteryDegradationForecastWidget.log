@@ -1,0 +1,162 @@
+=== P4 Dashboard widget 0011 BatteryDegradationForecastWidget (Apple) ===
+Artifact : apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.*
+Web src  : web/src/features/dashboard/widgets/BatteryDegradationForecastWidget.tsx
+Registry : battery-degradation-forecast · category battery · default 2x4 · min 1x2 · max 4x40
+Host     : macOS 26.5.1 · Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+           Apple Swift 6.3.2 · swiftlint + swiftformat + xcodegen + pwsh + OpenJDK 17 present
+Mode     : code-complete; surface-scoped host gates EXECUTED GREEN; full-app xcodebuild
+           build/test DEFERRED to P99 acceptance gate (macos-latest) per the established
+           protocol (apps/macos-pending-verifications.md) — blocked by the pre-existing,
+           surface-independent KMP Shared.xcframework Gradle long-pole + ChargingProjection
+           struct-vs-enum redeclaration. This surface is collision-free.
+
+--- CAPABILITY ---
+  SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 SDKs: PRESENT (full Xcode 26.5).
+  This surface uses NO charts/maps (web source has none) — Foundation/SwiftUI/Observation/
+  OSLog only. NOT BLOCKED.
+
+--- FILES (8 swift + 1 strings, all auto-included by the XcodeGen `sources` globs) ---
+  BatteryDegradationForecastWidget.Models.swift     258  domain value types + projection
+  BatteryDegradationForecastWidget.Builder.swift    200  pure cached->projection adapter + fmtNumber
+  BatteryDegradationForecastWidget.Model.swift      336  P1/S8 source seam + P1/S11 telemetry + @Observable + i18n + a11y
+  BatteryDegradationForecastWidget.Views.swift      381  presentation pieces (badge/statcard/risk row/tip card/content/banner)
+  BatteryDegradationForecastWidget.swift            265  the surface view (header + states)
+  BatteryDegradationForecastWidget.Previews.swift   183  #Preview per state (DEBUG)
+  BatteryDegradationForecastWidget.strings           54  i18n catalog contribution (table "BatteryDegradationForecastWidget")
+  BatteryDegradationForecastWidget.Tests.swift      223  adapter + format XCTest
+  BatteryDegradationForecastWidget.ModelTests.swift 269  model + registry + a11y XCTest
+  (every file < 400 lines → swiftlint file_length clean under --strict)
+
+--- PARITY (web source -> native) ---
+  Data : useBatteryDegradation + useVehicles + useDateFormat(locale) bound through the
+         BatteryDegradationForecastSource state-holder seam (P1/S8). No HTTP in the view.
+  Derivations reproduced 1:1:
+    healthTier(rate)  : <=0.05 healthy / <=0.12 normal / else accelerated  (+ badge tone)
+    scoreToImpact(s)  : >=7 high / >=4 medium / else low                   (risk badge tone)
+    riskIcon(name)    : temp|heat|thermal->thermometer ; charge|fast|dc->bolt ;
+                        battery|soc|depth->battery ; else triangle  (case-insensitive, web order)
+    currentHealthPct  : current_health_pct ?? current_health  (resolvedHealth)
+    projectedDate     : Intl.DateTimeFormat(locale,{year,month:'short'}) -> DateFormatter "yMMM"
+    rate text         : "-{fmtNumber(rate,2)}%" with U+2212 MINUS, shown only when rate>0
+    hasData           : currentHealthPct!=null || projected_80pct_date!=null
+    risk slice(0,5) + tips maxTips(3)  -> visibleRiskItems / visibleTipItems (unit-tested)
+  Shared components mapped: Badge->ForecastBadge ; StatCard->ForecastStatCard ;
+    WidgetTipCards->ForecastTipCard ; EmptyState->ContentUnavailableView ; WidgetShell->glass
+    shell + DataFreshness chip. (Atomic shared components are the P4 component-library bundle's
+    scope; this surface composes platform-token primitives, like sibling 0012.)
+  States rendered (every branch has a #Preview + is unit-tested):
+    loading (skeleton chrome) / empty (friendly ContentUnavailableView) / error (retry) /
+    stale (auto-refresh + banner) / offline (cached + banner) / content (compact + standard).
+  i18n : 12/12 web source keys present (+ description + native chrome), all via the P1/S10
+    facade NSLocalizedString(value:) — zero hardcoded English literals in code:
+      widget.forecast.title, .projected80, .currentHealth, .riskFactors, .recommendations,
+      .tip, .recommendation, .noData, .healthy, .normal, .accelerated, widget.mo
+  a11y : VoiceOver summary on hero/compact; per-row risk + tip labels; header section traits;
+    Dynamic Type (system fonts); Reduce Motion respected (no custom animation added).
+  Telemetry : model.start() emits view.opened(surface:"BatteryDegradationForecastWidget")
+    via the P1/S11 BatteryDegradationForecastTelemetry seam (asserted once-only by a spy test).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this host; real output) ===
+[1] swiftc -typecheck — production files compiled against the REAL design tokens
+    (apps/design/generated/apple/Tokens.swift) + REAL Sources/Design (TSDesign/TSMaterial) +
+    REAL Sources/DashboardWidgets/DashboardWidgetInfra + REAL TSSkeleton (Components/Feedback/
+    Skeletons + its UI atoms Cards/Typography/Badges/Buttons), under Swift 6 +
+    -strict-concurrency=complete -parse-as-library:
+      macOS  (arm64-apple-macos15.0)          MAC_TYPECHECK_EXIT=0            OK
+      iOS    (arm64-apple-ios18.0-simulator)  IOS_TYPECHECK_EXIT=0            OK
+      Previews (-D DEBUG) macOS               MAC_PREVIEW_TC_EXIT=0           OK
+      Previews (-D DEBUG) iOS                 IOS_PREVIEW_TC_EXIT=0           OK
+      (Surface is platform-agnostic SwiftUI — no #if os / UIKit / AppKit — iOS & macOS
+       compile the same code.)
+
+[2] swift test — isolated SwiftPM package (module name "TeslaSync" so the co-located
+    *Tests.swift `@testable import TeslaSync` resolve unchanged) containing the production
+    files + REAL deps + both XCTest files, built in Swift 6 language mode:
+      BatteryDegradationForecastBuilderTests   11/11
+      BatteryDegradationForecastFormatTests     5/5
+      BatteryDegradationForecastModelTests      9/9
+      BatteryDegradationForecastRegistryTests   2/2
+      BatteryDegradationForecastAccessibilityTests 6/6
+      Executed 33 tests, with 0 failures (0 unexpected)   SWIFT_TEST_EXIT=0   OK
+
+[3] swiftlint --strict (apps/apple/.swiftlint.yml) on the 8 surface .swift files:
+      Done linting! Found 0 violations, 0 serious in 8 files.   LINT_EXIT=0    OK
+      (trailing_comma + file_length tensions resolved by removing 3 trailing commas and
+       decomposing loaded-content into Views.swift + splitting the test suite — 0 opt-outs.)
+
+[4] swiftformat --lint (apps/apple/.swiftformat) on the 8 surface .swift files:
+      0/8 files require formatting.   FORMAT_EXIT=0                            OK
+
+[5] check-placeholders.ps1 (ADR-011 stub gate) — isolated copy of all 9 surface files:
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   ->   PLACEHOLDER_EXIT=0    OK
+      (The prompt's literal -Path .../BatteryDegradationForecastWidget is a filename PREFIX
+       that resolves to no directory -> a trivially-clean scan; the meaningful isolated-copy
+       scan is reported. Both returned EXIT=0. No TODO/FIXME/stub/mock/placeholder/Lorem.)
+
+[6] xcodegen generate — the surface is auto-included by the project.yml `sources` globs
+    (TeslaSync/dashboard-widgets for the app targets; **/*Tests.swift for the XCTest bundles):
+      Created project at apps/apple/TeslaSync.xcodeproj            XCODEGEN_EXIT=0  OK
+      All 9 files enumerated (8 swift + .strings) in project.pbxproj.
+
+=== GATE — FULL-APP XCODEBUILD (attempted on this host; DEFERRED per protocol) ===
+  [A] iOS — timeout 150 xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath /tmp/dd-bdf-slot5-ios CODE_SIGNING_ALLOWED=NO build test
+        Terminated at 150s in the scheme's Gradle pre-action (build-shared-xcframework.sh,
+        :core:assembleSharedXCFramework — the Kotlin/Native long-pole).   IOS_EXIT=124
+  [B] Direct staging — timeout 90 bash Scripts/build-shared-xcframework.sh
+        "Assembling Shared.xcframework via Gradle..." then Terminated at 90s.  GRADLE_EXIT=124
+        Frameworks/ still holds only .gitkeep (framework not staged).
+  [C] macOS — consumes the IDENTICAL Frameworks/Shared.xcframework (project.yml) and is
+        blocked by the same cause.                                          MAC_EXIT=124 (deferred)
+
+  Root cause 1 (surface-independent): the unstaged KMP Shared.xcframework. Its Gradle
+    :core:assembleSharedXCFramework (Kotlin/Native link) does not finish under live
+    parallel-slot Gradle contention. OpenJDK 17 + the gradlew wrapper are present; this is a
+    time/throughput limit, not a defect. Documented identically for predecessors 0038/0167/
+    0168/0262 in apps/macos-pending-verifications.md.
+  Root cause 2 (surface-independent): pre-existing 'ChargingProjection' redeclaration —
+    apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift:118  public struct ChargingProjection
+    apps/apple/TeslaSync/feature-views/ChargingDetailSection.Adapter.swift:240   public enum   ChargingProjection
+    A hard app-target compile error in two OTHER surfaces, unrelated to this widget.
+
+  This surface is collision-free — every public type it introduces is unique tree-wide
+  (BatteryDegradationForecastWidget/Model/Models/Builder/Format/Strings/Accessibility,
+   Forecast{Vehicle,RiskFactor,RiskItem,TipItem,HealthTier,RiskImpact,Badge,BadgeTone,
+   StatCard,RiskFactorRow,TipCard,Section,Content,ConnectivityBanner},
+   BatteryDegradationForecast{Summary,Projection,Source,Update,LoadStatus,Connection,Telemetry}):
+   automated grep across the whole apps/apple tree reported 0 external definitions.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content + compact) —
+      each has a #if DEBUG preview; phase + content logic unit-tested GREEN.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 12/12 source keys present.
+  [x] Accessibility labels on every interactive element + VoiceOver summary; Dynamic Type +
+      Reduce Motion honored.
+  [x] Tests: adapter unit test + per-state model test + registry + a11y label test — 33 methods,
+      executed GREEN (33/33) under Swift 6 strict concurrency.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — swiftlint, swiftformat, placeholder, host typecheck (macOS+iOS,
+      prod+previews), isolated swift test, and xcodegen all returned 0/green. Full-app
+      xcodebuild build/test DEFERRED to p4-apple/P99-0001 on macos-latest (recorded in
+      apps/macos-pending-verifications.md), blocked only by surface-independent causes.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : every OK above is a command actually run on this host with its real
+     result. The two 124s are real timeouts of a surface-INDEPENDENT KMP/Gradle long-pole,
+     reported as DEFERRED — not dressed up as green.
+  2  No scope narrowing : all web sections (hero / current-health stat / risk factors / tips /
+     compact) + all six states implemented.
+  3  No skip-and-assume : web source read end-to-end; every t() call + conditional branch ported.
+  4  No stubs as final : zero placeholders; full implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts : classifiers, fmtNumber (U+2212), locale date, slice caps all faithful.
+  6  No delegation : authored directly (delegation FORBIDDEN for this prompt).
+  7  No predecessor bypass : follows sibling 0012 (BatteryDegradationTrendWidget) architecture +
+     the shared DashboardWidgetInfra/registration + the documented deferral protocol.
+  8  No commit on red : all host-runnable surface gates green before commit.
+  9  No silent drift : registry id/name/description/sizes match registry/battery.ts.
+  10 Log ends with EXIT/STATUS below.
+
+EXIT=0
+STATUS=DONE

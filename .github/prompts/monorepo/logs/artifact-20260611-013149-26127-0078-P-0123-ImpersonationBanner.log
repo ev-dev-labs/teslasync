@@ -1,0 +1,140 @@
+=== P4 Shared surface 0123 ImpersonationBanner (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.*
+Web src  : web/src/components/feedback/ImpersonationBanner.tsx
+Date     : 2026-06-11 (PDT)
+Host     : macOS (Darwin, arm64), Xcode 26.5 (Build 17F42)
+
+------------------------------------------------------------------------------
+CAPABILITY EVIDENCE (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15)
+------------------------------------------------------------------------------
+xcodebuild   : Xcode 26.5, Build 17F42                       -> present
+iOS 18 SDK   : iPhone 16 simulator (Booted)                  -> present
+macOS 15 SDK : present
+swiftlint    : /opt/homebrew/bin/swiftlint                   -> present
+swiftformat  : /opt/homebrew/bin/swiftformat                 -> present
+xcodegen     : 2.45.4                                         -> present
+KMP core     : apps/shared/gradlew :core:assembleSharedXCFramework
+               "xcframework successfully written ... release/Shared.xcframework"
+               "BUILD SUCCESSFUL in 7m 48s"                  -> Shared.xcframework staged
+=> The platform IS fully capable for this surface (SwiftUI). This log is NOT a
+   capability gap on the SwiftUI side; see the BLOCKER section for the actual cause.
+
+------------------------------------------------------------------------------
+DELIVERABLE (9 files, scoped strictly to this prompt's allowed files)
+------------------------------------------------------------------------------
+ImpersonationBanner.swift            - surface View (slug "ImpersonationBanner"), phase switch + chip
+ImpersonationBanner.Adapter.swift    - pure core: mode/session, isActive, ISO expiry parse,
+                                       formatRemaining + endsIn/expired decision, a11y label
+ImpersonationBanner.Model.swift      - P1/S8 @Observable state-holder, projection, P1/S11 telemetry,
+                                       P1/S10 strings facade
+ImpersonationBanner.Seams.swift      - ImpersonationBannerSource protocol + Static (prod) + InMemory
+ImpersonationBanner.States.swift     - loading skeleton / empty (not impersonating) / error+retry
+ImpersonationBanner.Views.swift      - active security banner (1s countdown tick, End action) + chip
+ImpersonationBanner.Previews.swift   - every state (active/expired/no-expiry/ending/empty/loading/error/stale/offline)
+ImpersonationBanner.Tests.swift      - adapter + projection + model coverage (32 cases)
+ImpersonationBanner.strings          - i18n catalog contribution
+
+States reproduced (every one renders): loading, empty (web open/inactive modes), error+retry,
+  active (web data branch), stale, offline, ending (web endMut.isPending).
+i18n keys (web, verbatim): impersonation.banner.{title,body,endsIn,expired,ending,end}
+  + native P4 chrome: impersonation.banner.{loadingA11y,empty,emptyMessage,errorTitle,retry}
+  + freshness (shared w/ sibling): impersonation.freshness.{live,stale,offline,staleA11y,offlineA11y}
+Telemetry: view.opened emitted with surface slug "ImpersonationBanner" (P1/S11), asserted by test.
+
+------------------------------------------------------------------------------
+swiftlint --strict        (whole tree, as the gate runs it)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 4251 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+swiftformat --lint apps/apple   (whole tree, as the gate runs it)
+------------------------------------------------------------------------------
+0/4549 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+ImpersonationBanner tests — isolated Swift 6 SwiftPM harness
+------------------------------------------------------------------------------
+WHY ISOLATED: the in-repo XCTest target links the whole TeslaSync app module, which
+currently FAILS TO COMPILE due to PRE-EXISTING errors in sibling surfaces outside this
+prompt's allowed files (see BLOCKER below). To execute this surface's tests under the
+SAME toolchain contract as the app (swift-tools 6.0 => Swift 6 language mode, strict
+concurrency == the app's SWIFT_STRICT_CONCURRENCY: complete), the pure-logic files
+(Adapter/Model/Seams) were compiled + tested in an isolated SwiftPM package (a stub
+supplies only the View's diagnostics slug). The .swift test file is used verbatim.
+
+  swift test  ->  Executed 32 tests, with 0 failures (0 unexpected)
+    ImpersonationBannerActivityTests          (2)
+    ImpersonationBannerExpiryTests            (3)
+    ImpersonationBannerCountdownFormatTests   (5)
+    ImpersonationBannerCountdownPhraseTests   (4)
+    ImpersonationBannerAccessibilityTests     (3)
+    ImpersonationBannerProjectionTests        (8)
+    ImpersonationBannerModelTests             (7)
+HARNESS_EXIT=0
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------------------------
+This surface's 9 files: 0 errors, 0 warnings (grep of build log: "ImpersonationBanner.*error:" == 0).
+** TEST FAILED ** — Testing cancelled because the build failed.
+Only distinct compiler error in the whole app: "escaping closure captures non-escaping
+parameter 'content'", emitted by PRE-EXISTING sibling surfaces (each owned by its own
+P4 prompt), e.g.:
+    TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22
+    TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22
+    TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22
+    TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22
+    (+ ~25 more AI*/*.Chrome.swift: non-@escaping @ViewBuilder content fed to TSGlassPanel,
+     whose init requires @escaping) ; and a pre-existing type-check timeout at
+    TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24.
+IOS_EXIT=65
+
+PROOF the blocker is PRE-EXISTING and NOT caused by this surface:
+  - git status: the only working-tree changes are this surface's 9 new files; every
+    erroring file is unmodified and committed at HEAD.
+  - A build of the app target with this surface's 9 files moved ASIDE (project
+    regenerated) ALSO fails:  BASELINE_EXIT=65.
+  - Per "Out of Scope: Other surfaces in the same feature (each has its own prompt)"
+    and "Allowed files: ImpersonationBanner.*", those sibling bugs are NOT fixed here.
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------------------
+This surface's 9 files: 0 errors (grep: "ImpersonationBanner.*error:" == 0).
+** BUILD FAILED ** — blocked by (a) a runner code-signing limitation and (b) the same
+pre-existing sibling compile errors. Signing errors (DEVELOPMENT_TEAM is empty; no Apple
+development certificate provisioned on this runner):
+    "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+MAC_EXIT=65
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+ImpersonationBanner surface: COMPLETE and VERIFIED in isolation.
+  - swiftlint --strict (tree) ............ 0 violations           (LINT_EXIT=0)
+  - swiftformat --lint apps/apple ........ 0/4549 need formatting (FORMAT_EXIT=0)
+  - check-placeholders (surface) ......... 0 placeholders         (PLACEHOLDER_EXIT=0)
+  - isolated Swift 6 tests ............... 32/32 pass             (HARNESS_EXIT=0)
+  - this surface in the in-app build ..... 0 errors, 0 warnings
+
+Whole-app xcodebuild build+test (iOS & macOS) is BLOCKED — NOT by this surface, but by:
+  (1) pre-existing compile errors in ~25+ sibling surfaces outside this prompt's allowed
+      files (non-@escaping @ViewBuilder `content` + a type-check timeout), proven
+      pre-existing by the baseline-without-this-surface build also failing; and
+  (2) a macOS code-signing limitation on this runner (no development certificate).
+Both causes are outside "Allowed files: apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.*,
+the log file", so they are left to their owning prompts / the CI signing config and are
+not modified here.
+
+EXIT=65
+STATUS=BLOCKED

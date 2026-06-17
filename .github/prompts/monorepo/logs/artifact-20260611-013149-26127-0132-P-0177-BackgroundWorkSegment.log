@@ -1,0 +1,104 @@
+=== P4 Shared surface 0177 BackgroundWorkSegment (Apple) ===
+run-at: 2026-06-12T04:36:38Z
+host: macOS 26.5.1; Xcode 26.5 Build version 17F42 
+
+########## GATE STEP 1/5 — xcodebuild iOS (scheme TeslaSync) build test ##########
+--- iOS: failing command + error excerpt (full output: /tmp/gate-ios.log,    15690 lines) ---
+(2 failures)
+(3 failures)
+** BUILD FAILED **
+** TEST FAILED **
+shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures non-escaping parameter 'content'
+Testing failed:
+The following build commands failed:
+IOS_EXIT=65
+
+########## GATE STEP 2/5 — xcodebuild macOS (scheme TeslaSync-macOS) build test ##########
+--- macOS: failing command + error excerpt (full output: /tmp/gate-mac.log,     3518 lines) ---
+** BUILD FAILED **
+** TEST FAILED **
+Testing failed:
+MAC_EXIT=65
+
+########## GATE STEP 3/5 — swiftlint --strict (apps/apple, whole tree) ##########
+Linting 'WatchDesignTokens.swift' (4513/4514)
+Linting 'TeslaSyncWidgets/Widgets/SystemHealthWidget.swift' (4514/4514)
+Done linting! Found 0 violations, 0 serious in 4514 files.
+LINT_EXIT=0
+
+########## GATE STEP 4/5 — swiftformat --lint apps/apple (whole tree) ##########
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-132/apps/apple/.swiftformat
+SwiftFormat completed in 22.43s.
+0/4812 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+########## GATE STEP 5/5 — check-placeholders.ps1 (gate-literal path) ##########
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+########## macOS gate failure breakdown ##########
+The macOS scheme `build test` fails first on development-signing (capability gap on this
+runner), then would hit the same sibling compile errors as iOS:
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+    development certificate. Enable development signing... (target 'TeslaSync-macOS')
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing...
+  $ security find-identity -p codesigning  ->  "0 valid identities found"
+
+########## Blocker classification (all OUTSIDE this prompt's allowed files) ##########
+1. PRE-EXISTING sibling compile errors — the `glass(@ViewBuilder _ content:)` helper passes a
+   NON-escaping `content` into `TSGlassPanel { ... }` (an escaping autoclosure) in multiple
+   committed sibling surfaces, e.g.:
+     shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141  (commit 40e1e5da0)
+     shared-surfaces/AISignalExplorerNlFilter.swift:142
+   (The Swift compiler stops at the first batch failure, so the full set is larger.) These files
+   are committed baseline and are NOT in this prompt's allowed-files set
+   (apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.* + this log).
+2. macOS development-signing — no codesigning identity on this runner (capability gap). The P4
+   acceptance gate (p4-apple/P99-0001-apple-acceptance-gate) runs on macos-latest WITH signing
+   identities; this is the documented `macOS-pending` condition (apps/macos-pending-verifications.md).
+
+grep "BackgroundWorkSegment.*error:" over BOTH full xcodebuild logs => 0 matches.
+=> ZERO errors attributable to this surface in the full-app build.
+
+########## WITHIN-MANDATE SURFACE GATES (this prompt's allowed files) ##########
+swiftformat --lint (8 surface .swift)         -> 0/8 require formatting          SURFACE_FORMAT_EXIT=0
+swiftlint --strict (8 surface .swift)         -> 0 violations, 0 serious         SURFACE_LINT_EXIT=0
+swiftlint --strict (whole apps/apple, 4514)   -> 0 violations (incl. my files)   TREE_LINT_EXIT=0
+swiftformat --lint (whole apps/apple, 4812)   -> 0/4812 require formatting        TREE_FORMAT_EXIT=0
+check-placeholders (honest temp-dir copy of my 8 .swift) -> PLACEHOLDER_COUNT=0  SURFACE_PH_EXIT=0
+grep -niE "TODO|FIXME|XXX|Coming soon|Placeholder|Lorem|not implemented|fatalError" BackgroundWorkSegment.* -> clean
+
+########## SCOPED SURFACE VERIFICATION (proves the surface compiles + tests pass) ##########
+Method: a THROWAWAY xcodegen spec (project.verify.yml, since deleted) built the REAL Sources/
+foundation (design tokens P1/S9 + shared component kit) + ONLY the BackgroundWorkSegment.* files
+into a module named TeslaSync, plus a test bundle with BackgroundWorkSegment.Tests.swift. It never
+modified, moved, or excluded any sibling surface file. CODE_SIGNING_ALLOWED=NO. Swift 6,
+SWIFT_STRICT_CONCURRENCY=complete. Artifacts removed afterward; `git status` shows only the 9
+BackgroundWorkSegment.* files added.
+
+iOS  (platform=iOS Simulator,name=iPhone 16):  ** TEST SUCCEEDED **  Executed 27 tests, 0 failures
+macOS(platform=macOS):                         ** TEST SUCCEEDED **  Executed 27 tests, 0 failures
+  Suites: BackgroundWorkJobKindTests(2) BackgroundWorkExportStatusTests(2) BackgroundWorkAggregatorTests(5)
+          BackgroundWorkSummaryTests(3) BackgroundWorkAccessibilityTests(2) BackgroundWorkProjectionTests(7)
+          BackgroundWorkSegmentModelTests(6)  = 27
+  KMP Shared.xcframework assembled via Gradle (:core:assembleSharedXCFramework, BUILD SUCCESSFUL)
+  and staged to apps/apple/Frameworks/Shared.xcframework.
+
+########## GATE EXIT SUMMARY ##########
+IOS_EXIT=65          (BLOCKED: pre-existing sibling compile errors — not this surface)
+MAC_EXIT=65          (BLOCKED: macOS development-signing capability gap + same sibling errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE (scoped) iOS+macOS build test = SUCCEEDED, 27/27 tests each, 0 failures.
+
+EXIT=65
+STATUS=BLOCKED
+# BLOCKED cause: full-app xcodebuild build test is red ONLY due to (a) pre-existing compile errors
+# in sibling surfaces (the shared `glass()`/TSGlassPanel @escaping bug) and (b) macOS development
+# signing — both outside this prompt's allowed files. The BackgroundWorkSegment surface itself is
+# COMPLETE and verified green (compiles + 27 tests pass) on iOS-18 and macOS-15, lint/format/
+# placeholder clean. Re-runs green on p4-apple/P99-0001-apple-acceptance-gate (macos-latest + signing)
+# once the sibling surfaces compile. This matches the documented `macOS-pending` precedent.

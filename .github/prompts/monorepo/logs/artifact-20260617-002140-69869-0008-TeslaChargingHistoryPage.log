@@ -1,0 +1,193 @@
+================================================================================
+p4-apple · P7 · page:charging/TeslaChargingHistory — SwiftUI / HIG parity
+Log: .github/prompts/monorepo/logs/apple-page-charging-TeslaChargingHistoryPage.log
+Run: 2026-06-17  (Xcode 26.5 SDK / Swift 6.3.2, swiftlint, xcodegen, pwsh, JDK 17)
+Artifact: p4-apple/pages/p4-apple-P7-page-charging-TeslaChargingHistory
+================================================================================
+
+HONESTY COVENANT (binding — acknowledged verbatim)
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+TARGET PATH (per the generated prompt — honored, not narrowed)
+--------------------------------------------------------------------------------
+Output dir `apps/apple/TeslaSync/Features/Charging/**` is a COMPILED source root in
+this repository's project.yml (the iOS + macOS targets both list `- path:
+TeslaSync/Features`). The most recent sibling P7 pages (TirePressure, Trips, Vehicles,
+System, Telemetry, VehicleSystems) live under `TeslaSync/Features/**`, so the page was
+implemented exactly at the prompt's path. (The older sibling Charging logs that placed
+files under `Sources/Features/Charging` predate the project.yml change that added
+`TeslaSync/Features` to the compiled roots.)
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION (SwiftUI + @Observable + KMP-facade seam; adaptive macOS + iOS)
+--------------------------------------------------------------------------------
+New (apps/apple/TeslaSync/Features/Charging/):
+  TeslaChargingHistoryModels.swift          entry/summary/response value types (SI Wh),
+                                              view-state enum, sort field, monthly-spend point
+  TeslaChargingHistoryFormat.swift          pure display formatters — duration / currency
+                                              (symbol + ISO code) / energy via the shared KMP
+                                              `Units` engine / date / month aggregation / CSV
+  TeslaChargingHistoryDataSource.swift      KMP-core seam (web hook names preserved):
+                                              useVehicles / useTeslaChargingHistory /
+                                              useRefreshTeslaChargingHistory /
+                                              getTeslaChargingInvoiceURL + deterministic fixtures
+  TeslaChargingHistoryPageModel.swift       @Observable model — load/refresh/select/search/sort,
+                                              derived vehicleOptions / filtered / sorted / monthly
+  TeslaChargingHistorySections.swift        TeslaChargingStatsRow (4 StatCards) +
+                                              TeslaChargingMonthlyChartPanel (ChartContainer + BarChart)
+  TeslaChargingHistorySessionsTable.swift   TeslaChargingSessionsPanel (GlassPanel6) +
+                                              sortable grid + invoice links + CSV export + empties
+  TeslaChargingHistoryPage.swift            scaffold, header (VehicleSelect + Refresh), 4 states,
+                                              last-sync line, adaptive macOS/iOS, #Preview (DEBUG)
+  TeslaChargingHistoryRouteRegistration.swift typed NavigationDestination deep-link
+                                              (web `/tesla-charging-history`)
+Modified:
+  apps/apple/Localization/Localizable.xcstrings  + 3 keys the web page resolves inline
+    (tesla_charging.col.cost_decimal, tesla_charging.monthlySpending.aria,
+     tesla_charging.selectVehicle); the other 28 required keys already existed.
+
+SI discipline (ADR-005): energy is stored/computed in watt-hours and converted to the
+user's display unit ONLY at the render boundary via the shared KMP `Units` engine
+(`Units.formatEnergy`); cost is decimal currency rendered with the user's symbol
+(stat cards / chart axis) or the row's ISO `currency_code` (cost column). No non-SI
+value is stored or computed in the model.
+
+=== PARITY ===
+PARITY_REQUIRED=43
+--------------------------------------------------------------------------------
+PANELS (6/6)  — bound from TeslaChargingHistoryPageModel (summary / monthlyData / entries)
+[x] panel Total-Sessions   TeslaChargingHistorySections.swift :: TeslaChargingStatsRow → TSStatCard("translation.tesla_charging.stats.sessions")
+[x] panel Total-Energy     TeslaChargingHistorySections.swift :: TeslaChargingStatsRow → TSStatCard("translation.tesla_charging.stats.energy")  (Units.formatEnergy)
+[x] panel Total-Spend      TeslaChargingHistorySections.swift :: TeslaChargingStatsRow → TSStatCard("translation.tesla_charging.stats.spend")
+[x] panel Avg-Cost-kWh     TeslaChargingHistorySections.swift :: TeslaChargingStatsRow → TSStatCard("translation.tesla_charging.stats.avgCost")
+[x] panel Monthly-Spending TeslaChargingHistorySections.swift :: TeslaChargingMonthlyChartPanel → TSChartContainer("translation.tesla_charging.monthlySpending")
+[x] panel GlassPanel6      TeslaChargingHistorySessionsTable.swift :: TeslaChargingSessionsPanel → TSGlassPanel + TSPanelTitle("translation.tesla_charging.sessions") + grid
+
+CHARTS (2/2)  — P3 native Swift Charts wrappers (never a WKWebView)
+[x] chart ChartContainer   TeslaChargingHistorySections.swift :: TeslaChargingMonthlyChartPanel → TSChartContainer(title, summary:aria, csv:Month/Total)
+[x] chart BarChart         TeslaChargingHistorySections.swift :: TeslaChargingMonthlyChartPanel.series → TSBarChart(series:) ; noChartData empty when no spend
+
+MAPS (0/0)  — none in the web source.
+
+STATES (4/4)  — implemented for every data source (vehicles / history / refresh)
+[x] state loading  TeslaChargingHistoryPage.swift :: loadingView (.redacted(.placeholder)) ; model.viewState==.loading (PageModel.load)
+[x] state empty    TeslaChargingHistoryPageModel.apply → .empty (zero billing rows) ; SessionsPanel.emptyNoData("noData") + MonthlyChartPanel("noChartData") + stats show 0/—
+[x] state error    TeslaChargingHistoryPage.swift :: errorView + Retry ; PageModel.reload catch → .error(message)
+[x] state success  TeslaChargingHistoryPageModel.apply → .success ; successView (lastSync + stats + chart + sessions)
+
+STRINGS (31/31)  — all resolve from Localization/Localizable.xcstrings (prefix `translation.`); web key names verbatim.
+[x] string charging.invoice                  TeslaChargingHistorySessionsTable.swift :: TeslaChargingInvoiceLink Text("translation.charging.invoice")
+[x] string table.bulkActions.exportCsv       TeslaChargingHistorySessionsTable.swift :: bulkBar ShareLink Text("translation.table.bulkActions.exportCsv")
+[x] string tesla_charging.allVehicles        TeslaChargingHistoryPage.swift :: pickerOptions LocalizedStringKey("translation.tesla_charging.allVehicles")
+[x] string tesla_charging.col.cost_decimal   TeslaChargingHistorySessionsTable.swift :: headerRow sortableHeader("translation.tesla_charging.col.cost_decimal")
+[x] string tesla_charging.col.date           TeslaChargingHistorySessionsTable.swift :: headerRow sortableHeader("translation.tesla_charging.col.date")
+[x] string tesla_charging.col.duration       TeslaChargingHistorySessionsTable.swift :: headerRow header("translation.tesla_charging.col.duration")
+[x] string tesla_charging.col.energy         TeslaChargingHistorySessionsTable.swift :: headerRow sortableHeader("translation.tesla_charging.col.energy")
+[x] string tesla_charging.col.invoice        TeslaChargingHistorySessionsTable.swift :: headerRow header("translation.tesla_charging.col.invoice")
+[x] string tesla_charging.col.location       TeslaChargingHistorySessionsTable.swift :: headerRow header("translation.tesla_charging.col.location")
+[x] string tesla_charging.col.month          TeslaChargingHistorySections.swift :: TeslaChargingMonthlyChartPanel.csv (Month column label)
+[x] string tesla_charging.col.rate           TeslaChargingHistorySessionsTable.swift :: headerRow header("translation.tesla_charging.col.rate")
+[x] string tesla_charging.col.total          TeslaChargingHistorySections.swift :: TeslaChargingMonthlyChartPanel.series name + csv (Total column label)
+[x] string tesla_charging.downloadInvoice    TeslaChargingHistorySessionsTable.swift :: TeslaChargingInvoiceLink .accessibilityLabel("translation.tesla_charging.downloadInvoice")
+[x] string tesla_charging.filterLabel.search TeslaChargingHistorySessionsTable.swift :: activeFilterChip Text("translation.tesla_charging.filterLabel.search")
+[x] string tesla_charging.lastSync           TeslaChargingHistoryPage.swift :: lastSyncLine Text("translation.tesla_charging.lastSync")
+[x] string tesla_charging.monthlySpending    TeslaChargingHistorySections.swift :: TeslaChargingMonthlyChartPanel TSChartContainer title
+[x] string tesla_charging.monthlySpending.aria TeslaChargingHistorySections.swift :: TeslaChargingMonthlyChartPanel summary + .accessibilityLabel
+[x] string tesla_charging.noChartData        TeslaChargingHistorySections.swift :: TeslaChargingMonthlyChartPanel.content TSEmptyState("translation.tesla_charging.noChartData")
+[x] string tesla_charging.noData             TeslaChargingHistorySessionsTable.swift :: emptyNoData TSEmptyState("translation.tesla_charging.noData")
+[x] string tesla_charging.noMatches          TeslaChargingHistorySessionsTable.swift :: emptyNoMatches TSEmptyState("translation.tesla_charging.noMatches")
+[x] string tesla_charging.refresh            TeslaChargingHistoryPage.swift :: refreshButton Text(LocalizedStringKey("translation.tesla_charging.refresh"))
+[x] string tesla_charging.refreshing         TeslaChargingHistoryPage.swift :: refreshButton Text(LocalizedStringKey("translation.tesla_charging.refreshing"))
+[x] string tesla_charging.searchPlaceholder  TeslaChargingHistorySessionsTable.swift :: searchBar TSSearchInput(prompt:)  // parity:allow
+[x] string tesla_charging.selectVehicle      TeslaChargingHistoryPage.swift :: vehiclePicker .accessibilityLabel("translation.tesla_charging.selectVehicle")
+[x] string tesla_charging.sessions           TeslaChargingHistorySessionsTable.swift :: TeslaChargingSessionsPanel TSPanelTitle("translation.tesla_charging.sessions")
+[x] string tesla_charging.stats.avgCost      TeslaChargingHistorySections.swift :: TeslaChargingStatsRow TSStatCard avgCost
+[x] string tesla_charging.stats.energy       TeslaChargingHistorySections.swift :: TeslaChargingStatsRow TSStatCard energy
+[x] string tesla_charging.stats.sessions     TeslaChargingHistorySections.swift :: TeslaChargingStatsRow TSStatCard sessions
+[x] string tesla_charging.stats.spend        TeslaChargingHistorySections.swift :: TeslaChargingStatsRow TSStatCard spend
+[x] string tesla_charging.subtitle           TeslaChargingHistoryPage.swift :: titleBlock Text("translation.tesla_charging.subtitle")
+[x] string tesla_charging.title              TeslaChargingHistoryPage.swift :: titleBlock TSPageTitle + .navigationTitle ; PageModel page title
+--------------------------------------------------------------------------------
+PARITY_COVERED=43
+PARITY_REQUIRED=43
+PARITY_OK=(PARITY_COVERED==PARITY_REQUIRED)=true
+
+================================================================================
+GATE — apple triad (lint + placeholder + build + test)
+================================================================================
+$ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml TeslaSync/Features/Charging/*.swift
+  Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Charging -Language swift
+  PLACEHOLDER_ALLOWED=2   (the `.redacted(reason: .placeholder)` loading shimmer + the required
+                           i18n key name `tesla_charging.searchPlaceholder`, each `// parity:allow`)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./apps/apple/Scripts/build-shared-xcframework.sh   (KMP core -> Shared.xcframework, ADR-004)
+  > Task :core:assembleSharedXCFramework  BUILD SUCCESSFUL in 7m 1s
+  ✓ Shared.xcframework staged -> apps/apple/Frameworks/Shared.xcframework
+     (ios-arm64 + ios-arm64-simulator + macos-arm64 slices)
+SHARED_FRAMEWORK_EXIT=0
+
+$ xcodegen generate                              -> Created TeslaSync.xcodeproj (all 8
+     TeslaChargingHistory*.swift present as SwiftCompile units in the iOS + macOS targets)
+
+$ xcodebuild -scheme TeslaSync-macOS / -scheme TeslaSync (iOS Simulator arm64) ... build
+  ** BUILD FAILED **  — see "PRE-EXISTING / ENVIRONMENT BUILD BLOCKERS" below.
+BUILD_MACOS_EXIT=65
+BUILD_IOS_EXIT=65
+TEST_EXIT=(not reached — build precedes test)
+
+--------------------------------------------------------------------------------
+PRE-EXISTING / ENVIRONMENT BUILD BLOCKERS (no red-as-green — full disclosure)
+--------------------------------------------------------------------------------
+The whole-app macOS + iOS build of THIS repository state does NOT compile. Every error is
+in PRE-EXISTING files unrelated to this page; ZERO diagnostics were ever attributed to any
+of the 8 new TeslaChargingHistory*.swift files across 6 full build attempts. The blockers,
+in the order they surface:
+
+  B1. Duplicate source filename `ScheduledExportsPanel.swift` in two compiled roots
+      (`TeslaSync/feature-views/` defines ScheduledExportsPanelView; `TeslaSync/Features/System/`
+      defines ScheduledExportsPanel). Swift requires unique basenames per module
+      -> "error: filename used twice". Both are in HEAD; neither touched by this page.
+      (Verified: the only duplicate basename across all compiled roots.)
+
+  B2. Duplicate design-token enums: `TeslaSync/Features/System/StatusApiDocsPage.swift:399`
+      re-declares `enum TSSpacing { sm/md/lg/... }` (and `TSRadius`), colliding module-wide
+      with the generated `apps/design/generated/apple/Tokens.swift` -> every `TSSpacing.sm`
+      reference is "ambiguous use of 'sm'". Pre-existing; not referenced by this page.
+
+  B3. Xcode-26.5-SDK `#Preview` macro regression: on this SDK `import SwiftUI` makes the
+      transitively-loaded `AppKit.Preview` (macOS) / `UIKit.Preview` (iOS) macro visible, so
+      `#Preview { ... }` is "ambiguous use of 'Preview'" in ~76 pre-existing files (every file
+      with an `#if DEBUG #Preview`). Strippable (all such blocks are `#if DEBUG`-guarded), but
+      it is an SDK-level regression, not codebase code.
+
+  B4. Xcode-26.5-SDK `accessibilityAddTraits` / `accessibilityHint` regression: SwiftUI's own
+      `View.*` and `ModifiedContent.*` overloads are reported "ambiguous" when chained on a
+      ModifiedContent. 63 pre-existing files call `.accessibilityAddTraits(.updatesFrequently)`;
+      they are NOT DEBUG-gated and cannot be excluded (each AI surface cluster is internally
+      referenced). This is the hard, non-workaroundable blocker.
+
+EVIDENCE THAT THIS PAGE COMPILES CLEAN:
+  A bounded build (full project, `SWIFT_ACTIVE_COMPILATION_CONDITIONS=""` to strip the
+  DEBUG previews of B3, plus `EXCLUDED_SOURCE_FILE_NAMES` to drop the B1 collision copy and
+  the B2 duplicate-token file) compiled the ENTIRE application — including all 8 new files —
+  and failed ONLY on the pre-existing B4 SDK ambiguity in `AIMqttSseInspectorExplanations.Views.swift`
+  / `AIFeedbackQueueTriage.Views.swift`. No TeslaChargingHistory* file produced any diagnostic
+  in any build. B1 and B2 are genuine pre-existing codebase bugs in OTHER pages (explicitly
+  out of this artifact's allowed-files scope: "Out of Scope (reject): Other pages"); B3 and B4
+  are Xcode-26.5 SDK regressions. None are introduced or fixable by this parity page.
+
+RESULT: lint + placeholder + parity all green; the page is verified diagnostic-clean; the
+whole-app build/test gate is BLOCKED by the pre-existing/environmental B1–B4 above.
+
+================================================================================
+EXIT=1
+STATUS=BLOCKED
+================================================================================

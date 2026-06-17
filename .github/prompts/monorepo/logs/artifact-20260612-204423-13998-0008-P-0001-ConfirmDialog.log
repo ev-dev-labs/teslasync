@@ -1,0 +1,217 @@
+================================================================================
+ P4 · Modal / dialog · 0001 — ConfirmDialog (Apple)
+ Web source : components/ai/ConfirmDialog.tsx  (the Helix `AiConfirmDialog`)
+ Native     : apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.*
+ Runner     : macOS (Darwin, arm64) · Xcode 26.5 · Swift 6.3.2 · swiftlint + swiftformat + pwsh
+ Date       : 2026-06-12
+================================================================================
+
+--------------------------------------------------------------------------------
+NAMING-COLLISION RESOLUTION (binding decision — Honesty Covenant #2, #7, #9)
+--------------------------------------------------------------------------------
+The 0001 prompt's mechanically-generated native target `ConfirmDialog.*` COLLIDES
+with an already-shipped sibling surface:
+
+  • 0001 (this prompt) → web `components/ai/ConfirmDialog.tsx`  = `AiConfirmDialog`
+    (AI tool-use approval: tool name + verbatim JSON args + Approve/Cancel).
+  • 0012 (shipped)      → web `components/ui/ConfirmDialog.tsx`  = `ConfirmDialog`
+    (destructive-action confirm: severity tint + typed-confirmation gate).
+
+Both prompts declare the identical "Native output: ConfirmDialog.*". The 0012
+surface already occupies `apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.*`
+(commit f5a7add1a, in-tree on this branch). Overwriting it would destroy a
+completed sibling surface — a #7 "predecessor bypass" / #2 "scope narrowing"
+violation.
+
+RESOLUTION: this AI variant ships as `AiConfirmDialog.*` — matching the web
+component's exported symbol name (`export function AiConfirmDialog`) and the
+existing `Ai*` native surface convention (AiOutputPanel, AiLimitBanner, ToolCard).
+Types are `AiConfirm*`-prefixed, the strings table is "AiConfirmDialog", and the
+P1/S11 diagnostics slug is "AiConfirmDialog" — all collision-free with the 0012
+`ConfirmDialog` surface, which is left intact and untouched. This mirrors the
+collision resolution already adopted for this exact surface on a sibling parallel
+branch (commit 2ba5040a5).
+
+--------------------------------------------------------------------------------
+FILES SHIPPED (Allowed: AiConfirmDialog.* + this log) — 10 files
+--------------------------------------------------------------------------------
+  AiConfirmDialog.swift            View entry; visibility render-gate (web Modal open).
+  AiConfirmDialog.Adapter.swift    Pure projection core: tool/args model, JSON pretty-
+                                   printer (web JSON.stringify(args ?? {}, null, 2)),
+                                   intro selection, phase/visibility machine, i18n copies.
+  AiConfirmDialog.Model.swift      @MainActor @Observable state holder (P1/S8); approve/
+                                   cancel/dismiss commands; view.opened (P1/S11).
+  AiConfirmDialog.Seams.swift      Telemetry / controller / source seams; i18n facade
+                                   (P1/S10); in-memory source; VoiceOver builders.
+  AiConfirmDialog.Views.swift      Panel shell (TSGlassPanel), header (assistant chip +
+                                   title + freshness + close), Tool section, Arguments
+                                   <pre> block, Cancel/Approve footer (TSButton).
+  AiConfirmDialog.States.swift     loading / empty / error(+retry) / inline-error /
+                                   freshness chip / cached-data banner — never blank.
+  AiConfirmDialog.Previews.swift   9 #Preview states (mutating/read/no-args/submitting/
+                                   loading/empty/error/stale/offline).
+  AiConfirmDialog.strings          P1/S10 catalog: 7 web-parity keys + native chrome keys.
+  AiConfirmDialog.ModelTests.swift 16 XCTest (telemetry/phases/visibility/copy/freshness
+                                   + approve/cancel/dismiss/re-entrancy).
+  AiConfirmDialog.Tests.swift      18 XCTest (args formatter / intro / phase / labels /
+                                   accessibility).
+
+--------------------------------------------------------------------------------
+WEB → NATIVE PARITY (components/ai/ConfirmDialog.tsx)
+--------------------------------------------------------------------------------
+  Modal (open gate)            → visibility .hidden/.presented + TSFadeIn(TSGlassPanel)
+  useTranslation t(key,def)    → AiConfirmDialogStrings facade + AiConfirmDialog.strings
+  title 'Approve Helix action' → ai.confirm.title
+  intro tool.mutates ? a : b   → introDescriptor(mutates:) → ai.confirm.intro.{mutates,read}
+  Tool label + tool.name(mono) → ai.confirm.toolLabel + monospaced Text(verbatim:)
+  tool.description (optional)   → conditional secondary Text
+  Arguments label + <pre> JSON → ai.confirm.argsLabel + scrollable mono block;
+                                 JSON.stringify(args ?? {}, null, 2) → AiConfirmArgsFormatter
+                                 (sorted-key 2-space, unescaped slashes, "{}" for nil/blank,
+                                 verbatim for non-JSON)
+  Button primary 'Approve'+load → ai.confirm.run, TSButton(.primary, isLoading: busy)
+  Button secondary 'Cancel'     → ai.confirm.cancel, TSButton(.secondary), disabled while busy
+  onClose = loading?noop:onCancel → model.dismiss() swallowed while isBusy
+  States (loading/empty/error/stale/offline) reproduced — every state renders real chrome (#6).
+  All copy via P1/S10; chrome via P1/S9 tokens; no Tailwind ports; no English literals.
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (all RUN on this runner — real tooling, real results)
+--------------------------------------------------------------------------------
+[1] swiftc -typecheck — SHIPPED surface + REAL design system, macOS-15, Swift 6 strict
+      sdk=MacOSX26.5  target=arm64-apple-macos15.0  -swift-version 6
+      inputs: design/generated/apple/Tokens.swift + Sources/Design/TSMaterial.swift +
+              Sources/Components/UI/{Cards,Buttons,Typography}.swift +
+              Sources/Components/Motion/Motion.swift + the 6 AiConfirmDialog view/model files
+      → 0 errors, 0 warnings                                        VIEW_TYPECHECK_MAC_EXIT=0
+
+[2] swiftc -typecheck — SHIPPED surface + REAL design system, iOS-18 simulator, Swift 6 strict
+      sdk=iPhoneSimulator26.5  target=arm64-apple-ios18.0-simulator  -swift-version 6
+      → 0 errors, 0 warnings                                        VIEW_TYPECHECK_IOS_EXIT=0
+
+[3] swiftc -typecheck — DEBUG incl. AiConfirmDialog.Previews.swift (#Preview macro), macOS-15
+      → 0 errors, 0 warnings                                        PREVIEWS_TYPECHECK_EXIT=0
+
+[4] swift test — REAL XCTest execution in an isolated SwiftPM module (module name TeslaSync;
+      the 6 shipped view/model files + the real Tokens/TSMaterial/Cards/Buttons/Typography/
+      Motion sources; both *Tests.swift via @testable import TeslaSync), macOS-15, Swift 6,
+      -strict-concurrency=complete
+      → Executed 34 tests, 0 failures (AiConfirmArgsFormatterTests, AiConfirmDialogIntroTests,
+        AiConfirmDialogVisibilityTests, AiConfirmDialogLabelTests, AiConfirmDialogAccessibility
+        Tests, AiConfirmDialogModelTests×10, AiConfirmDialogModelCommandTests×6)
+                                                                    TEST_RUN_EXIT=0  (34/34)
+
+[5] swiftlint --strict --config apps/apple/.swiftlint.yml  (9 Swift files)
+      → "Done linting! Found 0 violations, 0 serious in 9 files."   LINT_EXIT=0
+
+[6] swiftformat --lint --config apps/apple/.swiftformat  (9 Swift files)
+      → "0/9 files require formatting."                             FORMAT_EXIT=0
+
+[7] apps/tools/check-placeholders.ps1 -Path …/AiConfirmDialog  (pwsh)
+      → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0          PLACEHOLDER_EXIT=0
+      No TODO/stub/mock/placeholder/Lorem/FIXME in shipped code.
+
+[8] xcodegen generate  → project created                           XCODEGEN_EXIT=0
+
+  → Every surface-scoped, in-scope gate is GREEN.
+
+--------------------------------------------------------------------------------
+FULL-APP xcodebuild GATE — BLOCKED (integration tier; out of Allowed-files scope)
+--------------------------------------------------------------------------------
+The prompt's literal gate is:
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+It cannot validate THIS surface in isolation, and is RED for reasons independent
+of this surface:
+
+(a) MEMBERSHIP PROOF — the surface is not compiled by the app build.
+    `TeslaSync/modals-dialogs` is NOT listed in any target's `sources:` in
+    project.yml (the whole modals-dialogs tier is wired in at a later integration
+    step; project.yml is OUTSIDE this prompt's Allowed files). After
+    `xcodegen generate`:
+        grep -c AiConfirmDialog TeslaSync.xcodeproj/project.pbxproj  → 0
+        grep -c modals-dialogs  TeslaSync.xcodeproj/project.pbxproj  → 0
+        grep -c feature-views   TeslaSync.xcodeproj/project.pbxproj  → 3  (wired tier, sanity)
+    The app/test targets contain ZERO references to this surface — it is neither
+    compiled by, nor a cause of, any full-app result.
+
+(b) The app + test targets depend on the KMP `Shared.xcframework`
+    (project.yml: framework Frameworks/Shared.xcframework), which is absent from
+    the tree (Frameworks/ holds only .gitkeep) and is staged by the heavyweight
+    `Scripts/build-shared-xcframework.sh` Gradle/Kotlin-Native pre-action. On this
+    runner the toolchain IS present: an attempted `xcodebuild -scheme TeslaSync`
+    entered the "Stage Shared.xcframework" scheme pre-action and ran Gradle
+    (gradle-8.14.5; :core:compileKotlin{Ios,Macos}* UP-TO-DATE; linkReleaseFramework
+    in progress). The run was stopped — completing it would not change (a): the
+    surface still isn't in the project.
+
+(c) Per apps/macos-pending-verifications.md, the full-app scheme build is RED for
+    PRE-EXISTING, UNRELATED cross-surface parallel-merge issues tracked under
+    p4-apple/P99-0001-apple-acceptance-gate (macOS-pending):
+      • feature-views/RecentDrivesSection.Previews.swift — "unable to type-check
+        this expression in reasonable time" (present on this branch).
+      • shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141 — escaping
+        closure error.
+      • macOS scheme: development-signing (0 valid codesigning identities).
+    None involve AiConfirmDialog.
+
+  → The full-app gate is an acceptance-tier (P99) concern, not a per-surface one.
+    IOS_EXIT=blocked   MAC_EXIT=blocked   (surface not in target; Shared + signing
+    + pre-existing unrelated sibling errors at the acceptance tier).
+  NOTE: the gate's `name=iPhone 16` simulator is absent on this runner (iPhone 17
+    series only); immaterial given (a).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+ 1 No red-as-green : surface gates [1]-[8] are independently GREEN with pasted real
+                     output; the full-app xcodebuild step is reported BLOCKED, not green.
+ 2 No scope narrow : every web state + branch reproduced (loading/empty/error/stale/
+                     offline/inline-error + mutating/read intro + no-args + submitting);
+                     0001 was NOT collapsed into the 0012 surface.
+ 3 No skip-assume  : web source read end-to-end; every t() key + conditional ported.
+ 4 No stubs final  : full production surface; placeholder gate COUNT=0; no TODO/mock.
+ 5 No parity short : Modal→TSGlassPanel, Button→TSButton, JSON.stringify→args formatter
+                     (unit-pinned), i18n 7/7 web keys.
+ 6 No delegation   : authored/verified directly on this runner.
+ 7 No predecessor  : the 0012 `ConfirmDialog` surface is preserved intact; this ships as
+                     `AiConfirmDialog.*` to avoid overwriting it. P4 core + P1-S8/S9/S10/S11
+                     primitives bound (real Tokens/TSMaterial/Components, real i18n facade).
+ 8 No commit on red: the COMMITTED code is GREEN on every applicable surface-scoped gate
+                     (swift test RUNS 34/34; iOS-18 + macOS-15 typecheck 0; previews 0;
+                     swiftlint/swiftformat/placeholder 0). The full-app xcodebuild RED is
+                     PRE-EXISTING in unrelated sibling surfaces + dev-signing and is provably
+                     independent of this surface (0 references in the generated project).
+ 9 No silent drift : the ConfirmDialog→AiConfirmDialog rename is documented above; changes
+                     confined to AiConfirmDialog.* + this log. project.yml / .swiftlint.yml /
+                     .swiftformat UNCHANGED; generated .xcodeproj + any staged
+                     Frameworks/Shared.xcframework are git-ignored and were removed.
+10 EXIT + STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+The AiConfirmDialog surface is production-complete, Apple-idiomatic, and at parity
+with components/ai/ConfirmDialog.tsx. It is INDEPENDENTLY VERIFIED on this runner:
+the SwiftUI view + model layer typechecks against the real TeslaSync design system
+on BOTH iOS-18 and macOS-15 SDKs under Swift-6 strict concurrency (0 errors), the
+#Preview states typecheck (0 errors), the XCTest suites ACTUALLY RUN green (34/34)
+via an isolated SwiftPM module against the real primitives, and
+swiftlint --strict / swiftformat --lint / placeholder are all GREEN.
+
+The full-app xcodebuild build/test gate is BLOCKED at the integration/acceptance
+tier — not by this surface — because (a) the modals-dialogs tier is not yet wired
+into project.yml (0 references to this surface in the generated project; out of
+Allowed-files scope) and (c) pre-existing, unrelated sibling-surface compile errors
++ macOS dev-signing fail the whole-app scheme (tracked under
+p4-apple/P99-0001-apple-acceptance-gate in apps/macos-pending-verifications.md).
+
+Surface-scoped, runnable gates:
+  VIEW_TYPECHECK_MAC_EXIT=0  VIEW_TYPECHECK_IOS_EXIT=0  PREVIEWS_TYPECHECK_EXIT=0
+  TEST_RUN_EXIT=0 (34/34)  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  XCODEGEN_EXIT=0  → all 0.
+Full-app gates (pre-existing/unrelated, acceptance tier): IOS_EXIT=blocked  MAC_EXIT=blocked.
+
+EXIT=1
+STATUS=BLOCKED

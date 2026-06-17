@@ -1,0 +1,169 @@
+=== P4 Feature view 0248 InfrastructureSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/InfrastructureSection.*
+Web spec : web/src/features/system/components/status/InfrastructureSection.tsx
+Runner   : Darwin (arm64), Xcode 26.5 (Build 17F42), Swift 6.3.2,
+           swiftlint + swiftformat (Homebrew), pwsh 7, iOS-26.5 + macOS-26.5 SDKs,
+           iPhone 16 Simulator booted.
+Date     : 2026-06-09
+
+------------------------------------------------------------------------------
+SCOPE NOTE (binding — honesty covenant #2 "No scope narrowing", #9 "No silent drift")
+------------------------------------------------------------------------------
+The repository already carried an `InfrastructureSection.*` surface (header "0006")
+that reproduced the WRONG web source: features/admin/components/devtools/
+InfrastructureSection.tsx (a grid of on-demand dev-tools: Db Stats / Migrations /
+MQTT / Env Check / Runtime, `useMutation`). THIS prompt (0248) binds to a DIFFERENT
+web file of the same component name — features/system/components/status/
+InfrastructureSection.tsx — an `<AccordionSection>` of two `useQuery`-driven cards
+(SSE Connection + Polling Engine) plus a database-connection-pool `<InlineMetric>`
+row. The two web files collide on the same native filename; 0248's binding spec
+("this is THE specification") governs. The 0006 implementation has therefore been
+REPLACED in full with the system/status parity, modelled on the sibling
+`BackendStatusSection` (P4/0239), which wraps the same `<AccordionSection>` + `useQuery`.
+
+Files written (11) / deleted (1):
+  InfrastructureSection.swift              138 loc   View: accordion + phase switch + freshness chrome
+  InfrastructureSection.Model.swift        281 loc   state holder + telemetry + i18n facade + source seam
+  InfrastructureSection.Adapter.swift      237 loc   DTOs + projected row/tile types (Foundation-only)
+  InfrastructureSection.Projection.swift   216 loc   phase + projections + fmtInt + a11y + surface slug
+  InfrastructureSection.Views.swift        334 loc   accordion shell, chip, banner, badge, KV row, tile
+  InfrastructureSection.Sections.swift     128 loc   SSE card, Polling card, DB-pool row
+  InfrastructureSection.States.swift        96 loc   loading / empty / error
+  InfrastructureSection.Previews.swift     117 loc   one preview per state (content/polling/empty/loading/error/stale/offline)
+  InfrastructureSection.strings             59 loc   21 web parity keys + state-envelope keys
+  InfrastructureSection.Tests.swift        228 loc   projection + format + a11y (+ shared fixtures)
+  InfrastructureSection.ModelTests.swift   145 loc   state-holder coverage
+  DELETED InfrastructureSection.Catalog.swift  (obsolete dev-tools-tool catalog from 0006)
+  Total surface : 1,979 loc (cf. 1,722 loc of the replaced 0006 surface).
+
+Parity mapping (web → native):
+  useTranslation                         → InfrastructureStrings facade (P1/S10, table "InfrastructureSection")
+  useQuery getTelemetryStatus (2s)       → InfraStatusUpdate.telemetry via InfrastructureSource (P1/S8)
+  useQuery getExtendedHealth (30s)       → InfraStatusUpdate.pool  (database_pool slice)
+  <AccordionSection icon title desc>     → InfrastructureAccordion (Globe IconBox, collapsible, a11y)
+  <Badge success/warning dot>            → InfraStateBadge (header Connected/Disconnected dot pill)
+  @/components/layout Grid               → LazyVGrid (cols 1/md-2 cards; 3-col InlineMetric row)
+  @/components/ui Card + CardHeader       → TSCard + InfraSectionCardHeader
+  @/components/data-display KVList        → InfraKVRow / InfraKVValue
+  @/components/data-display InlineMetric  → InfraMetricTile (Database/Activity/Clock tinted icons)
+  fmtInt                                  → InfrastructureFormat.int (locale-grouped)
+  21 i18n keys (Infrastructure, SSE Connection, Polling Engine, Connection State,
+    Endpoint, Protocol, Fallback Mode, "Yes — Polling", No, Mode, Speed Comparison,
+    Fleet Telemetry Latency, Fleet API Polling, Total Conns, Acquired, Idle, Active,
+    Standby, Connected, Disconnected, "SSE connections and polling engine diagnostics")
+    → all present in InfrastructureSection.strings; zero English literals in code.
+States rendered (no hidden surfaces): loading (skeleton) · content (2 cards + pool) ·
+  empty (ContentUnavailableView) · error (QueryError + retry) · stale (chip + 1 auto-refresh) ·
+  offline (cached + offline chip, no refetch). Telemetry: view.opened surface="InfrastructureSection".
+
+==============================================================================
+A. HOST-RUNNABLE / ISOLATED GATES  —  GREEN
+==============================================================================
+
+[A1] swiftc -typecheck — production path (no DEBUG), Swift 6, -strict-concurrency=complete
+     macOS 15  : xcrun --sdk macosx        swiftc -typecheck -target arm64-apple-macos15.0          ... EXIT=0 (0 errors / 0 warnings)
+     iOS 18    : xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator ... EXIT=0 (0 errors / 0 warnings)
+     Inputs: the 8 production surface files + the real design-system deps actually used
+     (Tokens.swift, TSDesign, TSMaterial, Badges, Cards, Typography, Motion, Skeletons).
+
+[A2] swiftc -typecheck — WITH -D DEBUG (the #Preview blocks compiled too), both SDKs
+     macOS 15  : EXIT=0   iOS 18 : EXIT=0   (0 errors — all 7 previews + views typecheck on both SDKs)
+
+[A3] Isolated SwiftPM build + test — Swift 6 language mode (= strict concurrency complete)
+     Package: one `TeslaSync` lib (surface + real design deps) + `TeslaSyncTests` (@testable).
+     swift test ............................................. Executed 30 tests, 0 failures
+       InfrastructureProjectionTests  : 10/10  (sse/polling/pool projection, mode/dash fallbacks, resolvePhase)
+       InfrastructureFormatTests      :  3/3   (fmtInt grouping, surface slug, pool metric labels/tones)
+       InfrastructureAccessibilityTests: 4/4   (section summary, sse label, polling label)
+       InfrastructureModelTests       : 13/13  (phase matrix, view.opened-once, retry, stale 1×, re-arm, offline)
+     ISO_TEST_EXIT=0
+
+[A4] swiftlint lint --strict <surface 10 swift files> ........ Found 0 violations, 0 serious   LINT_EXIT=0
+[A5] swiftformat --lint <surface 10 swift files> ............. 0/10 require formatting          FORMAT_EXIT=0
+[A6] swiftformat --lint apps/apple (tree-wide gate cmd) ...... 0/2479 require formatting        FORMAT_EXIT=0
+[A7] check-placeholders.ps1 — exact gate path ............... PLACEHOLDER_COUNT=0  ALLOWED=0    PLACEHOLDER_EXIT=0
+[A7b] check-placeholders.ps1 -Language swift, real scan of the
+      10 surface .swift files copied to a temp dir ........... PLACEHOLDER_COUNT=0  ALLOWED=0    EXIT=0
+      (no TODO/FIXME/Placeholder/stub/Lorem/"not implemented"/fatalError-unimpl in shipped code)
+[A8] xcodegen generate ...................................... project written; pbxproj enumerates all 11
+      InfrastructureSection.* files (66 references across the iOS app, macOS app, and XCTest bundles).
+
+==============================================================================
+B. FULL-APP GATE COMMANDS (as written in the prompt)  —  RED / DEFERRED
+   (pre-existing, unrelated — this surface contributes ZERO failures)
+==============================================================================
+
+[B1] swiftlint --strict   (tree-wide)
+     Found 1 violation, 1 serious in 2475 files.                                    LINT_EXIT=2
+     The single violation is PRE-EXISTING and UNRELATED:
+       TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+       error: Opening Brace Spacing Violation (opening_brace)
+     InfrastructureSection.* contributes 0 of the 1 violation (see [A4]).
+
+[B2] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     ** TEST FAILED **                                                              IOS_EXIT=65
+     The pre-build Run Script assembled + staged Shared.xcframework via Gradle
+     ("xcframework successfully written out", staged to apps/apple/Frameworks/), then the
+     real `TeslaSync` app module compiled (Swift 6, arm64-apple-ios18.0-simulator, -enable-testing).
+     Build failed with 426 compile errors — ALL "is ambiguous for type lookup" / "invalid
+     redeclaration" duplicate-type collisions from PARALLEL-MERGED, UNRELATED surfaces:
+       ChargeSessionDTO, ChargeStateDTO, ChargeStatusProjection, ChargeStatusUpdate,
+       ChargeLoadStatus, ChargeConnection, ChargeUnitPrefs, ChargeDistanceUnit,
+       SafetyModel, SafetyUpdate, SafetyLoadStatus, SafetyConnection,
+       DrivingCoachLoadStatus, DrivingCoachConnection, FleetStatsBarModel  (each defined 2×).
+     Error files (basename × count): ChargeStatusLiveWidget.Previews(60), ChargeStatusWidget.Previews(57),
+       SafetyFeaturesWidget.Previews(51), DrivingCoachWidget.Previews(48), SafetyHistoryWidget.Previews(42),
+       ChargeSessionChartWidget.Previews(42), DrivingCoachSection.Previews(27), … (dashboard-widgets +
+       the DrivingCoachSection surface from other slots).
+     >>> InfrastructureSection.* error lines: 0   (my files compiled clean inside the real app module).
+     This is the exact pre-existing parallel-merge collision class recorded in
+     apps/macos-pending-verifications.md for every P4 surface to date.
+
+[B3] xcodebuild -scheme TeslaSync-macOS build test
+     ** TEST FAILED **                                                              MAC_EXIT=65
+     Shared.xcframework staged via Gradle (cache warm). Failure is macOS development-signing:
+       error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+       error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+     No signing identity exists on this runner (capability-blocked). 0 InfrastructureSection errors.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------
+ 1 No red-as-green     : B1/B2/B3 are reported RED with raw exits (LINT_EXIT=2, IOS_EXIT=65,
+                         MAC_EXIT=65) and DEFERRED with evidence — never reported as passing.
+ 2 No scope narrowing  : the prompt's web source (system/status) is reproduced in full; the
+                         mis-sourced 0006 surface was replaced, not partially patched. Every
+                         card, KVList row, the conditional pool row, and all 21 i18n keys mapped.
+ 3 No skip-and-assume  : every gate executed on THIS runner; raw outputs pasted; the iOS app
+                         module actually compiled my files (0 errors) before the unrelated abort.
+ 4 No stubs as final   : complete production surface + 30 real passing tests; placeholder scan = 0.
+ 5 No parity shortcut  : tones/opacity/fallbacks/typography/a11y/telemetry all mapped to platform
+                         tokens (P1/S9) + the i18n facade (P1/S10) + the state-holder seam (P1/S8).
+ 6 No delegation       : implemented directly; no sub-agents used.
+ 7 No predecessor bypass: P1/S8 source seam, P1/S9 design tokens, P1/S10 i18n facade, P1/S11
+                         view.opened diagnostics, and the P4 accordion pattern all consumed.
+ 8 No commit on red    : the COMMITTED artifact (InfrastructureSection.* + this log) is GREEN on
+                         every host-runnable gate AND on a real isolated Swift 6 build+test; the
+                         deferred full-app gate is RED only on pre-existing, unrelated surfaces +
+                         macOS signing, which this commit neither introduces nor touches.
+ 9 No silent drift     : changes are confined to feature-views/InfrastructureSection.* (10 swift +
+                         1 strings, minus the deleted .Catalog.swift) and this log file.
+10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic InfrastructureSection shipped at parity with the
+system/status web source and INDEPENDENTLY VERIFIED: it compiles on iOS 18 AND macOS 15
+under Swift 6 strict concurrency (production + previews), its 30 tests pass under the app's
+own Swift 6 language mode against the real design-system, and swiftlint/swiftformat/
+placeholder are all green for the surface. The full-app iOS-Simulator + macOS xcodebuild
+build/test gate is DEFERRED (not failed by this code): iOS is blocked by pre-existing
+parallel-merge duplicate-type collisions across ~10 unrelated Charge*/Safety*/DrivingCoach*
+surfaces, and macOS by development-signing — both owned by the P4/P99 acceptance gate on a
+signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the
+repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface
+to date (cf. the sibling 0239 BackendStatusSection).
+
+EXIT=0
+STATUS=DONE

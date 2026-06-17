@@ -1,0 +1,207 @@
+=== P4-APPLE · P7 · page:admin/LiveLogs (SwiftUI / HIG) ===
+started: 2026-06-15T03:44:00-0700
+host: macOS (Darwin) 26.5.1; Xcode 26.5 Build 17F42; Apple Swift 6.3.2; swiftlint 0.63.3 + xcodegen + pwsh 7 present
+web source: web/src/features/admin/pages/LiveLogsPage.tsx   (web route: (unrouted))
+parity unit: page:admin/LiveLogs   (manifest requiredCount=37 = 4 panels + 2 states + 31 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (covenant #9 — no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`. That path is
+NOT a project.yml source group in this repo — the only compiled `TeslaSync/*` groups are
+widget-primitives / dashboard-widgets / feature-views / misc-surfaces / shared-surfaces. The repo's
+real, compiled canonical home for route-registered admin pages — proven by every sibling DONE admin
+page (ApiLogs, LiveSignalInspector, AuditLog, …) — is `apps/apple/Sources/Features/Admin/` (`Sources`
+is the recursive project.yml source path). The page therefore ships at
+`apps/apple/Sources/Features/Admin/**`, the faithful equivalent of the prompt's `Features/Admin`.
+Strings ship in the platform catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed
+file); the 31 parity keys already exist there as `translation.liveLogs.*` (the web `translation`
+namespace, matching the sibling `translation.apiLogs.*`), so only `route.liveLogs` (the nav title)
+was added. This path mapping is the only deviation from the literal prompt path.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? Sources/Features/Admin/LiveLogsModels.swift            (196 LOC) value types: LogStreamLevel (debug/info/warn/error + labelKey), LogField, LogStreamEvent + `parse(payload:receivedAt:seq:)` (web buildLogEvent + extractMessage/extractFields/extractVehicleId/detectLevel), LiveLogsStreamEvent (connected/log/drop/failed/disconnected), LiveLogsStaleness (ADR-013 2-min), LiveLogsStreamSource seam (web useLogStream)
+?? Sources/Features/Admin/LiveLogsFormat.swift            (81 LOC)  display-boundary helpers: time HH:mm:ss.SSS, levelTone (web levelBadgeVariant), eventLine (web eventToText), filename (web downloadFilename, %1$@ template), format (%1$@ catalog interpolation), highlighted AttributedString (web HighlightedText grep <mark>)
+?? Sources/Features/Admin/LiveLogsPageModel.swift         (227 LOC) @MainActor @Observable model: rolling buffer (cap 1000), totalReceived/drops/isConnected/enabled/paused/errorMessage/lastEventAt, level/grep/grepDraft/vehicleFilter/autoscroll, derived filteredEvents/status(5-branch ConnectionBadge)/isLive/isStale, start/stop/setLevel(restart)/applyGrep(restart)/togglePause/clear/reconnect/downloadText/downloadFilename, staleness ticker Task
+?? Sources/Features/Admin/LiveLogsPageModel.Sample.swift  (95 LOC)  SampleLiveLogsStreamSource (page/preview default: connect + 8-line seed burst varied level/fields/vehicle + 4-line async trickle) + EmptyLiveLogsStreamSource + FailingLiveLogsStreamSource doubles
+?? Sources/Features/Admin/LiveLogsPage.swift              (167 LOC) SwiftUI view: header(TSPageTitle+subtitle+TSLiveIndicator), GlassPanel3 errorPanel, TSLiveStaleDataBanner on isStale (ADR-013), buffered/max caption, .fileExporter(LiveLogsTextDocument) for the .txt download, .task{start}/.onDisappear{stop}, #if DEBUG previews (live/empty/error)
+?? Sources/Features/Admin/LiveLogsPage.Filters.swift      (100 LOC) GlassPanel1: level TSSelect (server-side, restarts), grep TSTextField + TSHelperText (applied on submit/blur via @FocusState), vehicle-id TSTextField (client-side, numeric on iOS); adaptive 3-up regular / stacked compact
+?? Sources/Features/Admin/LiveLogsPage.Controls.swift     (140 LOC) GlassPanel2: TSStatusBadge (5 web ConnectionBadge branches) + buffered/received/drops captions + auto-scroll TSToggle + Pause/Resume + Clear + Download + Reconnect; adaptive justified row / stacked compact
+?? Sources/Features/Admin/LiveLogsPage.Table.swift        (253 LOC) GlassPanel4: loading(TSSpinner)/empty(TSEmptyState+Reconnect)/success(virtualized ScrollViewReader+LazyVStack of LiveLogsLogRow with autoscroll), LiveLogsLogRow (regular columns / compact card: time + LiveLogsLevelBadge + grep-highlighted message + field chips), LiveLogsLevelBadge (verbatim tone chip / table.noLevel)
+?? Sources/Features/Admin/LiveLogsRouteRegistration.swift (26 LOC)  registers .liveLogs -> LiveLogsPage (model built on MainActor + captured; mirrors ApiLogsRouteRegistration; injectable LiveLogsStreamSource)
+?? Tests/Unit/Features/Admin/LiveLogsPageModelTests.swift (177 LOC) 14 XCTest: success/empty/error states, status branch order, client vehicle filter, pause-holds, clear-resets, setLevel/applyGrep restart, downloadText, parse (fields + non-JSON fallback), levelTone, staleness window
+?? Tests/Unit/Features/Admin/LiveLogsRouteRegistrationTests.swift (45 LOC) 6 XCTest: registers + renders, preserves base, injected source, route metadata (live-logs/.system), canonical + /admin/live-logs alias parse, unique-segment invariant
+ M Sources/App/AppRoute.swift            + case .liveLogs (pathSegment "live-logs", group .system, systemImage "scroll")
+ M Sources/App/AppRouteParser.swift      + alias "/admin/live-logs" -> .liveLogs (mirrors "/admin/api-logs")
+ M Sources/TeslaSyncApp.swift            chains LiveLogsRouteRegistration.registry(base:) into \.routeHosts (after ApiLogs)
+ M Localization/Localizable.xcstrings    +1 key route.liveLogs ("Live logs"); the 31 parity keys + 4 level options pre-exist as translation.liveLogs.*; JSON validated (9463 total keys)
+ M apps/parity/apple-ledger.json         +2 rows: page:admin/LiveLogs × {apple-macos, apple-ios}, status done, 37/37
+
+(generated apps/apple/TeslaSync.xcodeproj + staged apps/apple/Frameworks/Shared.xcframework are
+ git-ignored and NOT part of the commit. The LiveLogs surface has NO Shared/KMP dependency — it
+ binds the injectable LiveLogsStreamSource seam, the production wiring point for the shared client.)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj
+GEN_EXIT=0
+
+--- swiftlint --strict (9 new + 3 edited App + 2 test files, repo .swiftlint.yml) ---
+Done linting! 0 violations, 0 serious.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=9   [2 are mine: the grepPlaceholder / vehicleIdPlaceholder i18n KEY names carry
+                         "// parity:allow i18n key name, not a stub"; 7 are pre-existing sibling markers]
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0      [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in my code]
+
+--- Isolated Swift 6 strict-concurrency type-check of my 9 sources + the AppRoute/parser edits
+    against the REAL P2 tokens (Tokens/TSDesign/TSMaterial/Theme) + P3 components
+    (Cards/Typography/Buttons/Badges/Fields/Pickers/States/Banners/StatusIndicators) +
+    App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift, BOTH idioms ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> <deps> <mine>
+macOS  (arm64-apple-macos15.0)         -> 0 errors, 0 warnings   TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator) -> 0 errors, 0 warnings   TYPECHECK_IOS_EXIT=0
+  [Compiles my page + 3 panel sub-views + model + sample + registration + the AppRoute/parser edits
+   against the ACTUAL TSGlassPanel/TSPageTitle/TSPanelTitle/TSMetricLabel/TSCaption/TSText/TSButton/
+   TSToggle/TSTextField/TSSelect/TSEmptyState/TSSpinner/TSAlertBanner/TSLiveStaleDataBanner/
+   TSLiveIndicator/TSStatusBadge/TSTone + Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion + the
+   AppRouteHostRegistry on BOTH idioms (ADR-002/006). The #if os(iOS) horizontalSizeClass compact
+   vs. regular branch in Filters/Controls/Table is exercised on the iOS pass.]
+
+--- Executed Swift 6 strict-concurrency model harness (real LiveLogs* sources + P2 tokens + P3 TSTone,
+    sibling-independent; main.swift drives the same assertions as the XCTest suite) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx26.5> -target arm64-apple-macos15.0 \
+#   Tokens.swift TSDesign.swift TSMaterial.swift Badges.swift \
+#   LiveLogsModels.swift LiveLogsFormat.swift LiveLogsPageModel.swift LiveLogsPageModel.Sample.swift \
+#   main.swift -o llharness     (HARNESS_COMPILE_EXIT=0)
+"HARNESS: 34 assertions passed, 0 failed"
+HARNESS_EXIT=0
+  states success/empty/error; status 5-branch order connecting->connected->paused->error; client
+  vehicle filter (3->2); pause-holds-buffer; clear-resets-counters; setLevel + applyGrep each restart
+  the subscription once (stop+start, new level/grep forwarded); downloadText lines INFO+message;
+  filename non-empty; parse extracts message/level/vehicle/field + non-JSON raw fallback; levelTone
+  debug/info/warn/error -> neutral/info/warning/danger; staleness 2-min window (old/fresh/nil)
+
+--- Full-scheme corroboration (xcodebuild, CODE_SIGNING_ALLOWED=NO) ---
+macOS app build  (-scheme TeslaSync-macOS -destination platform=macOS)        ** BUILD SUCCEEDED **  (0 errors)
+XCTest run       (TeslaSync-macOSTests: LiveLogsPageModelTests + LiveLogsRouteRegistrationTests)
+                 Executed 20 tests, 0 failures  (14 model + 6 route)          TEST_EXIT=0
+iOS app build    (-scheme TeslaSync -destination generic/platform=iOS Simulator) compiled ALL Sources;
+                 the lone failure is a LINKER/codesign-disabled env artifact, ZERO source errors.
+  [These three results required ONE-LINE resolution of the pre-existing OUT-OF-SCOPE defects noted
+   below; those out-of-scope edits were REVERTED per covenant #6/#7 and are NOT in the commit. They
+   are reported here as honest corroboration that the breakage is external + trivial — grep of every
+   build/test log for LiveLogs*/AppRoute*/AppRouteParser*/TeslaSyncApp* = ZERO diagnostics in my files.]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BREAKAGE (forbidden to commit-fix — covenant #6/#7; deferred to owners/P99)
+================================================================================
+At this HEAD, three files OUTSIDE this artifact's allowed set do not compile under Swift 6 — all
+authored by sibling P7 tasks, none touched by my committed change (git status above is clean):
+  1. Sources/Features/Driving/DriveScorePage.Panels.swift:25  — `String(localized: trend.labelKey)`
+     passes a LocalizedStringKey to a String.LocalizationValue parameter (blocks the app target).
+  2. Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10/21/156 — @MainActor static accessed
+     from a nonisolated Stub source + an XCTAssertEqual(accuracy:) on Date (blocks the test bundle).
+  3. Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20 — @MainActor static `artifact(...)`
+     called from a nonisolated Stub `load` (blocks the test bundle).
+My files' correctness is proven instead by the isolated Swift 6 type-check (0/0 macOS + iOS) and the
+executed harness (34/34) above — the same host-harness methodology the peer p4-apple DONE logs use
+when the app/test target is blocked by an out-of-scope sibling.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=37
+================================================================================
+# evidence = file `symbol` (page paths under apps/apple/Sources/Features/Admin/); strings resolve
+# from Localization/Localizable.xcstrings as translation.liveLogs.<web-key> (web key names verbatim)
+
+[x] panel  — GlassPanel1   LiveLogsPage.Filters.swift `LiveLogsFiltersPanel.body` -> TSGlassPanel { levelControl(TSSelect) + grepControl(TSTextField+TSHelperText) + vehicleControl(TSTextField) }, adaptive 3-up/stacked (web livelogs-filters)
+[x] panel  — GlassPanel2   LiveLogsPage.Controls.swift `LiveLogsControlsPanel.body` -> TSGlassPanel { statusRow(statusBadge+stat captions) + controlsRow(autoscroll+pause+clear+download+reconnect) } (web livelogs-controls)
+[x] panel  — GlassPanel3   LiveLogsPage.swift `errorPanel(_:)` -> TSGlassPanel { exclamationmark.triangle + TSMetricLabel(error.title) + errorDetail }, shown when model.errorMessage != nil (web livelogs-error)
+[x] panel  — GlassPanel4   LiveLogsPage.Table.swift `LiveLogsTablePanel.body` -> TSGlassPanel { table(success) | loadingView | emptyView } (web livelogs-table-panel + virtualized DataTable)
+[x] state  — empty         LiveLogsTablePanel `emptyView` -> TSEmptyState(title liveLogs.title, message liveLogs.empty.noEvents, "scroll", +Reconnect action when !enabled) (web EmptyState)
+[x] state  — success       LiveLogsTablePanel `table` -> header row + ScrollViewReader/LazyVStack(ForEach filteredEvents -> LiveLogsLogRow) with `scrollToBottom` autoscroll (web DataTable rows)
+    (+ loading -> `loadingView` TSSpinner(status.connecting); + error -> page `errorPanel` + Controls danger badge — both data states implemented for the single useLogStream source)
+[x] string — liveLogs.controls.autoscroll       Controls `autoscrollToggle` -> TSToggle("…controls.autoscroll")
+[x] string — liveLogs.controls.clear            Controls `clearButton` -> Label("…controls.clear", "trash")
+[x] string — liveLogs.controls.download         Controls `downloadButton` -> Label("…controls.download", "square.and.arrow.down")
+[x] string — liveLogs.controls.pause            Controls `pauseButton` -> Label("…controls.pause") when !paused
+[x] string — liveLogs.controls.reconnect        Controls `reconnectButton` + Table `emptyView` reconnect action -> "…controls.reconnect"
+[x] string — liveLogs.controls.resume           Controls `pauseButton` -> Label("…controls.resume") when paused
+[x] string — liveLogs.empty.noEvents            Table `emptyView` -> TSEmptyState(message: "…empty.noEvents")
+[x] string — liveLogs.error.hint                LiveLogsPage `errorDetail` -> Text("…error.hint") when stream message empty
+[x] string — liveLogs.error.title               LiveLogsPage `errorPanel` -> TSMetricLabel("…error.title") (+ panel a11y label)
+[x] string — liveLogs.filename                  LiveLogsFormat.filename -> format("…filename","%1$@" stamp) -> model.downloadFilename (export)
+[x] string — liveLogs.filters.grep              Filters `grepControl` -> TSTextField(label: "…filters.grep") + a11y label
+[x] string — liveLogs.filters.grepHelp          Filters `grepControl` -> TSHelperText("…filters.grepHelp")
+[x] string — liveLogs.filters.grepPlaceholder   Filters `grepControl` -> TSTextField("…filters.grepPlaceholder") prompt
+[x] string — liveLogs.filters.level             Filters `levelControl` -> TSSelect(label: "…filters.level") + a11y label
+[x] string — liveLogs.filters.vehicleId         Filters `vehicleControl` -> TSTextField(label: "…filters.vehicleId") + a11y
+[x] string — liveLogs.filters.vehicleIdPlaceholder Filters `vehicleControl` -> TSTextField("…filters.vehicleIdPlaceholder") prompt
+[x] string — liveLogs.stats.buffered            Controls `statCaption` + LiveLogsPage `bufferedCaption` -> format("…stats.buffered",count)
+[x] string — liveLogs.stats.drops               Controls `dropsCaption` -> format("…stats.drops",drops) when drops>0
+[x] string — liveLogs.stats.received            Controls `statCaption` -> format("…stats.received",totalReceived)
+[x] string — liveLogs.status.connected          Controls `statusBadge` .connected -> TSStatusBadge("…status.connected", .success)
+[x] string — liveLogs.status.connecting         Controls `statusBadge` .connecting + Table `loadingView` TSSpinner("…status.connecting")
+[x] string — liveLogs.status.disconnected       Controls `statusBadge` .disconnected -> TSStatusBadge("…status.disconnected", .neutral)
+[x] string — liveLogs.status.error              Controls `statusBadge` .error -> TSStatusBadge("…status.error", .danger)
+[x] string — liveLogs.status.paused             Controls `statusBadge` .paused -> TSStatusBadge("…status.paused", .warning)
+[x] string — liveLogs.subtitle                  LiveLogsPage `header` -> Text("…subtitle")
+[x] string — liveLogs.table.fields              Table `headerRow` -> headerCell("…table.fields")
+[x] string — liveLogs.table.level               Table `headerRow` -> headerCell("…table.level")
+[x] string — liveLogs.table.message             Table `headerRow` -> headerLabel("…table.message")
+[x] string — liveLogs.table.noLevel             Table `LiveLogsLevelBadge.label` -> Text("…table.noLevel") when level empty
+[x] string — liveLogs.table.time                Table `headerRow` -> headerCell("…table.time")
+[x] string — liveLogs.title                     LiveLogsPage `header` TSPageTitle("…title") + Table panel/empty a11y + route.liveLogs nav title
+PARITY_COVERED=37
+
+All 37 panels/states/strings render from the bound @Observable LiveLogsPageModel (the single
+useLogStream source) and the Localizable.xcstrings catalog; web key names preserved verbatim. The
+one declared live data source implements loading / empty / error / success. ADR-013 freshness is
+honored (TSLiveIndicator in the header + TSLiveStaleDataBanner on a >2-min stale stream). SI units:
+N/A — log lines carry no unit-bearing display fields (the web page renders raw zerolog text). The
+web Download .txt blob is reproduced with the HIG-native .fileExporter; pause/auto-scroll/grep-
+highlight/level+grep server restart/vehicle client-filter all reproduced.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. In-scope gates are all GREEN. The
+                       only RED (full xcodebuild) is a documented PRE-EXISTING out-of-scope sibling
+                       defect, never recoloured; my files carry zero diagnostics in every log.
+ 2 No scope narrowing: all 4 panels, all declared states (empty+success) PLUS loading+error for the
+                       useLogStream source, and all 31 strings implemented; pause/auto-scroll/
+                       download/reconnect/grep-highlight/client-vehicle-filter reproduced.
+ 3 No skip-and-assume: web LiveLogsPage.tsx + useLogStream.ts read end-to-end; the 4 GlassPanels +
+                       ConnectionBadge 5-branch + DataTable 4 columns + filename template reproduced.
+ 4 No stubs as final : no TODO/FIXME/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code.
+ 5 No parity shortcuts: each state renders distinctly; level/grep restart the subscription exactly as
+                       the web hook re-fires on its effect deps; strings = web keys verbatim.
+ 6 No delegation     : implemented here; no sub-agents wrote code.
+ 7 No predecessor bypass: did NOT commit any edit to a sibling surface, project.yml, or other owners'
+                       files. The transient one-line fixes used only to capture the full-build/XCTest
+                       corroboration were REVERTED; git status is clean (only my deliverables).
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — xcodegen(0), swiftlint --strict(0),
+                       placeholder(0), type-check macOS(0/0) + iOS(0/0), harness(34/34) [+ corroborating
+                       macOS app build SUCCEEDED & 20/20 XCTest]. The only RED is the documented
+                       pre-existing out-of-scope sibling, DEFERRED to its owner / the P99 gate.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json;
+                       the output-path mapping is recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+LiveLogs ships natively at apps/apple/Sources/Features/Admin/** as a SwiftUI + @Observable surface,
+adaptive across macOS + iOS (ADR-002/006), bound through the LiveLogsStreamSource seam (ADR-004),
+honoring ADR-013 freshness and ADR-014 i18n. All 37 parity items covered; all in-scope gates green.
+
+EXIT=0
+STATUS=DONE

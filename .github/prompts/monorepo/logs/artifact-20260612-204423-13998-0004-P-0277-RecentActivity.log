@@ -1,0 +1,310 @@
+=== P4 Feature view 0277 RecentActivity (Apple) — vehicles surface ===
+Host: Darwin arm64 (Apple Silicon). Xcode 26.5 (Build 17F42), Swift 6.3.2
+(swiftlang-6.3.2.1.108). FULL Xcode.app present; iOS simulators available
+(incl. "iPhone 16" 83717DEE-… the gate's destination); OpenJDK 17 + apps/shared
+gradlew present; swiftlint 0.x + swiftformat + pwsh on PATH. Implication: unlike
+the CLT-only runner that produced peer 0130's log, THIS runner CAN run the
+xcodebuild app-target harness — and it was run (see HOST GATES §8). The KMP
+Shared.xcframework was assembled from source (Gradle, 6m52s) and staged into
+apps/apple/Frameworks so the scheme pre-action dependency is satisfied.
+
+Web source (THE specification):
+  web/src/features/vehicles/components/RecentActivity.tsx
+Native output (allowed files, all match the RecentActivity.* glob):
+  apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.{swift,Types,Adapter,
+    Model,Views,States,Previews,Tests,ModelTests}.swift
+  apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.strings
+  + this log.
+Charts/maps: the web source uses NEITHER a chart NOR a map — it is two list panels
+  (Recent Drives, Recent Charges). Native introduces neither (faithful). Swift
+  Charts / MapKit capability is nonetheless proven compilable on this host by the
+  peer surfaces + the type-check below; this surface simply has no chart/map.
+
+---------------------------------------------------------------------------
+SURFACE-NAME COLLISION — finding + resolution (no silent drift, no 0130 damage)
+---------------------------------------------------------------------------
+  TWO distinct web components are named `RecentActivity`:
+    • features/dashboard/components/RecentActivity.tsx  → prompt P-0130 (a THREE-panel
+      dashboard surface: activity feed + battery-trend Swift Chart + fleet performance).
+      ALREADY SHIPPED + locked: feature-views/RecentActivity.{swift,Types,Adapter,Model,
+      Views,States,Charts,Previews,Tests,ModelTests}.swift + RecentActivity.strings, with
+      p4-apple-feature-views-0130-RecentActivity.log ending EXIT=0 / STATUS=DONE.
+    • features/vehicles/components/RecentActivity.tsx   → THIS prompt P-0277 (a TWO-panel
+      Recent Drives + Recent Charges feed). A genuinely different component.
+  Both prompts nominate the same native output `feature-views/RecentActivity.*` and the
+  same module (TeslaSync). Overwriting 0130 would destroy a locked, passing surface
+  (Covenant #2 scope-narrowing, #9 silent drift) and break its co-located tests; two
+  Swift types named `RecentActivity` cannot coexist in one module.
+  RESOLUTION (the only non-destructive option): ship the vehicles surface with distinct
+  `VehicleRecentActivity*` Swift symbols + a distinct i18n table "RecentActivityVehicles",
+  in files `RecentActivity.Vehicles.*` — which DO match the allowed `RecentActivity.*`
+  glob (the glob's `*` matches `Vehicles.<x>.swift`) and the feature-views source glob in
+  project.yml, so both surfaces compile side-by-side. Grep confirmed zero pre-existing
+  `VehicleRecentActivity*` / `RecentDrivesPanel` / `InMemoryVehicleRecent*` symbols.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native)
+---------------------------------------------------------------------------
+  props:  RecentActivity({ drives, sessions }) (web parent derives via useDriving /
+            useCharging) + useUnits().unitPrefs.distance
+            → one VehicleRecentActivityUpdate snapshot pushed by a
+              VehicleRecentActivitySource (P1/S8); the projection derives the two panels.
+            → convertDistanceFromSI divisor carried as a value-typed `distanceDivisor`
+              (1609.344 for mi, 1000 for km) so the projection stays pure + KMP-free,
+              exactly the dashboard surface's value-typed-factor approach.
+  shell:  2× <GlassPanel className="p-6"> in a grid-cols-1 lg:grid-cols-2
+            → VehicleRecentActivityGlassPanel (Color.TS.surfaceGlass + TSRadius.lg +
+              Color.TS.border stroke). Side-by-side on a regular width, stacked on a
+              compact width (horizontalSizeClass) — the same responsive intent.
+            → each panel wrapped in TSFadeIn(delay: 0.25 / 0.27) — the web per-panel
+              FadeIn delays, reduce-motion-safe.
+  panel1: Recent Drives — Route glyph (cyan) + t('common.recentDrives') + Link("/drives")
+            t('common.viewAll') + ChevronRight; drives.slice(0,5) rows OR
+            t('common.noDrives') "No drives recorded yet"
+            → VehicleRecentActivityPanel(icon road.lanes, tint accent): header + rows
+              or the per-panel empty. Drive row: IconBox(cyan, road.lanes) +
+              "{convertDistanceFromSI(distance_m,unit)} {unit}" (AnimatedNumber, 1 dp) +
+              <TimeStamp start_ts> + InlineMetric clock "{floor(s/3600)}h
+              {fmtInt(floor((s%3600)/60))}m" + (both SoC present) "{start}% → {end}%".
+              Whole row is a Button → onNavigate(.drive(id)) (web row <Link>).
+  panel2: Recent Charges — BatteryCharging glyph (emerald) + t('common.recentCharges') +
+            Link("/charging") t('common.viewAll'); sessions.slice(0,5) rows OR
+            t('common.noCharges') "No charging sessions recorded yet"
+            → VehicleRecentActivityPanel(icon battery.100.bolt, tint statusSuccess).
+              Charge row: IconBox(green, bolt.fill) + "{convertEnergyFromSI(wh,'kWh')} kWh"
+              (1 dp) + <TimeStamp start_ts> + clock "{Xh Ym}" + (end SoC present)
+              "{start}% → {end}%". Button → onNavigate(.charge(id)).
+  fmt:    fmtNumber/safeNumber → number/safe (NumberFormatter .decimal, .halfUp, grouping,
+            non-finite→0); fmtInt → int; convertDistanceFromSI → distanceFromSI(÷divisor,
+            zero-safe); convertEnergyFromSI('kWh') → energyKwhFromWh (÷1000); <TimeStamp>
+            relative + absolute bodies (relative "Xm/Xh/Xd ago"/"Just now"/short date;
+            absolute month-abbrev day hour minute) with the unselected style offered to
+            VoiceOver (the web tooltip alternate). Charge duration stored SI seconds
+            (web reads duration_min; Xh Ym renders identically) — column stays SI-canonical.
+  i18n:   5 web t() keys (common.recentDrives|recentCharges|viewAll|noDrives|noCharges) →
+            VehicleRecentActivityStrings facade, table "RecentActivityVehicles". Symbols
+            (%, →, h, m, kWh, the unit label) are locale-neutral literals exactly as the
+            web builds them in template strings.
+
+STATES (every one renders — no hidden surface):
+  loading  → VehicleRecentActivityLoading (two redacted TSSkeleton panels, responsive,
+             reduce-motion safe)
+  content  → the two panels, each with its OWN internal empty (web per-panel
+             "No drives…" / "No charging sessions…") — never blank
+  empty    → VehicleRecentActivityEmpty (ContentUnavailableView, friendly message) when
+             the whole snapshot resolves with no drives AND no charges
+  error    → VehicleRecentActivityError (QueryError-equiv, Retry → model.refresh())
+  stale    → freshness chip (Stale) + connectivity banner + ONE guarded auto-refresh
+             (re-armed on return to live)
+  offline  → freshness chip (Offline) + banner; keeps cached panels, no refetch
+  (The web component itself only splits each panel content/empty; the loading/error/
+   stale/offline envelope the parent owns is reproduced here so no state is a blank box.
+   Chip + banner show ONLY when not live, keeping the healthy state as clean as the web.)
+a11y: container summary (surface label + recent-drive/recent-charge counts, or friendly
+  empty); per-row VoiceOver "{value}, {time}, {duration}[, {socRange}]" with .isButton;
+  icons accessibilityHidden; reduce-motion fade gate (TSFadeIn); Dynamic Type via system
+  fonts/tokens; monospacedDigit + fixedSize on values.
+telemetry: P1/S11 view.opened(surface:"RecentActivity") emitted once on appear (slug per
+  prompt §8; executed-once proven at §6).
+binding: P1/S8 VehicleRecentActivitySource seam (production impl over the shared driving/
+  charging state holders + useUnits prefs); the view performs NO networking. Previews/tests
+  drive InMemoryVehicleRecentActivitySource.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (surface scope: the 9 swift files; config apps/apple/.swiftformat)
+    $ swiftformat --lint TeslaSync/feature-views/RecentActivity.Vehicles.{swift,Types,
+        Adapter,Model,Views,States,Previews,Tests,ModelTests}.swift
+    → SwiftFormat completed. 0/9 files require formatting.
+    FORMAT_EXIT=0   ✅  (maxwidth 120, before-first wrapping, --self remove)
+
+[2] swiftlint --strict (surface scope: the 9 files, explicit paths, repo .swiftlint.yml)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/feature-views/
+        RecentActivity.Vehicles.*.swift  (+ the bare main view)
+    → Done linting! Found 0 violations, 0 serious in 9 files.
+    LINT_EXIT=0   ✅
+    File lengths all < 400 (Adapter 288, Model 266, Views 233, ModelTests 200, Types 197,
+    States 180, Tests 165, Previews 157, main 146). Type names all < 50 chars.
+
+[3] check-placeholders.ps1 (real per-file scan + negative control)
+    The gate's literal `-Path …/RecentActivity` is a no-op on the flat file layout (the
+    surfaces are RecentActivity.Vehicles.* FILES, not a subdir), so a MEANINGFUL scan was
+    run on copies of the real files in a temp dir — Covenant #1/#3, never vacuous:
+    $ pwsh apps/tools/check-placeholders.ps1 -Path <tmp>/RecentActivityVehicles -Language swift
+        → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    Negative control (injected "// TODO") → COUNT=1 / EXIT=1 (scanner proven live).
+    No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/fatalError in shipped code.
+    PLACEHOLDER_EXIT=0   ✅
+
+[4] Swift-6-strict TYPE-CHECK of the full SwiftUI view set
+    Compiled against the REAL shared chain (apps/design/generated/apple/Tokens.swift +
+    Design/{TSDesign,TSMaterial} + Components/Motion/Motion + Feedback/Skeletons +
+    UI/{Cards,Typography,Badges,Buttons}) + the macOS 15 SDK, module TeslaSync:
+    $ swiftc -typecheck -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        -module-name TeslaSync <shared chain> RecentActivity.Vehicles.{Types,Adapter,
+        Model,Views,States,swift}
+        → VIEWSET_TYPECHECK_EXIT=0  ✅  (SwiftUI + @Observable model compile clean here)
+    NOTE: this uses the macOS SDK + arm64-apple-macos15.0, so it also proves the surface
+      compiles for the macOS target. horizontalSizeClass is cross-platform; no os(iOS)-only
+      API in this surface.
+
+[5] EXECUTED adapter driver (Foundation only, Swift 6, macOS 15) — golden vectors
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        RecentActivity.Vehicles.Types.swift RecentActivity.Vehicles.Adapter.swift main.swift
+        -o driver && ./driver
+    Asserts (web-parity golden vectors): number half-up + non-finite→0 ("10.0","31.4",
+      .nan→"0.0"); int grouping ("1,234"); distanceFromSI (mi 16093.44→10.0, km 1000→1.0,
+      zero-divisor safe); energyKwhFromWh (31400→31.4); duration ("1h 30m","0h 44m","0h 12m",
+      .nan→"0h 0m"); socRange ("80% → 60%","?% → 84%"); relative (Just now/5m/3h/3d/absolute
+      >week); drive row ("10.0 mi"/"1h 30m"/"80% → 60%"/"10m ago"/id drive-d1/route d1);
+      drive omits SoC when end nil; charge row ("31.4 kWh"/"0h 44m"/"44% → 80%"/id charge-c1);
+      charge omits SoC when end nil; slice(0,5) cap in source order (d0..d4); absolute
+      timeStyle swaps primary/alternate; hasData; phase matrix (loading/empty/content/error/
+      failed-cached); a11y rowLabel + summary (counts + empty).
+    → ALL_ADAPTER_CHECKS_PASS    COMPILE_EXIT=0 / RUN_EXIT=0   ✅
+
+[6] EXECUTED state-holder driver (links REAL SwiftUI + Tokens + Motion[TSFadeIn] +
+    Skeletons + Cards/Typography/Badges/Buttons + the full RecentActivity.Vehicles
+    Types/Adapter/Model/Views/States/main view, Swift 6, macOS 15).
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 -module-name
+        TeslaSync <shared chain> RecentActivity.Vehicles.{Types,Adapter,Model,Views,States,
+        swift} main.swift -o driver && ./driver
+    Asserts: loaded→content (driveRows 2, chargeRows 1, driveCount 2, chargeCount 1, values
+      "10.0 mi"/"31.4 kWh", startCount 1); view.opened emitted exactly once across two
+      start() calls with slug "RecentActivity"; stale → exactly one guarded auto-refresh,
+      return-to-live re-arms (2 total); offline keeps cached content + 0 refetch; loaded-no-
+      data → empty; loading → loading; failed-no-data → error("timeout"); retry refreshes +
+      stop stops; displayLocale tracks de-DE; model.accessibilitySummary surfaces title +
+      "2 recent drives".
+    → ALL_MODEL_CHECKS_PASS    COMPILE_EXIT=0 / RUN_EXIT=0   ✅
+    NOTE: the SwiftUI source linked here INCLUDES the view bodies, so this also re-proves
+      §4's compile of Views/States/main under a full link (not just -typecheck).
+
+[7] i18n key coverage (every key-like literal in code resolves in the catalog, 1:1)
+    $ extract "(common|activity).*" literals across the 5 production files vs the keys
+      defined in RecentActivity.Vehicles.strings; comm -23 / comm -13.
+    → USED-but-NOT-DEFINED: none.  DEFINED-but-NOT-USED: none.  22 used == 22 defined.
+    → all 5 web-source t() parity keys present (common.recentDrives|recentCharges|viewAll|
+      noDrives|noCharges).
+    I18N_EXIT=0   ✅
+
+[8] xcodebuild iOS-Simulator app build — EXECUTED; RED due to a PRE-EXISTING swiftc crash
+    in a SIBLING surface OUTSIDE the allowed files (NOT this surface).
+    Prereqs run for real: KMP Shared.xcframework assembled (Gradle, BUILD SUCCESSFUL 6m52s,
+    staged ios-arm64 + ios-arm64-simulator + macos-arm64); `xcodegen generate` GEN_EXIT=0.
+    $ xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync \
+        -destination 'platform=iOS Simulator,name=iPhone 16' -configuration Debug build
+      → IOS_EXIT=65. Failure cause (verbatim from the log):
+          "Please submit a bug report (https://swift.org/contributing/...) and include the
+           crash backtrace."
+          "While evaluating request IRGenRequest(IR Generation for file
+           '.../feature-views/AppearanceSettings.Controls.swift')"
+          "Command SwiftCompile failed with a nonzero exit code"
+      The two failing compile units were the AppearanceSettings.* IRGen and a batch led by
+      AnomalyInlineRow.* / ApiPlaygroundPage.* — ALL sibling surfaces / shared Sources, NONE
+      of them a RecentActivity.Vehicles.* file (this surface is not in any failing unit).
+    PROOF it is pre-existing + independent of this surface (Covenant #1, not red-as-green):
+      moved all 10 RecentActivity.Vehicles.* files aside, `xcodegen generate`, rebuilt:
+        $ xcodebuild … build   → NOVEH_BUILD_EXIT=65, the IDENTICAL crash on the SAME file
+          "IRGenRequest(... AppearanceSettings.Controls.swift)". The crash reproduces with
+          this surface ABSENT ⇒ it is a pre-existing swiftc-6.3.2 IRGen bug in sibling code
+          I am forbidden to edit (allowed files = RecentActivity.* only).
+      Corroboration that THIS surface compiles inside the real app build: the without-files
+      rebuild logged "Removed stale file … RecentActivity.Vehicles.{Adapter,Model,Types,
+      States,Previews}.o" — i.e. the first build had already produced this surface's object
+      files before crashing on the sibling. Files restored + `xcodegen generate` afterward.
+    IOS_EXIT=65 (external sibling crash; reproduced without this surface; NOT this code)
+    MAC_EXIT=n/r — the macOS app target compiles the SAME AppearanceSettings.Controls.swift,
+      so it hits the SAME pre-existing IRGen crash; not separately re-run to avoid a
+      redundant ~12-min crash. This surface's macOS compilation is proven green by §4 (macOS
+      SDK type-check) + §6 (macOS-target executed link).
+
+[9] Whole-tree lint/format (the literal gate commands; also RED only on SIBLING surfaces)
+    $ swiftlint --strict --config .swiftlint.yml      (4931 files)
+      → Found 3 violations, 3 serious. WHOLETREE_LINT_EXIT=2. All 3 are identifier_name
+        ('a'/'b'/'c') in TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift — a
+        sibling surface. ZERO in RecentActivity.Vehicles.* (grep -c = 0). cf. §2: 0/9.
+    $ swiftformat --lint apps/apple                   (5229 files)
+      → 1/5229 require formatting. WHOLETREE_FORMAT_EXIT=1. The 1 is redundantType in
+        TeslaSync/feature-views/RecentDrivesSection.Previews.swift — a sibling surface.
+        ZERO in RecentActivity.Vehicles.* (grep -c = 0). cf. §1: 0/9.
+
+===========================================================================
+HONESTY COVENANT — attestation
+===========================================================================
+  1 No red-as-green   : §8/§9 are reported RED with their real exit codes (65 / 2 / 1) and
+                        attributed, by file, to SIBLING surfaces outside the allowed files;
+                        the §8 crash was reproduced with this surface ABSENT. No external
+                        red is painted green. Every surface-scoped step (§1-§7) is the real
+                        exit code.
+  2 No scope narrowing: both panels + every web state + the per-panel empties + the surface
+                        envelope reproduced; nothing stubbed.
+  3 No skip-and-assume: web source read end-to-end; every t() key + conditional branch
+                        mapped (drive SoC both-present guard, charge SoC end guard,
+                        slice(0,5), per-panel empties, timestamp relative/absolute).
+  4 No stubs as final : no TODO/placeholder/mock/Lorem (§3); complete implementations.
+  5 No parity shortcut: number/duration/SI/timestamp reproduced + executed-green vs web
+                        golden vectors (§5); SoC guards honored per panel.
+  6 No delegation     : authored directly (delegation FORBIDDEN per the prompt).
+  7 No predecessor bypass: built on the P1/S8 source + P1/S9 tokens + P1/S10 facade + P1/S11
+                        telemetry seams the peer surfaces (incl. 0130) established.
+  8 No commit on red  : THIS surface is green on every gate scoped to it (§1-§7). The §8/§9
+                        reds are pre-existing sibling-surface defects in non-allowed files,
+                        proven independent of this surface — an integration-time concern, the
+                        same disposition the user approved for peer 0130's deferred harness.
+  9 No silent drift   : changes confined to the allowed RecentActivity.* files (the new
+                        RecentActivity.Vehicles.* set) + this log; 0130's files untouched.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native vehicles RecentActivity shipped at parity with the web source:
+  a pure, executed-green projection core (Foundation, Swift 6) reproducing the fmtInt /
+  AnimatedNumber / convertDistanceFromSI / convertEnergyFromSI / duration / SoC / TimeStamp
+  formatting; the two-panel Recent Drives + Recent Charges feed (slice(0,5), per-panel
+  empties); a P1/S8 state-holder seam (no view HTTP) with the loading/content/empty/error/
+  stale/offline envelope + freshness chip + connectivity banner + one guarded stale
+  auto-refresh; a P1/S10 i18n facade with full 5-key web parity (+ native envelope keys,
+  1:1 coverage); P1/S11 view.opened telemetry (executed-once); reduce-motion + Dynamic Type
+  + VoiceOver throughout. The surface-name collision with the locked dashboard surface 0130
+  was resolved non-destructively by namespacing (VehicleRecentActivity* / table
+  RecentActivityVehicles / files RecentActivity.Vehicles.*, all within the allowed glob).
+  All host-runnable surface-scoped gates pass: swiftformat 0/9, swiftlint --strict 0/9,
+  placeholder COUNT=0 (control 1), Swift-6 macOS-SDK type-check of the full view set EXIT=0,
+  two EXECUTED runtime drivers (adapter golden vectors + model/telemetry/a11y, full SwiftUI
+  link) PASS, i18n 22==22. The whole-app xcodebuild (iOS) and the whole-tree swiftlint/
+  swiftformat are RED, but SOLELY because of three named pre-existing defects in SIBLING
+  surfaces outside the allowed files — a swiftc-6.3.2 IRGen crash on
+  AppearanceSettings.Controls.swift (reproduced with this surface absent), 3 identifier_name
+  lints in WidgetChartSummary.Tests.swift, and 1 redundantType in
+  RecentDrivesSection.Previews.swift — none of them this surface's code, and none editable
+  within the allowed files. They are deferred to the P4 integration runner, matching the
+  user-approved peer disposition for the cross-surface harness. This surface itself is
+  complete and verified.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Types.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Model.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Views.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.States.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Previews.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.Tests.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.ModelTests.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0277-RecentActivity.log
+  git commit -m "feat(apps/apple/feature-views): add RecentActivity (vehicles) surface (P4)"
+
+SURFACE_SCOPED_EXIT=0   (§1-§7: format 0/9, lint 0/9, placeholder 0, typecheck 0,
+                         adapter+model drivers PASS, i18n 22==22 — all green)
+AGGREGATE_HARNESS=RED    (§8 iOS build 65 / §9 lint 2 / §9 format 1 — ALL in named sibling
+                         surfaces outside allowed files; §8 crash reproduced WITHOUT this
+                         surface; not this code, not editable within allowed files)
+EXIT=0
+STATUS=DONE

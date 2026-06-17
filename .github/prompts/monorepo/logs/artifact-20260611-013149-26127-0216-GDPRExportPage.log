@@ -1,0 +1,258 @@
+=== P4-APPLE · P7 · page:admin/GDPRExport (SwiftUI / HIG) ===
+started: 2026-06-12T11:49:00-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6 (swiftc bundled); swiftlint 0.63.3 + swiftformat + xcodegen 2.45.4 + pwsh present; OpenJDK 17 (Gradle/KMP)
+web source: web/src/features/admin/pages/GDPRExportPage.tsx   (route /admin/gdpr-exports)
+parity unit: page:admin/GDPRExport  (manifest PARITY_REQUIRED=42 = 8 panels + 3 states + 31 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group. The repo's
+real, compiled canonical admin-page home is `apps/apple/Sources/Features/Admin/**` — where
+the sibling DiskForecast + ApiPlayground P7 admin pages ship, and which `Sources` already
+lists as a project.yml source path (createIntermediateGroups). The page therefore ships at
+`apps/apple/Sources/Features/Admin/**`, the faithful equivalent of the prompt's
+`Features/Admin`. Strings ship in the platform catalog `apps/apple/Localization/
+Localizable.xcstrings` (an allowed file). This is the SAME reconciliation the DiskForecast
+and ApiPlayground logs recorded; it is the only deviation from the literal prompt path.
+
+ROUTE HOSTING (navigation registration — allowed-file scope): the web route is the admin
+sub-path `/admin/gdpr-exports`, which `AppRouteParser` resolves on the FIRST path segment
+(`admin`). The sibling DiskForecast page already squats on the top-level `.admin` route
+(committed at bf76efb7e), so squatting again would clobber it. Instead this page gets a
+dedicated `.gdprExports` AppRoute case (System sidebar group) + a deep-link alias
+`/admin/gdpr-exports -> .gdprExports`, hosted by `GDPRExportRouteRegistration` chained into
+`\.routeHosts` in TeslaSyncApp. RouteTests invariants (unique pathSegment, group resolution,
+alias parse) verified GREEN by an isolated route harness (35/35, below). When a native admin
+sub-router lands, both admin pages become `/admin/*` NavigationDestinations. Recorded per #9.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain, generated .xcodeproj/build/xcframework are git-ignored)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/GDPRExportPage.swift              (254 LOC) SwiftUI view: header(title+subtitle), subsystem-unavailable AlertBanner (above lookup, web order), GlassPanel1 lookup (TSTextField + Look-up TSButton + hint), state router, GlassPanel2 empty state, not-found banner, generic-error panel, skeleton loading layout, GlassPanel8 download (hint+button when complete; wait/expired/failed caption); isCompact adaptive switch
+?? apps/apple/Sources/Features/Admin/GDPRExportPage.Sections.swift     (276 LOC) extension GDPRExportPage: artifactSection, GlassPanel3 statusCard + status chip (STATUS_VARIANT tone, verbatim status token), Format/Size/Storage TSStatCards (adaptive grid), GlassPanel7 detailsPanel (id+SHA mono w/ TSCopyButton, user, created/completed/expires datetime+relative rows), failure banner (verbatim server error under localized title); #if DEBUG previews (Complete/Idle/NotFound/Unavailable/Failed)
+?? apps/apple/Sources/Features/Admin/GDPRExportPageModel.swift         (354 LOC) @MainActor @Observable model: GDPRArtifactStatus (tolerant enum + isPending), GDPRExportArtifact (mirrors web/KMP wire 1:1), GDPRExportDataSource seam + SampleGDPRExportDataSource default + GDPRExportSubsystemUnavailable(503)/GDPRExportNotFound(404), GDPRExportState(idle/loading/notFound/unavailable/error/loaded), idInput+lookupNonce+activeID, lookUp/load/refresh/pollWhilePending (web FAST 10s poll), downloadURL gate (complete-only), makeDefaultBaseURL; GDPRExportFormat (formatBytes/formatDateTime/formatRelative ported from web numberFormat.ts + dateFormat.ts)
+?? apps/apple/Sources/Features/Admin/GDPRExportRouteRegistration.swift (28 LOC) registers .gdprExports -> GDPRExportPage (mirrors DiskForecast/ApiPlayground registration; model built on MainActor + captured)
+?? apps/apple/Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift (249 LOC) XCTest: idle/success/404/503/error states, whitespace trim, nonce bump, refresh reload, downloadURL gating (complete/queued/expired), status fold + pending, formatBytes, dateTime nil/invalid/valid/fractional, relative buckets, sample seed
+ M apps/apple/Sources/App/AppRoute.swift               +.gdprExports case (rawValue/pathSegment "gdpr-exports"/systemImage "person.text.rectangle.fill"/group .system)
+ M apps/apple/Sources/App/AppRouteParser.swift         +alias "/admin/gdpr-exports" -> .gdprExports
+ M apps/apple/Sources/TeslaSyncApp.swift               chains GDPRExportRouteRegistration.registry(base: DiskForecastRouteRegistration.registry(base: ApiPlaygroundRouteRegistration.registry(base: SettingsRouteRegistration.registry(...)))) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings       +31 keys (30 admin.gdprExport.* + route.gdprExports; admin.subsystem.unavailableTitle already present from DiskForecast); JSON validated (8191 total keys); web key names verbatim
+ M apps/parity/apple-ledger.json                        +2 rows (apple-macos, apple-ios) for page:admin/GDPRExport, covered 42/42
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- swiftformat --lint (my 8 files) ---
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 8 files, repo .swiftlint.yml rules) ---
+0 violations.  [split GDPRExportPage into page + .Sections to satisfy file_length(<400)/type_body_length(<250); buttons use action:/label: (no multiple-closures); idPlaceholder key carries `// parity:allow` for the web i18n key name]
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path Sources/Features/Admin -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=1   [one `// parity:allow web i18n key name (input placeholder), not a stub` on the required web key "admin.gdprExport.idPlaceholder" — the sanctioned opt-out for a literal key name, exactly the script's documented false-positive case]
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in shipped code; loading uses TSSkeleton, not .redacted(.placeholder), to keep the dir literal-free]
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "GDPRExport" referenced 30x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- Shared.xcframework (ADR-004) staged via Gradle (build-shared-xcframework.sh, run standalone) ---
+> Task :core:assembleSharedReleaseXCFramework  ;  BUILD SUCCESSFUL in 8m 26s
+"✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64 + Info.plist)
+XCFRAMEWORK_EXIT=0
+
+--- View+model+registration+route ISOLATED type-check against the REAL P2 tokens + P3 components (Swift 6, -strict-concurrency=complete, -DDEBUG so previews compile) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -DDEBUG -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Cards,Typography,Badges,Buttons,Fields,Utility}.swift \
+#   Sources/Components/DataDisplay/Metrics.swift Sources/Components/Feedback/{States,Banners,Skeletons}.swift \
+#   Sources/App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift Sources/Features/Admin/GDPRExport*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact branch + all 5 DEBUG previews]
+# Authoritative proof the API usage is correct on BOTH idioms (ADR-002/006) against the ACTUAL
+# TSGlassPanel/TSStatCard/TSAlertBanner/TSEmptyState/TSErrorDisplay/TSSkeleton/TSTextField/TSCopyButton/
+# TSButton/TSPanelTitle/TSCaption/TSText/TSTone/Color.TS/Font.TS/TSSpacing/TSRadius/AppRouteHostRegistry sources.
+# Caught + fixed one real defect: makeDefaultBaseURL() had to be `public` to be referenced from the
+# public init's default argument (would have failed the full build too).
+
+--- Executed model harness (real GDPRExportPageModel.swift, Swift 6 strict-concurrency, run) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   Sources/Features/Admin/GDPRExportPageModel.swift main.swift -o gdprharness   (SWIFTC_EXIT=0)
+36 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  initial=.idle (+ !hasActiveLookup, !canLookUp, downloadURL=nil); success->.loaded(id) + activeID + download URL
+  "https://example.test/api/v1/admin/gdpr/exports/abc-123/download"; blank/whitespace input stays .idle, "  spaced  "->activeID "spaced";
+  404->.notFound; 503->.unavailable; generic->.error; downloadURL nil when queued + nil when expired; requestLookup bumps nonce;
+  status fold complete/unknown + isPending; formatBytes 0/512/1KB/1.5KB/1MB/1GB + nil->dash; dateTime nil/invalid->dash, valid + fractional != dash;
+  relative just-now/30m/3h/3d + >7d->absolute + nil->dash; sample seed complete + sha256 len 64
+HARNESS_EXIT=0
+
+--- Route-logic harness (my AppRoute + AppRouteParser edits vs the existing RouteTests invariants; Swift 6) ---
+# xcrun swiftc ... Sources/App/{AppRoute,AppRouteParser,RouteHostRegistry}.swift main.swift -o routeharness
+35 assertions, 0 failures -> "ALL ROUTE ASSERTIONS PASSED"
+  unique pathSegments across all 24 routes (RouteTests.testEveryRouteHasUniquePathSegment holds);
+  .gdprExports in allCases + pathSegment "gdpr-exports" + group .system + routes(in:.system) contains it;
+  alias /admin/gdpr-exports->.gdprExports; canonical /charging,/vehicle-systems; alias battery/health->energy, devtools->admin;
+  /nonexistent->nil; every route resolves to its group (testEveryRouteResolvesToItsGroup holds)
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [BLOCKED by ONE PRE-EXISTING, OUT-OF-SCOPE compiler error — see note below; ZERO errors in any of my files; whole-module EmitSwiftModule for TeslaSync-macOS — which type-checks my files — completed before the per-file failure]
+TEST_EXIT=(not reached)  [the macOS test bundle hosts on the app target, blocked by the same out-of-scope error; my test logic is instead proven by the 36/36 model harness + 35/35 route harness above]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to a defect in a sibling
+surface OUTSIDE this artifact's allowed files. `grep -cE ": error:"` over the full build log = 1;
+the single diagnostic is:
+  TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20:
+      error: the compiler is unable to type-check this expression in reasonable time;
+              try breaking up the expression into distinct sub-expressions
+That line is a self-contained `(0..<count).map { index in RecentDriveItem(...) }` builder inside a
+`#if DEBUG` preview; it references RecentDriveItem/Date/Double only — NONE of my types, AppRoute,
+or any symbol I touched. It is a Swift type-inference timeout local to that feature-views preview,
+independent of this artifact's additive changes (new Admin files + one AppRoute case + one alias +
+registry chain + xcstrings keys). RecentDrivesSection is feature-views — another owner's scope, NOT
+in my allowed files (Features/Admin + navigation registration + Localizable.xcstrings + this log),
+so it is forbidden to commit-fix (covenant #6/#7). This is the same class of pre-existing out-of-scope
+breakage the predecessor DiskForecast log documented at the immediately prior commit (it named the
+shared-surfaces `glass(@ViewBuilder _ content:)` escaping-closure bug). Grep of the full build log for
+my files (GDPRExport*, Features/Admin, AppRoute.swift, AppRouteParser, TeslaSyncApp.swift) + "error"/"warning"
+-> ZERO diagnostics. My files' correctness is instead proven by the isolated Swift 6 type-check
+(0/0 on macOS + iOS, with previews) + the executed model harness (36/36) + the route harness (35/35)
+— the same host-harness methodology the peer p4-apple admin logs use when the shared bundle is blocked
+by out-of-scope siblings. No out-of-scope file was edited.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=42
+================================================================================
+[x] panel  — GlassPanel1   GDPRExportPage.swift `lookupPanel(idText:)` -> TSGlassPanel { TSPanelTitle("admin.gdprExport.lookupTitle"); lookupControls (TSTextField + Look-up TSButton); TSCaption("admin.gdprExport.lookupHint") }
+[x] panel  — GlassPanel2   GDPRExportPage.swift `emptyPanel` -> TSGlassPanel { TSEmptyState(title:"admin.gdprExport.emptyTitle", message:"admin.gdprExport.emptyMessage", systemImage:"externaldrive.badge.questionmark") }  (state .idle)
+[x] panel  — GlassPanel3   GDPRExportPage.Sections.swift `statusCard(_:)` -> TSGlassPanel { TSCaption("admin.gdprExport.statusLabel"); statusChip (verbatim status token, STATUS_VARIANT tone) }
+[x] panel  — Format        GDPRExportPage.Sections.swift `statusGrid` -> TSStatCard(title:"admin.gdprExport.formatLabel", value: artifact.format | "—")
+[x] panel  — Size          GDPRExportPage.Sections.swift `statusGrid` -> TSStatCard(title:"admin.gdprExport.bytesLabel", value: GDPRExportFormat.bytes(artifact.bytes))
+[x] panel  — Storage       GDPRExportPage.Sections.swift `statusGrid` -> TSStatCard(title:"admin.gdprExport.storageLabel", value: storageValue(artifact.storage))
+[x] panel  — GlassPanel7   GDPRExportPage.Sections.swift `detailsPanel(_:)` -> TSGlassPanel { TSPanelTitle("admin.gdprExport.metaTitle"); LazyVGrid(idRow/userRow/created/completed/expires/sha256Row) }
+[x] panel  — GlassPanel8   GDPRExportPage.swift `downloadPanel(_:)` -> TSGlassPanel { TSPanelTitle("admin.gdprExport.downloadTitle"); downloadBody (hint + Download TSButton when complete, else status caption) }
+[x] state  — empty         GDPRExportState.idle (web !activeId) -> `emptyPanel` GlassPanel2 TSEmptyState; model.state initial = .idle
+[x] state  — error         GDPRExportState.error -> `errorPanel` TSErrorDisplay(onRetry); .notFound -> `notFoundBanner`; .unavailable -> `subsystemBanner`; artifact.error -> `failureBanner` (errorTitle + verbatim server message)
+[x] state  — success       GDPRExportState.loaded(GDPRExportArtifact) -> `artifactSection` (statusGrid 4 cards + detailsPanel + optional failureBanner + downloadPanel) + auto-poll while queued/running
+[x] string — admin.gdprExport.bytesLabel        Sections.swift `statusGrid` TSStatCard(title:"admin.gdprExport.bytesLabel")
+[x] string — admin.gdprExport.downloadButton    GDPRExportPage.swift `downloadBody` Label("admin.gdprExport.downloadButton", systemImage:"arrow.down.circle.fill")
+[x] string — admin.gdprExport.downloadExpired   GDPRExportPage.swift `downloadUnavailableKey(.expired)`
+[x] string — admin.gdprExport.downloadFailed    GDPRExportPage.swift `downloadUnavailableKey` default (failed / no bundle)
+[x] string — admin.gdprExport.downloadHint      GDPRExportPage.swift `downloadBody` TSText("admin.gdprExport.downloadHint", variant:.small)
+[x] string — admin.gdprExport.downloadTitle     GDPRExportPage.swift `downloadPanel` TSPanelTitle("admin.gdprExport.downloadTitle") + a11y label
+[x] string — admin.gdprExport.downloadWait      GDPRExportPage.swift `downloadUnavailableKey(.queued/.running)`
+[x] string — admin.gdprExport.emptyMessage      GDPRExportPage.swift `emptyPanel` TSEmptyState message
+[x] string — admin.gdprExport.emptyTitle        GDPRExportPage.swift `emptyPanel` TSEmptyState title
+[x] string — admin.gdprExport.errorTitle        Sections.swift `failureBanner` TSAlertBanner title (web artifact.error banner)
+[x] string — admin.gdprExport.formatLabel       Sections.swift `statusGrid` TSStatCard title
+[x] string — admin.gdprExport.idLabel           GDPRExportPage.swift `lookupControls` TSTextField label
+[x] string — admin.gdprExport.idPlaceholder     GDPRExportPage.swift `lookupControls` TSTextField prompt (// parity:allow web i18n key name)
+[x] string — admin.gdprExport.lookupButton      GDPRExportPage.swift `lookupControls` Label("admin.gdprExport.lookupButton", systemImage:"magnifyingglass")
+[x] string — admin.gdprExport.lookupHint        GDPRExportPage.swift `lookupPanel` TSCaption("admin.gdprExport.lookupHint")
+[x] string — admin.gdprExport.lookupTitle       GDPRExportPage.swift `lookupPanel` TSPanelTitle + a11y label
+[x] string — admin.gdprExport.metaCompleted     Sections.swift `detailsPanel` timestampRow("admin.gdprExport.metaCompleted", iso: completedAt)
+[x] string — admin.gdprExport.metaCreated       Sections.swift `detailsPanel` timestampRow("admin.gdprExport.metaCreated", iso: createdAt)
+[x] string — admin.gdprExport.metaExpires       Sections.swift `detailsPanel` timestampRow("admin.gdprExport.metaExpires", iso: expiresAt)
+[x] string — admin.gdprExport.metaId            Sections.swift `detailsPanel` idRow -> metaRow("admin.gdprExport.metaId") + TSCopyButton
+[x] string — admin.gdprExport.metaSha256        Sections.swift `detailsPanel` sha256Row -> metaRow("admin.gdprExport.metaSha256") + TSCopyButton
+[x] string — admin.gdprExport.metaTitle         Sections.swift `detailsPanel` TSPanelTitle("admin.gdprExport.metaTitle") + a11y label
+[x] string — admin.gdprExport.metaUser          Sections.swift `detailsPanel` metaRow("admin.gdprExport.metaUser") (rendered when userID present)
+[x] string — admin.gdprExport.notConfigured     GDPRExportPage.swift `subsystemBanner` TSAlertBanner message
+[x] string — admin.gdprExport.notFoundMessage   GDPRExportPage.swift `notFoundBanner` TSAlertBanner message
+[x] string — admin.gdprExport.notFoundTitle     GDPRExportPage.swift `notFoundBanner` TSAlertBanner title
+[x] string — admin.gdprExport.pageTitle         GDPRExportPage.swift `header` TSPageTitle("admin.gdprExport.pageTitle") + loadingArtifact a11y label
+[x] string — admin.gdprExport.statusLabel       Sections.swift `statusCard` TSCaption + statusChip a11y label
+[x] string — admin.gdprExport.storageLabel      Sections.swift `statusGrid` TSStatCard title
+[x] string — admin.gdprExport.subtitle          GDPRExportPage.swift `header` Text("admin.gdprExport.subtitle")
+[x] string — admin.subsystem.unavailableTitle   GDPRExportPage.swift `subsystemBanner` TSAlertBanner title (shared key, already in catalog)
+PARITY_COVERED=42
+
+All 42 panels/states/strings render from the bound @Observable GDPRExportPageModel and the
+Localizable.xcstrings catalog; web key names preserved verbatim (30 new admin.gdprExport.* keys +
+the shared admin.subsystem.unavailableTitle + route.gdprExports for the nav entry). The value types
+(GDPRExportArtifact / GDPRArtifactStatus) mirror the web GDPRExportArtifact / KMP OperatorConfidence
+shape field-for-field, so the production `OperatorConfidenceStore.gdprExport(id:)` binding drops into
+the `GDPRExportDataSource` seam (ADR-004 — no networking in the view), the same seam pattern the sibling
+DiskForecast page uses. The raw `status` token + server `error` message render verbatim (web shows them
+verbatim — they are data, not i18n strings). SI converters: N/A — byte counts + timestamps are
+unit-agnostic admin control-plane values, formatted at the display boundary by GDPRExportFormat
+(formatBytes/formatDateTime/formatRelative ported from web numberFormat.ts + dateFormat.ts). Live-SSE
+staleness (ADR-013): N/A — GDPR export is a pull/poll report (web refetchInterval 10s while queued/running,
+reproduced by `pollWhilePending()`), not an SSE live stream.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65) is
+                       ONE pre-existing OUT-OF-SCOPE compiler timeout in feature-views/RecentDrivesSection.Previews.swift,
+                       labelled as such, never recoloured. In-scope gates are all GREEN.
+ 2 No scope narrowing: all 8 panels, all 3 declared data states (+ the web 404 not-found, 503 subsystem-unavailable,
+                       and artifact-failed variants), adaptive macOS/iPad/iPhone layouts, polling, copy buttons, and the
+                       download affordance are implemented and verified.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title/subtitle/loading/error + subsystemMissing
+                       banner + lookup panel + empty state + notFound banner + the 4 stat cards + the artifact-details
+                       dl (id/user/created/completed/expires/sha256 + copy) + the export-failed banner + the download
+                       panel (complete/queued/expired/failed copy) were all reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0; the single ALLOWED opt-out is the
+                       required web i18n key name "idPlaceholder"); complete code, loading uses real TSSkeleton shimmer.
+ 5 No parity shortcuts: 6 states render distinctly; download gated on status==complete (web downloadUrl guard);
+                       wait/expired/failed download copy branched on status; status tone map = web STATUS_VARIANT;
+                       strings = web keys verbatim; dates/bytes ported + unit-tested.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface (RecentDrivesSection / DiskForecast / ApiPlayground), the
+                       generated git-ignored TeslaSync.xcodeproj, or other owners' files. Only navigation-registration
+                       files (AppRoute/AppRouteParser/TeslaSyncApp) + the shared string catalog were touched, all in scope.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/8), swiftlint --strict(0), placeholder(0),
+                       isolated type-check macOS(0/0)+iOS(0/0) with previews, model harness(36/36), route harness(35/35),
+                       xcframework staged, xcodegen(0). The only RED is the pre-existing OUT-OF-SCOPE feature-views
+                       preview timeout, DEFERRED to its owner / the P99 integration gate.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + dedicated-.gdprExports-route reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI GDPRExportPage shipped at parity with the web source: a pure
+@Observable state holder (ADR-004 — no networking in the view) exposing idle/loading/notFound/
+unavailable/error/loaded over an injectable GDPRExportDataSource seam whose value types mirror the web
+GDPRExportArtifact 1:1 (production binds OperatorConfidenceStore.gdprExport(id:) through the seam). The
+page reproduces the web chrome (title/subtitle), the 503 subsystem-unavailable AlertBanner, the
+artifact-id lookup panel (text field + Look-up button + hint, Enter-to-submit), the pre-lookup empty
+state, the 404 not-found banner, the four artifact stat cards (Status GlassPanel + Format / Size / Storage,
+adaptive grid), the artifact-details panel (id + SHA-256 mono with copy buttons, user, and created/
+completed/expires absolute+relative timestamps), the export-failed banner, and the download panel (hint +
+Download button when complete, status-specific caption otherwise), using the P2 tokens + P3 shared
+components (no hand-rolled glass). The web's 10s queued/running poll is reproduced by pollWhilePending().
+Every visible string resolves from Localizable.xcstrings with the web key names (31 keys added); display
+formatting (formatBytes/formatDateTime/formatRelative) is ported and unit-tested. Verified on BOTH idioms
+by isolated Swift 6 strict-concurrency type-checks (0/0, previews included), an executed model harness
+(36/36), and a route-logic harness (35/35). The full xcodebuild scheme is RED ONLY due to one pre-existing,
+out-of-scope feature-views preview type-inference timeout (forbidden to commit-fix), with ZERO diagnostics
+in any of my files and a clean whole-module type-check.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/GDPRExportPage.swift \
+          apps/apple/Sources/Features/Admin/GDPRExportPage.Sections.swift \
+          apps/apple/Sources/Features/Admin/GDPRExportPageModel.swift \
+          apps/apple/Sources/Features/Admin/GDPRExportRouteRegistration.swift \
+          apps/apple/Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-GDPRExportPage.log
+  git commit -m "feat(apps/apple): GDPRExportPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

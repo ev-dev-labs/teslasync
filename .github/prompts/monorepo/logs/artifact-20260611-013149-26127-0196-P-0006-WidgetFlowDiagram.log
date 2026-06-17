@@ -1,0 +1,172 @@
+=== P4 Widget primitive 0006 WidgetFlowDiagram (Apple) ===
+Date: 2026-06-12  Host: Darwin (Apple Silicon)
+Toolchain: Xcode 26.5 (17F42) · Apple Swift 6.3.2 · swiftlint + swiftformat (homebrew) · xcodegen · pwsh
+Surface: apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.*
+Web spec: web/src/features/dashboard/widgets/shared/WidgetFlowDiagram.tsx
+
+------------------------------------------------------------------------------------------------
+SUMMARY (honest accounting — see detail below)
+------------------------------------------------------------------------------------------------
+  surface compile + tests (isolated, Swift 6 mode, real deps) ... PASS  (42 tests, 0 failures)
+  swiftlint --strict (whole apps/apple, 4814 files) ............ PASS  (0 violations, 0 serious)
+  swiftformat --lint . (whole apps/apple, 5112 files) .......... PASS  (0 require formatting)
+  check-placeholders.ps1 -Path .../WidgetFlowDiagram ........... PASS  (PLACEHOLDER_COUNT=0)
+  xcodebuild iOS  -scheme TeslaSync   build (whole app) ........ BLOCKED (pre-existing sibling compile errors)
+  xcodebuild mac  -scheme TeslaSync-macOS build (whole app) .... BLOCKED (code-signing: no dev certificate)
+
+VERDICT: The WidgetFlowDiagram surface is COMPLETE and INDEPENDENTLY VERIFIED (compiles under the app's
+Swift 6 language mode + complete concurrency, all 42 surface tests pass, full-tree lint/format/placeholder
+clean). The repo-wide `xcodebuild build test` cannot reach EXIT=0 because of TWO blockers that are
+PRE-EXISTING / ENVIRONMENTAL and OUTSIDE this prompt's allowed files (`WidgetFlowDiagram.*` + this log):
+  (1) iOS: sibling surfaces fail to compile under this toolchain (not touched by this surface).
+  (2) macOS: the app + widget targets require a development signing certificate that is absent here
+      (project.yml DEVELOPMENT_TEAM=""), failing before compilation.
+Per the Honesty Covenant this is reported as STATUS=BLOCKED (not red-as-green), with full evidence.
+
+------------------------------------------------------------------------------------------------
+[1] FILES DELIVERED (git status — only this surface was added; nothing else modified)
+------------------------------------------------------------------------------------------------
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Adapter.swift
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Projector.swift
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Model.swift
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.swift
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Views.swift
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Previews.swift
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.strings
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.Tests.swift
+?? apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.AdapterTests.swift
+(git diff --stat against tracked files: EMPTY — no sibling file modified in the committed deliverable.)
+
+------------------------------------------------------------------------------------------------
+[2] SURFACE COMPILE + TESTS — isolated harness (the authoritative proof for this surface)
+------------------------------------------------------------------------------------------------
+Why isolated: the whole-app build is blocked by unrelated pre-existing errors (section [5]); the Swift
+module is monolithic so those errors block any in-app compile. To verify THIS surface honestly, its real
+dependency closure was compiled with the SAME compiler + language mode the app uses:
+  - sources: WidgetFlowDiagram.{Adapter,Projector,Model,swift,Views} (the shipped surface, minus the
+    DEBUG-only Previews) + its only real deps: the AnimatedNumber shared surface (P4/0075) and the
+    generated design Tokens.swift (P1/S9). AnimatedNumber's external refs are exactly Color.TS / Font.TS.
+  - tests: WidgetFlowDiagram.Tests.swift + WidgetFlowDiagram.AdapterTests.swift (verbatim, @testable).
+  - Package.swift: swift-tools-version 6.0, platforms macOS 15, .swiftLanguageMode(.v6) on both targets
+    (== the app target's SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY complete).
+
+$ swift test     # /tmp/FlowVerify, Apple Swift 6.3.2
+Test Suite 'WidgetFlowDiagramAdapterTests' passed
+Test Suite 'WidgetFlowDiagramStrokeTests' passed            (6 tests)
+Test Suite 'WidgetFlowDiagramToneTests' passed              (2 tests)
+Test Suite 'WidgetFlowDiagramCompactTests' passed           (4 tests)
+Test Suite 'WidgetFlowDiagramLabelTests' passed             (3 tests)
+Test Suite 'WidgetFlowDiagramSegmentTests' passed           (5 tests)
+Test Suite 'WidgetFlowDiagramResolveTests' passed           (3 tests)
+Test Suite 'WidgetFlowDiagramValueTypeTests' passed         (3 tests)
+Test Suite 'WidgetFlowDiagramModelTests' passed             (7 tests)
+Test Suite 'WidgetFlowDiagramViewTests' passed              (3 tests)
+Test Suite 'WidgetFlowDiagramStringsTests' passed           (4 tests)
+Test Suite 'All tests' passed at 2026-06-12 09:17:38.336.
+	 Executed 42 tests, with 0 failures (0 unexpected) in 0.010 (0.018) seconds
+SWIFT_TEST_EXIT=0
+
+Coverage: adapter geometry (coords map, radius, strokeForValue, maxArrowValue, value-sign tone + override,
+compact top-3 arrow slice, 3-letter label slice, inward label placement, radius-offset segment geometry,
+zero-distance fallback, missing-endpoint skip, duplicate-id last-wins, font sizes, resolve empty/populated,
+value-type equality) + model (once-only view.opened telemetry, idempotent start/stop, props update
+re-derivation, resolved empty copy override-vs-default, VoiceOver summary) + views (public surface + every
+subview compose in populated / compact / single / missing-endpoint / empty branches; injected-model seam) +
+strings facade (empty copy, "Energy flow diagram" a11y label, node reading, summary join).
+
+------------------------------------------------------------------------------------------------
+[3] swiftlint --strict    (gate step 3 — whole apps/apple)
+------------------------------------------------------------------------------------------------
+$ cd apps/apple && swiftlint --strict
+Done linting! Found 0 violations, 0 serious in 4814 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[4] swiftformat --lint .  (gate step 4 — whole apps/apple)
+------------------------------------------------------------------------------------------------
+$ cd apps/apple && swiftformat --lint .
+(lint mode - no files will be changed.)
+SwiftFormat completed in 80.18s.
+0/5112 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[4b] check-placeholders.ps1  (gate step 5 — surface scope)
+------------------------------------------------------------------------------------------------
+$ pwsh -c "& ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram"
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+(No TODO / FIXME / stub / mock / placeholder / Lorem in shipped code.)
+
+------------------------------------------------------------------------------------------------
+[5] xcodebuild iOS — BLOCKED by PRE-EXISTING sibling compile errors (NOT this surface)
+------------------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+... the TeslaSync app module emits successfully ("Emitting module for TeslaSync") — i.e. all declarations,
+    including this surface's public API, type-check — then individual sibling function bodies fail:
+
+  TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure
+      captures non-escaping parameter 'content'
+  (identical pattern in 3 more pre-existing sibling surfaces:
+      AISignalExplorerNlFilter.swift, AISuggestNewGeofences.swift, AIAutoNameUnnamedLocations.swift —
+      a `func glass(@ViewBuilder _ content: () -> some View)` missing `@escaping`.)
+
+  After those 4 were temporarily patched LOCALLY to confirm they were the only blocker, the next
+  pre-existing sibling error surfaced (different surface, different error class):
+  TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to
+      type-check this expression in reasonable time; try breaking up the expression into distinct
+      sub-expressions
+IOS_EXIT=65
+
+Evidence these are NOT caused by this surface:
+  - `git status --porcelain` shows ONLY the 9 new WidgetFlowDiagram.* files added (section [1]); the
+    failing files are tracked and were never modified by this surface.
+  - The errors are self-contained Swift body errors (a missing `@escaping`; a type-inference timeout) in
+    files this surface neither imports nor references. Adding unrelated leaf files cannot cause them.
+  - The 4 temporary `@escaping` patches used only to prove the blast radius were REVERTED
+    (`git checkout --`); the committed deliverable modifies no sibling file (git diff --stat: empty).
+  - This surface's own declarations type-checked (module emitted) and its bodies + tests compile and pass
+    in isolation under the identical compiler/language mode (section [2]).
+  - Fixing the sibling surfaces is outside this prompt's allowed files (WidgetFlowDiagram.* + this log) and
+    is owned by their own prompts.
+
+------------------------------------------------------------------------------------------------
+[6] xcodebuild macOS — BLOCKED by code-signing (environment), before compilation
+------------------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+      development certificate. Enable development signing in the Signing & Capabilities editor.
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development
+      certificate. ...
+MAC_EXIT=65
+Cause: project.yml sets DEVELOPMENT_TEAM="" and the macOS app/widget carry entitlements; no signing
+identity is provisioned on this host, so the build fails during build-description (before any Swift
+compile). This is an environment/provisioning gap, independent of this surface. The surface's macOS
+compile is nonetheless proven by the isolated harness in section [2], which targets macOS 15 and links no
+signed bundle.
+
+------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------
+[x] Surface renders all web states reproduced: empty (EmptyState peer) + populated; within populated the
+    compact (top-3 arrows / 3-letter labels / radius 10), per-arrow tone (positive/negative/neutral +
+    override), active (marching dash) vs idle (solid), optional node icon, node-label placement, and the
+    missing-endpoint skip. (No loading/error/stale/offline branch — the web source is a PURE presentational
+    primitive with no fetch; inventing those would be drift. Same disposition as siblings 0003 / 0075.)
+[x] Hooks bind via the shared P1/S8 state-holder (WidgetFlowDiagramModel); no direct HTTP from the view.
+[x] Every i18n key resolves through the P1/S10 facade (WidgetFlowDiagramStrings); no English literals in
+    code. Catalog: WidgetFlowDiagram.strings (empty msg, "Energy flow diagram" a11y label, node reading,
+    list separator). The web source's only own copy (emptyMessage default + svg aria-label) is ported.
+[x] Accessibility: the diagram is a single image (web role="img") labelled "Energy flow diagram" with a
+    per-node VoiceOver value summary; Reduce Motion stills the marching dash + count-up; Dynamic Type via
+    token fonts. (There are no interactive elements in the source — nothing tappable to label.)
+[x] Tests: adapter unit tests + per-state view-composition tests + a11y/strings label tests (42 total, all
+    passing — section [2]).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (section [4b]).
+[ ] EXIT=0 via the literal whole-app `xcodebuild build test`: NOT achievable here — blocked by the two
+    pre-existing/environmental issues above, both outside the allowed files. Surface itself fully verified.
+
+EXIT=65
+STATUS=BLOCKED

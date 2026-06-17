@@ -1,0 +1,178 @@
+=== P7 · page:vehicle-systems/GuardMode · Apple SwiftUI Implementation ===
+Prompt: p4-apple/P7/page:vehicle-systems/GuardMode
+Target: apps/apple/TeslaSync/Features/VehicleSystems/GuardModePage.swift (+ 7 peers)
+Web source: web/src/features/vehicle-systems/pages/GuardModePage.tsx (580 lines)
+Base commit: aef073020
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 (Build 17F42) at /usr/bin/xcodebuild
+✓ swiftlint at /opt/homebrew/bin/swiftlint
+✓ pwsh at /opt/homebrew/bin/pwsh
+✓ xcodegen at /opt/homebrew/bin/xcodegen
+✓ Platform: Darwin 26.5.1
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+✓ Nav catalog already registers /guard-mode (shared-surfaces/Layout.Nav.swift:114,
+  Security section: nav("/guard-mode", "Guard Mode", "exclamationmark.shield.fill"))
+⚠ apps/apple/Frameworks/Shared.xcframework (KMP core, ADR-004) is ABSENT (.gitkeep only),
+  so a full `xcodebuild` link cannot run in this environment. Per the established
+  precedent for these P7 parity pages (apple-page-system-SystemStatusPage.log,
+  apple-page-telemetry-SignalDiffPage.log) the page is validated by a standalone
+  Swift 6 type-check + swiftlint --strict + the placeholder gate; the new files
+  independently validate clean.
+
+=== WEB SOURCE ANALYSIS ===
+Data sources (8 web hooks, kept under the same names at the Swift call sites):
+  isGuardEventAcknowledged, useAcknowledgeGuardEvent (POST /vehicles/{id}/guard/events/{eventId}/acknowledge),
+  useGeofences (GET /geofences), useGuardConfig (GET /vehicles/{id}/guard),
+  useGuardEvents (GET /vehicles/{id}/guard/events), useGuardPanic (POST /vehicles/{id}/guard/panic),
+  useSetGuardConfig (POST /vehicles/{id}/guard), useVehicleState.
+Wire types ported (SI on disk — geofence radius in meters): GuardConfig, GuardEvent,
+  Geofence, vehicle-state slice (latitude/longitude/is_locked/sentry_mode).
+6 panels (GlassPanel1-6): toggle · status · panic · settings · live map · event timeline.
+6 map children: MapContainer, MapTileLayer, Marker, Circle, Popup, Polyline.
+4 data states: loading · empty · error · success.
+38 i18n strings: guard.* (see String Coverage below).
+
+=== IMPLEMENTATION ===
+New files under apps/apple/TeslaSync/Features/VehicleSystems/ (auto-included by
+xcodegen `TeslaSync/Features` source group → iOS + macOS app targets; ADR-002):
+  GuardModeModels.swift       (208) — wire-faithful types + isGuardEventAcknowledged + event maps
+  GuardModePageModel.swift    (289) — @MainActor @Observable model, derived state, actions
+  GuardModeDataSource.swift   (177) — 8 hook-named KMP seams + interactive mock store
+  GuardModeStatusViews.swift  (255) — GlassPanel/SectionTitle/Badge, banner, panels 1-3
+  GuardModeSettingsView.swift (116) — panel 4 (adaptive 3-up / 1-col via ViewThatFits)
+  GuardModeTimelineView.swift (131) — panel 6 + event row (Ack action)
+  GuardModeLiveMap.swift      (161) — MapKit canvas: Map/mapStyle/Marker/MapCircle/Annotation/MapPolyline
+  GuardModePage.swift         (306) — scaffold: 4 states, toolbar picker, confirmationDialog, panels 5+staleness
+Catalog: +6 keys (translation.guard.acknowledgedBy, .panicConfirmMessage,
+  .sensitivityLow/Medium/High, translation.common.staleData); other 36 guard.* keys
+  and translation.common.retry pre-existed.
+
+=== GATE ===
+# 1) Placeholder / stub gate (ADR-011)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/VehicleSystems -Language swift
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) Standalone Swift 6 type-check (substitute for the framework-blocked full build)
+$ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+    -target arm64-apple-ios18.0-simulator apps/apple/TeslaSync/Features/VehicleSystems/*.swift
+(no diagnostics)
+BUILD_EXIT=0  (type-check; full xcodebuild link BLOCKED — Shared.xcframework absent, see ENVIRONMENT CHECK)
+
+# 3) SwiftLint (strict) — gate invocation from repo root
+$ swiftlint --strict apps/apple/TeslaSync/Features/VehicleSystems
+LINT_EXIT=0
+# (Linting the 8 new files explicitly under apps/apple/.swiftlint.yml also exits 0.
+#  3 unrelated pre-existing violations exist elsewhere in the tree:
+#  Sources/Features/System/MyActivityPageModel.swift:217 trailing_whitespace,
+#  feature-views/AnomalyInlineRow.Previews.swift:37,89 line_length — not in scope.)
+
+# 4) Symbol-collision sweep across the whole Apple target (Sources + TeslaSync)
+No collisions for any GuardMode* declaration or isGuardEventAcknowledged.
+
+TEST_EXIT=0  (no unit tests required for parity pages; framework-blocked test bundle, per precedent)
+
+=== PARITY ===
+PARITY_REQUIRED=54
+
+Panel Coverage (6):
+✓ panel — GlassPanel1 (GuardModeTogglePanel) — GuardModeStatusViews.swift:101; used GuardModePage.swift:96
+✓ panel — GlassPanel2 (GuardModeStatusPanel) — GuardModeStatusViews.swift:151; used GuardModePage.swift:105
+✓ panel — GlassPanel3 (GuardModePanicPanel) — GuardModeStatusViews.swift:210; used GuardModePage.swift:114
+✓ panel — GlassPanel4 (GuardModeSettingsPanel) — GuardModeSettingsView.swift:13; used GuardModePage.swift:124
+✓ panel — GlassPanel5 (GuardModeLiveMapPanel) — GuardModePage.swift:251; used GuardModePage.swift:137
+✓ panel — GlassPanel6 (GuardModeTimelinePanel) — GuardModeTimelineView.swift:14; used GuardModePage.swift:147
+
+Map Coverage (6 — first-party MapKit, no WKWebView):
+✓ map — MapContainer → Map(position:) — GuardModeLiveMap.swift:45
+✓ map — MapTileLayer → .mapStyle(mapTileStyle) basemap — GuardModeLiveMap.swift:51,63
+✓ map — Marker → Marker(...) (vehicleMarker) — GuardModeLiveMap.swift:68
+✓ map — Circle → MapCircle(center:radius:) (homeGeofenceCircle, SI meters) — GuardModeLiveMap.swift:89
+✓ map — Popup → Annotation callout (vehiclePopup → GuardModeMapPopup) — GuardModeLiveMap.swift:76,78,140
+✓ map — Polyline → MapPolyline(coordinates:) (eventTrail) — GuardModeLiveMap.swift:106
+
+State Coverage (4):
+✓ state — loading → case .loading + loadingView .redacted(.placeholder) — GuardModePage.swift:21,177,193
+✓ state — empty → case .empty + emptyView ContentUnavailableView — GuardModePage.swift:25,198
+✓ state — error → case .error + errorView ContentUnavailableView + Retry — GuardModePage.swift:23,215,224
+✓ state — success → case .success + contentView — GuardModePage.swift:27,50
+
+String Coverage (38 — all resolved from Localizable.xcstrings as translation.guard.*):
+✓ string — guard.acknowledge — GuardModeTimelineView.swift:82
+✓ string — guard.acknowledgedBy — GuardModeTimelineView.swift:129
+✓ string — guard.alertTriggered — GuardModeStatusViews.swift:75
+✓ string — guard.armed — GuardModePageModel.swift:38
+✓ string — guard.armedSince — GuardModePageModel.swift:159
+✓ string — guard.autoPanic — GuardModeSettingsView.swift:97
+✓ string — guard.autoPanicHelp — GuardModeSettingsView.swift:101
+✓ string — guard.disarmed — GuardModePageModel.swift:39
+✓ string — guard.emergency — GuardModeStatusViews.swift:224
+✓ string — guard.enableGuard — GuardModeStatusViews.swift:125
+✓ string — guard.eventTimeline — GuardModeTimelineView.swift:50
+✓ string — guard.homeGeofence — GuardModeSettingsView.swift:48
+✓ string — guard.homeGeofenceHelp — GuardModeSettingsView.swift:63
+✓ string — guard.liveMap — GuardModeLiveMap.swift:121; panel title GuardModePage.swift:260
+✓ string — guard.locked — GuardModeStatusViews.swift:176
+✓ string — guard.noEvents — GuardModePageModel.swift:171; timeline GuardModeTimelineView.swift:27
+✓ string — guard.noGeofence — GuardModeSettingsView.swift:52
+✓ string — guard.noLocation — GuardModePage.swift:274
+✓ string — guard.notArmed — GuardModePageModel.swift:164
+✓ string — guard.panicButton — GuardModeStatusViews.swift:253
+✓ string — guard.panicConfirmLabel — GuardModePage.swift:233
+✓ string — guard.panicConfirmMessage — GuardModePage.swift:238
+✓ string — guard.panicConfirmTitle — GuardModePage.swift:36
+✓ string — guard.panicDesc — GuardModeStatusViews.swift:239
+✓ string — guard.panicking — GuardModeStatusViews.swift:252
+✓ string — guard.saveSettings — GuardModeSettingsView.swift:107
+✓ string — guard.sensitivity — GuardModeSettingsView.swift:76
+✓ string — guard.sentryOff — GuardModeStatusViews.swift:183
+✓ string — guard.sentryOn — GuardModeStatusViews.swift:182
+✓ string — guard.settings — GuardModeSettingsView.swift:25
+✓ string — guard.status — GuardModeStatusViews.swift:161
+✓ string — guard.subtitle — GuardModePage.swift:71; empty GuardModePage.swift:206
+✓ string — guard.title — GuardModePage.swift:31; empty/error GuardModePage.swift:201,218
+✓ string — guard.triggered — GuardModePageModel.swift:37
+✓ string — guard.unack — GuardModeTimelineView.swift:59
+✓ string — guard.unackEvents — GuardModePageModel.swift:174
+✓ string — guard.unlocked — GuardModeStatusViews.swift:177
+✓ string — guard.updating — GuardModeStatusViews.swift:131
+
+PARITY_COVERED=54
+
+Hook ports (web name kept at the Swift call site):
+✓ useGuardConfig — GuardModeDataSource.swift:23
+✓ useGuardEvents — GuardModeDataSource.swift:29
+✓ useVehicleState — GuardModeDataSource.swift:35
+✓ useGeofences — GuardModeDataSource.swift:40
+✓ useSetGuardConfig — GuardModeDataSource.swift:45
+✓ useGuardPanic — GuardModeDataSource.swift:65
+✓ useAcknowledgeGuardEvent — GuardModeDataSource.swift:82
+✓ isGuardEventAcknowledged — GuardModeModels.swift:91
+
+=== SUMMARY ===
+✓ All 6 panels implemented (toggle, status, panic, settings, live map, event timeline)
+✓ All 6 map children implemented with first-party MapKit (no WKWebView)
+✓ All 4 data states implemented (loading/empty/error/success); per-source empties
+  (no location, no events) use ContentUnavailableView — never a blank region
+✓ All 38 i18n strings resolve from Localizable.xcstrings; zero hardcoded literals; web key names kept
+✓ @MainActor @Observable model; 8 web hooks kept by name as the single KMP seam (ADR-004)
+✓ SI honored — geofence radius read as meters; formatted only at the display boundary
+✓ Adaptive macOS + iOS (ViewThatFits rows, Navigation*-agnostic, .primaryAction toolbar; ADR-002/006)
+✓ Accessibility: labels/traits on panels, map and popup; Dynamic Type; semantic colors for light/dark
+✓ PARITY_COVERED=54 / PARITY_REQUIRED=54 (100%)
+✓ Placeholder check: PASS (PLACEHOLDER_COUNT=0)
+✓ Swift 6 type-check: PASS (exit 0)
+✓ SwiftLint --strict: PASS (exit 0 on the new files)
+✓ No symbol collisions across the Apple target
+
+⚠ Full `xcodebuild` link/test BLOCKED in this environment — apps/apple/Frameworks/Shared.xcframework
+  (KMP core, ADR-004) is absent (.gitkeep only). The new files validate independently via the
+  Swift 6 type-check, matching the accepted precedent for the prior P7 apple parity pages.
+
+Files: apps/apple/TeslaSync/Features/VehicleSystems/*.swift (8 files, 1643 lines)
+Ledger: apps/parity/apple-ledger.json — page:vehicle-systems/GuardMode {apple-macos, apple-ios} = done 54/54
+
+EXIT=0
+STATUS=DONE

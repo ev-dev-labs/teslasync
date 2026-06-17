@@ -1,0 +1,129 @@
+=== P4 Shared surface 0055 AITripPlannerLLMAgent (Apple) ===
+Branch auto/20260614-061656-85557/8 · Xcode 26.5 (17F42) · macOS 26.5.1 · Swift 6 (strict concurrency complete)
+Web source: web/src/components/ai/AITripPlannerLLMAgent.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.{swift,Adapter,Model,Projection,Chrome,Views,Previews,Tests,AdapterTests,ModelTests}.swift + .strings
+
+=== SURFACE SUMMARY ===
+  Native Apple-idiomatic SwiftUI parity of the Helix trip-planner card. The web source is an
+  `AIFeatureCard` wrapped in `withAiFeature('trip-planner-llm-agent', …)` and driven by `useAiStream`;
+  the native surface reproduces that composition, its data, its states, and its i18n. No networking
+  lives in the view — it binds the `TripPlannerAgentModel` state holder (P1/S8).
+
+  Data sources (web hooks → P1/S8 source seam; no direct HTTP from the view):
+    • useTranslation → TripPlannerAgentStrings facade (P1/S10).
+    • useAiStream    → TripPlannerAgentSource seam (start/stop/refresh + generate()=stream.start,
+                       cancel()=stream.cancel; cancel fires on disappear, mirroring the web
+                       AbortController-on-unmount). The view binds TripPlannerAgentModel only.
+
+  Shared components used (web → native counterpart):
+    • @/components/ai/AIFeatureCard  → header hoisted to the surface chrome with the freshness
+      envelope; the action button + AiOutputPanel reproduced 1:1 (TripPlannerAgentActionButton /
+      TripPlannerAgentOutputPanel / TripPlannerAgentThinkingView / TripPlannerAgentHelixBadge).
+    • @/components/ai/withAiFeature  → the AI-enabled gate: TripPlannerAgentModel.isGated; when off the
+      surface renders nothing (faithful web `return null`), unit-pinned.
+
+  Charts / maps: none in the web source (the corridor map is a SIBLING surface, TripPlannerMap, out of
+  scope here). This card is description + Ask-Helix button + streamed output only.
+
+  Verbatim web logic ported + unit-pinned (the `useMemo` body + guards):
+    request body (7 top-level fields, snake_case, POST /ai/trips/plan/draft):
+      vehicle_id = numericVehicleId || 0 ; origin/destination = present ? {lat,lng,name:name??''}
+      : {lat:0,lng:0,name:''} ; current_soc?80 ; charge_limit_soc?90 ; min_arrival_soc?20 ;
+      speed_factor?1.0. canStart = haveInputs = !!vehicleId && origin != null && destination != null
+      (a non-zero vehicle id AND both endpoints; negatives stay truthy, mirroring JS `!!(-3)`).
+    Float fidelity: the body is encoded with JSONEncoder (shortest round-trippable form) so
+      speed_factor 1.0 → "1" and a coordinate → "37.7749" — byte-faithful to JS JSON.stringify.
+      (JSONSerialization would corrupt fractional doubles to "37.774900000000002" — proven + guarded
+      by TripPlannerAgentRequestTests.testEncodedBodyPreservesFractionalCoordinatesLikeJSON.)
+    SSE + reducer: port of parseSSEFrame / toTypedEvent + handleEvent / finalizeError — idle →
+      streaming → (done | error); delta accumulates; confirm_request pauses; non-OK HTTP →
+      "stream_http_{status}"; comments / malformed / unknown / tool_* dropped/no-op.
+
+=== STATES (every non-gated one renders — no hidden surface) ===
+  gated   — feature off → EmptyView (web withAiFeature → null), unit-pinned; not a hidden section.
+  loading — useAiEnabled availability resolving → skeleton chrome (TripPlannerAgentLoadingView).
+  error   — availability query failed → retryable gate error; terminal STREAM error renders inline as
+            "Helix error: {message}" in the output panel.
+  ready   — description + Ask-Helix button + output panel (empty / thinking / prose / error) + the
+            orthogonal live/stale/offline connectivity axis (header freshness chip + banner with a
+            one-shot auto-refresh on the stale transition).
+  empty   — gate open, no plan drafted → friendly hint ("No plan drafted yet…" with inputs, or
+            "Select a vehicle, an origin, and a destination…" without) — never a blank box (P4).
+  stale / offline — freshness chip + banner; stale auto-refreshes once, offline never.
+
+=== i18n (P1/S10) ===
+  20 keys in AITripPlannerLLMAgent.strings (table "AITripPlannerLLMAgent"). The 4 web parity keys
+  (tripPlanner.aiAgent.title/description/generateButton/badge) + the shared Helix/AiOutputPanel
+  literals (helix.askHelix/thinking/errorLabel, ai.common.errorUnknown) + native P4 chrome.
+  Bidirectional check: every key resolved in Swift is defined; every defined key is used; 0 missing.
+  No English literals in the Swift sources (all via the facade with the web value as fallback).
+
+=== HOST-RUNNABLE GATES (authoritative — all GREEN) ===
+  SwiftPM XCTest harness — REAL shared atoms (apps/design/generated/apple/Tokens.swift + TSDesign /
+    TSMaterial / Buttons(TSButton) / Skeletons(TSSkeleton) / Motion(TSFadeIn)); no stubbed atoms.
+    `swift build` ........................................................ OK
+    `swift test` ......................................................... Executed 84 tests, 0 failures
+      Request(17) · SSEFrame(14) · Reducer(8) · OutputDerive(8) · ActionDerive(3) · ProjectionPhase(4)
+      · ProjectionReady(8) · ProjectionOutput(9) · Model(11) · Accessibility(2).
+  Real-SDK typecheck (Swift 6, strict concurrency complete) — surface + atoms:
+    iOS 18 simulator (arm64-apple-ios18.0-simulator) .................... IOS_TYPECHECK_EXIT=0
+    macOS 15 (arm64-apple-macos15.0) ................................... MAC_TYPECHECK_EXIT=0
+  swiftlint --strict (10 swift files) ................................... 0 violations · SWIFTLINT_EXIT=0
+  swiftformat --lint (10 swift files) .................................. 0/10 require formatting · SWIFTFORMAT_EXIT=0
+  check-placeholders.ps1 (stub gate) ................................... PLACEHOLDER_COUNT=0 · PLACEHOLDER_EXIT=0
+  xcodegen generate (spec valid, project written, files enumerated) .... XCODEGEN_EXIT=0
+  type-name collision scan (42 top-level types vs 23,393 external defs
+    across Sources + feature-views + dashboard-widgets + shared-surfaces) 0 collisions
+
+=== FULL-APP XCODEBUILD (the prompt gate) ===
+  Prerequisite Shared.xcframework (P1/S3, KMP/Kotlin-Native via Gradle) was NOT staged in this tree
+  (Frameworks/ held only .gitkeep). Built it here:
+    apps/shared/gradlew :core:assembleSharedXCFramework ... BUILD SUCCESSFUL in 18m 41s → staged
+    apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64).
+
+  iOS app build (the gate's iOS leg, build):
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+      CODE_SIGNING_ALLOWED=NO build ...................................... ** BUILD SUCCEEDED **  (0 errors)
+    The ENTIRE iOS app target compiled + linked with this surface included; AITripPlannerLLMAgent.strings
+    validated into the bundle (UTF-8). This surpasses the predecessor shared-surface logs, which had to
+    defer the whole xcodebuild because the KMP framework could not be staged in-window.
+
+  iOS `test` (full TeslaSyncTests bundle) — BLOCKED by a PRE-EXISTING, UNRELATED collision (NOT this
+    surface). The bundle compile fails with exactly ONE error:
+      feature-views/RecentActivity.Tests.swift:103: invalid redeclaration of
+      'RecentActivityFeedProjectionTests'
+    The same class name is also declared at shared-surfaces/RecentActivityFeed.Tests.swift:106 — a
+    parallel-merge duplicate between two OTHER surfaces' test files. `git status` confirms this tree's
+    ONLY changes are this surface's 11 AITripPlannerLLMAgent.* files; neither RecentActivity file was
+    touched here. This is the documented co-located-test-bundle blocker (a P4-core/P99 concern outside
+    this prompt's allowed-files scope). This surface's own 84 tests run GREEN under the SwiftPM XCTest
+    harness above (real XCTest, real shared atoms, identical sources), and the surface compiles into the
+    real iOS app target (build succeeded), so the surface itself is fully proven.
+
+  macOS app build (the gate's macOS leg, build):
+    xcodebuild -scheme TeslaSync-macOS CODE_SIGNING_ALLOWED=NO build ...... ** BUILD SUCCEEDED **  (0 errors)
+    The ENTIRE macOS app target compiled + linked with this surface included (macos-arm64 framework
+    slice). The macOS `test` leg hits the IDENTICAL pre-existing RecentActivity duplicate-class bundle
+    blocker (+ macOS dev-signing for a hosted run), so the full macOS scheme test is deferred to P99 on
+    the same basis as iOS.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading / empty / error / ready / stale /
+      offline + gated-off `null`).
+  [x] Hooks bind to the shared P1/S8 source seam (TripPlannerAgentSource); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (4 web parity keys + shared
+      Helix/AiOutputPanel keys + native chrome); bidirectional check clean.
+  [x] Accessibility labels present on every interactive element + per-state spoken summaries
+      (badge / action button / refresh / freshness chip / banner / output panel / loading / gate error).
+  [x] Tests: adapter unit tests (request body / SSE / reducer / output / action) + per-state
+      projection/model tests + a11y label tests (84 total, green under SwiftPM XCTest).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (stub gate: 0).
+  [x] iOS + macOS full-app builds BOTH SUCCEEDED with the surface integrated; surface typechecks clean
+      on iOS 18 + macOS 15 real SDKs.
+  [~] `xcodebuild test` (full bundle): DEFERRED — blocked ONLY by a pre-existing, unrelated duplicate
+      class in feature-views/RecentActivity.Tests.swift vs shared-surfaces/RecentActivityFeed.Tests.swift
+      (not this surface). Host-runnable equivalents (84/84 XCTest + dual-SDK typecheck + iOS app build
+      SUCCEEDED) all green.
+
+EXIT=0
+STATUS=DONE

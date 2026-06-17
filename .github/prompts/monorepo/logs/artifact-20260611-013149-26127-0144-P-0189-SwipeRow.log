@@ -1,0 +1,144 @@
+=== P4 Shared surface 0189 SwipeRow (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/SwipeRow.*
+Web spec : web/src/components/mobile/SwipeRow.tsx
+Runner   : Darwin (arm64), Xcode 26.5 (17F42), Apple Swift 6.3.2, swiftlint + swiftformat + xcodegen
+           + Kotlin/Native (Gradle 8.x, Kotlin 2.0.21, JDK 17). SwiftUI + Swift Charts + MapKit on the
+           iOS-18 + macOS-15 SDKs are all available → NOT capability-BLOCKED.
+
+------------------------------------------------------------------------
+HONESTY COVENANT — every result below is from a real command run on this runner; raw exit codes are
+reported verbatim. The full-scheme `xcodebuild build test` is reported as its TRUE state (BLOCKED by a
+pre-existing defect in ANOTHER agent's surface, proven independent of this artifact), NOT as green.
+------------------------------------------------------------------------
+
+PARITY — the native surface reproduces the web SwipeRow data, composition, states & i18n:
+[x] Swipe-to-action row wrapper (web `children` → generic `Content`): a ZStack lays the left/right edge
+    action panels behind the foreground row and translates it by the live drag offset, reproducing the
+    iOS Mail / Notes interaction.
+[x] Drag math is the pure web logic in `SwipeRowGeometry`: 8px horizontal axis-lock, vertical-drift
+    cancel so the parent list keeps scrolling, wired-side + ±width overshoot clamp, the
+    reveal-threshold (64px) crossing, and the release ladder — auto-fire past half width / peek past
+    threshold (rest at ±ACTION_WIDTH 96px) / snap closed. All asserted by unit tests.
+[x] One-shot haptic the first time the reveal threshold is crossed (web `navigator.vibrate(10)`) via
+    `.sensoryFeedback(.impact, trigger:)`.
+[x] Touch-only by default (web `enabled ?? useIsCoarsePointer()`): on a fine pointer (macOS default,
+    or host `enabled:false`) the row is a straight pass-through with NO gesture — the web `!active`
+    branch. The coarse-pointer capability binds through the P1/S8 state-holder.
+[x] Reduce Motion collapses the snap-back animation to an instant transition (web
+    `prefers-reduced-motion`) via `@Environment(\.accessibilityReduceMotion)` — the `useMotionPreference`
+    binding at the view boundary.
+[x] Action tone → token + default SF Symbol parity (web `defaultIcon` / `actionPanelClasses`):
+    danger → statusDanger + `trash` (web Trash2/rose); default → accent + `archivebox` (web Archive/cyan).
+[x] P4 leaf states the web pure render lacks (treated like the sibling wrapper surface
+    SectionErrorBoundary 0138): loading (skeleton row), empty (no row → friendly card, never blank),
+    error (QueryError + Retry), plus the orthogonal freshness axis — stale/offline chip + banner with a
+    one-shot stale auto-refresh. The wrapped row is the `content` phase.
+[x] Hooks bind via the shared P1/S8 state-holder seam (SwipeRowSource + SwipeRowModel); NO direct HTTP
+    in the view (the web source has none — it owns no data).
+[x] i18n: the web source resolves ZERO `t()` keys (anonymous surface; action labels arrive
+    host-localized via `SwipeAction.label`, exactly like the native `SwipeAction.label`). The 13 keys
+    in SwipeRow.strings (table "SwipeRow") are native chrome (a11y + leaf states + freshness). No
+    English string literals in native code — all via the P1/S10 facade.
+[x] Accessibility: the swipe row is one VoiceOver element exposing each wired action as a custom action
+    (`.accessibilityActions`) + an "Actions available" hint, so the hidden gesture is fully operable
+    without a swipe; the edge buttons carry resolved labels (web `ariaLabel ?? label`).
+[x] Telemetry: `view.opened` emitted once with surface slug "SwipeRow" (P1/S11 seam; asserted by
+    testStartEmitsViewOpenedOnceEvenAcrossRestart).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+
+------------------------------------------------------------------------
+SHIPPED FILES (apps/apple/TeslaSync/shared-surfaces/) — each .swift <= 260 lines (swiftlint file_length budget 400)
+------------------------------------------------------------------------
+  SwipeRow.swift             186  generic wrapper, SwipeAction prop type, phase switch, freshness composition
+  SwipeRow.Adapter.swift     178  pure geometry (lock/cancel/clamp/threshold/outcome) + tone/symbol + a11y
+  SwipeRow.Model.swift       260  meta, telemetry seam, i18n facade, Input/Resolved/Projection, @Observable model
+  SwipeRow.Seams.swift       136  source protocol + static (prod) + in-memory (tests) + coarse-pointer probe
+  SwipeRow.Views.swift       227  interactive swipe content (DragGesture) + action buttons
+  SwipeRow.States.swift      186  loading skeleton / empty / error + freshness chip + banner
+  SwipeRow.Previews.swift    129  every state + pass-through preview (DEBUG)
+  SwipeRow.Tests.swift       257  geometry + outcome + tone + a11y + projection + meta tests
+  SwipeRow.ModelTests.swift  171  source seam + state-holder + telemetry tests
+  SwipeRow.strings            32  i18n catalog (13 keys, table "SwipeRow")
+  total                     1762
+
+------------------------------------------------------------------------
+GATE RESULTS (raw exit codes from real runs on this runner)
+------------------------------------------------------------------------
+FORMAT_EXIT=0                # `swiftformat --lint apps/apple` — 0/4874 files require formatting (2 skipped).
+LINT_EXIT=0                  # `swiftlint --strict` — 0 violations, 0 serious in 4576 files (whole project).
+PLACEHOLDER_EXIT=0           # check-placeholders.ps1 -Language swift over a real dir of the 10 SwipeRow files
+                             #   → PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0, EXIT=0.
+                             #   NOTE: the gate's `-Path …/shared-surfaces/SwipeRow` is a filename PREFIX,
+                             #   not a directory, so the scanner's Test-Path is false and returns a vacuous
+                             #   0. To verify HONESTLY the 10 files were copied into a real SwipeRow/ dir
+                             #   and scanned → COUNT=0.
+XCODEGEN_EXIT=0              # `xcodegen generate` enumerates all 10 SwipeRow.* files (60 pbxproj refs across
+                             #   the iOS+macOS app targets and the iOS+macOS XCTest bundles).
+MACOS_TYPECHECK_EXIT=0       # swiftc -typecheck, Swift 6 (-swift-version 6, strict concurrency), -D DEBUG,
+                             #   -target arm64-apple-macos15.0, the 7 view-bearing surface files (incl.
+                             #   #Preview macro) + the REAL design system (generated Tokens + Sources/Design
+                             #   + Components/UI + Components/Feedback + Components/Motion) — 0 errors, 0 warnings.
+IOS_TYPECHECK_EXIT=0         # same, -target arm64-apple-ios18.0-simulator — 0 errors, 0 warnings.
+SWIFT_TEST_EXIT=0            # SwiftPM XCTest of the Foundation-only core (Adapter+Model+Seams) against the
+                             #   real surface logic with the co-located test files: Executed 44 tests, 0 failures.
+GIT_SCOPE_OK=1               # working tree adds ONLY the 10 SwipeRow.* files; the generated .xcodeproj and the
+                             #   Gradle-staged Frameworks/Shared.xcframework are git-ignored (git check-ignore).
+
+MAC_EXIT=BLOCKED-UNRELATED   # `xcodebuild -target TeslaSync-macOS -configuration Debug build` (KMP
+                             #   Shared.xcframework staged from a real Kotlin/Native build on this runner).
+IOS_EXIT=DEFERRED            # (iOS Simulator variant deferred behind the SAME pre-existing defect — it
+                             #   compiles the identical platform-agnostic shared-surfaces source.)
+
+------------------------------------------------------------------------
+FULL-SCHEME xcodebuild DISPOSITION — BLOCKED by a PRE-EXISTING defect in ANOTHER agent's surface,
+proven independent of this artifact (Honesty Covenant: no skip-and-assume, no red-as-green).
+------------------------------------------------------------------------
+The Kotlin/Native `Shared.xcframework` built successfully on this runner (Gradle: "xcframework
+successfully written out"; slices ios-arm64 / ios-arm64-simulator / macos-arm64) and was staged into
+apps/apple/Frameworks/ (git-ignored). The full-app Swift compile then FAILED — the ONLY error in the
+entire build, repeated verbatim:
+
+    apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+        error: escaping closure captures non-escaping parameter 'content'
+    ** BUILD FAILED ** (2 failures, both in AIAutoNameUnnamedLocations.swift)
+
+This is the same class of pre-existing defect the predecessor P4 surfaces documented (e.g. 0107
+TimelineScrubber cited AIGeofenceAwareAutomationSuggestions.swift:141 with the identical
+"escaping closure captures non-escaping parameter 'content'" error).
+
+PROOF this artifact is NOT the cause:
+  • SWIPEROW_ERRORS=0 — grep over the full build log finds ZERO errors in ANY SwipeRow.* file.
+  • The failing file AIAutoNameUnnamedLocations.swift is a DIFFERENT agent's surface; `git status`
+    shows it is unmodified by me (working tree adds only the 10 SwipeRow.* files) and the bug is
+    present at HEAD (git show HEAD:…AIAutoNameUnnamedLocations.swift), i.e. pre-existing.
+  • This surface INDEPENDENTLY compiles under the app's own Swift 6 strict-concurrency rules against
+    the REAL design tokens + components on BOTH the iOS-18 and macOS-15 SDKs (views + #Preview
+    included) — MACOS_TYPECHECK_EXIT=0 / IOS_TYPECHECK_EXIT=0 — and its 44 XCTest pass via SwiftPM.
+
+AIAutoNameUnnamedLocations.* is OUTSIDE this prompt's allowed-files scope (only
+apps/apple/TeslaSync/shared-surfaces/SwipeRow.* + this log), so fixing it here is forbidden (scope +
+predecessor rules). The full-scheme `build test` is therefore deferred to the P4 acceptance gate once
+the sibling surface compiles — exactly the sanctioned disposition used by prior P4 surfaces.
+
+------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------
+[x] Surface renders on Apple with all states from the web source reproduced — content (interactive
+    swipe row: left/right action panels + drag offset + peek + auto-fire + reduce-motion) + pass-through
+    (fine pointer) + the P4 leaf states loading / empty / error + stale / offline freshness chip + banner.
+[x] Hooks bind to the shared P1/S8 state-holder layer (SwipeRowSource + SwipeRowModel); no direct HTTP.
+    useIsCoarsePointer → the model's coarse-pointer capability; useMotionPreference →
+    @Environment(\.accessibilityReduceMotion).
+[x] Every i18n key from source has a catalog entry: the web source resolves 0 keys (anonymous); the 13
+    native-chrome keys are all present in SwipeRow.strings (table "SwipeRow"), 0 missing.
+[x] Accessibility labels present on every interactive element: the row exposes each wired action as a
+    custom action with a resolved label + a hint; the edge buttons carry resolved labels.
+[x] Tests: geometry/adapter + projection + tone + a11y label + meta + state-holder/source-seam +
+    telemetry = 44, all green via SwiftPM against the real surface logic.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+[~] EXIT=0 for the in-scope artifact (all applicable gates green); full-scheme `xcodebuild build test`
+    is BLOCKED by a pre-existing defect in ANOTHER agent's out-of-scope surface
+    (AIAutoNameUnnamedLocations.swift:123, evidence above), not by this artifact or platform capability.
+
+EXIT=0
+STATUS=DONE

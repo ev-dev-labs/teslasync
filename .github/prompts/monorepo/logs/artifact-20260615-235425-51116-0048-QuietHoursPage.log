@@ -1,0 +1,154 @@
+=== P4-APPLE · P7 · page:notifications/QuietHours (SwiftUI / HIG) ===
+started: 2026-06-16T17:05:00-0700
+host: macOS 26.5.1 (Darwin); Xcode 26.5 Build 17F42; Apple Swift 6.3.2 (swiftlang-6.3.2.1.108);
+      swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present (Xcode runner available → NOT BLOCKED)
+web source: web/src/features/notifications/pages/QuietHoursPage.tsx   (route /notifications/quiet-hours)
+parity unit: page:notifications/QuietHours  (manifest PARITY_REQUIRED=2 — strings only; 0 data sources, 0 panels declared)
+
+------------------------------------------
+OUTPUT-PATH RECONCILIATION
+------------------------------------------
+The generated prompt names apps/apple/TeslaSync/Features/Notifications/** as the output, but that path
+is NOT a compiled source root. project.yml builds apps/apple/Sources/** (+ the TeslaSync/* surface dirs);
+the sibling P7 page (page:notifications/AuditLog) ships under apps/apple/Sources/Features/Notifications/.
+Followed the real, compiling convention (same as the sibling) so the page actually builds + is testable.
+
+------------------------------------------
+SCOPE DISCOVERY (decisive) — the page COMPOSES existing component ports, it does not re-implement them
+------------------------------------------
+The web QuietHoursPage is a thin PageContainer (title + subtitle) that renders two regions:
+  <AIQuietHoursSuggestion onApplyDraft=…/>  +  <QuietHoursPanel seedDraft=… onSeedConsumed=…/>
+Both regions were ALREADY ported to the Apple app as standalone P3/P4 component surfaces:
+  • TeslaSync/feature-views/QuietHoursPanel.*    → `public struct QuietHoursPanel: View` + `@MainActor @Observable QuietHoursModel`
+                                                   + types (QuietHoursWindowItem / QuietHoursDraft / QuietHoursValidation / …) + InMemoryQuietHoursSource.
+  • TeslaSync/shared-surfaces/AIQuietHoursSuggestion.* → `public struct AIQuietHoursSuggestion: View` + `@MainActor @Observable QuietHoursSuggestionModel`
+                                                   (onApply: (QuietHoursWindowPatch)->Void) + InMemoryQuietHoursSuggestionSource.
+An initial from-scratch re-implementation of the panel was written, then DELETED on discovering the existing
+ports (it collided: "invalid redeclaration of QuietHoursDraft / QuietHoursValidation"). The page now does what
+the web page does — it hosts both component ports and wires the propose-only seed hand-off (web pendingSeed/
+seedDraft) at the page boundary: the advisor's onApply seeds the panel's draft via the panel's public
+startCreate() + the deliberately-exposed `public internal(set) var draft` seam; the panel Save button stays the
+sole write path (ADR-015 §I3 + §I8). No sibling component file was modified (composition only, in-module).
+
+NATIVE OUTPUT (in-scope changes — git status --porcelain; the generated .xcodeproj is git-ignored, not committed)
+?? apps/apple/Sources/Features/Notifications/QuietHoursPage.swift                 (69 LOC)  thin page: PageContainer header (title+subtitle) + AIQuietHoursSuggestion + QuietHoursPanel; adaptive content column; DEBUG previews (Loaded/Empty)
+?? apps/apple/Sources/Features/Notifications/QuietHoursRouteRegistration.swift    (94 LOC)  registers .notificationsQuietHours; makePanelModel()/makeAdvisorModel(panel:) build the two @Observable models; onApply seeds the panel draft (web hand-off); seeded InMemory default sources
+?? apps/apple/Tests/Unit/Features/Notifications/QuietHoursPageTests.swift         (67 LOC)  route registration + deep link + seeded panel phase (.content/.empty) + advisor→panel seed hand-off
+ M apps/apple/Sources/App/AppRoute.swift              +case .notificationsQuietHours (pathSegment notifications/quiet-hours, systemImage moon.fill, group .operations) — exhaustive switches enforce RouteTests invariants at compile time
+ M apps/apple/Sources/App/AppRouteParser.swift        +alias "/notifications/quiet-hours" → .notificationsQuietHours
+ M apps/apple/Sources/TeslaSyncApp.swift              +QuietHoursRouteRegistration.registry(base:) composed into the route host
+ M apps/apple/Localization/Localizable.xcstrings      +3 keys (route.notificationsQuietHours + translation.notifications.quietHours.title/subtitle); web key names; JSON validated; key count 11070 → 11073 (purely additive, 0 existing keys modified). The panel + advisor strings resolve from the pre-existing bulk web-i18n keys translation.quietHours.* + translation.notifications.quietHours.aiSuggestion.* (the established `translation.*` convention Admin pages/widgets already use).
+ M apps/parity/apple-ledger.json                      +2 rows (apple-macos, apple-ios) for page:notifications/QuietHours, covered 2/2
+
+=== PARITY ===
+PARITY_REQUIRED=2
+================================================================================
+[x] string — notifications.quietHours.subtitle   QuietHoursPage.swift L48 `header` Text("translation.notifications.quietHours.subtitle") → catalog "Suppress non-critical notifications during a configurable window."
+[x] string — notifications.quietHours.title       QuietHoursPage.swift L46 `header` TSPageTitle("translation.notifications.quietHours.title") → catalog "Quiet hours" (+ route.notificationsQuietHours nav title)
+PARITY_COVERED=2
+
+Both parity strings render from the bound page header and resolve from Localizable.xcstrings with the web key
+names. The two page REGIONS (web `<AIQuietHoursSuggestion>` + `<QuietHoursPanel>`) are reproduced by composing
+the existing native component ports — each driven by its own @MainActor @Observable model (ADR-004 — no
+networking in the view) — so the page is NOT a stub: it shows the advisor card AND the full quiet-hours CRUD
+panel with all of the panel's data states (loading / empty / error+retry / content), the live-state freshness
+banner, the add/edit form, and the toast, plus the advisor's idle/streaming/proposal states. No scope narrowing.
+
+ADDITIONAL FAITHFUL WIRING (web pendingSeed/seedDraft hand-off — reproduced at the page boundary):
+[x] hand-off — advisor "Apply to form" → panel draft seed   QuietHoursRouteRegistration.makeAdvisorModel onApply → panel.startCreate() + panel.draft = QuietHoursDraft(id:nil, …patch…)  (unit-tested: testAdvisorApplySeedsPanelDraft)
+
+SI converters: N/A — quiet-hours windows are wall-clock + control-plane scalars (no unit conversion).
+Live-SSE staleness: handled INSIDE the composed components (QuietHoursConnection / QuietHoursSuggestionConnection
+freshness chip + cached-data banner, ADR-013); the page itself declares no live source.
+a11y: header accessibilityElement(.combine); the composed components carry their own contain/label semantics,
+Dynamic Type via Font.TS, light/dark via Color.TS. Adaptive macOS/iPad + iPhone via the constrained content
+column + the components' own reflow (ADR-002/006).
+AI-advisor note: web `<AIQuietHoursSuggestion>` is gated by withAiFeature (renders null when AI is off). The page
+hosts the native port with a default gate-on source so the region is demonstrably present; the off-mode "render
+nothing" contract is owned + tested by the component itself.
+
+================================================================================
+GATE (apple triad — run on the real paths; iOS Simulator idiom, no code-signing required)
+================================================================================
+PLACEHOLDER_EXIT=0    check-placeholders.ps1 -Path apps/apple/Sources/Features/Notifications -Language swift → PLACEHOLDER_ALLOWED=1 PLACEHOLDER_COUNT=0
+LINT_EXIT=0           swiftlint --strict (QuietHoursPage/QuietHoursRouteRegistration/QuietHoursPageTests) → 0 violations, 0 serious
+SWIFTFORMAT_EXIT=0    swiftformat --lint (same 3 files) → 0/3 files require formatting
+BUILD_EXIT=0          xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build → ** BUILD SUCCEEDED ** (grep ": error:" over my files = 0; the app module EmitSwiftModule succeeded → my sources type-check under Swift 6 strict concurrency, app + iOS widget/activity extensions linked)
+TEST: my unit suite is GREEN — Test Suite 'QuietHoursPageTests' passed (5/5):
+        testAdvisorApplySeedsPanelDraft (0.347s), testDeepLinkResolvesToQuietHours (0.001s),
+        testDefaultPanelModelLoadsSeededWindows (0.001s), testEmptySourceResolvesEmptyPhase (0.001s),
+        testRouteRegistrationHostsQuietHours (0.039s)
+      The overall `xcodebuild … test` action reports ** TEST FAILED ** due to ONE pre-existing, unrelated test:
+        TeslaSync/shared-surfaces/Toast.Tests.swift:183  ToastCenterMutationBridgeTests.testMutationFailedUsesLocalizedErrorDetail
+        XCTAssertEqual failed: ("Something went wrong") != ("Failed to save")
+      ROOT CAUSE (not mine): ToastCenter.mutationFailed(_:key:fallback:) defaults key="toast.common.error"; the test
+      passes fallback "Failed to save" WITHOUT overriding the key, so the existing catalog value for that key wins
+      over the fallback. The Kotlin Shared.xcframework was assembled fresh via Gradle (BUILD SUCCESSFUL in 7m50s) so
+      this is NOT the parallel-slot OOM blocker the sibling hit.
+
+      PROOF this failure is PRE-EXISTING and INDEPENDENT of this change:
+        • git diff HEAD -- Toast.Model.swift Toast.Tests.swift = EMPTY (no toast file touched).
+        • git diff on Localizable.xcstrings is PURELY ADDITIVE: +3 keys (route.notificationsQuietHours,
+          translation.notifications.quietHours.title, translation.notifications.quietHours.subtitle); 0 existing
+          keys modified. Catalog key count 11070(HEAD) → 11073(now) = exactly +3. The "toast.common.error" key + its
+          "Something went wrong" value are byte-identical to HEAD, so the test behaves identically with or without
+          this change → it fails at HEAD too.
+        • Fixing it would require editing an out-of-scope sibling test/impl — forbidden (no predecessor bypass).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : the one RED (overall test action) is reported AS red, with its file:line, assertion, and a
+                       git-backed proof it pre-exists + is unrelated; never recoloured. My own build + unit suite are
+                       genuinely green (real command output pasted above).
+ 2 No scope narrowing: BOTH web regions reproduced — the advisor card AND the full CRUD panel (every panel data
+                       state) — plus the page chrome (2 parity strings) AND the propose-only seed hand-off. Not a shell.
+ 3 No skip-and-assume: the web page was read end-to-end; on discovering the existing Apple component ports, the page
+                       was re-shaped to compose them (what the web page does) rather than duplicate them.
+ 4 No stubs as final : PLACEHOLDER_COUNT=0; no TODO/stub/fatalError. The page renders real, functional composed
+                       components with seeded default sources; production swaps the KMP sources through the seams.
+ 5 No parity shortcuts: strings = web key names; the advisor→panel seed hand-off is wired + unit-tested; the panel/
+                       advisor are the real ports (their own SI/freshness/a11y intact), not look-alikes.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT modify any sibling surface (QuietHoursPanel.* / AIQuietHoursSuggestion.* / Toast.*),
+                       shared component, or other owners' files. The generated TeslaSync.xcodeproj is git-ignored (not
+                       committed). The pre-existing Toast test failure is left to its owner.
+ 8 No commit on red  : committing on GREEN IN-SCOPE gates — placeholder(0), swiftlint --strict(0), swiftformat --lint
+                       (0/3), xcodebuild BUILD SUCCEEDED (0 Swift diagnostics in my files), and my QuietHoursPageTests
+                       5/5 PASS. The sole RED is a pre-existing, out-of-scope, unrelated sibling test (proven above),
+                       handled exactly as the sibling P7 precedent handled its pre-existing blocker.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + scope-discovery (compose-don't-reimplement) reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI QuietHoursPage shipped at parity with the web source: a thin PageContainer
+(the two parity strings — title + subtitle) that COMPOSES the existing native component ports of the web page's
+two regions — `AIQuietHoursSuggestion` (Helix advisor) and `QuietHoursPanel` (server-backed Do-Not-Disturb CRUD)
+— each bound to its own @MainActor @Observable model (ADR-004, no networking in the view), with the web
+pendingSeed/seedDraft hand-off reproduced at the page boundary (the advisor's "Apply to form" seeds the panel
+draft; the panel Save button stays the sole write path). A dedicated `.notificationsQuietHours` route
+(pathSegment notifications/quiet-hours, Operations group) + parser alias + registration make it sidebar-reachable
+and `/notifications/quiet-hours` deep-linkable, preserving every compile-enforced RouteTests invariant. The
+Kotlin Shared.xcframework was assembled fresh (Gradle BUILD SUCCESSFUL 7m50s) and the full iOS Simulator app +
+extensions BUILD SUCCEEDED with zero Swift diagnostics; the QuietHoursPageTests suite passes 5/5 (route + deep
+link + seeded panel phase + advisor→panel seed). The only RED in `xcodebuild … test` is a pre-existing,
+out-of-scope, unrelated sibling test (Toast.Tests.swift toast.common.error fallback mismatch), proven by git to
+be byte-identical to HEAD and untouched by this change — forbidden to commit-fix.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Notifications/QuietHoursPage.swift \
+          apps/apple/Sources/Features/Notifications/QuietHoursRouteRegistration.swift \
+          apps/apple/Tests/Unit/Features/Notifications/QuietHoursPageTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-notifications-QuietHoursPage.log
+  git commit -m "feat(apps/apple): QuietHoursPage at web parity (P7 notifications)"
+
+EXIT=0
+STATUS=DONE

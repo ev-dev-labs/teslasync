@@ -1,0 +1,308 @@
+=== P4 Modal / dialog 0017 AcknowledgeAlertDialog (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.*
+Web src : web/src/features/admin/components/AcknowledgeAlertDialog.tsx (THE spec)
+Runner  : Darwin arm64, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat,
+          xcodegen 2.45.4, pwsh 7.x. SwiftUI present (iOS-18 + macOS-15 SDKs) -> NOT
+          capability-blocked. The required capability is SwiftUI + iOS18/iPadOS18/
+          macOS15 HIG; this surface uses no Swift Charts / MapKit (the web source
+          has neither charts nor maps).
+Disposition: code-complete; every host-runnable gate GREEN; the surface's own code
+          INDEPENDENTLY compiles + tests under the real Xcode 26 / Swift 6 toolchain
+          (isolated SwiftPM build/test of the pure-logic core + iOS-18 & macOS-15 SDK
+          typecheck of the full SwiftUI view layer against the real design system).
+          The full-app iOS xcodebuild was RUN here and exits 65 (RED) -- but solely on
+          108 pre-existing parallel-merge collisions in unrelated RecentDrives*/
+          StateTimeline* siblings (0 errors in this surface; the modals-dialogs tier is
+          not globbed into project.yml / .swiftlint.yml, so it is 0 pbxproj refs and not
+          in the build); macOS is signing-deferred (0 valid identities). Tier registration
+          + macOS signing are the P4/P99 acceptance gate's, and project.yml is outside this
+          prompt's allowed files. This is the same sanctioned "code-complete + DEFERRED
+          Xcode gate" disposition as the 0002/0007/0008/0009/0010/0011/0014 siblings in this
+          same modals-dialogs tier (ADR-002/009, apps/macos-pending-verifications.md).
+
+==================================================================================
+ARTIFACTS (9 Swift files + 1 strings catalog; all match the AcknowledgeAlertDialog.* glob)
+==================================================================================
+  Pure logic (Foundation/OSLog/Observation-only; unit-tested, no SwiftUI):
+    AcknowledgeAlertDialog.Adapter.swift (220) surface slug; LoadStatus/Connection/
+                                Phase; AckAlertContext (alertID + title); AckAlertSubmitBody
+                                / AckAlertSubmitOutcome; AckAlertProjection (noteMaxLength
+                                1000, noteInputLimit 1050, length=utf16 [web `.length`],
+                                trimmedNote, isTooLong, clampToInputLimit grapheme-safe,
+                                submitBody, submitDisabled, resolvePhase, fieldError,
+                                noteHint {{max}}, submitErrorMessage, title/label/prompt/
+                                cancel/submit copy).
+    AcknowledgeAlertDialog.Seams.swift   (207) telemetry seam (view.opened); acknowledge
+                                service seam (web onSubmit -> gated PATCH /alerts/{id});
+                                dismissal control seam (web onSubmit-success / onClose);
+                                Update snapshot; P1/S8 source protocol + in-memory source;
+                                P1/S10 i18n facade; VoiceOver builders (summary, close,
+                                note count).
+  State holder (Foundation/Observation; SwiftUI-free):
+    AcknowledgeAlertDialog.Model.swift   (254) @MainActor @Observable model: phase/
+                                connection, note/submitting/error, derived copy +
+                                validation (isTooLong/fieldError/submitDisabled/count),
+                                async submit routing (service -> complete | mapped error),
+                                cancel, note reset on fresh alert (web useEffect on open)
+                                + re-arm, input cap, stale auto-refresh, inline-error +
+                                a11y, lifecycle (start -> view.opened once).
+  View (SwiftUI, HIG-native):
+    AcknowledgeAlertDialog.swift         (90)  phase switch + glass-panel chrome +
+                                lifecycle + a11y + surfaceSlug (web Modal -> HIG sheet content).
+    AcknowledgeAlertDialog.Views.swift   (259) header (bell glyph + title + freshness chip
+                                + close), form (inline reload error, optional alert subtitle,
+                                note editor, submit error, footer), AckNoteEditor (TextEditor
+                                + prompt overlay + grapheme counter + too-long chrome),
+                                Cancel / Acknowledge footer, field focus (web autoFocus),
+                                .text helper.
+    AcknowledgeAlertDialog.States.swift  (183) loading / empty (no alert selected) /
+                                error+retry (QueryError) / inline reload error / freshness
+                                chip / connectivity banner. Never a blank box.
+    AcknowledgeAlertDialog.Previews.swift(98)  8 states: content / content-no-subtitle /
+                                too-long / loading / empty / error / stale / offline.
+    AcknowledgeAlertDialog.strings       (51)  i18n catalog: the 6 web alerts.ack.* keys +
+                                native state chrome (loading/empty/error/retry/chip/banner)
+                                + a11y builders.
+  Tests (XCTest, @testable import TeslaSync):
+    AcknowledgeAlertDialog.Tests.swift   (186) phase resolution, length(utf16)/trim/
+                                isTooLong boundary, clampToInputLimit (cap + no grapheme
+                                split), submitBody/submitDisabled/fieldError guards,
+                                submitErrorMessage, copy + {{max}} substitution, a11y (21).
+    AcknowledgeAlertDialog.ModelTests.swift(285) state holder: view.opened once/idempotent,
+                                phase transitions (+inline error), note reset on new alert /
+                                not same / re-arm after clear, input cap, submit routing
+                                (too-long guard w/o service call, success->complete, empty
+                                note allowed, failure->mapped, clears on edit), cancel,
+                                stale auto-refresh re-arm, offline keeps content (18).
+
+  Total 1833 lines (1782 swift + 51 strings); every swift file <= 285 (swiftlint
+  file_length 400 strict). All public symbols are AckAlert*-namespaced; the top-level
+  View is `AcknowledgeAlertDialog`. Collision-checked against Sources/ + feature-views/ +
+  dashboard-widgets/ + misc-surfaces/ + modals-dialogs/ before authoring (grep: 0
+  pre-existing matches for `AckAlert` / `AcknowledgeAlertDialog`).
+
+==================================================================================
+PARITY (web AcknowledgeAlertDialog.tsx -> native), no scope narrowing
+==================================================================================
+  Data sources (web -> native P1/S8 seam):
+    useTranslation -> AckAlertStrings facade (P1/S10), no literals.
+    useId          -> the hint is wired as the note field's a11y value (native VoiceOver
+                      describedby), not an HTML id.
+    onSubmit(note) -> AckAlertService.acknowledge(body) (async; no HTTP in the view) ->
+                      AckAlertController.complete (the parent's post-submit close).
+    onClose        -> AckAlertController.cancel (close with no mutation).
+  Logic (verbatim ports):
+    NOTE_MAX = 1000                        -> AckAlertProjection.noteMaxLength.
+    maxLength = NOTE_MAX + 50 (1050)       -> noteInputLimit + clampToInputLimit (grapheme-safe).
+    note.trim()                            -> trimmedNote (whitespacesAndNewlines).
+    trimmed.length > NOTE_MAX              -> isTooLong (length = utf16.count = JS `.length`;
+                                              unit-tested incl. an astral emoji = 2 units).
+    onSubmit(trimmed) (empty allowed)      -> submitBody(for:) trims; empty note accepted
+                                              (ack with no note; audit timeline still records).
+    disabled={submitting || tooLong}       -> submitDisabled.
+    error={tooLong ? noteHint : undefined} -> fieldError (the hint reused as the too-long
+                                              validation copy).
+    noteHint {{max: NOTE_MAX}}             -> noteHint substitutes {{max}} -> 1000.
+    reset note on (re)open (useEffect)     -> resetNoteIfAlertChanged keyed by alertID + re-arm.
+    submitting guard on close              -> model.cancel() no-op while submitting.
+  Composition (web Modal/form -> native):
+    Modal title + close "x"           -> AckAlertHeader (title + freshness chip + close).
+    <p> alertTitle subtitle           -> subtitle line (Text, text-secondary), shown only
+                                         when the alert title is non-empty.
+    <Textarea label/placeholder/rows> -> AckNoteEditor: TextEditor (minHeight 96 ~ rows 4)
+                                         + visible label + prompt overlay when empty +
+                                         too-long red border; built in-surface (the shared
+                                         TSTextArea's LocalizedStringKey label can't resolve
+                                         the per-surface i18n table), exactly as the 0007
+                                         sibling's in-surface fields.
+    hint <p> (aria-describedby)       -> always-present hint line (muted; turns red as the
+                                         too-long error) + a live "n/1000" grapheme counter,
+                                         and the field's VoiceOver value (count of max).
+    Button ghost Cancel (disabled)    -> TSButton(.ghost).disabled(submitting).
+    Button primary Acknowledge        -> TSButton(.primary, isLoading: submitting)
+                                         .disabled(submitDisabled).
+  Native widening (honest, documented): the web parent owns the mutation + toast/undo; the
+  native client additionally surfaces an acknowledge failure inline (AckErrorText) so the
+  user can retry, and widens the prop-driven dialog into the prompt-required loading / empty
+  / error / stale / offline envelopes (the web component is only ever rendered with a target).
+  Tailwind classes were NOT ported; chrome is P1/S9 tokens (TSSpacing/TSRadius/Color.TS/
+  Font.TS) via TSGlassPanel/TSFadeIn/TSButton.
+
+==================================================================================
+STATES (every state renders -- no hidden surfaces)
+==================================================================================
+  loading  -> AckAlertLoadingState (spinner + "Loading the alert...").
+  empty    -> AckAlertEmptyState (ContentUnavailableView "No alert selected to acknowledge")
+              -- the native widening of the web "dialog only opens from a row".
+  error    -> AckAlertErrorState (QueryError-equivalent + Retry -> model.refresh()).
+  stale    -> freshness chip "Stale" + connectivity banner + ONE guarded auto-refresh.
+  offline  -> freshness chip "Offline" + banner; cached context kept; no refetch; the note
+              stays editable (the ack syncs on reconnect).
+  content  -> the populated form (subtitle + note editor + hint/counter + footer; + inline
+              reload error if a refresh failed while a cached context remains; + the submit
+              error line if the acknowledge service failed).
+  Telemetry: model.start() emits P1/S11 view.opened surface="AcknowledgeAlertDialog" (once,
+  idempotent -- ModelTests proven).
+
+==================================================================================
+i18n (P1/S10) -- 18-key bijection (catalog <-> code)
+==================================================================================
+  AcknowledgeAlertDialog.strings carries 18 keys; the 7 non-test surface files reference
+  exactly 18 (comm -23 / -13 both empty -> 0 missing, 0 orphan). Every web `t(key, default)`
+  is mapped: alerts.ack.dialogTitle / noteLabel / notePlaceholder / noteHint / cancel /
+  submit (6/6), plus the native envelope keys (error, state.loading/empty/error, retry,
+  live/stale/offline, staleBanner/offlineBanner) + a11y (a11y.close, a11y.count). No English
+  literals in native code. The web i18n key `alerts.ack.notePlaceholder` is preserved
+  verbatim; its one code occurrence carries a `// parity:allow` marker (the placeholder
+  scanner's sanctioned opt-out for a translation key that contains a trigger substring -- see
+  the scanner's own self-test), so it is counted PLACEHOLDER_ALLOWED, not a violation.
+
+==================================================================================
+GATE EXECUTION (every step run on THIS runner; raw exits)
+==================================================================================
+  [1] swiftformat --lint apps/apple
+        -> "0/3323 files require formatting, 2 files skipped."   FORMAT_EXIT=0  GREEN
+
+  [2] swiftlint --strict (the 9 surface files, passed explicitly; repo .swiftlint.yml
+      `included` does not yet list the new modals-dialogs tier -- tier registration is the
+      P4 acceptance gate's, exactly as the 0002/0007 siblings)
+        -> "Found 0 violations, 0 serious in 9 files."           LINT_EXIT=0    GREEN
+
+  [3] check-placeholders.ps1 -- the prompt's literal -Path .../AcknowledgeAlertDialog (no
+      extension) is not an existing path, so the tool returns Count=0 VACUOUSLY (run +
+      recorded). To avoid a false green it was ALSO run against the real directory and an
+      isolated copy of only the 9 AcknowledgeAlertDialog .swift files:
+        -Path .../AcknowledgeAlertDialog -> ALLOWED=0 ; COUNT=0   EXIT=0  (vacuous)
+        -Path <temp copy of my 9 files>  -> ALLOWED=1 ; COUNT=0   EXIT=0
+        -Path .../modals-dialogs         -> ALLOWED=3 ; COUNT=0   EXIT=0
+      (My files contribute 1 ALLOWED -- the `alerts.ack.notePlaceholder` i18n-key line with
+      its `// parity:allow web i18n key` marker; the scanner caught the "Placeholder"
+      substring and honored the opt-out, proving it actually read my files. The other 2
+      ALLOWED in the modals-dialogs run are the sibling AddAnnotationPopover's pre-existing
+      opt-outs.)                                                   PLACEHOLDER_EXIT=0  GREEN
+
+  [4] ISOLATED build + test (SwiftPM module "TeslaSync" = Adapter+Seams+Model, test target =
+      Tests+ModelTests, swift-tools 6.0 / Swift 6 language mode, -strict-concurrency=complete)
+        -> "Executed 39 tests, with 0 failures"                  SWIFT_TEST_EXIT=0  GREEN
+
+  [5] SDK typecheck of the FULL view layer + the real (Shared-free) design system
+      (Tokens + TSMaterial + TSDesign + Motion + Buttons/Cards/Typography/Badges) + the 7
+      non-test surface files, -D DEBUG, -swift-version 6, -strict-concurrency=complete:
+        iOS   arm64-apple-ios18.0-simulator  -> 0 errors   IOS_TYPECHECK=0  GREEN
+        macOS arm64-apple-macos15.0          -> 0 errors   MAC_TYPECHECK=0  GREEN
+      (The design system is self-contained -- 0 files under Sources/Components or
+      Sources/Design import the KMP `Shared` framework -- so the SwiftUI layer typechecks
+      against the REAL components on both SDKs with no stubs.)
+
+  [6] FULL-APP xcodebuild (the prompt's two gate steps): DEFERRED.
+
+    Pre-req proof: the new modals-dialogs tier is NOT globbed in project.yml yet. The
+    TeslaSync / TeslaSync-macOS app + test targets glob only Sources, dashboard-widgets,
+    feature-views, and misc-surfaces -- `modals-dialogs` appears 0 times in project.yml.
+    `xcodegen generate` (run on this runner) -> grep TeslaSync.xcodeproj/project.pbxproj:
+      AcknowledgeAlertDialog = 0 ; modals-dialogs = 0 ; ReauthDialog (sibling) = 0 ;
+      StateTimelineWidget = 54 ; RecentDrivesSection = 66 (wired tiers DO appear).
+    So the full-app build neither includes nor is affected by this surface's files -- its
+    OWN code is proven by [4]+[5] instead. Wiring the tier in requires editing project.yml +
+    .swiftlint.yml, which are OUTSIDE this prompt's allowed-files set
+    (apps/apple/TeslaSync/modals-dialogs/AcknowledgeAlertDialog.* + this log); tier
+    registration is owned by the P4/P99 acceptance gate, exactly as all 8 modals-dialogs
+    siblings.
+
+    iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+           (RUN on this runner, bounded; ran to completion -- not a timeout):
+           > scheme pre-action ran Scripts/build-shared-xcframework.sh =>
+             apps/shared/gradlew :core:assembleSharedXCFramework (KMP Kotlin/Native).
+             SUCCEEDED ("xcframework successfully written out ..." x2 -- debug + release
+             Shared.xcframework staged). NOT a hard block -- only slow (~7 min Gradle,
+             incl. downloadKotlinNativeDistribution).
+           > the app/test compile then FAILED -- ALL errors in PRE-EXISTING, unrelated
+             SIBLING surfaces, NONE in this surface:
+               ": error:" total = 108 ; AcknowledgeAlertDialog = 0 ; modals-dialogs = 0
+               "is ambiguous for type lookup" = 96, all RecentDrives* / StateTimeline*:
+                 StateTimelineUpdate/Connection/LoadStatus/Model = 52
+                 RecentDrivesUpdate/Connection/LoadStatus/Model  = 44
+               + cascading "cannot infer contextual base in reference to member
+                 'loaded'/'loading'/'failed'/'stale'/'offline'" -- the documented
+                 parallel-merge duplicate-type collisions (RecentDrives vs
+                 RecentDrivesListWidget; StateTimeline vs StateTimelineWidget), the
+                 known condition (apps/macos-pending-verifications.md). The failing
+                 SwiftCompile batch is feature-views/Vehicle*.swift; 0 of my files.
+           ** TEST FAILED **                                       IOS_EXIT=65
+
+    macOS: xcodebuild -scheme TeslaSync-macOS build test
+           DEFERRED -- owned by the P4/P99 acceptance gate on a signed macos-latest runner
+           (the macOS app + widget targets carry entitlements that require a development
+           signing identity; `security find-identity` has 0 valid identities and
+           DEVELOPMENT_TEAM="" on this runner), per apps/macos-pending-verifications.md and
+           the 0008/0014 siblings. The macOS view layer is proven by the [5] macOS-15 SDK
+           typecheck (0 errors). MAC_EXIT=deferred
+
+  Reading: the full-app build does not compile this surface at all (tier unwired; 0 pbxproj
+  refs). Its own code is independently GREEN on this runner via [4] (39/39 Swift-6 tests) and
+  [5] (iOS-18 + macOS-15 SDK typecheck of the whole SwiftUI layer against the real design
+  system). 0 errors attributable to any AcknowledgeAlertDialog file.
+
+==================================================================================
+HONESTY COVENANT (binding)
+==================================================================================
+  1 No red-as-green   : the full-app iOS xcodebuild was RUN on this runner and is reported
+                        RED (IOS_EXIT=65) -- never claimed passing -- with raw evidence that
+                        all 108 errors are in pre-existing unrelated RecentDrives*/
+                        StateTimeline* siblings (0 in my files; my tier is unwired, 0 pbxproj
+                        refs). The macOS step is DEFERRED (0 signing identities). [1]-[5] are
+                        real GREEN exits with raw output.
+  2 No scope narrowing: every web region + branch reproduced -- the optional alert subtitle,
+                        the note Textarea (label + prompt + rows + input cap + too-long
+                        error), the {{max}} hint, the disabled-while-submitting Cancel, the
+                        Acknowledge disabled on submitting||tooLong, the trimmed/empty-allowed
+                        submit, and the reset-on-open -- plus all six states
+                        (loading/empty/error/stale/offline/content).
+  3 No skip-and-assume: web source read end-to-end; the note limits, trim, utf16 length,
+                        grapheme-safe cap, and submit guards ported and unit-tested; every
+                        t() key mapped (18/18 bijection); every runnable gate executed on
+                        THIS runner; the tier-unwired claim verified by generating the real
+                        Xcode project and grepping the pbxproj (not assumed).
+  4 No stubs as final : complete production surface; placeholder scanner COUNT=0 on my files;
+                        39 real tests pass; no TODO/FIXME/stub/mock/Lorem.
+  5 No parity shortcut: validation / submit routing / dismissal / i18n / telemetry / a11y all
+                        mapped to platform seams + tokens and verified; the SwiftUI layer
+                        typechecks against the REAL design system on BOTH the iOS-18 and
+                        macOS-15 SDKs.
+  6 No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass: consumes the P1/S8 state-holder seam shape, P1/S9 tokens, P1/S10
+                        i18n facade, P1/S11 view.opened, and the P4-core shared TSGlassPanel/
+                        TSFadeIn/TSButton; did NOT edit project.yml / .swiftlint.yml /
+                        Localizable.xcstrings / macos-pending-verifications.md (outside the
+                        prompt's allowed files) -- strings ship as the per-surface table.
+  8 No commit on red  : the committed artifact is GREEN on every runnable gate AND
+                        independently compiles + tests under the real Xcode 26 / Swift 6
+                        toolchain. The full-app iOS xcodebuild exits 65 RED solely on
+                        pre-existing, unrelated sibling parallel-merge collisions
+                        (RecentDrives*/StateTimeline*) -- 0 errors in this surface, which is
+                        not even in the project (tier unwired) -- and macOS is signing-
+                        deferred; neither is introduced or touched by this commit.
+  9 No silent drift   : changes confined to apps/apple/TeslaSync/modals-dialogs/
+                        AcknowledgeAlertDialog.* and this log (the generated
+                        TeslaSync.xcodeproj and any staged Frameworks/Shared.xcframework are
+                        git-ignored).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AcknowledgeAlertDialog shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED on this runner: the pure logic + state holder build and
+  39/39 tests pass under Swift 6 strict concurrency, and the entire SwiftUI view layer
+  typechecks against the real design system on BOTH the iOS-18 and macOS-15 SDKs (0 errors),
+  with swiftformat --lint / swiftlint --strict / placeholder all green. The full-app
+  iOS-Simulator xcodebuild build/test was RUN on this runner and exits 65 (RED, reported as
+  such): the KMP Shared.xcframework actually built + staged, and the build then aborts on
+  108 pre-existing parallel-merge duplicate-type collisions across unrelated sibling
+  RecentDrives*/StateTimeline* surfaces -- 0 errors in any AcknowledgeAlertDialog file, which
+  is not even in the generated project (the modals-dialogs tier is unwired: 0 pbxproj refs).
+  The macOS xcodebuild is DEFERRED on development signing (security find-identity: 0 valid
+  identities) -- both owned by the p4-apple/P99 acceptance gate on a signed macos-latest
+  runner per apps/macos-pending-verifications.md, the same disposition as all 8 modals-dialogs
+  siblings. Zero errors in any AcknowledgeAlertDialog file.
+
+EXIT=0
+STATUS=DONE

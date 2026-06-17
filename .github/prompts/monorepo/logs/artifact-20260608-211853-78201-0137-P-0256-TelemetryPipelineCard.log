@@ -1,0 +1,148 @@
+=== P4 Feature view 0256 TelemetryPipelineCard (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/TelemetryPipelineCard.*
+Web source: web/src/features/system/components/status/TelemetryPipelineCard.tsx
+Runner: macOS 26.5 (Darwin), Xcode 26.5 (17F42), Swift 6, iPhone 16 simulator present.
+Capability: SwiftUI present; Swift Charts / MapKit NOT required by this surface (web uses
+no Recharts/Leaflet — "Charts/maps used: (none)"). Shared.xcframework (KMP) built OK.
+
+────────────────────────────────────────────────────────────────────────────────
+FILES SHIPPED (11)
+────────────────────────────────────────────────────────────────────────────────
+  TelemetryPipelineCard.Model.swift      — seams (telemetry/i18n/nav), DTOs, source, @Observable model
+  TelemetryPipelineCard.Adapter.swift    — pure projection: liveness ladder, formatters, rows/summary/stats, phase
+  TelemetryPipelineCard.Format.swift     — relative-time, "Vehicle {id}" fallback, VoiceOver row summary
+  TelemetryPipelineCard.swift            — main view composition (all states)
+  TelemetryPipelineCard.Views.swift      — freshness chip, banner, stat grid, liveness/broker/polling chips
+  TelemetryPipelineCard.States.swift     — empty / error / loading states, footer nav, flow layout
+  TelemetryPipelineCard.Rows.swift       — per-vehicle list, row, battery bar, liveness chip
+  TelemetryPipelineCard.Previews.swift   — 8 previews (content/streaming-only/broker-down/empty/loading/error/stale/offline)
+  TelemetryPipelineCard.Tests.swift      — adapter projection tests (18)
+  TelemetryPipelineCard.ModelTests.swift — model + accessibility tests (12)
+  TelemetryPipelineCard.strings          — P1/S10 i18n catalog (status.pipeline.* — 45 keys)
+
+States reproduced (all render, none hidden): loading · empty · error(+retry) · stale(chip+auto-refresh)
+· offline(cached+chip) · content. Liveness ladder (<5m sending / <30m slow / >30m stale / none offline)
+derived from the UNION of poll + stream timestamps, with the freshest-source label (stream/poll), exactly
+per the web source + its vitest spec.
+
+════════════════════════════════════════════════════════════════════════════════
+GATE STEP RESULTS (commands run verbatim from repo root unless noted)
+════════════════════════════════════════════════════════════════════════════════
+
+── 1. swiftformat --lint apps/apple ───────────────────────────────────────────
+  SwiftFormat completed. 0/2512 files require formatting, 2 files skipped.
+  FORMAT_EXIT=0   ✅ PASS
+
+── 2. check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TelemetryPipelineCard ──
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0   ✅ PASS
+  (Also scanned the real shipped *.swift files explicitly → PLACEHOLDER_COUNT=0. No
+   TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/stub patterns in shipped code.)
+
+── 3. swiftlint --strict (cd apps/apple) — SCOPED to this surface (10 swift files) ──
+  Done linting! Found 0 violations, 0 serious in 10 files.
+  ✅ PASS for the shipped surface.
+
+── 3b. swiftlint --strict (whole tree, 2508 files) — as the gate runs it ────────
+  Found 1 violation, 1 serious in 2508 files:
+    apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+      error: Opening Brace Spacing Violation (opening_brace)
+  LINT_EXIT=non-zero   ⚠ BLOCKED by ONE PRE-EXISTING violation in an UNRELATED file.
+  Evidence it is not mine: `git status` shows that file unmodified by me; it is committed at
+  HEAD. It is OUTSIDE this surface's allowed-files scope (TelemetryPipelineCard.* only), so it
+  is intentionally left untouched.
+
+── 4. xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ──
+  ** BUILD FAILED **  ** TEST FAILED **
+  IOS_EXIT=non-zero   ⚠ BLOCKED by PRE-EXISTING duplicate-symbol collisions in 21 UNRELATED
+  sibling surfaces. Compile errors are "ambiguous for type lookup" for types declared by two
+  surfaces each:
+    ChargeConnection ChargeDistanceUnit ChargeLoadStatus ChargeSessionDTO ChargeStateDTO
+    ChargeStatusProjection ChargeStatusUpdate ChargeUnitPrefs DrivingCoachConnection
+    DrivingCoachLoadStatus FleetStatsBarModel SafetyConnection SafetyLoadStatus SafetyModel SafetyUpdate
+  Failing files (all PRE-EXISTING, none mine):
+    dashboard-widgets/ChargeSessionChartWidget.{Model,Previews}.swift
+    dashboard-widgets/ChargeStatusLiveWidget.{Adapter,Content,Model,Previews}.swift
+    dashboard-widgets/ChargeStatusWidget.{Adapter,Model,Previews}.swift
+    dashboard-widgets/DrivingCoachWidget.{Model,Previews}.swift
+    dashboard-widgets/FleetStatsBarWidget.{swift,Previews}.swift
+    dashboard-widgets/SafetyFeaturesWidget.{swift,Model,Previews}.swift
+    dashboard-widgets/SafetyHistoryWidget.{swift,Model,Previews}.swift
+    feature-views/DrivingCoachSection.{Model,Previews}.swift
+  >>> grep ": error:" of the iOS build log for "TelemetryPipelineCard" → 0 lines. <<<
+  My surface contributes ZERO compile errors. The collisions are between OTHER sibling
+  surfaces and are outside this surface's allowed-files scope.
+
+── 5. xcodebuild -scheme TeslaSync-macOS build test ────────────────────────────
+  ** BUILD FAILED **  ** TEST FAILED **
+  MAC_EXIT=non-zero   ⚠ BLOCKED at code-signing, BEFORE compilation:
+    error: "TeslaSync-macOS" has entitlements that require signing with a development
+    certificate. Enable development signing in the Signing & Capabilities editor.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a dev cert.
+  No signing identity is available in this environment (CI capability gap). The macOS source
+  set is identical to iOS, so once signed it would additionally hit the same pre-existing
+  duplicate symbols above. Neither blocker involves TelemetryPipelineCard.*.
+
+════════════════════════════════════════════════════════════════════════════════
+SURFACE-LEVEL VERIFICATION — DECISIVE PROOF THE SHIPPED SURFACE IS GREEN
+(Because a whole-module batch failure can short-circuit before reaching my files, the surface
+ was built + tested in isolation against the REAL design tokens (apps/design/generated/apple/
+ Tokens.swift) and the REAL TSTone (Sources/Components/UI/Badges.swift). Only TSSkeleton was a
+ thin API-matching shim, since the production Skeletons.swift cascades into Typography.)
+════════════════════════════════════════════════════════════════════════════════
+
+── A. iOS-simulator-target typecheck (Swift 6, -strict-concurrency=complete) ────
+  xcrun -sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 -strict-concurrency=complete <surface + real tokens + TSTone>
+  SWIFTC_EXIT=0   ✅ The surface type-checks clean for the iOS 18 simulator.
+
+── B. macOS-host isolated SwiftPM build (Swift 6 mode, .macOS(.v15)) ────────────
+  swift build → "Build complete! (10.42s)"   ✅ The surface compiles for macOS 15.
+
+── C. macOS-host isolated SwiftPM test run (swift test) ─────────────────────────
+  Test Suite 'TelemetryPipelineAdapterTests'  Executed 18 tests, 0 failures
+  Test Suite 'TelemetryPipelineModelTests'    Executed 10 tests, 0 failures
+  Test Suite 'TelemetryPipelineAccessibilityTests' (in run) — included
+  Test Suite 'All tests' passed — Executed 30 tests, with 0 failures (0 unexpected)
+  ✅ 30/30 unit tests PASS — adapter (liveness ladder, union freshest-source, vinTail, battery
+  thresholds, state normalization, fmtInt counts, rows/summary/fleet-stats, phase matrix, name
+  fallback, relative time) + model (phase resolution, connection/flag tracking, stale auto-
+  refresh once-per-episode, nav-activation + refresh delegation, view.opened once) + a11y
+  (combined VoiceOver row summary: present + absent segments).
+
+────────────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────────────
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — previews + tests.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (TelemetryPipelineSource); no HTTP in view.
+  [x] Every i18n key resolves through the P1/S10 facade; strings table shipped (status.pipeline.*).
+  [x] Accessibility labels on every interactive element (rows, footer buttons, retry, account CTA).
+  [x] Tests: adapter unit tests + model/per-state tests + a11y label test — 30/30 PASS.
+  [x] No TODO/stub/mock/Placeholder/Lorem in shipped code (placeholder gate = 0).
+  [x] Surface compiles clean: iOS-sim typecheck EXIT=0, macOS build EXIT=0, swiftlint(surface)=0, swiftformat=0.
+  [~] Whole-tree `xcodebuild build test` (iOS+macOS) and whole-tree `swiftlint --strict` are RED, but
+      EXCLUSIVELY due to PRE-EXISTING, OUT-OF-SCOPE issues (21 sibling-surface duplicate symbols +
+      1 unrelated lint nit + a missing macOS signing certificate) — none in TelemetryPipelineCard.*,
+      none fixable within this surface's allowed-files scope.
+
+────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT NOTE
+────────────────────────────────────────────────────────────────────────────────
+Per rule 1 (no red-as-green) and rule 8 (no commit on red), the whole-tree gate steps are
+reported RED, not faked green. The shipped surface itself is independently verified GREEN on
+both platforms (typecheck + build + 30/30 tests + lint + format + placeholder). The remaining
+red is pre-existing baseline breakage + a CI signing-capability gap, both strictly outside this
+surface's allowed-files scope (TelemetryPipelineCard.* + this log).
+
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+LINT_EXIT(surface=10 files)=0   LINT_EXIT(whole-tree)=non-zero (1 pre-existing, unrelated)
+IOS_EXIT=non-zero (pre-existing duplicate symbols in 21 unrelated files; surface errors=0)
+MAC_EXIT=non-zero (missing dev signing certificate; surface compiles+tests on macOS toolchain)
+SURFACE_TYPECHECK_IOS_EXIT=0
+SURFACE_BUILD_MACOS_EXIT=0
+SURFACE_TESTS=30 passed / 0 failed
+
+EXIT=65
+STATUS=BLOCKED

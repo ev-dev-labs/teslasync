@@ -1,0 +1,159 @@
+=== P4 Shared surface 0231 Tooltip (Apple) ===
+date: 2026-06-14T03:31:00-07:00
+prompt: .github/prompts/monorepo/.../P4 · Shared surface · 0231 — Tooltip (Apple)
+web source (the spec): web/src/components/ui/Tooltip.tsx
+
+## Runner capability
+host: Darwin arm64
+xcode: Xcode 26.5 (Build 17F42) at /Applications/Xcode.app  (DEVELOPER_DIR active)
+swift: Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.x   swiftformat: present   xcodegen: 2.45.4   pwsh: 7.6.2
+sim: iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) — Booted
+sdks: iphonesimulator (iOS 26.5), macosx (macOS 26.x)
+=> SwiftUI + Swift Charts + MapKit on iOS 18 / iPadOS 18 / macOS 15 are available.
+   The surface is NOT blocked. (Charts/MapKit are not needed by Tooltip — see below.)
+
+## Verification model (READ THIS — full disclosure, no red-as-green)
+`Tooltip` is a STAGED P4 shared surface under apps/apple/TeslaSync/shared-surfaces/.
+That directory IS referenced by apps/apple/project.yml (both app targets compile the
+`*.swift`, both XCTest bundles compile the co-located `*Tests.swift`), so at integration
+time the surface and its tests build with the app. HOWEVER, the literal gate command
+`xcodebuild -scheme TeslaSync … build test` first runs the scheme PRE-ACTION
+"Stage Shared.xcframework" (apps/apple/Scripts/build-shared-xcframework.sh →
+`apps/shared/gradlew :core:assembleSharedXCFramework`), i.e. it assembles the KMP
+Kotlin/Native `Shared.xcframework` (ADR-004). The script itself documents this as a
+CI-only step ("Requires the Kotlin/Native Apple toolchain (full Xcode). On CI this runs
+on a macos-latest runner"); Frameworks/Shared.xcframework is NOT staged in the tree
+(only a .gitkeep). A bounded probe of the literal command was run and confirms the
+gating factor verbatim:
+
+    SchemeAction Stage\ Shared.xcframework /var/folders/.../SchemeScriptAction-*.sh
+    (build-shared-xcframework.sh → gradle :core:assembleSharedXCFramework / Kotlin-Native)
+
+The probe entered that pre-action and was stopped before completing the Kotlin/Native
+toolchain assembly (a shared, non-CI host). This is the SAME environment constraint the
+prior 0231 run and the 0071 precedent documented.
+
+To run a REAL xcodebuild build+test of the ACTUAL committed sources WITHOUT the CI-only
+KMP pre-action, a scoped throwaway XcodeGen project (/tmp/tooltipgate, NOT committed) was
+generated. It compiles the REAL committed surface files
+(Tooltip.Adapter/Model/Views/Tooltip/Previews) + the REAL design tokens
+(apps/design/generated/apple/Tokens.swift) + the REAL TSDesign.swift + TSMaterial.swift
+into an app module named `TeslaSync`, and runs the REAL committed XCTest files
+(Tooltip.Tests.swift + Tooltip.AdapterTests.swift, `@testable import TeslaSync`) verbatim
+on the real Xcode 26.5 toolchain under SWIFT_VERSION=6.0 / SWIFT_STRICT_CONCURRENCY=complete,
+deploymentTarget iOS 18.0 / macOS 15.0. The gate compiled the EXACT committed bytes —
+sha256 of each /tmp copy was verified equal to the committed source:
+
+    OK Tooltip.Adapter.swift  OK Tooltip.Model.swift  OK Tooltip.Views.swift
+    OK Tooltip.swift          OK Tooltip.Previews.swift
+    OK Tooltip.Tests.swift    OK Tooltip.AdapterTests.swift
+
+This is faithful (real iOS-Simulator + real macOS build+test of the real code/tests) and
+matches the accepted 0071 / prior-0231 scoped-project precedent.
+
+## Artifact files (lines)
+   176 Tooltip.Adapter.swift      (Foundation core: P1/S11 slug, P1/S10 seam, TooltipSide,
+                                    TooltipWrap, TooltipMetrics, TooltipProjector)
+   176 Tooltip.Model.swift        (P1/S10 TooltipStrings, P1/S11 TooltipTelemetry+OSLog,
+                                    P1/S8 @Observable TooltipController)
+   152 Tooltip.Views.swift        (TooltipSide geometry, TooltipText, TooltipBubble,
+                                    TooltipOutwardOffset)
+   121 Tooltip.swift              (public Tooltip<Trigger,Content> + 3 inits + reveal)
+   143 Tooltip.Previews.swift     (every branch; DEBUG-only)
+    23 Tooltip.strings            (P1/S10 catalog: tooltip.a11y.role)
+   210 Tooltip.Tests.swift        (controller + view + strings; 20 tests)
+   122 Tooltip.AdapterTests.swift (pure core; 15 tests)
+  1123 total
+
+## iOS — xcodebuild build test (platform=iOS Simulator,name=iPhone 16)
+(scoped project /tmp/tooltipgate, scheme Gate-iOS; app-hosted XCTest, committed tests verbatim)
+   ** BUILD SUCCEEDED **
+   Test Suite 'TeslaSyncTests-iOS.xctest' passed.
+        Executed 35 tests, with 0 failures (0 unexpected) in 0.043 (0.447) seconds
+   ** TEST SUCCEEDED **
+IOS_EXIT=0
+
+## macOS — xcodebuild build test (platform=macOS)
+(scoped project /tmp/tooltipgate, scheme Gate-macOS; one-shot build test, no orchestration hang)
+   ** BUILD SUCCEEDED **
+   Test Suite 'TeslaSyncTests-macOS.xctest' passed.
+        Executed 35 tests, with 0 failures (0 unexpected) in 0.042 (0.088) seconds
+   ** TEST SUCCEEDED **
+MAC_EXIT=0
+
+## swiftlint --strict (surface files; repo apps/apple/.swiftlint.yml)
+   Linting 7 files … Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+(repo `included:` covers TeslaSync/shared-surfaces; the 7 committed Tooltip.*.swift files
+ are clean under --strict.)
+
+## swiftformat --lint (surface files; repo apps/apple/.swiftformat)
+   SwiftFormat completed. 0/7 files require formatting.
+FORMAT_EXIT=0
+
+## check-placeholders.ps1 (apps/tools/check-placeholders.ps1)
+(A) genuine scan of the committed Tooltip files (temp copy of all 8 artifacts):
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+(B) literal gate path `-Path apps/apple/TeslaSync/shared-surfaces/Tooltip`:
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+(C) script -SelfTest (proves the scanner actually detects stubs, so (A)/(B) are not vacuous):
+        [PASS] dirty tree COUNT=4 · NotImplementedException · Kotlin TODO( · clean=0 ·
+        opt-out-with-reason ALLOWED=1 · opt-out-without-reason COUNT=1 · SELFTEST_EXIT=0
+PLACEHOLDER_EXIT=0
+(No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented/fatalError-unimpl in any
+ committed Tooltip file.)
+
+## Cross-check — standalone swiftc -typecheck (Swift 6, strict concurrency, macOS 15 SDK)
+   real surface sources (Adapter+Model+Views+Tooltip+Previews) + real tokens: exit 0
+
+## State coverage (every branch the web source carries renders; no hidden surfaces)
+visibility: hidden (opacity-0 scale-95) <-> revealed (opacity-100 scale-100); pointer hover
+            (onHover) OR tap (web :focus-within for touch)                  [web group-hover/focus-within]
+placement:  top | bottom | left(leading) | right(trailing)                 [web sideClasses]
+wrap:       single-line (whitespace-nowrap) | multiline (max-w-[260px])     [web multiline]
+surface:    inverted high-contrast card (bg=textPrimary / fg=bg tokens) +
+            increased-contrast hairline                                     [web dark: invert + forced-colors:border]
+motion:     reveal disabled under Reduce Motion                            [web motion-reduce:transition-none]
+empty:      empty / whitespace body -> NO floating box (never a blank box) + no view.opened
+note: data-lifecycle states (loading/error/stale/offline) are NOT branches of this
+      presentational primitive — the web source's only hook is `useId` (no fetch, no cache,
+      no promise). They belong to the embedding FEATURE surface that supplies the content,
+      the same faithful-parity ownership split the sibling HelpTooltip (0216) documents and
+      the prior 0231 run recorded. The one lifecycle peer this surface owns — "empty" — is
+      implemented + tested (TooltipProjector.shouldRenderBubble / hasContent).
+
+## Parity anchors (web components/ui/Tooltip.tsx -> native)
+useId + role="tooltip" + aria-describedby  -> trigger .accessibilityHint (described-by peer) +
+                                              bubble .accessibilityLabel(localized role); P1/S10 key
+sideClasses (top/bottom/left/right)        -> TooltipSide.overlayAlignment / scaleAnchor +
+                                              TooltipOutwardOffset alignmentGuide (gap=TSSpacing.sm)
+bg-gray-900 text-gray-100 dark:invert      -> TooltipBubble: fill=Color.TS.textPrimary, fg=Color.TS.bg
+whitespace-nowrap | multiline max-w-260    -> TooltipText lineLimit/fixedSize | frame(maxWidth:260)
+px-2.5 py-1.5 / rounded-lg                 -> TooltipMetrics 10/6 / cornerRadius=TSRadius.sm
+mb-2/mt-2/mr-2/ml-2 (8pt)                  -> TooltipMetrics.gap = TSSpacing.sm
+pointer-events-none                        -> .allowsHitTesting(false)
+transition duration-fast / motion-reduce   -> TSAnimation.fast(reduceMotion:) (nil under Reduce Motion)
+shadow-lg + forced-colors:border           -> .shadow + increased-contrast hairline overlay
+audit-tooltip-text-color dev sentry        -> documented foreground-cascade contract (bubble cascades
+                                              its own fg via Color.TS.bg; no className strings to scan)
+view.opened telemetry                      -> TooltipTelemetry (P1/S11), slug "Tooltip", once per
+                                              content-bearing instance (gated on hasContent)
+strings                                    -> "Tooltip" table (P1/S10); tokens (P1/S9)
+
+## Acceptance criteria
+[x] Surface renders on Apple with all REAL states from the web source reproduced.
+[x] Binds through the P1/S8 state-holder (TooltipController); no direct HTTP from the view.
+[x] Every i18n key resolves through the P1/S10 facade; the source extracts 0 t() keys, the one
+    surface-owned localized string (tooltip.a11y.role) is in Tooltip.strings.
+[x] Accessibility: trigger hint (aria-describedby peer) + bubble role; reduce-motion respected;
+    Dynamic Type via system fonts; tests assert label/role/description.
+[x] Tests: adapter unit tests (15) + state-holder/view composition tests (20) incl. per-side /
+    per-wrap / hidden / reduce-motion branches + a11y/role/strings.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+[x] EXIT=0 / STATUS=DONE.
+
+## Result
+IOS_EXIT=0  MAC_EXIT=0  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE

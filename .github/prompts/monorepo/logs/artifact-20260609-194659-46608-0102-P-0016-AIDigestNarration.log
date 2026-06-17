@@ -1,0 +1,156 @@
+=== P4 Shared surface 0016 AIDigestNarration (Apple) ===
+Date: 2026-06-10
+Runner: Darwin / Xcode 26.5 (Build 17F42) / Swift 6.3.2 / swiftlint + swiftformat + pwsh present
+Repo HEAD: b1da95840 merge(parallel): p4-apple/shared-meaningful/P-0012-AIChatbotIndicator
+Web source (spec): web/src/components/ai/AIDigestNarration.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.*
+
+----------------------------------------------------------------------
+ARTIFACT DELIVERED (10 files, all within the allowed AIDigestNarration.* scope)
+----------------------------------------------------------------------
+AIDigestNarration.swift             — SwiftUI surface (gated/loading/error/ready + freshness chrome)
+AIDigestNarration.Model.swift       — P1/S8 state holder, P1/S10 i18n facade, P1/S11 telemetry, input/resolved types, source seam, @Observable model, in-memory source
+AIDigestNarration.Projection.swift  — pure projection (withAiFeature gate + canStart=vehicleId!=null + AiOutputPanel branches), localized
+AIDigestNarration.Adapter.swift     — Foundation-only core: request body, SSE frame parse, stream reducer, output/action derivation, accessibility seam
+AIDigestNarration.Chrome.swift      — freshness chip, refresh button, stale/offline banner, loading skeleton, gate-error view
+AIDigestNarration.Views.swift       — Helix badge, Ask-Helix button, thinking dots/indicator, output panel, ready body
+AIDigestNarration.Previews.swift    — DEBUG previews for every state
+AIDigestNarration.strings           — P1/S10 catalog contribution (table "AIDigestNarration")
+AIDigestNarration.Tests.swift       — projection + model + accessibility XCTest
+AIDigestNarration.AdapterTests.swift— request + SSE + reducer + output + action XCTest
+
+Parity deltas vs the 0008 narrative template (verbatim from the web source — NOT "fixed"):
+  • POST /ai/digests/weekly/narrate  body = { vehicle_id: vehicleId ?? 0, week_offset_weeks: 0 }  (two-key body)
+  • canStart = (vehicleId != null)   → a present id, INCLUDING 0/negative, enables the button; only nil disables
+                                       (looser than 0008's numericVehicleId > 0; locked by the id-0 boundary tests)
+  • i18n keys: analytics.weeklyDigest.aiNarration.{title|description|generateButton|badge}
+  • surface slug (P1/S11 view.opened): "AIDigestNarration"
+
+======================================================================
+GATE RESULTS
+======================================================================
+
+--- STEP 1: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+Pre-build: Shared.xcframework (KMP core, ADR-004) staged via Gradle — BUILD SUCCESSFUL in 6m 47s.
+Result: ** BUILD FAILED ** → Testing cancelled because the build failed.
+IOS_EXIT=65
+
+Diagnosis: 216 compile errors, ALL of the form "'<Type>' is ambiguous for type lookup",
+ALL located in PRE-EXISTING sibling surfaces — ZERO in AIDigestNarration.* (grep 'AIDigestNarration.*error:' = 0).
+
+  total error: lines = 216 ; AIDigestNarration errors = 0
+
+  Sample (verbatim):
+    TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:14:76: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+    TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:14:53: error: 'RecentDrivesUpdate' is ambiguous for type lookup in this context
+    TeslaSync/dashboard-widgets/RecentDrivesListWidget.swift:43:16: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+
+  Files with errors (10, none mine):
+    dashboard-widgets/RecentDrivesListWidget.{swift,Model,Previews}.swift
+    feature-views/RecentDrivesSection.{Previews,Seams}.swift
+    dashboard-widgets/StateTimelineWidget.{swift,Model,Previews}.swift
+    feature-views/StateTimeline.{Previews,Source}.swift
+
+ROOT CAUSE (pre-existing, committed at HEAD b1da95840, OUTSIDE this prompt's allowed scope):
+  Two sibling surface groups each declare the SAME 'public' type names in BOTH the
+  dashboard-widgets and feature-views directories, which compile into the single TeslaSync
+  module → duplicate declarations → "ambiguous for type lookup". 25 duplicated type names:
+    RecentDrives*:  RecentDrivesModel, RecentDrivesConnection, RecentDrivesLoadStatus,
+                    RecentDrivesUpdate, RecentDrivesProjection, RecentDrivesSource,
+                    RecentDrivesStrings, RecentDrivesTelemetry, RecentDrivesAccessibility,
+                    RecentDrivesConnectivityBanner, RecentDrivesSurface,
+                    InMemoryRecentDrivesSource, OSLogRecentDrivesTelemetry
+    StateTimeline*: StateTimelineModel, StateTimelineConnection, StateTimelineLoadStatus,
+                    StateTimelineUpdate, StateTimelineProjection, StateTimelineSource,
+                    StateTimelineStrings, StateTimelineTelemetry, StateTimelineAccessibility,
+                    StateTimelineFormat, InMemoryStateTimelineSource, OSLogStateTimelineTelemetry
+  Defined e.g. at:
+    dashboard-widgets/RecentDrivesListWidget.Model.swift:181  public final class RecentDrivesModel
+    feature-views/RecentDrivesSection.Model.swift:23          public final class RecentDrivesModel
+    dashboard-widgets/StateTimelineWidget.Model.swift:104     public final class StateTimelineModel
+    feature-views/StateTimeline.Model.swift:64                public final class StateTimelineModel
+  git status confirms the only working-tree changes are the 10 new AIDigestNarration.* files;
+  these colliding files are committed/tracked and unmodified by this prompt.
+
+SECONDARY FINDING (reproduced for completeness): after temporarily quarantining one side of each
+collision (NON-committed, fully restored), the type errors clear and the build advances, but
+swift-frontend 6.3.2 then aborts during IRGen ("llvm::report_fatal_error ... report_at_maximum_capacity"
+while emitting reabstraction thunk @$sSbScA_pSgIeAghyg_SbIeAghn_TR) on the oversized module —
+a toolchain capacity crash, again unrelated to AIDigestNarration.* and outside the allowed scope.
+
+--- STEP 2: xcodebuild -scheme TeslaSync-macOS build test ---
+Result: ** BUILD FAILED **
+MAC_EXIT=65
+Diagnosis: code-signing/entitlements, NOT a code error (verbatim):
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+  development certificate. Enable development signing in the Signing & Capabilities editor.
+  (in target 'TeslaSync-macOS' from project 'TeslaSync')
+This environment has no development certificate (project.yml DEVELOPMENT_TEAM=""). Environmental,
+outside the allowed scope.
+
+--- STEP 3: swiftlint --strict (apps/apple, whole tree) ---
+Done linting! Found 0 violations, 0 serious in 3304 files.
+LINT_EXIT=0
+
+--- STEP 4: swiftformat --lint apps/apple (whole tree) ---
+0/3534 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--- STEP 5: check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AIDigestNarration ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(Substantive re-scan of the 9 shipped AIDigestNarration .swift files in a dir of that name: PLACEHOLDER_COUNT=0.)
+
+======================================================================
+SLICE VERIFICATION — AIDigestNarration.* proven correct in isolation
+======================================================================
+Because the shared TeslaSync module cannot link (pre-existing sibling collisions above), the surface
+was verified independently of the broken siblings:
+
+  • swiftlint --strict on the 9 shipped .swift files .......... 0 violations
+  • swiftformat --lint on the 9 shipped .swift files ......... 0/9 require formatting
+  • placeholder scan of the shipped files .................... PLACEHOLDER_COUNT=0
+  • forbidden-word scan (TODO/FIXME/XXX/placeholder/lorem/
+    not implemented/stub/mock) ............................... 0 matches
+  • full-module compile attributed errors to my files ....... 0 (216 errors, all in siblings)
+
+  • STANDALONE RUNTIME PARITY HARNESS (compiled the REAL production
+    AIDigestNarration.Adapter.swift + .Model.swift + .Projection.swift with swiftc against the
+    macOS SDK and executed 84 assertions covering: request body/encoding incl. week_offset_weeks
+    and vehicle_id ?? 0; SSE parse (delta/done/error/comment/no-space/unknown-drop/malformed-drop/
+    eventless-drop/missing-field); stream reducer (start/delta-accumulate/done/error/confirm-pause/
+    tool-noop/fold/http-failure); output branches (empty/thinking/prose/failed/unknown); action
+    flags; projection gate + canStart vehicleId!=null incl. the id-0 digest boundary + localized
+    strings + every output hint; accessibility labels; and full model wiring — telemetry-once,
+    gated-emits-none, gated→presented, loading→ready, stream→output, stale one-shot auto-refresh +
+    re-arm, offline no-refresh, refresh/generate/cancel/stop delegation, surfaceSlug):
+
+        STANDALONE PARITY: passed=84 failed=0
+
+  The SwiftUI view layer (.swift/.Chrome/.Views/.Previews) is a faithful, mechanical adaptation of
+  the committed, compiling sibling AIBatteryHealthForecastNarrative (0008) views; it uses only
+  design tokens/components verified to exist (Color.TS.*, Font.TS.*, TSSpacing/TSRadius, TSButton,
+  TSSkeleton, TSFadeIn) and passed swiftlint/swiftformat with 0 issues.
+
+======================================================================
+SUMMARY
+======================================================================
+AIDigestNarration.* is COMPLETE and INDEPENDENTLY VERIFIED (lint 0, format 0, placeholder 0,
+84/84 runtime parity, 0 self-attributed compile errors). The acceptance gate's two xcodebuild
+steps cannot reach green for reasons entirely outside this prompt's allowed file scope
+(AIDigestNarration.* + this log):
+  - iOS:  216 pre-existing "ambiguous type lookup" errors from duplicate public types declared by
+          the sibling RecentDrives*/StateTimeline* surfaces (committed at HEAD); not fixable here.
+  - macOS: missing development signing certificate in this environment.
+Per the Honesty Covenant (1 No red-as-green, 7 No predecessor bypass, 8 No commit on red, 10 log
+ends EXIT/STATUS): this is reported truthfully as BLOCKED, not DONE.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SLICE_PARITY=84/84
+EXIT=65
+STATUS=BLOCKED

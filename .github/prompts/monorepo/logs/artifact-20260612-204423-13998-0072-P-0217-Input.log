@@ -1,0 +1,189 @@
+=== P4 Shared surface 0217 Input (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/Input.*
+Web src  : web/src/components/ui/Input.tsx  (THE specification)
+Native   : FormInput (public view) + Input* type family (slug "Input")
+Date     : 2026-06-13
+Honesty covenant: 1 No red-as-green · 8 No commit on red · 10 Log ends EXIT=<int> STATUS=<DONE|BLOCKED>
+                  This log reports the full-app build/test legs RED, honestly, with platform-capability evidence.
+
+------------------------------------------------------------------------------------------------
+ENVIRONMENT (runner capability probe)
+------------------------------------------------------------------------------------------------
+xcodebuild   : Xcode 26.5 / Build 17F42
+swift        : Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint    : /opt/homebrew/bin/swiftlint
+swiftformat  : /opt/homebrew/bin/swiftformat
+pwsh         : /opt/homebrew/bin/pwsh
+xcodegen     : /opt/homebrew/bin/xcodegen
+iOS Simulator: iPhone 16 (booted, iOS 18 sim, arm64-apple-ios18.0-simulator)
+macOS target : arm64-apple-macos15.0
+Capability requirement (SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 HIG): PRESENT.
+  (This surface is pure-presentational and uses neither Swift Charts nor MapKit — see parity note below.)
+
+------------------------------------------------------------------------------------------------
+KMP Shared.xcframework (scheme pre-action: Scripts/build-shared-xcframework.sh)
+------------------------------------------------------------------------------------------------
+cd apps/shared && ./gradlew :core:assembleSharedXCFramework   => BUILD SUCCESSFUL in 12m 02s
+Staged ios-arm64 + ios-arm64-simulator + macos-arm64 -> apps/apple/Frameworks/Shared.xcframework
+(Re-staged FROM-CACHE on each subsequent xcodebuild invocation: "BUILD SUCCESSFUL in 10s".)
+
+------------------------------------------------------------------------------------------------
+FILES SHIPPED (9; convention split kept every file < SwiftLint 400-line budget)
+------------------------------------------------------------------------------------------------
+  Input.Adapter.swift       329  Foundation core: slug, InputProps, InputProjector, size metrics, id/aria derivation
+  Input.Projection.swift     99  Foundation core: InputProjection view-ready value type
+  Input.Model.swift         156  i18n facade (InputStrings) + telemetry seam + @Observable InputModel (P1/S8,S10,S11)
+  Input.Views.swift         187  SwiftUI: InputFieldRow (TextField/SecureField + token chrome), InputBody, message
+  Input.swift                93  public FormInput view (Binding<String> + props), once-only view.opened
+  Input.Previews.swift      126  #Preview for every real branch (DEBUG)
+  Input.AdapterTests.swift  307  pure projector + value-type XCTest
+  Input.Tests.swift         156  InputModel lifecycle + view composition + strings XCTest
+  Input.strings              -   owned native a11y keys (invalid / required / fallbackLabel)
+git status (porcelain) confirms ONLY new "?? .../Input.*" files were ADDED; ZERO existing files modified.
+
+------------------------------------------------------------------------------------------------
+STEP 1 — swiftformat --lint  (gate: FORMAT_EXIT)
+------------------------------------------------------------------------------------------------
+$ swiftformat --lint <all 8 Input *.swift>
+SwiftFormat completed in 16.9s.
+0/8 files require formatting.
+FORMAT_EXIT=0   [GREEN]
+
+------------------------------------------------------------------------------------------------
+STEP 2 — swiftlint --strict  (gate: LINT_EXIT)
+------------------------------------------------------------------------------------------------
+$ swiftlint lint --strict --no-cache <all 8 Input *.swift>
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0   [GREEN]
+(Note: file_length forced the InputProjection split into Input.Projection.swift; re-lint clean.)
+
+------------------------------------------------------------------------------------------------
+STEP 3 — placeholder / stub gate  (gate: PLACEHOLDER_EXIT)
+------------------------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -SelfTest
+  [PASS] dirty tree -> PLACEHOLDER_COUNT=4 (non-zero)
+  [PASS] reported NotImplementedException / Kotlin TODO(
+  [PASS] clean tree -> PLACEHOLDER_COUNT=0
+  [PASS] opt-out with reason counted as PLACEHOLDER_ALLOWED ; without reason still a violation
+  SELFTEST_EXIT=0
+
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Input   (verbatim gate path)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+Supplementary (real recursive scan of the 9 shipped files, since the verbatim path above is a literal
+file-prefix that Test-Path resolves to "nothing to scan"):
+$ cp Input.*.swift Input.swift /tmp/input-scan && pwsh check-placeholders.ps1 -Path /tmp/input-scan -Language swift
+PLACEHOLDER_ALLOWED=1   (one `// parity:allow web prop name` on the InputProps.prompt doc that names web `placeholder`)
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0   [GREEN]   No TODO/FIXME/XXX/Coming soon/Lorem/stub/mock in shipped code.
+
+------------------------------------------------------------------------------------------------
+STEP 4 — surface compiles + adapter logic executes  (real evidence the surface is GREEN)
+------------------------------------------------------------------------------------------------
+(a) Executed Foundation harness (compiled against the REAL Input.Adapter.swift + Input.Projection.swift,
+    swiftc -swift-version 6 -strict-concurrency=complete, then run):
+    === InputProjector executed harness (adapter -> projection) ===
+    37 assertions: id slugify/derivation, aria-describedby, hint-suppressed-by-error, invalid flag,
+    accessible-name precedence, spoken-hint composition, sm/md/lg/auto size metrics, value-type equality.
+    HARNESS_RESULT=PASS (0 failures)   HARNESS_EXIT=0   [GREEN]
+
+(b) Dual-SDK type-check of the Foundation core (Adapter+Projection+Model), Swift 6 strict concurrency:
+    iOS 18  : swiftc -typecheck -target arm64-apple-ios18.0-simulator   => IOS_TC_EXIT=0  (0 errors/0 warnings)
+    macOS 15: swiftc -typecheck -target arm64-apple-macos15.0           => MAC_TC_EXIT=0  (0 errors/0 warnings)
+
+(c) In-module type-check: the full-app build below reached whole-module EmitSwiftModule SUCCESS and then the
+    per-file IRGen phase with ZERO `Input` (or `error:`) diagnostics — i.e. the SwiftUI Views/Model/Previews/
+    Tests type-check inside the real TeslaSync app module. The crash is AFTER type-check, in an unrelated file.
+
+------------------------------------------------------------------------------------------------
+STEP 5 — xcodegen generate
+------------------------------------------------------------------------------------------------
+$ xcodegen generate  => Created TeslaSync.xcodeproj  (XCODEGEN_EXIT=0); all 9 Input files enumerated into the
+  TeslaSync / TeslaSync-macOS app targets (and the *Tests into the XCTest bundles) by the shared-surfaces glob.
+
+------------------------------------------------------------------------------------------------
+STEP 6 — iOS full-app build test  (gate: IOS_EXIT)   *** RED — PRE-EXISTING, OUT-OF-SCOPE ***
+------------------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build [test]
+** BUILD FAILED **   IOS_EXIT=65
+
+ROOT CAUSE — a swift-frontend IRGen compiler CRASH (NOT a source error; ZERO `error:` diagnostics in the
+entire transcript). Verbatim:
+  4.  While evaluating request IRGenRequest(IR Generation for file
+        ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+  ...
+  swift::report_fatal_error  <-  report_at_maximum_capacity(unsigned long)
+                              <-  llvm::SmallVectorBase<unsigned int>::grow_pod
+                              <-  IRGenSILFunction::visitFullApplySite -> SyncCallEmission::setArgs
+  ** BUILD FAILED **
+
+This is a TOOLCHAIN whole-module-IRGen capacity crash at the monorepo's scale (5,209 .swift files in the
+TeslaSync app module), in feature-views/AppearanceSettings.Controls.swift — a file this surface neither
+modifies nor references. It is:
+  • POST type-check  (whole-module EmitSwiftModule SUCCEEDED; the crash is in code generation),
+  • DETERMINISTIC    (reproduced identically on a full build AND an incremental rebuild — same file, same
+                      mangled thunk @$sSbScA_pSgIeAghyg_SbIeAghn_TR each time),
+  • OUT-OF-SCOPE     (git confirms only new Input.* files were added; AppearanceSettings.Controls.swift is
+                      byte-identical to its pre-change state and is outside this prompt's allowed file set),
+  • PRE-EXISTING + DOCUMENTED — the IDENTICAL signature (same mangled function, same file) is recorded in
+      apps/macos-pending-verifications.md for sibling surfaces 0079-DataFreshness and 0143-TimeMachineBanner,
+      and in .github/prompts/monorepo/logs/apple-page-admin-TeslaOrdersPage.log (BUILD_EXIT=65) and
+      apple-page-automations-AutomationActivityFeed.log, all of which deferred the full-app gate to the
+      macos-latest acceptance gate on a runner whose swift-frontend does not hit the IRGen capacity limit.
+ZERO `Input` errors. The surface itself is green (Steps 1-5).
+
+------------------------------------------------------------------------------------------------
+STEP 7 — macOS full-app build test  (gate: MAC_EXIT)   *** RED — PRE-EXISTING, OUT-OF-SCOPE ***
+------------------------------------------------------------------------------------------------
+$ security find-identity -p codesigning -v   =>  0 valid identities found
+$ xcodebuild -scheme TeslaSync-macOS build [test]
+TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development
+  certificate. Enable development signing in the Signing & Capabilities editor.
+TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+  certificate.
+** BUILD FAILED **   MAC_EXIT=65
+
+ROOT CAUSE — the macOS scheme fails at the development-signing/entitlements gate BEFORE compiling (0 valid
+codesigning identities on this runner). Outside this prompt's allowed file set (cannot edit entitlements /
+project signing). Documented in apps/macos-pending-verifications.md as the macOS-pending prerequisite,
+deferred to the macos-latest acceptance gate.
+
+------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------
+[x] Surface renders on Apple with all REAL states from the web source reproduced:
+      labelled/unlabelled, required (marker + spoken "required"), help icon, leading icon, trailing suffix,
+      empty (prompt shown — never a blank box), error (danger border + message + spoken "invalid", aria-
+      describedby), hint (suppressed while error shows), disabled, secure (password), sizes sm/md/lg/auto.
+      Faithful-parity note: components/ui/Input.tsx is a PURE presentational primitive (no fetch / no
+      React-Query / no Promise), so it has NO network loading/stale/offline branch. Following the accepted
+      precedent of the very siblings it composes — Label (0218) + HelpIcon (0215) — inventing such chrome
+      would fabricate states the source does not have, so only the source's REAL branches are reproduced.
+[x] Bound via shared P1/S8 @Observable state-holder (InputModel); no direct HTTP from the view (none exists).
+[x] i18n: label/error/hint/prompt are caller-supplied already-localized props (web owns no t() keys here);
+      the only owned keys are native a11y additions (input.a11y.invalid/required/fallbackLabel) via the
+      P1/S10 facade. No English literals in code paths.
+[x] Accessibility: explicit accessibilityLabel/Value/Hint + fieldIdentifier on the field; required+invalid
+      folded into the spoken hint; decorative icon/suffix hidden from VoiceOver; Dynamic Type via Font.TS;
+      Reduce-Motion respected by composed HelpIcon.
+[x] Tests: adapter unit test (37 executed assertions PASS) + per-state composition/strings XCTest + a11y
+      label/hint coverage.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] EXIT=0/STATUS=DONE — NOT achievable on THIS runner: the full-app iOS build/test (toolchain whole-module
+      IRGen capacity crash in an unrelated, unmodified file) and macOS build/test (no dev signing identity)
+      are RED for PRE-EXISTING, OUT-OF-SCOPE reasons. Per the prompt ("If unavailable on the runner ->
+      STATUS=BLOCKED with API evidence") this is STATUS=BLOCKED with platform-capability evidence; the
+      full-app build/test is deferred to the P99 macos-latest acceptance gate.
+
+------------------------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------------------------
+FORMAT_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  HARNESS_EXIT=0  IOS_TC_EXIT=0  MAC_TC_EXIT=0  XCODEGEN_EXIT=0
+IOS_EXIT=65 (pre-existing IRGen crash, unrelated file)   MAC_EXIT=65 (no dev signing identity)
+
+EXIT=65
+STATUS=BLOCKED

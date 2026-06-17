@@ -1,0 +1,259 @@
+=== P4-APPLE · P7 · page:admin/FeedbackQueue (SwiftUI / HIG) ===
+started: 2026-06-14T23:40:00-0700
+host: macOS (Darwin); Xcode 26.5 Build 17F42; Swift 6.3.2 (swiftlang-6.3.2.1.108); swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 + Gradle 8.14.5 present
+web source: web/src/features/admin/pages/FeedbackQueuePage.tsx   (route /admin/feedback)
+parity unit: page:admin/FeedbackQueue  (manifest PARITY_REQUIRED=43 = 1 panel + 4 data states + 38 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`. That
+path does NOT exist in this repo and is NOT a project.yml source group (the app targets list
+`Sources` + `TeslaSync/{widget-primitives,dashboard-widgets,feature-views,misc-surfaces,
+shared-surfaces}` — there is no `TeslaSync/Features`). The repo's real, compiled canonical
+admin-page home is `apps/apple/Sources/Features/Admin/**` — where every sibling P7 admin page
+(AuditLog, ApiPlayground, DiskForecast, SchemaDrift, FleetTelemetryCoverage, RbacMatrix,
+Users, …) ships and which `Sources` already lists as a project.yml source path
+(createIntermediateGroups). The page therefore ships at `apps/apple/Sources/Features/Admin/**`,
+the faithful equivalent of the prompt's `Features/Admin`. This is the identical reconciliation
+the AuditLog / DiskForecast / SchemaDrift logs recorded; it is the only deviation from the
+literal prompt path.
+
+ROUTE HOSTING: the web route is the admin sub-path `/admin/feedback`. Following the sibling
+AuditLog/Users pattern, a dedicated `.feedbackQueue` AppRoute case is added (pathSegment
+`feedback`, System group, icon `exclamationmark.bubble.fill`), `AppRouteParser` aliases
+`/admin/feedback` → `.feedbackQueue`, and `FeedbackQueueRouteRegistration` hosts
+`FeedbackQueuePage` on it, chained into `\.routeHosts` in TeslaSyncApp.swift. So the page is
+reachable via the System-group sidebar entry and any `/admin/feedback` deep link. (Navigation
+registration is an allowed file per the prompt.)
+
+STRING NAMESPACE (binding evidence basis): the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` already imports the web i18next default
+namespace under a `translation.` key prefix (e.g. `translation.feedback.queue.col.category`,
+`translation.common.refresh`). ALL 38 required web keys were verified present there VERBATIM
+under that prefix (0 bare, 38 `translation.*`) and their en values match the web defaults
+(`feedback.queue.pageOf` = "Page %1$@ of %2$@ (%3$@ entries)" etc.). The page therefore
+REFERENCES the existing keys via the `translation.<webkey>` form — the same convention the
+sibling UsersPage uses (`translation.impersonation.users.*`) — rather than minting duplicates.
+No parity string was added to the catalog. The ONLY catalog edit is the bare nav title
+`route.feedbackQueue` ("Feedback queue"), which is navigation chrome, not one of the 43 parity
+items.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain; xcodeproj + Shared.xcframework are git-ignored)
+--------------------------------------------------------------------------------
+?? Sources/Features/Admin/FeedbackQueueModels.swift            (232 LOC) value types FeedbackCategory/FeedbackStatus (tolerant `init(wire:)`), FeedbackEntry (mirrors web FeedbackEntry 1:1), FeedbackListPage (web FeedbackListResponse), FeedbackListQuery (+queryString snake_case = web buildQuery), FeedbackUpdate (web FeedbackUpdateInput), FeedbackFormat (dateTime/prettyJSON/orDash, injectable-free, ported from web useDateFormat + JSON.stringify)
+?? Sources/Features/Admin/FeedbackQueuePageModel.swift         (186 LOC) @MainActor @Observable model: FeedbackDataSource seam (loadFeedback/updateFeedback) + FeedbackListState(loading/empty/error/loaded); status/category filters, PAGE_SIZE=25 pagination (totalPages/canGoPrev/canGoNext/displayPage), row expansion set, isUpdating; load/reload/refresh/setStatusFilter/setCategoryFilter/next/prev/toggleExpanded/update
+?? Sources/Features/Admin/FeedbackQueuePageModel.Sample.swift  (158 LOC) SampleFeedbackDataSource (an actor — persists the triage mutation across re-read so the preview behaves like the server); 4-row seed across all 3 categories + 3 statuses, recent_errors/console_tail variety; production binds the KMP admin-feedback adapter through the seam
+?? Sources/Features/Admin/FeedbackQueuePage.swift              (275 LOC) SwiftUI view: PageContainer title; GlassPanel1 = status + category native menus (TSSelect, "All …" + tokens verbatim) + Refresh (loading state) + "bridge not configured" note; state-routed body (TSTableSkeleton / TSEmptyState / TSQueryError+retry / table); pagination (pageOf %n$@ interpolation + Previous/Next); #if DEBUG previews (loaded/empty/error)
+?? Sources/Features/Admin/FeedbackQueuePage.Table.swift        (230 LOC) FeedbackQueueTable (adaptive: macOS/iPad columnar Grid w/ full-width expanded GridRow, iPhone compact cards) — 7 web columns (created/category/title/pageRoute/reporter/status/github link) + chevron expand (TSUserCell for reporter)
+?? Sources/Features/Admin/FeedbackQueuePage.Expansion.swift    (260 LOC) FeedbackExpansion (web renderExpanded): report body, 2-up metadata grid (appVersion/userAgent/submitter/masked userEmail via TSMaskedValue), recent_errors + console_tail DisclosureGroups, triage action row (status menu / GitHub URL field / Save / bridge-gated Forward); AI triage advisor noted out-of-scope (separate parity unit)
+?? Sources/Features/Admin/FeedbackQueuePage.Badges.swift       (61 LOC)  FeedbackCategoryBadge (web bug→danger/feature→info/other→neutral) + FeedbackStatusBadge (web new→warning/triaged→success/closed→neutral) over TSBadge, web label keys
+?? Sources/Features/Admin/FeedbackQueueRouteRegistration.swift (29 LOC)  registers .feedbackQueue -> FeedbackQueuePage (model built on MainActor + captured; mirrors AuditLogRouteRegistration)
+?? Tests/Unit/Features/Admin/FeedbackQueuePageModelTests.swift (266 LOC) XCTest: 4 list states + query snake_case + filter→page-reset + totalPages math + pagination guards/advance + expansion toggle + update persistence/in-flight flag + update-failure non-destructive + tolerant wire decode + formatters (dateTime/prettyJSON/orDash) + badge tone maps + sample seed/filter
+ M Sources/App/AppRoute.swift                  +.feedbackQueue case (pathSegment "feedback", systemImage exclamationmark.bubble.fill, .system group)
+ M Sources/App/AppRouteParser.swift            +"/admin/feedback" -> .feedbackQueue alias
+ M Sources/TeslaSyncApp.swift                  chains FeedbackQueueRouteRegistration.registry(base: UsersRouteRegistration.registry(...)) into \.routeHosts
+ M Localization/Localizable.xcstrings          +1 key (route.feedbackQueue nav title); JSON validated (9211 total keys). All 38 PARITY string keys ALREADY present under translation.* (0 added).
+ M apps/parity/apple-ledger.json               +2 rows (apple-macos, apple-ios) for page:admin/FeedbackQueue, covered 43/43
+
+================================================================================
+GATES
+================================================================================
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj
+GEN_EXIT=0
+
+--- swiftformat --lint (my 9 new files + 3 edited, repo .swiftformat) ---
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 9 new files + 3 edited, repo .swiftlint.yml) ---
+Done linting! Found 0 violations, 0 serious in 12 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=7   (all 7 pre-existing sibling opt-outs; ZERO are mine)
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0   [tests dir Tests/Unit/Features/Admin: PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0]
+# No TODO/FIXME/stub/Placeholder/Lorem/fatalError in any of my files (self-grep = 0). The
+# GitHub-URL field prompt is the literal example URL the web uses verbatim (not localized,
+# not a stub).
+
+--- Executed model harness (real FeedbackQueueModels + FeedbackQueuePageModel + .Sample, Swift 6 strict-concurrency host) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   Sources/Features/Admin/{FeedbackQueueModels,FeedbackQueuePageModel,FeedbackQueuePageModel.Sample}.swift main.swift -o fbharness   (SWIFTC_EXIT=0)
+ALL ASSERTIONS PASSED   (HARNESS_EXIT=0; 33 assertions)
+  initial=.loading; load -> .loaded(2)+total+bridgeEnabled; zero rows -> .empty; load failure -> .error;
+  queryString "?status=new&category=feature&limit=25&offset=50" + bare "?limit=25&offset=0" (snake_case);
+  totalPages ceil(60/25)=3; page0 prev-disabled/next-enabled; next->offset25; page2 last; prev->page1;
+  filter change resets page+applies; toggleExpanded add/remove; sample 312 .new->.triaged PERSISTED + isUpdating cleared;
+  wire decode tolerant (unknown->.other / garbage->.new); dateTime nil/invalid->dash, valid!=dash;
+  prettyJSON pretty multiline / raw fallback / nil->dash; orDash empty->dash; sample populated + status filter narrows
+
+--- View type-check against the REAL P2 tokens + P3 components (Swift 6 strict concurrency, -DDEBUG so previews compile) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -DDEBUG -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Typography,Badges,Buttons,Cards,Fields,Utility,Pickers}.swift \
+#   Sources/Components/Feedback/{Banners,States,Skeletons}.swift Sources/Components/DataDisplay/{People,StatusIndicators}.swift \
+#   Sources/App/{AppRoute,RouteHostRegistry}.swift Sources/Features/Admin/FeedbackQueue*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0   (exercises the compact horizontalSizeClass branches)
+
+--- Test-logic type-check (XCTest's C assert macros are unavailable outside a test bundle; shimmed to validate symbol usage + types) ---
+0 errors. (Caught + fixed one real defect first: StubSource.updateFeedback (nonisolated) called the @MainActor test class's makeRow — would fail in the real bundle too; inlined the fallback.)
+TEST_LOGIC_TYPECHECK_EXIT=0
+
+--- KMP Shared.xcframework (scheme pre-build, ADR-004) ---
+./Scripts/build-shared-xcframework.sh -> :core:assembleSharedXCFramework BUILD SUCCESSFUL in 10m41s; staged to apps/apple/Frameworks/Shared.xcframework
+SHARED_XCFRAMEWORK_EXIT=0
+
+--- FULL xcodebuild (scheme TeslaSync, iOS Simulator, Debug) — REAL run, RED (pre-existing, out-of-scope) ---
+# xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync -destination 'generic/platform=iOS Simulator' -configuration Debug build CODE_SIGNING_ALLOWED=NO
+RESULT: ** BUILD FAILED ** (3 failures)
+ROOT CAUSE: the ONLY source diagnostics are 2 errors in the GENERATED, OUT-OF-SCOPE
+  apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift:88:9 / :101:9
+    "cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'"
+  This file is NOT in my changeset (git status confirms), I did not touch it or any of its
+  dependencies, and the failure aborted the whole-module batch before my Features/Admin batch
+  was scheduled. grep "error:" over the entire build, restricted to Sources/Features/Admin =>
+  ZERO. This is the SAME pre-existing TeslaSync/shared-surfaces breakage the sibling AuditLog
+  log recorded; it is out-of-scope and forbidden to commit-fix.
+BUILD_EXIT=65   (RED is 100% pre-existing/out-of-scope; my code is proven clean by the two
+                 isolated Swift-6 type-checks above + the executed model harness)
+
+================================================================================
+=== PARITY ===   PARITY_REQUIRED=43
+================================================================================
+[panel] (1/1)
+ 1. GlassPanel1                         -> FeedbackQueuePage.swift `queuePanel` (TSGlassPanel { filterSection; bodySection })
+
+[state] (4/4) — FeedbackQueuePageModel.FeedbackListState + FeedbackQueuePage.bodySection switch
+ 2. loading                            -> .loading  -> TSTableSkeleton(rows: 6)
+ 3. empty                              -> .empty    -> TSEmptyState(translation.feedback.queue.empty / .emptyMessage, ladybug.fill)
+ 4. error                              -> .error    -> TSQueryError(onRetry: model.reload) + accessibilityValue(message)
+ 5. success                            -> .loaded   -> FeedbackQueueTable(rows) + paginationFooter
+
+[string] (38/38) — every literal resolves from Localizable.xcstrings via translation.<webkey>; symbol = call site
+ 6. common.next                         -> FeedbackQueuePage.swift paginationFooter TSButton("translation.common.next")
+ 7. common.previous                     -> FeedbackQueuePage.swift paginationFooter TSButton("translation.common.previous")
+ 8. common.refresh                      -> FeedbackQueuePage.swift refreshButton Label("translation.common.refresh") (+a11y)
+ 9. feedback.category.bug               -> FeedbackQueuePage.Badges.swift FeedbackCategoryBadge.labelKey(.bug) + Page.swift categoryOptions
+10. feedback.category.feature           -> FeedbackQueuePage.Badges.swift labelKey(.feature) + Page.swift categoryOptions
+11. feedback.category.other             -> FeedbackQueuePage.Badges.swift labelKey(.other) + Page.swift categoryOptions
+12. feedback.queue.action.changeStatus  -> FeedbackQueuePage.Expansion.swift statusControl TSLabel
+13. feedback.queue.action.forward       -> FeedbackQueuePage.Expansion.swift forwardButton Label
+14. feedback.queue.action.githubUrl     -> FeedbackQueuePage.Expansion.swift urlControl TSTextField(label:)
+15. feedback.queue.action.saveUrl       -> FeedbackQueuePage.Expansion.swift saveURLButton TSButton
+16. feedback.queue.bridgeDisabled       -> FeedbackQueuePage.swift filterSection Text (shown when !bridgeEnabled)
+17. feedback.queue.col.category         -> FeedbackQueuePage.Table.swift header(col.category)
+18. feedback.queue.col.created          -> FeedbackQueuePage.Table.swift header(col.created)
+19. feedback.queue.col.github           -> FeedbackQueuePage.Table.swift header(col.github) + compact githubRow label
+20. feedback.queue.col.pageRoute        -> FeedbackQueuePage.Table.swift header(col.pageRoute)
+21. feedback.queue.col.reporter         -> FeedbackQueuePage.Table.swift header(col.reporter) + compact reporterRow label
+22. feedback.queue.col.status           -> FeedbackQueuePage.Table.swift header(col.status)
+23. feedback.queue.col.title            -> FeedbackQueuePage.Table.swift header(col.title)
+24. feedback.queue.empty                -> FeedbackQueuePage.swift TSEmptyState(title:)
+25. feedback.queue.emptyMessage         -> FeedbackQueuePage.swift TSEmptyState(message:)
+26. feedback.queue.expand.appVersion    -> FeedbackQueuePage.Expansion.swift metadataGrid metaField
+27. feedback.queue.expand.body          -> FeedbackQueuePage.Expansion.swift reportBody Text
+28. feedback.queue.expand.consoleTail   -> FeedbackQueuePage.Expansion.swift consoleTailDisclosure label
+29. feedback.queue.expand.recentErrors  -> FeedbackQueuePage.Expansion.swift recentErrorsDisclosure label
+30. feedback.queue.expand.submitter     -> FeedbackQueuePage.Expansion.swift metadataGrid metaField
+31. feedback.queue.expand.userAgent     -> FeedbackQueuePage.Expansion.swift metadataGrid metaField
+32. feedback.queue.expand.userEmail     -> FeedbackQueuePage.Expansion.swift emailField label
+33. feedback.queue.filter.allCategories -> FeedbackQueuePage.swift categoryOptions ("All …" option)
+34. feedback.queue.filter.allStatuses   -> FeedbackQueuePage.swift statusOptions ("All …" option)
+35. feedback.queue.filter.category      -> FeedbackQueuePage.swift categoryFilter TSSelect(label:)
+36. feedback.queue.filter.status        -> FeedbackQueuePage.swift statusFilter TSSelect(label:)
+37. feedback.queue.maskedEmail          -> FeedbackQueuePage.Expansion.swift emailField TSMaskedValue.accessibilityLabel
+38. feedback.queue.openIssue            -> FeedbackQueuePage.Table.swift githubCell + githubRow Link("…openIssue")
+39. feedback.queue.pageOf               -> FeedbackQueuePage.swift pageInfoText (String(format: "…pageOf", page, totalPages, total))
+40. feedback.queue.status.closed        -> FeedbackQueuePage.Badges.swift FeedbackStatusBadge.labelKey(.closed) + Page.swift statusOptions
+41. feedback.queue.status.new           -> FeedbackQueuePage.Badges.swift labelKey(.new) + Page.swift statusOptions
+42. feedback.queue.status.triaged       -> FeedbackQueuePage.Badges.swift labelKey(.triaged) + Page.swift statusOptions
+43. feedback.queue.title                -> FeedbackQueuePage.swift header TSPageTitle + queuePanel accessibilityLabel
+
+PARITY_COVERED=43
+# Programmatic check: all 38 string keys referenced in code as "translation.<key>" (38/38) AND
+# present in Localizable.xcstrings (38/38); 1 panel + 4 states bound to FeedbackListState above.
+
+--------------------------------------------------------------------------------
+LIVE-SSE staleness: N/A — the feedback queue is a polled admin list + PATCH mutation, not a
+live stream (the manifest declares no live source; ADR-013 scope). Units: N/A — feedback is
+unit-agnostic control-plane data (no SI converters apply; ADR-002/P1-S5 unused here).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild)
+                       is a PRE-EXISTING OUT-OF-SCOPE compile failure on the generated
+                       TeslaSync/shared-surfaces/Input.Previews.swift (2 ViewBuilder-return
+                       errors), a file NOT in my changeset; grep "error:" over Sources/Features/Admin = 0.
+ 2 No scope narrowing: the single GlassPanel, all 4 list states, the 7-column adaptive table
+                       (macOS/iPad columnar Grid + iPhone compact cards), the expandable detail
+                       (body + 4-field metadata grid + recent-errors/console-tail disclosures +
+                       triage action row), filters, Refresh, bridge note, and pagination are ALL
+                       implemented. The web AI triage advisor is its OWN parity unit (native peer
+                       in TeslaSync/shared-surfaces/AIFeedbackQueueTriage.swift) and out of this
+                       unit's 43 — noted in-code, not silently dropped.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title, the status/category
+                       Selects + Refresh + bridge-disabled note, the 7 DataTable columns, the
+                       renderExpanded body/metadata/recent_errors/console_tail/status/url/save/
+                       forward, and the Page-of pagination were all reproduced.
+ 4 No stubs as final : no TODO/stub/Lorem/fatalError/Placeholder (PLACEHOLDER_COUNT=0; ZERO opt-outs
+                       of my own). Complete code; the actor sample persists the mutation.
+ 5 No parity shortcuts: 4 list states render distinctly; filters + Refresh stay interactive across
+                       states; category/status tone+label maps match the web variant maps; strings
+                       are the web keys verbatim (under the catalog's translation.* import namespace,
+                       the same convention as sibling UsersPage), values match the web defaults.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, shared component, project.yml, or other
+                       owners' files. The generated TeslaSync.xcodeproj + Frameworks/Shared.xcframework
+                       are git-ignored (git check-ignore confirmed) and not committed.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — xcodegen(0), swiftformat --lint(0/12),
+                       swiftlint --strict(0/12), placeholder(0/0), model harness(33 ASSERTIONS PASSED),
+                       view type-check macOS(0/0) + iOS(0/0), test-logic type-check(0). The only RED is
+                       the out-of-scope pre-existing shared-surfaces compile error, DEFERRED to its owner.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path, dedicated-.feedbackQueue-route, and translation.*-namespace
+                       reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI FeedbackQueuePage shipped at parity with the web source: a pure
+@Observable state holder (ADR-004 — no networking in the view) exposing the list state
+(loading/empty/error/success) over an injectable FeedbackDataSource seam whose value types mirror
+the web FeedbackEntry / FeedbackListResponse / FeedbackUpdateInput 1:1 (production binds the KMP
+admin-feedback endpoints through the seam). The page reproduces the web chrome (PageContainer
+title) and the single GlassPanel: the status/category filter menus + Refresh + the
+"bridge not configured" note, and the paginated entries table with an adaptive layout (columnar
+Grid on macOS/iPad, per-row cards on iPhone) covering all seven web columns plus the expandable
+detail (report body, app-version/user-agent/submitter/masked-email metadata, recent-errors +
+console-tail disclosures, and the triage action row — change status / save GitHub issue URL /
+bridge-gated Forward). It binds the P2 tokens + P3 shared components (TSGlassPanel, TSSelect,
+TSButton, TSTextField, TSMaskedValue, TSBadge, TSUserCell, TSTableSkeleton, TSEmptyState,
+TSQueryError — no hand-rolled chrome). Every visible string resolves from Localizable.xcstrings
+with the web key names (38 keys, already present under the catalog's translation.* namespace);
+date/JSON formatting is ported from the web and unit-tested. Verified on BOTH idioms by isolated
+Swift-6 strict-concurrency type-checks (macOS 0/0 + iOS 0/0, exercising the compact branches) and
+an executed model harness (33 assertions passed). The full xcodebuild scheme is RED ONLY due to a
+pre-existing, out-of-scope compile error in the generated TeslaSync/shared-surfaces
+(Input.Previews.swift), with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/FeedbackQueue*.swift \
+          apps/apple/Tests/Unit/Features/Admin/FeedbackQueuePageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-FeedbackQueuePage.log
+  git commit -m "feat(apps/apple): FeedbackQueuePage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,155 @@
+=== P4 Shared surface 0047 AISmartChargeScheduleSuggestion (Apple) ===
+
+ARTIFACT
+  Prompt   : .github/prompts/monorepo/p4-apple/shared-surfaces/0047-AISmartChargeScheduleSuggestion
+  Web src  : web/src/components/ai/AISmartChargeScheduleSuggestion.tsx  (THE specification)
+  Native   : apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.*  (10 files)
+  Toolchain: Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat (Homebrew) · xcodegen 2.x
+  Runner   : Darwin arm64, shared with parallel slots (slot-40 building the same KMP framework)
+
+SHIPPED FILES (10)
+  AISmartChargeScheduleSuggestion.swift            — the SwiftUI surface (gated/loading/error/ready)
+  AISmartChargeScheduleSuggestion.Adapter.swift    — request body, SSE parse, stream reducer, output/action derivation, ISO depart_by
+  AISmartChargeScheduleSuggestion.Model.swift      — P1/S8 state-holder seam, P1/S10 i18n facade, P1/S11 telemetry, @Observable model
+  AISmartChargeScheduleSuggestion.Projection.swift — pure input→view-state projection (localized)
+  AISmartChargeScheduleSuggestion.Chrome.swift     — P4 leaf chrome (freshness chip, refresh, banner, loading, gate-error)
+  AISmartChargeScheduleSuggestion.Views.swift      — badge, Ask-Helix button, thinking indicator, output panel, ready card
+  AISmartChargeScheduleSuggestion.Previews.swift   — #Preview matrix for every state (DEBUG-only)
+  AISmartChargeScheduleSuggestion.strings          — P1/S10 catalog contribution (all web keys + chrome)
+  AISmartChargeScheduleSuggestion.AdapterTests.swift — Foundation-only adapter unit tests
+  AISmartChargeScheduleSuggestion.Tests.swift      — projection + model + accessibility tests
+
+PARITY (vs web source — every behaviour reproduced, none "fixed")
+  - withAiFeature('smart-charge-schedule-suggestion') gate  → .gated / .loading / .error / .ready phases (useAiEnabled tri-state)
+  - useAiStream('/ai/charging/schedule/draft')              → SmartChargeScheduleRequest.path + SSE parse/reduce ports
+  - haveInputs = !!vehicleId && !!ratePlanId                → (vehicleID ?? 0) != 0 && !(ratePlanID ?? "").isEmpty
+                                                              (BOTH inputs; non-zero vehicle incl. negatives, non-empty rate plan —
+                                                               DISTINCT from the predictive surface's single `> 0` gate)
+  - 9-field body { vehicle_id, target_soc, depart_by, rate_plan_id, max_amps, battery_capacity_kwh, charger_voltage,
+                   prefer_off_peak, current_soc }           → snake_case verbatim; web `?? default` fallbacks; `numericVehicleId || 0`
+                                                              (field names mirror the EXISTING backend wire contract — this is a
+                                                               frontend-parity surface posting to the SAME route, NOT a new Go/DB field)
+  - depart_by ISO normalization (web new Date().toISOString) → SmartChargeScheduleISO8601 (UTC, ms); nil ⇒ injected now; ALWAYS present
+  - AIFeatureCard (no emptyHint passed by this source)       → no description-level hint; the "select a vehicle and a rate plan"
+                                                               guidance lives in the output panel (P4 "never a blank box")
+  - AiOutputPanel branch order (error → thinking → prose)    → SmartChargeScheduleOutput.derive
+  - Ask-Helix button (label flip + disabled = !canStart||streaming) → SmartChargeScheduleAction.derive
+  - i18n keys: chargePlanner.aiAgent.title / .description / .generateButton / .badge  (+ shared helix.* + chrome)
+  - P1/S11 view.opened emitted once, deferred past the gate (off-mode emits nothing — web data-ai-feature marker parity)
+
+------------------------------------------------------------------------------------------------------
+GATE STEPS — runnable steps executed on THIS runner; raw exits pasted (no fabrication)
+------------------------------------------------------------------------------------------------------
+
+[1] swiftformat --lint (the 9 shipped .swift surface files)
+    > 0/9 files require formatting.
+    FORMAT_EXIT=0
+
+[2] swiftlint lint --strict (the 9 shipped .swift surface files)
+    > Done linting! Found 0 violations, 0 serious in 9 files.
+    LINT_EXIT=0
+    (file_length 400-line cap honoured: Adapter.swift trimmed to 397, AdapterTests.swift to 400.)
+
+[3] check-placeholders.ps1 — no TODO/FIXME/stub/mock/placeholder/Lorem/Coming-soon in shipped code
+    [3a] literal gate path (prefix arg matches no directory ⇒ Get-ChildItem -Recurse scans 0 files):
+         PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / LITERAL_PLACEHOLDER_EXIT=0
+    [3b] HONEST per-file scan (the 10 shipped files copied to a temp dir, then scanned):
+         PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    PLACEHOLDER_EXIT=0
+
+[4] ISOLATED Swift 6 build + test (swift-tools-version 6.0 ⇒ Swift 6 language mode, strict concurrency
+    complete — the app's own setting; module named `TeslaSync` to satisfy `@testable import TeslaSync`).
+    Compiled the 10 shipped files AGAINST THE REAL DESIGN SYSTEM:
+      apps/design/generated/apple/Tokens.swift  +  apps/apple/Sources/Components/**  +  apps/apple/Sources/Design/**
+    (only apps/apple/Sources/Components/DataDisplay/UnitFormatters.swift excluded — it needs the app-level
+     Units/UnitPreferences layer my surface never references; my surface does NOT use it.)
+    > Executed 82 tests, with 0 failures (0 unexpected)
+    > Test Suite 'All tests' passed
+    ISOLATED_BUILD_TEST_EXIT=0
+    NOTE: this isolated build CAUGHT A REAL Swift-6 strict-concurrency defect in my first draft —
+      `static let formatter: ISO8601DateFormatter` (non-Sendable shared mutable state). FIXED to a
+      fresh per-call formatter (pure, Sendable-safe). Re-verified green. (Honesty rule 1 + 8.)
+
+[5] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Gradle pre-action SUCCEEDED on this runner (Kotlin/Native present): Shared.xcframework assembled + staged.
+    The full TeslaSync iOS app then compiled — MY SURFACE COMPILED CLEANLY (20 references, 0 errors) — and
+    the build FAILED on ONE pre-existing, out-of-allowed-files SIBLING surface:
+      apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures non-escaping parameter 'content'
+    ** BUILD FAILED **
+    IOS_EXIT=65
+    Evidence it is NOT mine and PRE-EXISTING:
+      - `git status --porcelain` shows my working tree adds ONLY the 10 AISmartChargeScheduleSuggestion.* files.
+      - AISignalExplorerNlFilter.swift is git-TRACKED (committed) by a DIFFERENT prior surface:
+          441cd2538 feat(apps/apple/shared-surfaces): add AISignalExplorerNlFilter surface (P4)
+      - 0 errors in the iOS log reference AISmartChargeScheduleSuggestion.*.
+      - The iOS app target was therefore already red at HEAD; my additive files introduce no regression.
+
+[6] xcodebuild -scheme TeslaSync-macOS build test
+    Gradle pre-action SUCCEEDED (Shared.xcframework UP-TO-DATE + staged). The macOS build then FAILED at
+    CODE SIGNING — before the Swift compile phase — because the runner has no development certificate
+    (project.yml DEVELOPMENT_TEAM is ""):
+      error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. ...
+    ** BUILD FAILED **
+    MAC_EXIT=65
+    This is an environmental runner limitation (unsigned), not a code defect; documented for the P4
+    acceptance gate (signed runner) per apps/macos-pending-verifications.md.
+
+------------------------------------------------------------------------------------------------------
+HONESTY COVENANT (verbatim 10)
+------------------------------------------------------------------------------------------------------
+ 1 No red-as-green     : IOS_EXIT=65 and MAC_EXIT=65 are pasted as the real failing exits with the verbatim
+                         error lines. I do NOT claim the full-app xcodebuild gate is green. I separately prove
+                         the surface itself is green (82 tests + lint + format + placeholder), and that the two
+                         red gates are external (a sibling's bug + runner signing), with git + log evidence.
+ 2 No scope narrowing  : every state (gated/loading/error/ready · idle/thinking/prose/stream-error/missing-inputs ·
+                         live/stale/offline) is rendered; every web t() key is reproduced (incl. the description +
+                         badge the prompt's extracted list omitted); the full 9-field body is implemented.
+ 3 No skip-and-assume  : both full-app gates were actually RUN on THIS runner; the iOS sibling error and the macOS
+                         signing error are real pasted lines, not assumptions. The macOS gate was executed (not
+                         skipped) even though its blocker was predictable. The isolated build/test is a real run.
+ 4 No stubs as final   : complete production surface + 82 real tests; PLACEHOLDER_COUNT=0 on every shipped file;
+                         no TODO/FIXME/stub/mock/placeholder/Lorem. OSLog telemetry is a working seam the app
+                         overrides; the InMemory source is a test/preview affordance.
+ 5 No parity shortcuts : the two-input `!!vehicleId && !!ratePlanId` gate (incl. zero-vehicle-falsy / negative-truthy
+                         boundaries), the 9-field snake_case body with the web `?? default` fallbacks + `||0` coercion,
+                         the ALWAYS-present ISO depart_by with now-fallback, the SSE parse/reducer, the AiOutputPanel
+                         order, and the AIFeatureCard button contract are each unit-asserted against the web
+                         expressions. Tailwind/hex → P1/S9 tokens (Color.TS.*, Font.TS.*, TSSpacing, TSRadius); the
+                         em-dash description is reproduced verbatim. The web source passes NO emptyHint — so neither
+                         do I (the never-blank-box guidance lives in the output panel instead).
+ 6 No delegation       : implemented directly; no sub-agents (delegation FORBIDDEN for this tier).
+ 7 No predecessor bypass: binds the P1/S8 state-holder seam (SmartChargeScheduleModel + Source), P1/S9 tokens (the
+                         REAL Tokens.swift + Sources/Components TSButton/TSFadeIn/TSSkeleton), P1/S10 i18n
+                         (SmartChargeScheduleStrings + the .strings table), and P1/S11 view.opened telemetry.
+                         Honours the established P4 isolated-build verification + DEFERRED full-app disposition.
+ 8 No commit on red    : the COMMITTED artifact (10 AISmartChargeScheduleSuggestion.* files + this log) is GREEN on
+                         swiftformat, swiftlint --strict, placeholder, AND a real Swift 6 strict-concurrency build +
+                         82/82 XCTest against the REAL design system. The two red full-app gates are owned elsewhere:
+                         the iOS sibling compile error (AISignalExplorerNlFilter.swift — out of my allowed files) and
+                         macOS runner code-signing. Adding my green, additive files introduces ZERO regression.
+ 9 No silent drift     : changes confined to TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.* + this log.
+                         No sibling surface, project.yml, or token file was touched (git status proves it). The
+                         generated .xcodeproj, staged Shared.xcframework, /tmp build logs, and the isolated harness
+                         are git-ignored / outside the repo / not committed.
+10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic AISmartChargeScheduleSuggestion shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED: it compiles and its 82 tests pass under the app's own Swift 6
+  strict-concurrency rules, against the REAL design system (Tokens.swift + Sources/Components +
+  Sources/Design) via Xcode 26.5, with swiftformat / swiftlint --strict / placeholder all green on the
+  shipped files and the #Preview matrix compiling.
+
+  The full-app iOS + macOS xcodebuild build/test gate is RED (IOS_EXIT=65, MAC_EXIT=65) but DEFERRED —
+  NOT failed by this code:
+    • iOS  : a pre-existing, committed, out-of-allowed-files SIBLING compile error
+             (AISignalExplorerNlFilter.swift:142, from commit 441cd2538). My surface compiled with 0 errors.
+    • macOS: runner code-signing (no development certificate; DEVELOPMENT_TEAM="").
+  Both are owned by the P4 acceptance gate (clean + signed runner) and the AISignalExplorerNlFilter
+  surface's own prompt. The surface deliverable for THIS prompt is complete and green on every gate it owns.
+
+EXIT=0
+STATUS=DONE

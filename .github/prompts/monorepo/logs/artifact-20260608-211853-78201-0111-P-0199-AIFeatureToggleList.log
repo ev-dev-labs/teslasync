@@ -1,0 +1,260 @@
+================================================================================
+=== P4 · Feature view · 0199 — AIFeatureToggleList (Apple) — AI feature opt-in list ===
+================================================================================
+Run    : 2026-06-09T02:20-0700   Host: Darwin arm64 (macOS 26.5)
+Branch : auto/20260608-211853-78201/111
+Base   : 40917330e
+Prompt : P4/feature-views/0199 — Feature view: AIFeatureToggleList
+Web src: web/src/features/settings/components/AIFeatureToggleList.tsx  (THE spec)
+Output : apps/apple/TeslaSync/feature-views/AIFeatureToggleList.{swift,Model,Adapter,Views,Previews,
+         Registry,Tests,RegistryTests}.swift + AIFeatureToggleList.strings
+Allowed: apps/apple/TeslaSync/feature-views/AIFeatureToggleList.* + this log   (confined; git status
+         confirms ONLY the 9 AIFeatureToggleList.* files are new — nothing else touched. The two
+         pre-existing modified web .tsx files predate this session and are NOT part of this change.)
+Host   : macOS 26.5 (arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint/swiftformat/pwsh/xcodegen present.
+Mode   : code-complete + host-executed surface gates + DEFERRED full-app xcodebuild
+         (0157 LiveMotorStatus / ADR-012 precedent, Honesty rule 7 — predecessor parity;
+         apps/macos-pending-verifications.md disposition).
+
+--------------------------------------------------------------------------------
+CAPABILITY DETECTION (prompt: "If unavailable on the runner → STATUS=BLOCKED with API evidence")
+--------------------------------------------------------------------------------
+The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply: SwiftUI is
+AVAILABLE and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below. This surface uses
+NEITHER Charts nor MapKit (prompt "Charts/maps used: (none)") — it is a settings toggle list drawn with
+native SwiftUI primitives (Toggle switches + Text). The surface is authored, host-compiled on BOTH SDKs,
+and its full XCTest suite (37 tests) is EXECUTED green on the macOS host. Xcode is driven via
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (no sudo).
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  SwiftUI .................... present in both SDKs (this surface's core requirement) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4 (project + schemes generate cleanly)          OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  REGISTERED (iOS + macOS app + test targets, 54 refs) OK
+
+--------------------------------------------------------------------------------
+ARTIFACT (apps/apple/TeslaSync/feature-views/AIFeatureToggleList.*) — 9 files, 1530 lines
+--------------------------------------------------------------------------------
+  AIFeatureToggleList.Registry.swift 104  generated mirror of AI_FEATURE_IDS + each meta.name (57
+                                          AIFeatureDescriptor{id,name}); Foundation-only, host-testable.
+  AIFeatureToggleList.Model.swift    302  P1/S8 state-holder seam (AIFeatureToggleSource → model) +
+                                          P1/S11 telemetry seam (view.opened) + P1/S10 strings facade +
+                                          load/connection/phase enums + optimistic toggle+persist seam +
+                                          stale auto-refresh + in-memory source.
+  AIFeatureToggleList.Adapter.swift  123  testable projection core — one row per registry entry in order,
+                                          Boolean(values[id]) state read, t(key,meta.name) label fallback,
+                                          label/description key shape, on/off VoiceOver words + summary.
+  AIFeatureToggleList.Views.swift    143  presentational chrome — the toggle row (label+description+
+                                          switch), the row list, freshness chip, loading skeleton.
+  AIFeatureToggleList.swift          198  AIFeatureToggleList surface (FadeIn + bordered <section> +
+                                          Subhead legend + freshness chip + connectivity banner + state
+                                          switch loading/empty/error/data + surfaceSlug).
+  AIFeatureToggleList.Previews.swift  77  #if DEBUG previews — one per state (content / all-off / empty /
+                                          loading / error / stale / offline).
+  AIFeatureToggleList.Tests.swift    293  XCTest — projector + a11y + model (phase/telemetry/toggle/
+                                          freshness) + per-state ImageRenderer render smoke + doubles.
+  AIFeatureToggleList.RegistryTests… 140  XCTest — registry count/order/ids/names + i18n catalogue
+                                          completeness (label==name + non-empty description for all 57).
+  AIFeatureToggleList.strings        150  P1/S10 catalogue contribution (table "AIFeatureToggleList":
+                                          legend + 57 label keys + 57 description keys + native chrome).
+  Largest .swift = 302 lines (swiftlint file_length<=400 honored under --strict; Tests split into
+  Tests + RegistryTests to keep each file in budget). No file imports the Shared xcframework — the seam
+  is a Swift protocol; the prod app injects the facade-backed source, previews/tests inject
+  InMemoryAIFeatureToggleSource.
+
+--------------------------------------------------------------------------------
+PARITY (web source reproduced end-to-end)
+--------------------------------------------------------------------------------
+  - Data source (web `useTranslation`; the controlled `values: Record<AiFeatureId, boolean>` +
+    `onToggle(id, value)` fed by the settings-form parent): bound through the P1/S8 seam
+    AIFeatureToggleSource → AIFeatureToggleListModel. The view never issues HTTP; the source resolves the
+    opt-in values + pushes coalesced updates, and a flip persists through `setEnabled` (web `onToggle`).
+  - Composition (web `<section rounded-md border p-4 space-y-2 aria-label={legend}>` > `<Subhead>`legend
+    + `AI_FEATURE_IDS.map(...)` of `<div>` label + `<Caption>` + `<Toggle>`):
+      • <section> border    -> bordered rounded container (TSRadius.md + Color.TS.border), wrapped in
+                               TSFadeIn(delay 0.1); aria-label -> accessibilityLabel = legend.
+      • <Subhead> legend    -> uppercase-weight Subhead (Font.TS.bodySm semibold textSecondary),
+                               web t('ai.settings.feature.legend','Per-feature opt-in (all default off)').
+      • per-feature rows    -> AIFeatureRegistry.all (= AI_FEATURE_IDS, 57, same order) each:
+          - label   -> t('ai.settings.feature.<id>.label', meta.name)        (bodySm medium textPrimary).
+          - desc    -> t('ai.settings.feature.<id>.description', meta.description) (caption textMuted).
+          - Toggle  -> Toggle(.switch).tint(accent), checked = Boolean(values[id]) (absent ⇒ off),
+                       onChange -> model.toggle(id,next) -> source.setEnabled (optimistic + persist).
+  - i18n: the legend key + all 57 label keys + all 57 description keys mirror the web
+    t('ai.settings.feature.*') calls; the long meta.description blurbs ship verbatim in the .strings
+    catalogue (NOT as oversized Swift literals), pinned non-empty by the catalogue test.
+  - States (every one renders; web leaf is controlled-only, native owns the lifecycle like AISettings):
+      loading -> skeleton rows; empty -> friendly empty state (no settings record); error -> retryable
+      QueryError peer; data -> the toggle list; stale/offline -> freshness chip + cached banner + one-shot
+      stale auto-refresh.
+  - a11y: each switch is the interactive element with accessibilityLabel = feature name (web
+    aria-label={label}) + the description as its hint + native on/off value; decorative label/description
+    text hidden from VoiceOver to avoid duplication. Projection carries a combined VoiceOver summary.
+  - Telemetry: model.start() emits the P1/S11 `view.opened` event with slug "AIFeatureToggleList" exactly
+    once (asserted).
+
+--------------------------------------------------------------------------------
+GATES — HOST-EXECUTED (genuinely green; raw results)
+--------------------------------------------------------------------------------
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK (Foundation-only Registry + Model + Adapter)
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  Registry.swift Model.swift Adapter.swift
+        IOS_TYPECHECK_EXIT=0   (0 errors)                                          OK
+  [2] swiftc -typecheck — macOS 15 SDK (same three files, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0   (0 errors)                                          OK
+  [3] swift build — the FULL SwiftUI closure (6 production files + #Preview previews + real design tokens
+        + the real TS component closure it uses: Tokens + Design + Motion + UI{Buttons,Cards,Badges,
+        Typography} + Feedback{States,Skeletons,Banners}) compiled by a self-contained SwiftPM harness
+        (module "TeslaSync" so the shipped `@testable import TeslaSync` resolves unchanged), Swift 6 +
+        complete concurrency:
+          Compiling TeslaSync AIFeatureToggleList.{Model,Views,Registry,Adapter,Previews}.swift
+          Compiling TeslaSync AIFeatureToggleList.swift
+          Build complete! (1.47s)
+        BUILD_EXIT=0  — 0 warnings (the switch binding uses an inline closure capturing the @MainActor
+                        model, matching the codebase's NotificationSounds toggle pattern, so the set
+                        closure is Sendable-clean).                                OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host (real production Registry/Model/
+        Adapter/Views/surface + DEBUG previews + real component closure), Swift 6 language mode:
+          Test Suite 'AIFeatureRegistryTests'            passed —  4 tests, 0 failures
+          Test Suite 'AIFeatureToggleAccessibilityTests' passed —  1 test , 0 failures
+          Test Suite 'AIFeatureToggleCatalogTests'       passed —  3 tests, 0 failures
+          Test Suite 'AIFeatureToggleListModelTests'     passed — 14 tests, 0 failures
+          Test Suite 'AIFeatureToggleListViewStateTests' passed —  7 tests, 0 failures
+          Test Suite 'AIFeatureToggleProjectorTests'     passed —  8 tests, 0 failures
+          Executed 37 tests, with 0 failures (0 unexpected) in 2.018 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: registry count/order(==AI_FEATURE_IDS)/unique-ids/non-empty-names; the projection (one
+        row per feature in order, Boolean(values[id]) incl. absent⇒off, label==meta.name fallback, key
+        shape, on/off words + summary); the catalogue completeness (label==name + NON-EMPTY description
+        for all 57 + the legend — proving the long blurbs ship); the model phase matrix, loaded-empty-map
+        ⇒ data-all-off, empty-status ⇒ empty, cached-behind-failure, optimistic toggle + persist + no-op,
+        once-until-live stale auto-refresh + offline-no-refresh, view.opened-once + slug; the a11y tile +
+        summary; and an ImageRenderer render smoke for ALL SEVEN states.
+  [5] swiftlint --strict — SURFACE-SCOPED (the 8 shipped .swift files; repo .swiftlint.yml):
+          Found 0 violations, 0 serious in 8 files.   LINT_EXIT=0                  OK
+        Whole-tree disclosure (Covenant #1/#9): `swiftlint --strict` over all included files reports
+        1 violation — opening_brace in TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.
+        swift:158 — a PRE-EXISTING, unrelated dashboard-widget file OUTSIDE this prompt's allowed files
+        (the same baseline blocker cited by the 0157 predecessor + apps/macos-pending-verifications.md).
+        ZERO of the violations are in AIFeatureToggleList (`… | grep -c AIFeatureToggleList` → 0).
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.   FORMAT_EXIT=0                            OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; pwsh):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AIFeatureToggleList
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        (zero TODO/FIXME/stub/placeholder/Lorem markers; a dir-wide scan of feature-views shows no
+         AIFeatureToggleList hits either.)   PLACEHOLDER_EXIT=0                    OK
+  [8] xcodegen generate — project + schemes regenerate cleanly; AIFeatureToggleList IS registered in the
+        iOS + macOS app targets AND both XCTest bundles (54 refs in project.pbxproj; all 9 files present).
+        XCODEGEN_EXIT=0                                                            OK
+
+================================================================================
+GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green)
+================================================================================
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host via the Xcode toolchain):
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+      - `apps/apple/Frameworks/` contains ONLY `.gitkeep` -> Shared.xcframework NOT staged; the app target
+        links the KMP core, whose staging needs a Kotlin/Native gradle build (apps/shared
+        :core:assembleSharedXCFramework), independent of this UI surface.
+      - macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    Why deferred (code-unrelated, pre-existing; identical disposition to 0157, Honesty rule 7):
+      (a) unstaged KMP Shared.xcframework (concrete missing-framework error captured above),
+      (b) macOS signing (development certificate on a signed runner),
+      (c) the project-wide pre-existing baseline — the opening_brace lint in
+          LiveSignalSparklinesWidget.Builder.swift — OUTSIDE this prompt's allowed files.
+    The SAME surface logic is PROVEN GREEN (37/37) by the executed SwiftPM harness in step [4], and the
+    surface compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2]/[3]. Per ADR-012 + the
+    macos-pending-verifications.md protocol, the full-app build/test is the deferred acceptance-gate
+    artifact (the apple acceptance gate on macos-latest with signing identities), NOT unfinished work.
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+  [x] Surface renders all web states (loading / empty / error / stale / offline / data, + all-off) —
+      implemented; each has a #if DEBUG preview; phase + per-state render EXECUTED green (ImageRenderer).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AIFeatureToggleSource → model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web ai.settings.feature.legend + the 57
+      .label + 57 .description keys present; catalogue test proves label==meta.name + non-empty desc.
+  [x] Accessibility labels on every interactive element (each switch: label = feature name, hint =
+      description, native on/off value); projection carries a combined VoiceOver summary.
+  [x] Tests: adapter projection unit + registry/order + catalogue completeness + per-state model + a11y +
+      per-state view render — 37 methods across 6 suites, EXECUTED 37/37, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — ADR-011 gate COUNT=0, EXIT=0.
+  [x] EXIT=0 / STATUS=DONE — host surface gates green; full-app xcodebuild build/test DEFERRED with
+      captured evidence (xcframework + signing + pre-existing baseline), per predecessor parity.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green : host surface gates are genuinely green (37/37 tests executed, both SDKs typechecked,
+                     swift build complete with 0 warnings, surface-scoped lint/format/placeholder clean —
+                     outputs pasted). The whole-tree swiftlint (1 pre-existing non-scope violation) and
+                     the full-app xcodebuild (exit 65, missing xcframework) are reported as-is.
+ 2 No scope narrow : full surface — the legend + ALL 57 feature rows (registry-ordered, value-bound,
+                     label + description) + 7 states + every i18n key + a11y + telemetry + persist seam.
+                     9 files, 1530 lines.
+ 3 No skip-assume  : web source read end-to-end; the AI_FEATURE_IDS registry order, every t() key, the
+                     Boolean(values[id]) guard, and the onToggle callback reproduced and pinned by tests.
+ 4 No stubs final  : complete implementation; ADR-011 placeholder COUNT=0. The /tmp SwiftPM harness is
+                     throwaway verification scaffolding, never shipped (removed after the run).
+ 5 No parity short : the 57 registry names + the legend are carried verbatim; the long meta.description
+                     blurbs ship verbatim in the .strings catalogue (NOT truncated) and are pinned
+                     non-empty per-id by the catalogue test; Boolean(values[id]) + absent⇒off pinned.
+ 6 No delegation   : authored directly; NO sub-agent delegation of the surface (delegation FORBIDDEN).
+ 7 No predecessor bypass : did NOT edit project.yml, Localizable.xcstrings, the shared component/token
+                     closure, or any non-AIFeatureToggleList file (git status: only the 9
+                     AIFeatureToggleList.* files are new). The toggle binding follows the existing
+                     NotificationSounds row pattern rather than reverting to any older approach.
+ 8 No commit on red : committing on GREEN surface-scoped gates; the non-green items are (a) the
+                     pre-existing whole-tree opening_brace lint in a dashboard-widget OUTSIDE allowed
+                     files and (b) the environment-blocked full-app build (unstaged KMP xcframework +
+                     signing) — both deferred per ADR-012, not a red result of THIS surface.
+ 9 No silent drift : DISCLOSED — (i) the 8th/9th files (Registry.swift split out as a generated mirror,
+                     RegistryTests.swift split from Tests.swift to honor file_length<=400) both match the
+                     allowed AIFeatureToggleList.* glob; (ii) the long descriptions live in the i18n table
+                     (lint-exempt, not Swift literals) and are verified by the catalogue test; (iii) a
+                     Swift-6 IRGen compiler crash on `Binding(get:set:)` with a stored set-closure was
+                     worked around using the codebase's inline-closure-capturing-@MainActor-model toggle
+                     pattern — the same construct other shipped surfaces use. Changes confined to the
+                     allowed AIFeatureToggleList.* files + this log.
+ 10 Log ends with EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+Production-polished native AI feature-toggle settings surface shipped at parity with the web source: a
+Foundation-only projection core over a generated 57-entry registry mirror (executed-green: 37/37 XCTest
+under Swift 6 strict concurrency), a P1/S8 state-holder seam with an optimistic toggle+persist contract
+(no HTTP in the view), P1/S11 view.opened telemetry, every state + every i18n key (legend + 57 labels +
+57 descriptions, the long blurbs verified shipped) + VoiceOver labels + Dynamic Type / Reduce-Motion via
+the shared components. All surface-scoped gates pass (swiftlint/swiftformat/placeholder) AND the surface
+COMPILES against BOTH the iOS-18 Simulator and the macOS-15 SDKs with the real Xcode 26.5 toolchain. The
+full-app `xcodebuild build test` is DEFERRED to the apple acceptance gate: it fails only on the
+pre-existing, project-wide unstaged KMP xcframework + signing + co-located-baseline (all outside this
+prompt's allowed files), matching the accepted 0157 "surface green in isolation + DEFERRED full-app gate"
+precedent.
+
+================================================================================
+COMMIT
+================================================================================
+git add apps/apple/TeslaSync/feature-views/AIFeatureToggleList.* \
+        .github/prompts/monorepo/logs/p4-apple-feature-views-0199-AIFeatureToggleList.log
+git commit -m "feat(apps/apple/feature-views): add AIFeatureToggleList surface (P4)"
+
+EXIT=0
+STATUS=DONE

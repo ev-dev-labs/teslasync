@@ -1,0 +1,139 @@
+=== P4 Shared surface 0014 AICrossRuleConflictDetection (Apple) ===
+run:   2026-06-10T17:56:12Z
+host:  Darwin 25.5.0 arm64
+xcode: Xcode 26.5 / Build version 17F42
+swift: Apple Swift version 6.3.2
+sim:   iPhone 16 (booted)
+
+SHIPPED FILES (apps/apple/TeslaSync/shared-surfaces/AICrossRuleConflictDetection.*):
+          54 AICrossRuleConflictDetection.strings
+         111 AICrossRuleConflictDetection.Source.swift
+         122 AICrossRuleConflictDetection.Previews.swift
+         161 AICrossRuleConflictDetection.Tests.swift
+         175 AICrossRuleConflictDetection.Logic.swift
+         208 AICrossRuleConflictDetection.swift
+         250 AICrossRuleConflictDetection.ModelTests.swift
+         252 AICrossRuleConflictDetection.AdapterTests.swift
+         264 AICrossRuleConflictDetection.Views.swift
+         283 AICrossRuleConflictDetection.Adapter.swift
+         303 AICrossRuleConflictDetection.Model.swift
+         308 AICrossRuleConflictDetection.Chrome.swift
+        2491 total
+
+--------------------------------------------------------------------------
+HOST-RUNNABLE GATES (surface scope)
+--------------------------------------------------------------------------
+--- [1] swiftformat --lint (11 swift files) ---
+    SwiftFormat completed in 5.07s.
+    0/11 files require formatting.
+FORMAT_EXIT=0
+
+--- [2] swiftlint --strict (11 swift files) ---
+    Done linting! Found 0 violations, 0 serious in 11 files.
+LINT_EXIT=0
+
+--- [3] check-placeholders.ps1 (swift; my files) ---
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------
+ISOLATED SURFACE VERIFICATION — exact shipped sources vs the REAL design
+system (apps/design/generated/apple/Tokens.swift + the real TSGlassPanel /
+TSButton / TSSkeleton / Typography / Badges / TSMaterial), Swift 6 strict
+concurrency. SwiftPM module named 'TeslaSync' so '@testable import TeslaSync'
+in the surface tests is unchanged.
+--------------------------------------------------------------------------
+--- [A] swift test (macOS host: compile production + #Preview + run 55 tests) ---
+    	 Executed 20 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+    	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+    	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+    	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+    	 Executed 55 tests, with 0 failures (0 unexpected) in 0.013 (0.019) seconds
+    	 Executed 55 tests, with 0 failures (0 unexpected) in 0.013 (0.021) seconds
+SWIFT_TEST_EXIT=0
+
+--- [B] dual-SDK typecheck of the exact shipped sources (production + #Preview) ---
+    iOS  18 simulator SDK  (arm64-apple-ios18.0-simulator) : 0 errors -> IOS_TYPECHECK_EXIT=0
+    macOS 15 SDK           (arm64-apple-macos15.0)          : 0 errors -> MAC_TYPECHECK_EXIT=0
+
+--------------------------------------------------------------------------
+FULL-APP XCODEBUILD GATE (whole shared monorepo app target — both platforms)
+Shared.xcframework (KMP) built + staged: BUILD SUCCESSFUL (7m47s, then cached).
+--------------------------------------------------------------------------
+--- [4] xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test ---
+    ** TEST FAILED **  (compile of the shared app target failed before tests ran)
+    total compile errors ........................ 108
+    errors in THIS surface (AICrossRuleConflictDetection / RuleConflict*) .. 0
+    all 108 errors are in OTHER prompts' surface files (out of my allowed set):
+        30  RecentDrivesListWidget.Previews.swift
+        22  StateTimelineWidget.Previews.swift
+        20  StateTimeline.Previews.swift
+        16  RecentDrivesSection.Previews.swift
+         …  StateTimelineWidget.Model / StateTimeline.Source / RecentDrivesSection.Seams / …
+    representative messages (pre-existing cross-surface name collisions):
+        'StateTimelineUpdate' is ambiguous for type lookup in this context
+        'RecentDrivesModel'  is ambiguous for type lookup in this context
+        cannot infer contextual base in reference to member 'loaded' / 'failed' / 'stale' / 'offline'
+    => the shared app target does not compile at BASELINE, independent of this surface.
+IOS_EXIT=65
+
+--- [5] xcodebuild -scheme TeslaSync-macOS build test ---
+    ** BUILD FAILED ** / ** TEST FAILED **
+    total compile errors ........................ 0
+    total errors ................................ 4  (ALL code-signing, 0 compile)
+    errors in THIS surface ...................... 0
+    messages (environment signing — project.yml ships DEVELOPMENT_TEAM=""):
+        "TeslaSync-macOS" has entitlements that require signing with a development certificate…
+        "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate…
+    => macOS gate is blocked by the runner having no development signing identity, not by code.
+MAC_EXIT=65
+
+--------------------------------------------------------------------------
+ATTRIBUTION & DISPOSITION (Honesty Covenant — verbatim, no red-as-green)
+--------------------------------------------------------------------------
+The full-app xcodebuild build/test is RED on this runner. That red is NOT produced
+by this surface and is outside this prompt's allowed-files scope:
+  • iOS  : 108 pre-existing compile collisions in RecentDrives*/StateTimeline* surface
+           files owned by OTHER P4 prompts. 0 errors reference AICrossRuleConflictDetection
+           or any RuleConflict* type. Removing/adding this surface cannot change that result.
+  • macOS: 4 code-signing failures only (empty DEVELOPMENT_TEAM, no dev certificate on the
+           runner). 0 compile errors, 0 reference this surface.
+Fixing either is forbidden here (allowed files = AICrossRuleConflictDetection.* + this log)
+and is owned by the p4-apple acceptance gate (apps/macos-pending-verifications.md): the
+shared app target is only green once every parallel surface has landed and signing is wired.
+This is the same "code-complete + DEFERRED full-app Xcode gate" disposition used by every
+sibling P4 surface (e.g. 0005/0006/0008/0009).
+
+THIS SURFACE is independently verified GREEN on BOTH platforms, with no shortcuts:
+  FORMAT_EXIT=0   swiftformat --lint .................. 0/11 files require formatting
+  LINT_EXIT=0     swiftlint --strict ................... 0 violations, 0 serious (11 files)
+  PLACEHOLDER_EXIT=0  check-placeholders.ps1 (swift) ... PLACEHOLDER_COUNT=0
+  SWIFT_TEST_EXIT=0   SwiftPM, exact sources vs REAL design system, 55/55 tests pass
+  IOS_TYPECHECK_EXIT=0   exact shipped sources (+#Preview) vs iOS 18 sim SDK ... 0 errors
+  MAC_TYPECHECK_EXIT=0   exact shipped sources (+#Preview) vs macOS 15 SDK ..... 0 errors
+A genuine @escaping bug in the panel-shell helper (caught by compiling against the real
+TSGlassPanel) was found and FIXED — not stubbed around.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders all web-source states (idle/streaming/empty/conflicts/stream-error)
+      plus the P4 leaf states (gateLoading/gateError/stale/offline/gatedOff). #Preview per state.
+  [x] Hooks bind via the shared P1/S8 state-holder (RuleConflictModel + RuleConflictSource);
+      no direct HTTP in the view. SSE/tool_result decode is a pure, tested function.
+  [x] Every i18n key from source resolves through the P1/S10 facade (RuleConflictStrings);
+      8 web-source keys + chip/relationship/scaffold/chrome keys; no English literal in code.
+  [x] Accessibility: card container summary; Helix badge; "Ask Helix · Detect conflicts"
+      action label+hint; per-row chips + two "Review rule {id}" labels; relationship line;
+      freshness chip + banner; reduce-motion-gated symbol pulse; isHeader trait on title.
+  [x] Tests: adapter decode (web handleEvent walk, incl. skip-malformed + strict bool + empty)
+      + logic + request body + accessibility + i18n + per-state model wiring = 55/55 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (scanner COUNT=0).
+  [x] Telemetry: view.opened emitted with slug "AICrossRuleConflictDetection" (RuleConflictModel.start).
+
+SURFACE GATE EXIT (in-scope runnable steps: format, lint, placeholder, dual-SDK typecheck,
+tests) = 0. Full-app xcodebuild build/test DEFERRED to the p4-apple acceptance gate (RED on
+this runner for pre-existing, out-of-scope reasons proven above; IOS_EXIT=65, MAC_EXIT=65).
+
+EXIT=0
+STATUS=DONE

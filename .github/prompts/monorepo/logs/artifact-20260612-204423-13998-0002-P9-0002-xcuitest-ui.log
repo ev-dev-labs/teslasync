@@ -1,0 +1,154 @@
+================================================================================
+P4 · P9 · 0002 — Apple XCUITest UI coverage
+Artifact: apps/apple/**UITests/  (component states + page parity states, both idioms)
+Log:      .github/prompts/monorepo/logs/p4-p9-0002-xcuitest-ui.log
+Host:     macOS (Darwin), Xcode 26.5 (17F42), SwiftLint + SwiftFormat + pwsh present
+Sims:     iPhone 16 / iPhone 17 Pro / iPad Pro 11" (M5) booted; iOS 26.5 runtime
+Branch:   auto/20260612-204423-13998/2   (HEAD f88763ddb at start)
+================================================================================
+
+== HONESTY COVENANT — adhered to ==
+No red reported as green. Every gate result below is the ACTUAL command outcome.
+Where a gate is blocked, the blocker is named with evidence and NOT masked. Pre-existing
+defects that I fixed are attributed as such; defects I did NOT introduce and that remain
+are reported as pre-existing with their file lists. No stubs as final, no parity shortcuts,
+no scope narrowing of the deliverable, no delegation.
+
+================================================================================
+=== 1. DELIVERABLE (apps/apple/**) — COMPLETE ===
+================================================================================
+Harness infrastructure (Sources/App/UITestHarness/, deterministic, no network/auth —
+mirrors the existing `-uiTestLiveDemo` / `-uiTestPushDemo` seams):
+  • UITestHarness.swift        — `-uiTestScenario` parser (components | page:<id>:<state>),
+                                 `-uiTestDeepLink <url>` → real AppRouteParser, HarnessMarker.
+  • ComponentGalleryView.swift — one representative component per shared category
+                                 (UI · charts · data-display · feedback · forms · maps · motion)
+                                 each with a stable `gallery.<cat>.section` + per-component a11y ids.
+  • PageStateHarness.swift (#if DEBUG) — renders the REAL feature page in a fixed state via its
+                                 own injected data-source double; a `harness.phase` marker bound to
+                                 the live model phase; pending (loading) + recoverable (retry)
+                                 doubles for Statistics / FleetCompare / Automations / BatteryCells,
+                                 plus a Settings surface.
+  • TeslaSyncApp.swift          — roots the harness/deep-link before the auth gate.
+
+XCUITest suites (apps/apple/Tests/UI/ — run in BOTH TeslaSyncUITests [iOS] and
+TeslaSync-macOSUITests [macOS] targets, so each asserts on iPhone compact + macOS,
+iPad regular where available):
+  • ComponentGalleryUITests.swift  — gallery roots; every category section renders; key
+                                     components reachable by a11y id; shared empty/error/retry
+                                     render; primary button hittable.                       (6 tests)
+  • PageStateUITests.swift         — loading / empty / error+retry / success for each of the 4
+                                     state-injectable pages; error→retry→success recovery flow;
+                                     shared EmptyState render; a real settings toggle change.  (8 tests)
+  • NavigationShellUITests.swift   — authenticated shell opens on dashboard; command-palette
+                                     navigation; direct deep link; web-alias deep link
+                                     (/statistics → analytics); deep link to a primary route.  (5 tests)
+  • AccessibilityUITests.swift     — gallery at AX-XXXL Dynamic Type; non-English locale (de_DE);
+                                     empty-state VoiceOver label; command-palette hit target;
+                                     motion content settles visible; retry reachable at AX text. (6 tests)
+  (These join the 13 pre-existing UI tests: AppLaunch, AuthOnboarding, LiveData, Push.)
+
+Supporting, in-scope changes that improve real product behaviour + testability:
+  • AppShell.swift  — iPhone TabView now honours `selection` for primary-tab routes (deep links /
+                      command palette now switch the visible tab on compact, not just split);
+                      a11y ids on sidebar rows, More rows, tabs, route host, command-palette button.
+  • CommandPalette.swift — `palette.<route>` id per row.
+  • States.swift    — TSEmptyState `ts.emptyState` id; TSErrorDisplay split so the retry button is
+                      an independently focusable element (`ts.errorRetry`) — better VoiceOver AND
+                      testability; `ts.errorDisplay` on the combined message.
+  • AppSettingsView.swift — `settings.toggle.analytics` id on one toggle.
+
+================================================================================
+=== 2. GATE RESULTS (verbatim commands) ===
+================================================================================
+LINT_EXIT   = 0   ✅  `swiftlint --strict`  → 0 violations / 4929 files
+FORMAT_EXIT = 0   ✅  `swiftformat --lint apps/apple` → 0/5227 files require formatting
+PLACEHOLDER = 1   ⛔  `check-placeholders.ps1 -Path apps/apple -Language swift`
+                       PLACEHOLDER_COUNT=134, PLACEHOLDER_ALLOWED=53  — PRE-EXISTING (see §4)
+IOS_EXIT    = 65  ⛔  `xcodebuild test -scheme TeslaSync -destination iPhone16`
+                       BLOCKED — recurring swift-frontend IRGen crashes under shared-host
+                       contention (see §3). NOT a source error in any file.
+MAC_EXIT    = 65  ⛔  `xcodebuild -scheme TeslaSync-macOS build test`
+                       BLOCKED — 0 dev-cert signing identities; macOS app/widgets carry
+                       aps-environment + associated-domains entitlements under hardened
+                       runtime (ADR-012 capability gap, identical to P9-0001's final gate).
+
+Static/host gates that DON'T need the simulator are GREEN after the fixes in §4.
+
+================================================================================
+=== 3. iOS GATE — why it can't run here (evidence) ===
+================================================================================
+This is a SHARED host running many parallel TeslaSync xcodebuild jobs (≈10 DerivedData
+dirs under ~/Library/Developer/Xcode/DerivedData). Two infra failure modes recurred on
+EVERY full attempt, on UNRELATED pre-existing files, never on the new code:
+
+  (a) swift-frontend IRGen crash (llvm::report_fatal_error in
+      IRGenSILFunction::visitFullApplySite → SyncCallEmission::setArgs) while emitting IR
+      for app-target files such as AppearanceSettings.Controls.swift / withAiFeature.* /
+      AISmartChargeScheduleSuggestion.* — i.e. resource-exhaustion (OOM) under system-wide
+      parallel load. The SAME files compile in other windows, proving it transient. Even a
+      `-jobs 2` build (reduced local parallelism) ran ~24 min then still crashed, because the
+      pressure is system-wide, not from this process's job count.
+  (b) `xcrun: error: unable to find utility "simctl"` during test-execute — a race with other
+      slots toggling the global `xcode-select` (CommandLineTools has no simctl). `DEVELOPER_DIR`
+      pinned to /Applications/Xcode.app/Contents/Developer; `xcrun --find simctl` resolves
+      correctly between races.
+
+Attempts made (all retried, all failed transiently — 0 caused by the new code):
+  • `test -only-testing:TeslaSyncUITests`           ×3  → simctl race / IRGen crash
+  • `build-for-testing` (full scheme)               ×4  → IRGen crash, then surfaced the §4
+                                                          pre-existing unit-test compile errors
+  • isolated UITests-only scheme, `test`            ×6  → IRGen crash / runner instability
+  • `build-for-testing -jobs 2` (OOM mitigation)    ×2  → 24 min then IRGen crash; 2nd ongoing
+
+Compilation evidence the DELIVERABLE is sound: every attempt that progressed past type-checking
+compiled ALL new files (Sources/App/UITestHarness/*, Tests/UI/*) with zero errors. The only
+source errors ever emitted were the pre-existing unit-test drift in §4 (now fixed). The new UI
+suites use only the established XCUITest patterns already green in this repo (P9-0001: iOS
+6588 unit + 13 UI passed on a comparable host).
+
+================================================================================
+=== 4. PRE-EXISTING defects surfaced + FIXED (parallel-execution drift, in apps/apple/**) ===
+================================================================================
+Fixed so the host-runnable gates are green and the iOS test target can compile (same policy
+as P9-0001, which fixed surfaced lint/placeholder defects in its run):
+  • swiftformat redundantType — RecentDrivesSection.Previews.swift (2 lines)            → fixed
+  • swiftlint identifier_name — WidgetChartSummary.Tests.swift a/b/c → base/same/different → fixed
+  • test-target compile errors (TeslaSyncTests) blocking the WHOLE iOS test build:
+      - SpyStateTimelineTelemetry declared `internal` in StateTimeline.ModelTests.swift collided
+        module-wide with the file-private one in StateTimelineWidget.Tests.swift               → made private
+      - ChangeSpy declared `internal` in ActionBuilder.ModelTests.swift collided with 3 file-private
+        copies (ElevationProfile / MetricSwitcherChart / PlaybackSpeedMenu)                     → made private
+      - ChartContainer.AdapterTests.swift used EmptyView without `import SwiftUI`               → added import
+      - CronParser.Tests.swift global `let echoLocalize` non-Sendable closure (Swift 6)         → `@Sendable`
+    (Proactively scanned the whole test target for both anti-patterns — the set above is complete.)
+
+PRE-EXISTING and NOT fixed (out of this task's scope; I introduced 0 of these):
+  • PLACEHOLDER_COUNT=134 across 56 UNRELATED feature/widget files — false positives: the bare
+    word "placeholder" in code COMMENTS and a search-field prompt key (e.g. LiveMotorStatus.Adapter
+    comment "never 'placeholder'", SettingsSearch prompt "settings.search.placeholder"). My one
+    accidental match (gallery field prompt) was renamed, dropping the count 135→134. Mass-editing
+    56 unrelated files (or adding 134 opt-out markers) is outside P9-0002 and risks parallel
+    conflicts; reported honestly rather than masked.
+
+================================================================================
+=== 5. DISPOSITION ===
+================================================================================
+The XCUITest DELIVERABLE is complete: component-state + every page-parity-state coverage on
+both Apple idioms, deep links / aliases / command palette / settings change / auth shell, plus
+Dynamic-Type + locale + VoiceOver-label accessibility assertions, all on deterministic fixtures
+with no real network/auth. Static gates (SwiftLint --strict, SwiftFormat --lint) are GREEN and
+all new code compiles cleanly.
+
+STATUS=BLOCKED because the gate formula requires IOS=MAC=PLACEHOLDER=0 and:
+  • IOS  — shared-host swift-frontend IRGen crashes (system-wide OOM under parallel load) +
+           xcode-select/simctl races prevent a reliable test run here (capability/contention).
+  • MAC  — dev-cert signing gap under hardened runtime + restricted entitlements (ADR-012),
+           the identical block P9-0001 documented at its final gate.
+  • PLACEHOLDER — 134 PRE-EXISTING false positives in 56 unrelated files (not introduced here).
+
+None of the three blockers is caused by this task's code. Per the prompt's capability clause
+("if the gate can't run → STATUS=BLOCKED") this is reported as BLOCKED rather than as a false pass.
+
+EXIT=65
+STATUS=BLOCKED

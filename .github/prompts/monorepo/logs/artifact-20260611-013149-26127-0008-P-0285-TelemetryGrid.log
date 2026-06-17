@@ -1,0 +1,135 @@
+=== P4 Feature view 0285 TelemetryGrid (Apple) ===
+Date: 2026-06-11
+Artifact: apps/apple/TeslaSync/feature-views/TelemetryGrid.*
+Web source (spec): web/src/features/vehicles/components/telemetry-panels/TelemetryGrid.tsx
+Runner: macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, xcodegen + swiftlint + swiftformat present.
+
+------------------------------------------------------------------------------
+DELIVERABLE — TelemetryGrid surface (9 files, all within the allowed scope)
+------------------------------------------------------------------------------
+  TelemetryGrid.swift            — surface view: connectivity banner + state switch
+  TelemetryGrid.Model.swift      — P1/S8 source seam, @Observable model, P1/S11 view.opened
+                                   telemetry, P1/S10 i18n facade, connection axis, projector
+  TelemetryGrid.Format.swift     — distance/speed/temperature/number ports of useUnits +
+                                   unitConversion.ts (SI m→km/mi, m/s→km/h·mph, °C→°C/°F)
+  TelemetryGrid.Adapter.swift    — Reading, Field (label key + SF Symbol), Tone, Tile,
+                                   pure projection (cached → projection)
+  TelemetryGrid.Views.swift      — adaptive LazyVGrid of shared InfoTile (web StaggerItem
+                                   cascade via TSStaggerItem), loading/empty/error/banner
+  TelemetryGrid.Previews.swift   — data(metric)/data(imperial)/empty/loading/error/stale/offline
+  TelemetryGrid.strings          — P1/S10 catalog (common.* parity keys + native chrome)
+  TelemetryGrid.Tests.swift      — format + projection unit tests
+  TelemetryGrid.ModelTests.swift — projector + model + telemetry + metadata unit tests
+
+Parity with the web source (six InfoTiles, in source order):
+  Battery  fmtInt(level)%        tone >50 success / >20 warning / else danger ; sub formatDistance(rated_range) + " range"
+  Speed    formatSpeed(speed)    sub Driving/Parked by speed>0
+  Inside   formatTemperature(inside_temp)  sub "Outside: " + formatTemperature(outside_temp)
+  Odometer formatDistance(odometer, precision 0)
+  Charger  charging ? fmtInt(charger_power)+" kW" (success) : "Not charging" (muted) ; sub "Full in {fmtNumber(ttf)}h"
+  Sentry   sentry ? "Active" (danger) : "Off" (muted)
+All eight web t() keys resolve through the P1/S10 facade; the web-hardcoded words
+(Driving/Parked/Not charging/Active/Off + the "Full in" template) are routed through the
+facade too — no English literals in Swift code. Data binds through the P1/S8 state-holder
+seam (TelemetryGridSource); the view performs no I/O.
+
+------------------------------------------------------------------------------
+GATE COMMANDS (run verbatim on the committed tree)
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   ** BUILD FAILED **
+    First diagnostic (NOT this surface — a pre-existing sibling file):
+      TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error:
+        escaping closure captures non-escaping parameter 'content'
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   ** BUILD FAILED **
+    Cause (runner capability — no development signing certificate present):
+      error: "TeslaSync-macOS" has entitlements that require signing with a development
+        certificate. Enable development signing in the Signing & Capabilities editor.
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+
+[3] swiftlint --strict           LINT_EXIT=0   (0 violations, whole apps/apple incl. this surface)
+[4] swiftformat --lint apps/apple FORMAT_EXIT=0  (0 files require formatting, whole tree)
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TelemetryGrid
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+
+------------------------------------------------------------------------------
+ROOT CAUSE OF THE BUILD FAILURES — pre-existing + runner capability, NOT this surface
+------------------------------------------------------------------------------
+git status confirms the only changes in this work are the 9 untracked TelemetryGrid.*
+files; no sibling file was modified in the committed tree.
+
+(a) iOS: the TeslaSync app target does not compile under the runner's Xcode 26.5 /
+    Swift 6.3 because ~59 pre-existing sibling files declare a non-@escaping @ViewBuilder
+    helper closure (e.g. `func glass(@ViewBuilder _ content: () -> some View)`) that is
+    then captured into the @escaping TSGlassPanel/TSCard initializer — "escaping closure
+    captures non-escaping parameter". First hit: AISignalExplorerNlFilter.swift:142.
+    Beyond those, the Swift frontend additionally CRASHES (report_fatal_error during
+    IRGen) on another pre-existing sibling file:
+      While evaluating request IRGenRequest(IR Generation for file
+        ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+      swift-frontend ... llvm::report_fatal_error(...)  [compiler crash]
+    These files are outside this prompt's allowed scope (TelemetryGrid.* only) and are
+    owned by other surface prompts; fixing ~59 unrelated surfaces + a compiler crash is
+    out of scope and would corrupt parity attribution for those surfaces.
+
+(b) macOS: fails at code-signing (development certificate not provisioned on the runner)
+    before/независимо of compilation — a runner-capability gap, not a code defect.
+
+------------------------------------------------------------------------------
+ISOLATED VERIFICATION OF THIS SURFACE (proves the surface is complete + correct)
+------------------------------------------------------------------------------
+Because the monolithic app target cannot link due to the pre-existing baseline breakage
+above, this surface was verified against the real iOS 18 simulator SDK (Swift 6) by
+type-checking its exact dependency closure (TelemetryGrid.* + the shared InfoTile + the
+design tokens + the shared components it composes — Cards/Buttons/Typography/Badges/
+Skeletons/Motion), which excludes the crashing/erroring baseline files:
+
+  swiftc -typecheck -sdk iPhoneSimulator26.5 -target arm64-apple-ios18.0-simulator
+         -swift-version 6  <surface + deps>
+    SURFACE_TYPECHECK_EXIT=0     (0 errors)
+  + DEBUG previews (TelemetryGrid.Previews.swift)
+    PREVIEW_TYPECHECK_EXIT=0     (0 errors)
+  + unit tests (TelemetryGrid.Tests.swift + TelemetryGrid.ModelTests.swift, XCTest-linked)
+    TESTS_TYPECHECK_EXIT=0       (0 errors)
+
+Runtime execution of the pure formatting + projection logic (compiled natively, executed):
+    swiftc Format.swift Adapter.swift Model.swift runner.swift && ./runner
+    => ALL_RUNTIME_CHECKS_PASSED   (RUN_EXIT=0)
+  Verified outputs incl.: "85%"/"350.0 km range", "0 km/h"/"Parked", "21.5°C"/"Outside: 14.0°C",
+  "48,213 km", "11 kW"/"Full in 1.50h", "Off"; imperial "65 mph"/"Driving"/"71.6°F"/"Active";
+  empty-reading sentinels "0%"/"— range"/"—"/"Outside: —"; projector error>loading>empty>data
+  precedence; field(6)/tone(5) metadata.
+
+Surface-scoped lint/format (subset of the green repo-wide runs above):
+  swiftlint --strict <9 files>   => 0 violations
+  swiftformat --lint <9 files>   => 0 files require formatting
+
+Accessibility: container .accessibilityElement(children: .contain) + label; each InfoTile
+is one VoiceOver element (label+value+sub); decorative icons a11y-hidden; reduce-motion
+honored by TSFadeIn/TSStaggerItem; Dynamic Type via the typography tokens.
+
+------------------------------------------------------------------------------
+HONESTY STATEMENT
+------------------------------------------------------------------------------
+The TelemetryGrid surface is complete, lint-clean, format-clean, placeholder-free, and is
+verified to type-check (surface + previews + tests, iOS 18 SDK, Swift 6) and to pass its
+logic at runtime. The full-scheme `xcodebuild build test` gate cannot reach EXIT=0 on this
+runner for two reasons entirely outside this surface's allowed files: (a) a pre-existing,
+baseline-wide Xcode 26.5 / Swift 6.3 compile breakage (~59 sibling files + a swift-frontend
+IRGen crash) and (b) macOS development code-signing not being provisioned on the runner.
+No red was reported as green; the build steps are recorded as failed with their true cause.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_EXIT=0
+PREVIEW_TYPECHECK_EXIT=0
+TESTS_TYPECHECK_EXIT=0
+RUNTIME_CHECKS=PASSED
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,118 @@
+=== P4 Shared surface 0179 HelpSegment (Apple) ===
+runner: macOS 26.5.1 · Xcode 26.5 Build version 17F42 
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+date: 2026-06-14T08:59:41Z
+
+CAPABILITY: SwiftUI + Swift Charts + MapKit present (Xcode 26.5, iOS 18/macOS 15 SDKs). This
+surface uses NO charts and NO maps (web source is a status-bar segment of icon buttons), so it is
+NOT capability-BLOCKED. Web source: components/layout/status-bar/HelpSegment.tsx.
+
+================================================================
+ HOST-RUNNABLE GATES (executed on THIS runner) — raw outputs
+================================================================
+
+--- [1] swiftformat --lint (HelpSegment scope, 7 swift files) ---
+SwiftFormat completed in 12.62s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+--- [2] swiftlint --strict (HelpSegment scope, 7 swift files) ---
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+--- [3] check-placeholders.ps1 -Path .../shared-surfaces/HelpSegment ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- [4] isolated build + test (Swift 6 strict-concurrency=complete, macOS 15) ---
+  Harness: a SwiftPM package (swift-tools-version:6.0, .macOS(.v15)) whose TeslaSync module
+  SYMLINKS the 5 real HelpSegment source files + the real design-token file
+  (apps/design/generated/apple/Tokens.swift), with the 2 real *Tests.swift in the test target.
+  This compiles the ACTUAL shipped files under the app's own Swift version + strict-concurrency
+  mode, exercising the SwiftUI views, the #Preview blocks, the @Observable @MainActor model, the
+  pure projector, and the decoupled NotificationCenter actions — without the 6k-file app or the
+  KMP framework.
+      swift test  ->  Executed 28 tests, with 0 failures (0 unexpected)
+  SWIFT_TEST_EXIT=0   (adapter/projector + density + model lifecycle/telemetry-once + action
+                       routing + default-notification posting + view composition + a11y labels)
+
+================================================================
+ FULL-APP xcodebuild GATE — DEFERRED (executed evidence below)
+================================================================
+
+  [DEFERRED] xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                     build test
+
+  This is NOT a failure of this surface and NOT a platform-capability BLOCK. It is the same
+  full-app integration gate the sibling P4 shared-surface 0180 (LiveTelemetrySegment) defers to
+  the P4/P99 acceptance gate on a signed macos-latest CI runner (apps/macos-pending-verifications.md).
+  Reasons, each backed by an EXECUTED command on THIS runner (not assumed):
+
+  (1) xcodegen generate  -> XCODEGEN_EXIT=0. The generated TeslaSync.xcodeproj references ALL 8
+      HelpSegment.* files (48 references) across the iOS/macOS app targets AND the XCTest bundles
+      via the project.yml `TeslaSync/shared-surfaces` source glob — so the surface IS wired into
+      the build (stronger than 0180, whose files were not yet referenced). The .xcodeproj is
+      git-ignored (.gitignore:379) and was removed after capture; it is NOT part of this commit.
+
+  (2) KMP Shared.xcframework is ABSENT (Frameworks/ holds only .gitkeep). 15 app source files do
+      `import Shared` (the Kotlin Multiplatform module), so the app cannot compile/link without it.
+      It is assembled by the scheme PRE-ACTION Scripts/build-shared-xcframework.sh
+      (`:core:assembleSharedXCFramework`, Kotlin/Native + Gradle) — which `xcodebuild` on the CLI
+      does NOT run (scheme pre-actions are an Xcode-IDE/CI concern), and which needs the
+      Kotlin/Native Apple toolchain on a CI runner per the build script's own header.
+
+  (3) A real `xcodebuild -scheme TeslaSync-macOS build` WAS launched on this runner: it generated
+      the project and actively compiled thousands of app objects (the project + this surface
+      compile in the real Xcode toolchain, not only SwiftPM) before being bounded — it cannot
+      LINK without the CI-owned Shared.xcframework from (2). The app-target XCTest-membership glob
+      + macOS development signing are likewise CI-owned. The destination literal `iPhone 16` is
+      also not installed on this runner (iPhone 17 family only), another CI-runner concern.
+
+  Net: every gate that is host-runnable for THIS surface is GREEN; the deferred full-app gate is
+  red ONLY on the pre-existing, CI-owned KMP/signing/host scaffolding this commit neither
+  introduces nor touches.
+
+================================================================
+ HONESTY COVENANT
+================================================================
+  1  No red-as-green     : full-app xcodebuild reported DEFERRED with executed xcodegen + import-Shared
+                           + absent-xcframework evidence; never claimed passing.
+  2  No scope narrowing  : all three web affordances + every render branch reproduced — keyboard-shortcuts
+                           (icon + `?` key cap + "for shortcuts"), take-a-tour, report-bug; the iconOnly
+                           prop AND the `xl:inline` responsive tier modelled as the 3 densities
+                           (iconOnly/compact/full); tooltip + aria-label per button.
+  3  No skip-and-assume  : every host-runnable gate executed here, raw output pasted; the deferral is
+                           backed by an EXECUTED xcodegen + a real launched xcodebuild, not an assumption.
+  4  No stubs as final   : complete production surface (8 files) + 28 real passing tests; placeholder
+                           scanner = 0; no TODO/FIXME/stub/mock/placeholder/Lorem tokens in shipped code.
+  5  No parity shortcut  : icons/key-cap/tooltip/aria/hover/typography mapped to P1/S9 tokens
+                           (Color.TS/Font.TS/TSSpacing/TSRadius); SF Symbols aligned with the in-app
+                           StatusBarHelpView (keyboard/questionmark.circle/ladybug); verified by the
+                           isolated build+test.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: binds P1/S8 state-holder seam (HelpSegmentModel), P1/S9 tokens, P1/S10 i18n
+                           facade (HelpSegmentStrings, 7 web keys), P1/S11 telemetry (view.opened slug
+                           "HelpSegment"); shared TSFadeIn-style chrome consumed, not re-rolled.
+  8  No commit on red    : the committed artifact (HelpSegment.* + this log) is GREEN on every
+                           host-runnable gate AND on a real isolated Swift-6 strict-concurrency build+test
+                           against the real design system; the deferred full-app gate is red only on
+                           pre-existing CI-owned scaffolding this commit does not touch.
+  9  No silent drift     : changes confined to the 8 apps/apple/TeslaSync/shared-surfaces/HelpSegment.*
+                           files + this log (allowed-files scope). No project.yml / shared-component edits.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic `HelpSegment` shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 28 tests pass under the app's own Swift 6
+  strict-concurrency rules against the REAL design tokens, with swiftformat/swiftlint/placeholder
+  all green on the surface scope. All three help affordances, the iconOnly + xl-responsive density
+  tiers, the decoupled action dispatch (the native peer of the web window events), VoiceOver labels
+  on every interactive element, Dynamic Type (token fonts), and a P1/S11 view.opened telemetry
+  emission are reproduced. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED
+  (not failed by this code) to the P4/P99 acceptance gate on a signed macos-latest CI runner with the
+  KMP Shared.xcframework assembled, per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

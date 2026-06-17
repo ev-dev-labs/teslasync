@@ -1,0 +1,191 @@
+================================================================================
+p4-apple · P7 · page:maps/TemperatureImpact — SwiftUI / HIG parity
+Artifact: apps/apple/TeslaSync/Features/Maps/TemperatureImpactPage.swift
+Web source: web/src/features/maps/pages/TemperatureImpactPage.tsx  (route /temperature-impact)
+Generated: native SwiftUI View + @Observable model, adaptive macOS + iOS (ADR-002/006)
+================================================================================
+
+--------------------------------------------------------------------------------
+DELIVERABLES (all under apps/apple/TeslaSync/Features/Maps/ — within Allowed files)
+--------------------------------------------------------------------------------
+TemperatureImpactModels.swift            domain types + SI bucket math + viewState
+TemperatureImpactFormat.swift            display-boundary unit conversion + formatting
+TemperatureImpactDataSource.swift        KMP-core seam (protocol) + Sample/Empty/Failing
+TemperatureImpactDerive.swift            pure unit-aware derivations (web useMemo blocks)
+TemperatureImpactPageModel.swift         @MainActor @Observable model (load/refresh/select)
+TemperatureImpactCharts.swift            native Swift Charts: scatter + bucket line
+TemperatureImpactViews.swift             furniture + 4 MetricCards + scatter/bucket panels
+TemperatureImpactPanels.swift            optimal-analysis + tips panels
+TemperatureImpactPage.swift              scaffold (4-state switch, header, toolbar, previews)
+TemperatureImpactRouteRegistration.swift registers page on .temperatureImpact route
+
+Navigation registration (Allowed: "navigation registration"):
+  Sources/App/AppRoute.swift             + case temperatureImpact (pathSegment
+                                           "temperature-impact", group .insights,
+                                           systemImage "thermometer.medium")
+  Sources/TeslaSyncApp.swift             + TemperatureImpactRouteRegistration.registry(...)
+  Localization/Localizable.xcstrings     + "route.temperatureImpact" = "Temperature Impact"
+  (AppRouteParser resolves /temperature-impact via the kebab pathSegment — no alias needed)
+
+All 22 ported i18n keys already existed in Localizable.xcstrings as translation.* —
+no new content strings were added (only the native sidebar label route.temperatureImpact).
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+# 1) placeholder / stub scan (ADR-011)
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Maps -Language swift
+PLACEHOLDER_ALLOWED=1      (one .redacted(reason: .placeholder) loading shimmer, // parity:allow)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   ✔
+
+# 2) swiftlint --strict (Maps feature)
+$ swiftlint lint --strict apps/apple/TeslaSync/Features/Maps
+0 violations
+LINT_EXIT=0   ✔
+
+# 3) isolated Swift 6 type-check of ALL 10 Maps sources (strict concurrency + previews)
+#    Faithful stubs of the design-system + facade symbols (Color.TS, Font.TS, TSSpacing,
+#    TSRadius, TSTone, TSChartPalette, TSChartFormat, UnitPreferences, Units, tsUnits,
+#    AppRoute, AppRouteHostRegistry) mirroring the real signatures.
+$ swiftc -typecheck -sdk <macosx> -swift-version 6 -strict-concurrency=complete -DDEBUG *.swift
+ISOLATED_TYPECHECK_EXIT=0   ✔   (caught + fixed one real issue: TempImpactTip dropped a
+                                  redundant Sendable conformance — TSTone is not Sendable
+                                  under strict concurrency)
+
+# 4) xcodebuild (Shared.xcframework staged via Gradle/Kotlin-Native — BUILD SUCCESSFUL 8m15s)
+$ xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync  -sdk iphonesimulator build   # gate scheme (iOS)
+$ xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS build                   # equivalent full compile
+BUILD_EXIT=65   ✖  BLOCKED BY PRE-EXISTING, UNRELATED, OUT-OF-SCOPE DEFECTS (see below)
+TEST_EXIT=n/a   (xcodebuild test depends on a successful build)
+
+# 5) parity coverage
+PARITY_REQUIRED=36
+PARITY_COVERED=36   ✔   (see === PARITY === below)
+
+--------------------------------------------------------------------------------
+BUILD BLOCKER ANALYSIS  (honesty covenant #1 "no red-as-green")
+--------------------------------------------------------------------------------
+The full xcodebuild (both the gate's iOS `TeslaSync` scheme and the `TeslaSync-macOS`
+scheme) fails to compile the app module. EVERY error originates in PRE-EXISTING files
+that this task did not create or modify, and that are OUTSIDE this prompt's Allowed
+files / prescribed commit. ZERO compiler errors are attributable to Features/Maps/*.
+
+Root causes (git status: all UNMODIFIED by this task — clean working tree except the
+Maps feature + the three navigation-registration edits):
+
+  • apps/apple/TeslaSync/Features/System/StatusApiDocsPage.swift:399
+      `enum TSSpacing { static let xs/sm/md/lg/xl/x2xl }`
+    apps/apple/TeslaSync/Features/System/StatusApiDocsPage.swift:408
+      `enum TSRadius  { static let sm/md/lg }`
+    These shadow the generated design tokens (apps/design/generated/apple/Tokens.swift),
+    making `TSSpacing.sm/md/lg` and `TSRadius.sm/md/lg` AMBIGUOUS module-wide. The
+    ambiguity cascades into ~135 unrelated files (widget-primitives, shared-surfaces,
+    dashboard-widgets previews, feature views, …) as "ambiguous use of 'md'/'sm'/'lg'"
+    and "failed to produce diagnostic for expression".
+
+  • apps/apple/Sources/Features/Analytics/WeeklyDigestPageModel.Sample.swift:114
+      `error: invalid redeclaration of 'rounded(toPlaces:)'`
+
+  • Additional INDEPENDENT pre-existing breakages across unrelated widget / preview /
+    shared-surface files (the baseline is broadly contaminated, not a single defect):
+      - dashboard-widgets/TirePressureHistoryWidget.Model.swift: "'TirePressureUnit'
+        is ambiguous for type lookup" (another duplicated type)
+      - many *.Previews.swift (feature-views, shared-surfaces, dashboard-widgets):
+        "cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'"
+      - shared-surfaces/StatusHero.Previews.swift: "incorrect argument label in call
+        (have 'status:', expected 'model:')" / "type 'StatusHeroModel' has no member 'healthy'"
+      - shared-surfaces/PullToRefresh.Previews.swift: "unable to type-check this expression
+        in reasonable time"
+    None of these are in Features/Maps/* and none are touched by this task. Unblocking
+    them would require modifying dozens of unrelated, out-of-scope files (and the local
+    StatusApiDocsPage TSSpacing/TSRadius enums are referenced 18x there with non-identical
+    TSRadius values, so they are not trivially removable without changing that page).
+
+Evidence:
+  - `grep -i TemperatureImpact /tmp/xcb-ios.log  | grep error:`  → (empty: 0 errors)
+  - `grep -i TemperatureImpact /tmp/xcb-macos.log | grep error:` → (empty: 0 errors)
+  - 137 distinct files report errors; 0 of them are Features/Maps/*.
+  - `git status --short` → only `apps/apple/TeslaSync/Features/Maps/` (new),
+    `Sources/App/AppRoute.swift`, `Sources/TeslaSyncApp.swift`,
+    `Localization/Localizable.xcstrings` are touched by this task.
+
+These pre-existing defects are NOT in this task's scope ("Out of Scope (reject):
+Other pages") and NOT in the prescribed commit manifest, so they were deliberately
+left untouched. On a healthy baseline the Maps feature compiles cleanly — proven by
+the isolated Swift 6 strict-concurrency type-check (gate step 3, EXIT=0) of all ten
+real source files, and by the zero errors attributed to Features/Maps/* in the full
+module build.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=36
+--------------------------------------------------------------------------------
+[panel  1/8 ] Avg-Efficiency        TemperatureImpactViews.swift  · TempImpactSummaryRow (tempImpact.avgEfficiency MetricCard)
+[panel  2/8 ] Best-Temp-Range       TemperatureImpactViews.swift  · TempImpactSummaryRow (tempImpact.bestRange MetricCard + subtitle)
+[panel  3/8 ] Worst-Temp-Range      TemperatureImpactViews.swift  · TempImpactSummaryRow (tempImpact.worstRange MetricCard + subtitle)
+[panel  4/8 ] Total-Data-Points     TemperatureImpactViews.swift  · TempImpactSummaryRow (tempImpact.totalPoints MetricCard)
+[panel  5/8 ] GlassPanel5           TemperatureImpactViews.swift  · TempImpactScatterPanel (temperature-vs-efficiency)
+[panel  6/8 ] GlassPanel6           TemperatureImpactViews.swift  · TempImpactBucketPanel (efficiency-by-range)
+[panel  7/8 ] GlassPanel7           TemperatureImpactPanels.swift · TempImpactOptimalPanel (optimal-temperature analysis)
+[panel  8/8 ] GlassPanel8           TemperatureImpactPanels.swift · TempImpactTipsPanel (recommendations)
+[chart  1/2 ] ScatterChart          TemperatureImpactCharts.swift · TempImpactScatterChart (PointMark per-bucket colour + RuleMark avg)
+[chart  2/2 ] LineChart             TemperatureImpactCharts.swift · TempImpactBucketChart (LineMark + PointMark, categorical X)
+[state  1/4 ] loading               TemperatureImpactPage.swift   · loadingView (.redacted skeleton)
+[state  2/4 ] empty                 TemperatureImpactPage.swift   · emptyView (ContentUnavailableView) + per-panel empty regions
+[state  3/4 ] error                 TemperatureImpactPage.swift   · errorView (ContentUnavailableView + Retry) + TempImpactErrorBanner
+[state  4/4 ] success               TemperatureImpactPage.swift   · successView
+[string  1/22] common.noData             TemperatureImpactViews.swift TempImpactChartEmpty; TemperatureImpactPanels.swift optimal/tips empty
+[string  2/22] error.loadFailed          TemperatureImpactViews.swift TempImpactErrorBanner; TemperatureImpactPage.swift errorView
+[string  3/22] tempImpact.avgEff         TemperatureImpactViews.swift TempImpactBucketPanel.seriesName (line legend)
+[string  4/22] tempImpact.avgEfficiency  TemperatureImpactViews.swift TempImpactSummaryRow (MetricCard label)
+[string  5/22] tempImpact.bestRange      TemperatureImpactViews.swift TempImpactSummaryRow (MetricCard label)
+[string  6/22] tempImpact.bucketTitle    TemperatureImpactViews.swift TempImpactBucketPanel header; TemperatureImpactCharts a11y label
+[string  7/22] tempImpact.efficiency     TemperatureImpactViews.swift TempImpactScatterPanel.yAxisTitle
+[string  8/22] tempImpact.optimalDelta   TemperatureImpactPanels.swift TempImpactOptimalPanel.deltaLine (%1$@/%2$@/%3$@)
+[string  9/22] tempImpact.optimalDesc    TemperatureImpactPanels.swift TempImpactOptimalPanel.summary (%1$@..%4$@)
+[string 10/22] tempImpact.optimalTitle   TemperatureImpactPanels.swift TempImpactOptimalPanel.header
+[string 11/22] tempImpact.scatterName    TemperatureImpactViews.swift TempImpactScatterPanel.seriesName (scatter a11y)
+[string 12/22] tempImpact.scatterTitle   TemperatureImpactViews.swift TempImpactScatterPanel header
+[string 13/22] tempImpact.subtitle       TemperatureImpactPage.swift titleHeader + emptyView
+[string 14/22] tempImpact.temperature    TemperatureImpactViews.swift TempImpactScatterPanel.xAxisTitle
+[string 15/22] tempImpact.tipCold        TemperatureImpactDerive.swift tips (cold band, .info)
+[string 16/22] tempImpact.tipHot         TemperatureImpactDerive.swift tips (hot band, .warning)
+[string 17/22] tempImpact.tipOptimal     TemperatureImpactDerive.swift tips (optimal, %1$@ range)
+[string 18/22] tempImpact.tipsTitle      TemperatureImpactPanels.swift TempImpactTipsPanel header
+[string 19/22] tempImpact.title          TemperatureImpactPage.swift titleHeader/vehiclePicker/emptyView/errorView
+[string 20/22] tempImpact.totalPoints    TemperatureImpactViews.swift TempImpactSummaryRow (MetricCard label)
+[string 21/22] tempImpact.worstRange     TemperatureImpactViews.swift TempImpactSummaryRow (MetricCard label)
+[string 22/22] temperature.title         TemperatureImpactPage.swift .navigationTitle (web usePageTitle)
+--------------------------------------------------------------------------------
+PARITY_COVERED=36
+=== /PARITY ===
+
+--------------------------------------------------------------------------------
+DESIGN NOTES
+--------------------------------------------------------------------------------
+- Units convert ONLY at the render boundary via @Environment(\.tsUnits) + Units.convertTemperature
+  (KMP core, ADR-005). Efficiency Wh/km→Wh/mi uses the inline KM_PER_MILE factor (web parity:
+  no SI efficiency helper exists in the shared core).
+- The five SI temperature buckets map EXACTLY to design tokens (no hardcoded hex):
+  #3b82f6 chartSeriesSpeed · #06b6d4 chartSeriesRegen · #10b981 chartSeriesBattery
+  · #f59e0b chartSeriesEnergy · #ef4444 chartSeriesTemperature.
+- Charts are native Swift Charts (Charts framework) — never a WKWebView.
+- a11y: panel/chart accessibilityLabels, VoiceOver-friendly metric cards, Dynamic Type
+  (Font.TS tokens + minimumScaleFactor), light/dark via tokens, >=44pt picker targets.
+- Staleness chip surfaces when the last load is > 2 min old (ADR-013).
+- Empty/error arms exercised by EmptyTemperatureImpactDataSource / FailingTemperatureImpactDataSource
+  (previews) so no data state is dead logic.
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+Feature implementation COMPLETE and independently verified:
+  PLACEHOLDER_EXIT=0 · LINT_EXIT=0 · ISOLATED_TYPECHECK_EXIT=0 · PARITY_COVERED=36/36.
+Aggregate xcodebuild (build+test) is BLOCKED by PRE-EXISTING duplicate declarations in
+files outside this task's scope (StatusApiDocsPage.swift, WeeklyDigestPageModel.Sample.swift);
+zero errors are attributable to Features/Maps/*. Per the honesty covenant this is reported
+truthfully rather than as green.
+
+EXIT=65
+STATUS=BLOCKED

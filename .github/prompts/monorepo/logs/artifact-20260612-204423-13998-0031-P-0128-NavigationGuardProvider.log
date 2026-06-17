@@ -1,0 +1,138 @@
+=== P4 Shared surface 0128 NavigationGuardProvider (Apple) ===
+started: 2026-06-13 (slot-31, auto/20260612-204423-13998/31)
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat + xcodegen 2.45.4 + pwsh present
+web source: web/src/components/feedback/NavigationGuardProvider.tsx  (+ web/src/hooks/useNavigationGuard.ts)
+parity unit: P4 shared surface · 0128 · NavigationGuardProvider
+
+================================================================================
+CAPABILITY CHECK (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15")
+================================================================================
+Apple toolchain PRESENT and usable: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh,
+iOS 26.5 simulators (iPhone 16 booted). This is NOT a capability-absent BLOCK. The block recorded at
+the bottom is an environmental RESOURCE-CONTENTION block (see GATE TRANSCRIPT), not a missing-tool block.
+
+================================================================================
+NATIVE OUTPUT (in-scope, git status --porcelain) — 10 files, all under the allowed path
+================================================================================
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Adapter.swift       (214 LOC) pure projection core: NavigationGuardSurface.slug, LoadStatus/Connection/Visibility/Phase enums, NavigationGuardEntry snapshot, NavigationGuardPrompt, NavigationGuardProjection (firstDirty/hasDirty=web findDirty, prompt=web <ConfirmDialog> props, resolvePhase/resolveVisibility/inlineFailure, forms.* keys+fallbacks, silenceKey="unsaved-navigation")
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Seams.swift         (273 LOC) telemetry (P1/S11 view.opened) + navigator seam (web navigate(-1)) + silence store (web confirmSilence localStorage->UserDefaults) + NavigationGuardProviderSource protocol (+InMemory/Live) (P1/S8) + NavigationGuardStrings facade (P1/S10) + accessibility builders
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Model.swift         (256 LOC) @MainActor @Observable NavigationGuardModel: guard registry (register/upsert/unregister), confirmIfDirty() async (web reuse-in-flight + silence auto-resolve), requestSystemBack() (web popstate replay), confirmDiscard/keepEditing (shared continuations + deferred nav), freshness/auto-refresh, view.opened
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.States.swift        (211 LOC) loading / idle(empty) / error+retry / inline-error / freshness chip (Live/Stale/Offline) / connectivity banner — every state renders, never a blank box
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Views.swift         (160 LOC) status strip (phase switch) + guarding summary (armed-guard count) + discard .confirmationDialog (native <ConfirmDialog> counterpart: Discard / Don't-ask-again / Keep-editing) + Text helper
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.swift               (105 LOC) NavigationGuardProvider<Content> provider (wraps content + env model + status strip + dialog) + .navigationGuard(isDirty:message:) registration modifier (web useNavigationGuard) + surfaceSlug
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.strings             (47 lines) P1/S10 table: forms.unsavedTitle/unsavedWarning/discard/keepEditing (EXACT web keys) + navGuard.* chrome + a11y keys
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Previews.swift      (107 LOC) one preview per state (idle / guarding x2 / loading / error / stale / offline) + full provider composition
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.Tests.swift         (288 LOC) XCTest model+a11y: view.opened once, register/unregister/upsert -> phase, failed+dirty inline arm, stale auto-refresh once, offline no-refresh, confirmIfDirty clean->true / dirty->present->discard/keep, in-flight reuse, silence auto-resolve+persist, system-back replay, message override, guarding a11y label
+?? apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.AdapterTests.swift  (143 LOC) XCTest pure projection: firstDirty order, prompt override/default/keys, resolvePhase 4 arms, resolveVisibility, inlineFailure, guarding singular/plural a11y, promptLabel
+
+i18n keys extracted from web source (all present in NavigationGuardProvider.strings):
+  "Unsaved changes" forms.unsavedTitle | "You have unsaved changes. Discard them?" forms.unsavedWarning
+  "Discard changes" forms.discard       | "Keep editing" forms.keepEditing
+
+Data sources mapped (web hook -> native):
+  useId           -> @State UUID per .navigationGuard call site
+  useTranslation  -> NavigationGuardStrings (P1/S10 facade)
+  useNavigate     -> NavigationGuardNavigator seam (discard replay)
+  useLocation     -> system back gesture intercept (requestSystemBack)
+  useNavigationGuardContext -> NavigationGuardModel via @Environment(NavigationGuardModel.self) (NOOP when absent = web NOOP_CTX)
+Shared component mapped: @/components/ui/ConfirmDialog -> SwiftUI .confirmationDialog (the landed
+  BulkActionsToolbar convention; Apple HIG canonical "Discard Changes?" action sheet).
+
+NAME-COLLISION RECONCILIATION (no silent drift, covenant #9):
+  Sibling surface GuardedLink.Seams.swift already declares public `NavigationGuardSource` +
+  `InMemoryNavigationGuardSource` in the same module. My source types were renamed to
+  `NavigationGuardProviderSource` / `InMemoryNavigationGuardProviderSource` /
+  `LiveNavigationGuardProviderSource` to avoid the redeclaration/ambiguity. Verified the full module
+  for any other NavigationGuard* collision: none. (GuardedLink files were NOT modified — out of scope.)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (apps/apple/Scripts/build-shared-xcframework.sh) ---
+"BUILD SUCCESSFUL in 9m 12s" ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+"Created project at .../apps/apple/TeslaSync.xcodeproj" ; all 10 NavigationGuardProvider files referenced
+GEN_EXIT=0
+
+--- swiftformat --lint (my 9 .swift files) ---
+"0/9 files require formatting."
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 9 .swift files, config-scoped) ---
+"Done linting! Found 0 violations, 0 serious in 9 files."
+LINT_EXIT=0
+
+--- check-placeholders.ps1 (literal gate path AND a direct scan of the 10 files copied to a temp dir) ---
+PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0   (both invocations)
+PLACEHOLDER_EXIT=0
+
+--- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+COMPILATION PROVEN CLEAN: one run (jobs=6, in a brief low-contention window) compiled the ENTIRE app
+target AND BOTH test bundles to completion:
+    .../Build/Products/Debug-iphonesimulator/TeslaSync.app                                  (built)
+    .../TeslaSync.app/PlugIns/TeslaSyncTests.xctest                                         (built)
+    .../TeslaSyncUITests-Runner.app/PlugIns/TeslaSyncUITests.xctest                         (built)
+  Building TeslaSyncTests.xctest REQUIRES NavigationGuardProvider.Tests.swift +
+  NavigationGuardProvider.AdapterTests.swift (@testable import TeslaSync) to compile with zero errors;
+  building TeslaSync.app requires the 7 NavigationGuardProvider app sources to compile (7 object files
+  emitted: NavigationGuardProvider*.o). => my surface + tests compile cleanly and integrate.
+
+  HOWEVER, a single CAPTURED clean `build test` (with the test run + IOS_EXIT=0) could NOT be
+  obtained. 12 full attempts were made (default jobs, and -jobs 8/6/4/2; several started in a verified
+  low-contention window). ENABLE_TESTABILITY=YES for Debug (so the build + test actions share objects
+  — a single complete compile would unlock the tests), yet the BUILD action itself never reached
+  completion: every attempt except the one above was killed mid-compile by an INTERMITTENT
+  swift-frontend crash under severe, sustained memory pressure from concurrently-running parallel
+  slots (slots 30,32,33,34,35,38,41,43,44,45,46 were observed building the same 5000-file module
+  simultaneously — new slots kept spawning DURING this build's ~10-min compile, re-saturating memory
+  even when the window started with only 1 other slot; system swap was pinned ~73% full with
+  >2,000,000 swapouts):
+
+    swift-frontend  report_at_maximum_capacity(unsigned long)        <- LLVM SmallVector capacity overflow
+    in IRGenSILFunction::visitFullApplySite -> SyncCallEmission::setArgs
+    "** BUILD FAILED **"   (or "** BUILD INTERRUPTED **" when a frontend was OOM-killed outright)
+
+  The crash ALWAYS occurred while IR-generating a PRE-EXISTING, unrelated file (e.g.
+  feature-views/AppearanceSettings.Controls.swift, feature-views/TemperatureGauges.*,
+  shared-surfaces/AlertBanner.*, feature-views/AnomalyInlineRow.*, feature-views/AlertsSection.swift),
+  emitting a generic actor-isolated thunk that is NOT introduced by this surface:
+    $sSbScA_pSgIeAghyg_SbIeAghn_TR =
+    "reabstraction thunk helper from @escaping @isolated(any) @callee_guaranteed @Sendable
+     (Bool, Actor?) -> () to ... (Bool) -> ()"
+  It is intermittent (the jobs=6 run above compiled everything cleanly), it never points at a
+  NavigationGuardProvider file, and it reproduced even at -jobs 2 (minimal footprint) — confirming the
+  trigger is TOTAL system memory exhaustion from the parallel-slot farm, not this build's job count and
+  not this surface's code. (/tmp build logs were also wiped mid-run under the disk/memory load.)
+IOS_EXIT=non-zero (build interrupted by environmental OOM/compiler-crash; NOT a code or test failure)
+
+--- xcodebuild -scheme TeslaSync-macOS build test ---
+NOT separately completed: the macOS app target compiles the identical `Sources` + shared-surfaces set
+under the identical toolchain, so it hits the identical environmental crash. The static gates
+(swiftformat/swiftlint/placeholders) and the compile-proof above apply equally (one shared SwiftUI
+source group, ADR-002). Recording honestly rather than fabricating a macOS pass.
+MAC_EXIT=non-zero (same environmental block)
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+[x] Surface renders all states from the web source (loading/idle(empty)/error/guarding + stale/offline
+    + the discard confirmation) — see States/Views/Previews; one preview per state.
+[x] Hooks bind to the shared P1/S8 state-holder layer (NavigationGuardModel + NavigationGuardProviderSource);
+    no direct HTTP in the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (forms.unsavedTitle/unsavedWarning/
+    discard/keepEditing) — NavigationGuardProvider.strings.
+[x] Accessibility labels on every interactive element (freshness chip, retry, discard dialog, guarding
+    summary, registration); VoiceOver builders unit-tested.
+[x] Tests: adapter unit test + per-state model tests + a11y label tests (AdapterTests.swift + Tests.swift)
+    — COMPILE-VERIFIED (TeslaSyncTests.xctest built); execution not captured (environmental block).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code — check-placeholders PLACEHOLDER_COUNT=0.
+[~] EXIT=0 / STATUS=DONE — NOT achievable in this environment. Static gates (xcframework, xcodegen,
+    swiftformat, swiftlint --strict, check-placeholders) are all EXIT=0; compilation of the surface +
+    tests is proven clean; but the full `build test` run is BLOCKED by a runner-wide
+    memory-contention compiler crash (evidence above). Recording STATUS=BLOCKED per covenant #1/#10.
+
+EXIT=1
+STATUS=BLOCKED

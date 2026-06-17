@@ -1,0 +1,130 @@
+=== P4 Dashboard widget 0045 EnergyFlowAnimatedWidget (Apple) ===
+date: 2026-06-10T03:15:44Z
+host: macOS 26.5.1 | Xcode 26.5 Build version 17F42 
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+Web source (spec): web/src/features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx
+Native surface:    apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.*
+Registry id:       energy-flow-animated  (category energy, default 2x4, min 2x4, max 3x40)
+
+Shipped files (10, all match the allowed EnergyFlowAnimatedWidget.* glob):
+  - EnergyFlowAnimatedWidget.Builder.swift
+  - EnergyFlowAnimatedWidget.Compact.swift
+  - EnergyFlowAnimatedWidget.Diagram.swift
+  - EnergyFlowAnimatedWidget.Model.swift
+  - EnergyFlowAnimatedWidget.Models.swift
+  - EnergyFlowAnimatedWidget.Palette.swift
+  - EnergyFlowAnimatedWidget.Previews.swift
+  - EnergyFlowAnimatedWidget.strings
+  - EnergyFlowAnimatedWidget.swift
+  - EnergyFlowAnimatedWidget.Tests.swift
+
+================================================================
+HOST-RUNNABLE GATES (the surface's correctness — all GREEN)
+================================================================
+>>> [1/7] swiftformat --lint (surface files)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-194659-46608/slot-5/apps/apple/.swiftformat
+SwiftFormat completed in 4.57s.
+0/9 files require formatting.
+FORMAT_EXIT=0
+>>> [2/7] swiftlint --strict (surface files)
+Linting 'EnergyFlowAnimatedWidget.swift' (9/9)
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+>>> [3/7] check-placeholders.ps1 (ADR-011 stub gate)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+>>> [4/7] Isolated SwiftPM build + XCTest (Swift 6, strict concurrency=complete, macOS 15)
+    harness: my 8 app files + real generated Tokens.swift + real DashboardWidgetInfra.swift + real TSSkeleton
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+	 Executed 37 tests, with 0 failures (0 unexpected) in 0.007 (0.009) seconds
+	 Executed 37 tests, with 0 failures (0 unexpected) in 0.007 (0.010) seconds
+TEST_EXIT=0
+>>> [5/7] swiftc -typecheck — iOS 18 simulator (arm64-apple-ios18.0-simulator, Swift 6, -D DEBUG incl. previews)
+IOS_TYPECHECK_EXIT=0  (0 errors / 0 warnings)
+>>> [6/7] swiftc -typecheck — macOS 15 (arm64-apple-macos15.0, Swift 6, -D DEBUG incl. previews)
+MAC_TYPECHECK_EXIT=0  (0 errors / 0 warnings)
+>>> [7/7] xcodegen generate (file enumeration into the real Xcode project)
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-194659-46608/slot-5/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+  enumerated surface files (app target + iOS/macOS test bundles):
+    EnergyFlowAnimatedWidget.Builder.swift
+    EnergyFlowAnimatedWidget.Compact.swift
+    EnergyFlowAnimatedWidget.Diagram.swift
+    EnergyFlowAnimatedWidget.Model.swift
+    EnergyFlowAnimatedWidget.Models.swift
+    EnergyFlowAnimatedWidget.Palette.swift
+    EnergyFlowAnimatedWidget.Previews.swift
+    EnergyFlowAnimatedWidget.strings
+    EnergyFlowAnimatedWidget.swift
+    EnergyFlowAnimatedWidget.Tests.swift
+
+================================================================
+FULL-APP xcodebuild build test — BLOCKED (platform capability)
+================================================================
+The gate's two xcodebuild steps cannot reach EXIT=0 in this dev environment for
+two PRE-EXISTING, ENVIRONMENTAL reasons unrelated to this surface (identical to
+every P4 Apple surface row in apps/macos-pending-verifications.md):
+
+ (1) KMP Shared.xcframework is not stageable here (Kotlin/Native long-pole).
+     - apps/apple/Frameworks/ holds only .gitkeep (no Shared.xcframework).
+     - standalone:  cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+                    => GRADLE_EXIT=124 (SIGTERM at the 150s cap; Kotlin/Native link)
+     - via scheme pre-action build-shared-xcframework.sh, triggered by:
+         xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+                    => XCODEBUILD_IOS_EXIT=124 (SIGTERM at the 200s cap; blocked in the
+                       Shared.xcframework pre-action before the app sources compile)
+ (2) No macOS code-signing identity on this host.
+     - security find-identity -p codesigning => "0 valid identities found"
+
+The iPhone 16 simulator IS available (booted) — the simulator is not the blocker.
+Both blockers are the documented deferral to p4-apple/P99-0001-apple-acceptance-gate
+(runs on macos-latest with signing identities + the Kotlin/Native toolchain).
+
+Deferred verification command (macos-latest):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+IOS_EXIT=124   (BLOCKED in Shared.xcframework pre-action; surface sources never reached)
+MAC_EXIT=124   (BLOCKED — same Shared.xcframework pre-action + 0 signing identities)
+
+================================================================
+SURFACE VERIFICATION SUMMARY (this artifact — GREEN)
+================================================================
+FORMAT_EXIT=0        swiftformat --lint  0/9 files require formatting
+LINT_EXIT=0          swiftlint --strict  0 violations, 0 serious in 9 files
+PLACEHOLDER_EXIT=0   PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=0 (0 opt-outs)
+TEST_EXIT=0          isolated SwiftPM XCTest 37/37 passed, 0 failures (Swift 6, strict concurrency=complete)
+IOS_TYPECHECK_EXIT=0 swiftc -typecheck arm64-apple-ios18.0-simulator  0 errors / 0 warnings (incl. #Preview)
+MAC_TYPECHECK_EXIT=0 swiftc -typecheck arm64-apple-macos15.0          0 errors / 0 warnings (incl. #Preview)
+XCODEGEN_EXIT=0      xcodegen generate OK; all 10 files enumerated (app target + iOS/macOS test bundles)
+
+Parity with web/src/features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx:
+ - Data: useVehicles + useVehicleState (power, charger_power, battery_level, is_charging),
+   bound through the P1/S8 EnergyFlowAnimatedSource seam — no HTTP in the view.
+ - Dead-zone: isConsuming power>0.5, isRegen power<-0.5 (strict, exclusive at 0.5).
+ - Nodes (always 3): battery(left,%), drive(right, Drive/Regen/Idle, kW|—),
+   charger(top, ALWAYS present, whole-kW|—). Node icons neutral (web icons uncolored).
+ - Arrows (always 3): battery->drive cyan, drive->battery emerald, charger->battery amber;
+   inactive arrows carry value 0 and render as thin static lines.
+ - Compact fallback (cols<2): battery% + amber/cyan/emerald chips or "Idle".
+ - States: loading / empty(noData) / error(retry) / content / stale / offline — all rendered.
+ - i18n: 7 web keys (energyFlowAnimated.title/battery/drive/regen/idle/charger/noData) +
+   native chrome, all via the P1/S10 EnergyFlowAnimatedStrings facade; no English literals in views.
+ - a11y: VoiceOver diagram summary + compact summary, reduce-motion-aware dash + numeric roll,
+   Dynamic Type fonts; interactive controls (refresh/retry/open) labeled.
+ - Telemetry: model.start() emits P1/S11 view.opened surface="EnergyFlowAnimatedWidget" (asserted).
+
+EXIT=124
+STATUS=BLOCKED
+# BLOCKED scope = the full-app xcodebuild build/test ONLY (KMP Shared.xcframework
+# Kotlin/Native long-pole + 0 macOS signing identities — pre-existing, environmental,
+# deferred to p4-apple/P99-0001 on macos-latest). The EnergyFlowAnimatedWidget surface
+# itself is verified GREEN on every host-runnable gate above (no red-as-green).

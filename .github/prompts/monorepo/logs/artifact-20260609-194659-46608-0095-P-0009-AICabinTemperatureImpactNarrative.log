@@ -1,0 +1,215 @@
+=== P4 Shared surface 0009 AICabinTemperatureImpactNarrative (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon — Mac Studio), shared parallel runner slot-95.
+  Xcode              : 26.5 (Build 17F42); Swift 6.3.2; default DEVELOPER_DIR.
+  Toolchain          : swiftlint 0.63.x · swiftformat (maxwidth 120) · xcodegen 2.45.4 · pwsh 7.6.2 ·
+                       JDK 17.0.19 (KMP) · Kotlin/Native prebuilt 2.4.0.
+  Simulators         : iOS runtime installed; "iPhone 16" device present (Booted during this run).
+  Capability         : SwiftUI present and EXERCISED (the surface compiles + renders). This surface
+                       uses NO Swift Charts and NO MapKit — the web source has none either (prompt
+                       "Charts / maps used: (none)") — so every iOS 18 / macOS 15 HIG primitive it
+                       needs is available. => NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/ai/AICabinTemperatureImpactNarrative.tsx — the Helix cabin-temperature-impact
+  narration card. It is `withAiFeature('cabin-temperature-impact-narrative', InnerSection)` (a
+  `useAiEnabled` gate; disabled => the HOC renders `null`). InnerSection:
+    • accepts `vehicleId?: string | number`;
+    • `numericVehicleId = typeof vehicleId === 'number' ? vehicleId : Number(vehicleId)`;
+    • `useAiStream({ url: '/ai/climate/temperature-impact/narrate',
+                     body: { vehicle_id: Number.isFinite(numericVehicleId) ? numericVehicleId : 0 },
+                     onEvent: noop })`  — NOTE: body is `{ vehicle_id }` ONLY (no `days`);
+    • `haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0`  (the canStart rule —
+      STRICTER than the anomaly card's `vehicleId != null`: 0 and negatives are disabled);
+    • renders the shared `AIFeatureCard` with
+        title  t('tempImpact.aiNarrative.title','Narrate the cabin-temperature impact'),
+        desc   t('tempImpact.aiNarrative.description', <long ambient-temperature explanation>),
+        button t('tempImpact.aiNarrative.generateButton','Narrate impact'),
+        badge  t('tempImpact.aiNarrative.badge','Helix'),
+        canStart = haveInputs, stream = the useAiStream handle.
+
+  Composed shared primitives reproduced for parity (their native atoms are owned by the P4 component-
+  library bundle — out of scope here and not yet present — so they are reproduced as private subviews
+  scoped to this surface, the only files this prompt may touch):
+    • AIFeatureCard  : GlassPanel -> (title + AIBadge) -> description -> universal "Ask Helix" button
+                       (idle "Ask Helix" / streaming "Helix is thinking…"; disabled = !canStart ||
+                       isStreaming; aria-label "Ask Helix · {buttonLabel}") -> AiOutputPanel.
+    • AiOutputPanel  : nothing while idle+empty; "Helix error: {message}" in error; AIThinkingIndicator
+                       (shimmer lines + dots) while streaming before the first delta; else the prose.
+    • useAiStream    : idle -> streaming -> (done | error); `delta.text` frames accumulate; a non-OK
+                       HTTP response finalises as "stream_http_{status}"; unknown SSE events dropped.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.* + this log)
+  AICabinTemperatureImpactNarrative.Adapter.swift       — pure Foundation core. CabinTempNarrativeVehicleID
+                                                          (port of `typeof==number ? n : Number(n)` +
+                                                          `Number.isFinite` + the `>0` gate, over a
+                                                          string|number|absent Raw); CabinTempNarrativeRequest
+                                                          (path /ai/climate/temperature-impact/narrate,
+                                                          body `{ vehicle_id }` only — NO days — with the
+                                                          non-finite->0 coercion, deterministic sorted JSON);
+                                                          CabinTempNarrativeStreamEvent + SSEFrame.parse (port
+                                                          of parseSSEFrame + toTypedEvent); StreamState +
+                                                          Snapshot + Reducer (start, delta accumulation, done,
+                                                          error, confirm pause, tool no-ops, stream_http_{n});
+                                                          Output.derive (AiOutputPanel branches); Action.derive
+                                                          (disabled = !canStart || streaming); Accessibility.
+  AICabinTemperatureImpactNarrative.Model.swift         — P1/S10 strings facade (table
+                                                          "AICabinTemperatureImpactNarrative"); Connection axis;
+                                                          Availability tri-state (useAiEnabled peer); P1/S11
+                                                          telemetry seam + OSLog default; Input snapshot;
+                                                          Resolved view-state; @MainActor @Observable
+                                                          CabinTempNarrativeModel (gate, view.opened-once,
+                                                          stale one-shot auto-refresh); InMemory source.
+  AICabinTemperatureImpactNarrative.Projection.swift    — pure projection (gated/loading/error/ready, the
+                                                          `isFinite && >0` canStart rule, Ask-Helix label flip,
+                                                          localized AiOutputPanel branches incl. the no-vehicle
+                                                          hint when canStart is false).
+  AICabinTemperatureImpactNarrative.Views.swift         — Helix badge, universal Ask-Helix button (idle/
+                                                          thinking/disabled + symbol-effect shim), thinking dots
+                                                          + indicator, output panel (empty/thinking/prose/
+                                                          failed), ready card body.
+  AICabinTemperatureImpactNarrative.Chrome.swift        — P4 leaf chrome: freshness chip (Live/Stale/Offline),
+                                                          refresh button, stale/offline banner, loading
+                                                          skeleton, retryable gate-error.
+  AICabinTemperatureImpactNarrative.swift               — the surface View: gate (EmptyView when off),
+                                                          header (title + badge + freshness + refresh),
+                                                          connectivity banner, content switch; surfaceSlug
+                                                          "AICabinTemperatureImpactNarrative"; start/stop.
+  AICabinTemperatureImpactNarrative.Previews.swift      — DEBUG #Preview per state (idle/thinking/prose/
+                                                          stream-error/no-vehicle/loading/gate-error/stale/
+                                                          offline/gated).
+  AICabinTemperatureImpactNarrative.strings             — i18n catalog: the web parity keys + the shared
+                                                          AIFeatureCard/AiOutputPanel literals + the native
+                                                          chrome copy.
+  AICabinTemperatureImpactNarrative.AdapterTests.swift  — 47 Foundation-only tests (vehicle coercion,
+                                                          request body, SSE parse, reducer, output/action).
+  AICabinTemperatureImpactNarrative.Tests.swift         — 32 tests (projection phases/ready/output, model
+                                                          wiring/telemetry/freshness/delegation, a11y).
+
+GATE EXECUTION (raw exits pasted; the prompt's PowerShell gate, run step-by-step on THIS runner)
+
+  [KMP prerequisite] apps/shared :core:assembleSharedXCFramework
+      BUILD SUCCESSFUL in 4m 6s — staged Shared.xcframework {ios-arm64, ios-arm64-simulator, macos-arm64}
+      into apps/apple/Frameworks/ (gitignored). The scheme pre-action re-runs this up-to-date.
+
+  [xcodegen generate]            -> Created TeslaSync.xcodeproj (gitignored). All 9 surface .swift files +
+                                    the .strings resource are wired into the app + test targets (verified in
+                                    pbxproj). Schemes TeslaSync + TeslaSync-macOS present.
+
+  [swiftlint --strict]           tree-wide (the gate step):
+      "Done linting! Found 0 violations, 0 serious in 3262 files."   LINT_EXIT=0
+      (the 9 surface files specifically: 0 violations.)
+
+  [swiftformat --lint apps/apple] tree-wide (the gate step):
+      "0/3492 files require formatting, 2 files skipped."            FORMAT_EXIT=0
+      (the 9 surface files specifically: 0 require formatting.)
+
+  [check-placeholders.ps1]       The gate's literal `-Path ...shared-surfaces/AICabinTemperatureImpactNarrative`
+                                 is an extensionless prefix (not a real dir/file) so the recursive scanner
+                                 returns a vacuous clean. To make the "no stubs as final" rule MEANINGFUL it
+                                 was additionally run over copies of all 9 shipped .swift files:
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                     PLACEHOLDER_EXIT=0
+      (grep of the shipped files for TODO/FIXME/XXX/stub/mock/placeholder/Lorem/"not implemented"/
+       "Coming soon": none.)
+
+  [xcodebuild iOS build test]    -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+      IOS_EXIT=65  (FAILED — and disclosed as such; this is NOT reported green).
+      ROOT CAUSE = PRE-EXISTING, UNRELATED, OUT-OF-ALLOWED-FILES. 108 compiler errors, ALL in sibling
+      surfaces this prompt does not own and did not touch:
+        • 'RecentDrivesModel' / 'RecentDrivesConnection' / 'RecentDrivesLoadStatus' / 'RecentDrivesUpdate'
+          "is ambiguous for type lookup" — each is DEFINED TWICE in the TeslaSync module:
+            apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift  AND
+            apps/apple/TeslaSync/feature-views/RecentDrivesSection.Model.swift (+ .Adapter.swift)
+        • 'StateTimelineModel' / 'StateTimelineConnection' / 'StateTimelineLoadStatus' / 'StateTimelineUpdate'
+          "is ambiguous" — DEFINED TWICE:
+            apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift  AND
+            apps/apple/TeslaSync/feature-views/StateTimeline.Model.swift
+      Errors located in THIS surface's files: 0 (grep "AICabinTemperature" over the error lines = 0).
+      This surface's resource compiled cleanly in the same run:
+        "CopyStringsFile … AICabinTemperatureImpactNarrative.strings (in target 'TeslaSync') … encoding UTF-8".
+
+  [xcodebuild macOS build test]  -scheme TeslaSync-macOS
+      MAC_EXIT=65  (FAILED — disclosed; NOT reported green).
+      ROOT CAUSE = PRE-EXISTING ENVIRONMENT (code signing), reached BEFORE any Swift compilation
+      (SwiftCompile count = 0):
+        '"TeslaSync-macOS" has entitlements that require signing with a development certificate.'
+        '"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.'
+      DEVELOPMENT_TEAM is empty (project.yml) and this runner has no signing identity / hardened-runtime
+      certificate. Unrelated to this surface; errors in this surface's files: 0.
+
+INDEPENDENT VERIFICATION (because the two full-app xcodebuild gates are blocked by the above pre-existing,
+out-of-scope breakage, the surface was verified in ISOLATION under the app's OWN rules)
+  A throwaway SwiftPM package (/tmp/cabin-iso, not committed) was built with:
+    • the REAL design tokens (apps/design/generated/apple/Tokens.swift),
+    • VERBATIM copies of the shared components the surface consumes (TSButton / TSSkeleton / TSFadeIn),
+    • this surface's 6 production files + Previews.swift,
+    • this surface's 2 test files, with their `@testable import TeslaSync` unchanged (the library target is
+      named `TeslaSync`),
+    • swift-tools 6.0, `.swiftLanguageMode(.v6)` + `-strict-concurrency=complete`
+      (mirrors project.yml SWIFT_VERSION 6.0 / SWIFT_STRICT_CONCURRENCY complete).
+  Result:
+      Test Suite 'All tests' passed.
+      Executed 79 tests, with 0 failures (0 unexpected).             SWIFT_TEST_EXIT=0
+  => The shipped surface compiles under the app's Swift 6 strict-concurrency rules and all 79 of its tests
+     pass on the Xcode 26.5 XCTest runtime. The #Preview macro (Previews.swift) compiled in the same build.
+
+PRE-EXISTING BLOCKER ANALYSIS (proof the two xcodebuild reds are NOT caused by this commit)
+  • `git status --porcelain` shows this commit adds ONLY the 10
+    apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.* files — nothing else modified.
+  • The ambiguous types are each DEFINED in two pre-existing, non-mine files (greps above). This surface
+    defines NONE of them — it uses the unique `CabinTempNarrative*` / `AICabinTemperatureImpactNarrative`
+    prefix, which collides with nothing in the module.
+  • The macOS signing requirement predates and is independent of any source change.
+  Therefore both xcodebuild reds are pre-existing, unrelated, and OUTSIDE this prompt's allowed files; fixing
+  them would require editing dashboard-widgets/ + feature-views/ + project signing — forbidden here
+  (covenant #2 no scope narrowing the other way, #9 no silent drift). They are owned by the P4 acceptance
+  gate / the RecentDrives + StateTimeline surface owners on a signed runner.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : IOS_EXIT=65 and MAC_EXIT=65 are pasted verbatim and explicitly called FAILED;
+                           only the per-surface gates (lint/format/placeholder) and the isolated 79-test
+                           build are reported green — because they ARE.
+  2  No scope narrowing  : every web branch reproduced — the withAiFeature gate; the AIFeatureCard header/
+                           badge/description/Ask-Helix button (idle + thinking + disabled); the
+                           `isFinite && >0` canStart rule (incl. 0/negative edges); the body `{ vehicle_id }`
+                           ONLY (no days); ALL AiOutputPanel branches (no-vehicle hint / idle hint / thinking /
+                           prose / "Helix error:"); the useAiStream lifecycle + SSE parsing; all P4 states
+                           (gated/loading/empty/error/ready/stale/offline).
+  3  No skip-and-assume  : every gate executed on THIS runner with raw exits pasted; both full-app gates were
+                           actually ATTEMPTED (xcodegen + a real KMP xcframework build + xcodebuild) and their
+                           blockers re-confirmed by grep/ls/pbxproj, not assumed.
+  4  No stubs as final   : complete production surface + 79 real tests; placeholder COUNT=0; no
+                           TODO/FIXME/XXX/stub/mock/placeholder/Lorem/"not implemented"/"Coming soon".
+  5  No parity shortcut  : the string|number coercion + Number.isFinite, the `>0` gate, the no-`days` body,
+                           the snake_case vehicle_id, the SSE narrowing, the delta accumulation, the done/error
+                           finalisation, the "stream_http_{status}" formatting, and the AiOutputPanel /
+                           AIFeatureCard branch logic are each unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 isolated-build + DEFERRED full-app disposition
+                           (mirrors the 0005 AIAnomalyExplanations log) all honoured.
+  8  No commit on red    : the committed artifact (10 AICabinTemperatureImpactNarrative.* files + this log) is
+                           GREEN on every gate it OWNS (swiftlint/swiftformat/placeholder) AND on a real
+                           Swift 6 strict-concurrency build + 79/79 XCTest. The two full-app xcodebuild gates
+                           are red ONLY on pre-existing, unrelated, out-of-allowed-files breakage this commit
+                           neither introduces nor is permitted to touch.
+  9  No silent drift     : changes are confined to shared-surfaces/AICabinTemperatureImpactNarrative.* + this
+                           log; the CabinTempNarrativeVehicleID parity seam, the buttonPlacement layout choice,
+                           and the no-vehicle empty-hint are disclosed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AICabinTemperatureImpactNarrative shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED: it compiles and its 79 tests pass under the app's own Swift 6
+  strict-concurrency rules, against the REAL design tokens + the REAL shared components, via the Xcode 26.5
+  XCTest runtime, with swiftformat / swiftlint / placeholder all green (tree-wide AND on the 9 surface files)
+  and the #Preview macro compiling. The full-app iOS-Simulator build/test and macOS build/test xcodebuild
+  gates are DEFERRED (not failed by this code): the iOS gate on a pre-existing duplicate-type collision in the
+  RecentDrives* + StateTimeline* sibling surfaces (each type defined twice across dashboard-widgets/ +
+  feature-views/), the macOS gate on a pre-existing code-signing requirement (no development certificate on
+  this runner). Both are out of this prompt's allowed files and owned by the P4 acceptance gate on a signed
+  runner with those sibling collisions resolved.
+
+EXIT=0
+STATUS=DONE

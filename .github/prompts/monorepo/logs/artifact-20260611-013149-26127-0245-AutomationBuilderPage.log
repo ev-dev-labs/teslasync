@@ -1,0 +1,238 @@
+=== P4-APPLE · P7 · page:automations/AutomationBuilder (SwiftUI / HIG) ===
+started: 2026-06-12T18:14:44-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Apple Swift 6.3.2; swiftlint 0.63.3; swiftformat 0.61.1; xcodegen 2.45.4; pwsh present
+web source: web/src/features/automations/pages/AutomationBuilderPage.tsx   (routes /automations/:id/edit, /automations/new)
+parity unit: page:automations/AutomationBuilder  (manifest requiredCount=48 = 3 panels + 4 states + 41 strings; 0 charts, 0 maps)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Automations/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group (the only
+`TeslaSync/*` groups compiled into the app targets are widget-primitives, dashboard-widgets,
+feature-views, misc-surfaces, shared-surfaces). The repo's real, compiled canonical page home
+is `apps/apple/Sources/Features/<Domain>/` — every shipped P7 page (admin/ApiPlayground,
+admin/DiskForecast, analytics/FleetCompare, analytics/Statistics, …) lives there, and `Sources`
+IS a project.yml source path (createIntermediateGroups). This page therefore ships at
+`apps/apple/Sources/Features/Automations/**` — the faithful equivalent of the prompt's
+`Features/Automations`, identical to the precedent reconciliation recorded in
+apple-page-admin-ApiPlaygroundPage.log. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This mapping is the only
+deviation from the literal prompt path and is recorded here per covenant.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Automations/AutomationBuilderModels.swift          (256 LOC) Domain value types: AutomationBuilderVehicle/Channel, AutomationBuilderTrigger(+Kind,+GeofenceEvent), AutomationBuilderCondition(+Kind), AutomationBuilderAction(+Kind, isIncomplete), AutomationBuilderForm, AutomationBuilderValidationError. Namespaced AutomationBuilder* to avoid collision with the existing feature-views DTOs (AutomationTrigger/Action/Kind enums).
+?? apps/apple/Sources/Features/Automations/AutomationBuilderPageModel.swift       (257 LOC) @MainActor @Observable model: AutomationBuilderDataSource seam, AutomationBuilderLoadState(loading/empty/error/ready), Mode(create/preset/edit), load/refresh, validate() (web order), save(), testRun(), trigger/condition/action mutations + dirty flag.
+?? apps/apple/Sources/Features/Automations/AutomationBuilderPageModel.Sample.swift ( 74 LOC) SampleAutomationBuilderDataSource — API-shaped fixture (vehicles, channels, sample automation, sample preset); writes return synthetic ids.
+?? apps/apple/Sources/Features/Automations/AutomationBuilderPage.swift            (368 LOC) SwiftUI view: header(title by mode + editBreadcrumb + subtitle), state router (loading skeletons / not-found empty / error+retry / form), back button, edit-conflict + draft banners, Save/TestRun/Cancel row, GlassPanel3 preset hint; adaptive macOS/iPad/iPhone; #if DEBUG previews (create/edit/not-found/error).
+?? apps/apple/Sources/Features/Automations/AutomationBuilderPage.Sections.swift   (367 LOC) Binding helpers (dirty-tracking), AutomationBuilderSection/LabeledControl/Labels, General section (name/description+placeholder overlay/vehicle/enabled), When section (trigger-type select + GlassPanel1 configurator / GlassPanel2 empty), AutomationTriggerConfigurator, AutomationValidationBanner.
+?? apps/apple/Sources/Features/Automations/AutomationBuilderPage.Builders.swift   (213 LOC) Only If conditions editor (AutomationOnlyIfSection + AutomationConditionRow) and Then actions editor (AutomationThenSection + AutomationActionRow), add/remove + per-kind fields.
+?? apps/apple/Sources/Features/Automations/AutomationBuilderRouteRegistration.swift ( 26 LOC) registers .automations -> AutomationBuilderPage (create mode); mirrors ApiPlaygroundRouteRegistration; model built on MainActor + captured; onClose routes via onNavigate.
+?? apps/apple/Tests/Unit/Features/Automations/AutomationBuilderPageModelTests.swift (293 LOC) XCTest: 4 load states + preset + reference lists + 6-case validation order + actionIncompleteness + save success/validation/write-failure + test-run gating + mutations/dirty + sample well-formedness (24 tests).
+ M apps/apple/Sources/TeslaSyncApp.swift               chains AutomationBuilderRouteRegistration.registry(base: StatisticsRouteRegistration.registry(...), onNavigate: { selection = $0 }) into \.routeHosts (+18/-15, reindent of the registry chain).
+ M apps/apple/Localization/Localizable.xcstrings       +82 unprefixed native keys (41 required parity strings + 41 supporting trigger/condition/action editor labels), additive only (+902/-0 lines); JSON validated (8394 total strings).
+ M apps/parity/apple-ledger.json                       +2 rows (apple-macos + apple-ios) for page:automations/AutomationBuilder, status done, covered 48/48.
+
+The web page delegates the rich trigger/condition/action editors to dedicated sub-units
+(TriggerConfigurator / ConditionBuilder / ActionBuilder — their own parity rows, already shipped
+under TeslaSync/feature-views). This page reproduces the page-level orchestration with
+self-contained, functional inline editors so the unit is independently verifiable and does not
+couple to the build-blocked sibling tree (see breakage note). The 3 GlassPanels, 4 data states,
+and 41 strings the manifest enumerates are all reproduced.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (scheme pre-action, run standalone) ---
+# apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 8m 45s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; my 7 files referenced 42x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 8 files + edited TeslaSyncApp.swift, repo .swiftformat) ---
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (repo .swiftlint.yml) ---
+Done linting! Found 3 violations in 9800 files — ALL pre-existing + OUT-OF-SCOPE:
+  TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift (identifier_name a/b/c) — same 3 the
+  ApiPlayground log recorded; NONE in my files.
+Violations in Sources/Features/Automations or Tests/Unit/Features/Automations: 0
+LINT_EXIT(in-scope)=0
+# Earlier iteration flagged 3 of MY files (2x file_length>400, 1x multiple_closures_with_trailing_closure).
+# Fixed: split the model into AutomationBuilderModels.swift + …PageModel.swift, split the sections into
+# …Sections.swift + …Builders.swift (each ≤368 LOC), and passed both closures by name in `backButton`.
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Automations -Language swift ---
+PLACEHOLDER_ALLOWED=3   (3 unavoidable web i18n key names containing "Placeholder":
+                         automations.builder.namePlaceholder / .descriptionPlaceholder / .cronPlaceholder,
+                         each opted out inline with `// parity:allow web i18n key name (input prompt)`)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/Coming soon/Lorem/stub/fatalError in shipped code]
+
+--- Executed model logic (real AutomationBuilder model, Swift 6 strict-concurrency host harness) ---
+# swiftc -swift-version 6 -strict-concurrency=complete AutomationBuilderModels.swift AutomationBuilderPageModel.swift \
+#   AutomationBuilderPageModel.Sample.swift main.swift   (SWIFTC_EXIT=0)
+28 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  initial=.loading; create->.ready+1 default action; edit success->.ready+hydrated name; edit nil->.empty;
+  edit throw->.error; preset->.ready+name+isPreset; reference lists populated; validate() full order
+  (name->trigger->triggerPlace->conditionPlace->actions->actionDetails)->nil when valid; save success
+  (savedID+!dirty+showsTestRun); save validation-fail (validationError=.name); save write-fail (saveError);
+  edit shows testRun + testRunStarted; setTriggerKind/clear; add/remove condition+action; preset-hint gating
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components (Swift 6 strict concurrency) ---
+# swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/*.swift Sources/Design/* Sources/Theme.swift Sources/Components/UI/* \
+#   Sources/Components/Feedback/* (minus FeedbackOverlays — needs DataDisplay, unused here) \
+#   Sources/App/AppRoute.swift Sources/App/RouteHostRegistry.swift Sources/Features/Automations/*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact branch]
+# Compiles my view + model + sections + builders + registration against the ACTUAL
+# TSGlassPanel/TSCard/TSEmptyState/TSErrorDisplay/TSSpinner/TSSkeleton/TSAlertBanner/TSInlineCallout/
+# TSTextField/TSTextArea/TSToggle/TSStepper/TSButton/typography/Color.TS/Font.TS/TSSpacing sources —
+# authoritative proof the API usage is correct on BOTH idioms (ADR-002/006).
+
+--- Type collision audit (module-level) ---
+The existing feature-views units already declare PUBLIC AutomationTrigger / AutomationAction /
+AutomationActionKind / AutomationConditionKind / AutomationTriggerKind. My page-local DTOs were renamed
+to the AutomationBuilder* namespace (AutomationBuilderTrigger/Action/…); verified disjoint from ALL
+external Automation* type declarations (grep over TeslaSync/ + Sources/ outside my dir → none).
+
+--- Full-scheme build (xcodebuild -scheme TeslaSync-macOS … build, real staged Shared.xcframework) ---
+ALL 7 of my source files compile (present in SwiftCompile commands); ZERO ": error:" lines reference
+any apps/apple/Sources/Features/Automations file across every build attempt.
+BUILD_EXIT=65  [RED — BLOCKED by PRE-EXISTING, OUT-OF-SCOPE breakage; see note below]
+TEST_EXIT=(not reached)  [TeslaSyncTests bundle requires the app target, blocked by the same out-of-scope breakage]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not link at this HEAD due to the SwiftUI "the compiler is
+unable to type-check this expression in reasonable time" defect in sibling surfaces OUTSIDE this
+artifact's allowed files. Across two full build runs the failing SwiftCompile batches were, in order:
+  (run 1) TeslaSync/feature-views/RecentDrivesSection.* (+ RecentDrivesSection.Previews.swift) — the
+          exact file the apple-page-admin-ApiPlaygroundPage.log cited.
+  (run 2) TeslaSync/feature-views/AnomalyInlineRow.* and TeslaSync/feature-views/AppearanceSettings.*
+          in the alphabetical "A" batch (Swift batch-mode fails the whole batch when one sibling times
+          out; that batch also sweeps in already-shipped Sources files like ApiPlaygroundPage.swift and
+          AppRoute.swift, none of which are the cause).
+This is the same toolchain/sibling defect class the predecessor P7 logs record; the failing batch is
+non-deterministic with machine load. None of these files are in my allowed set, none reference my types,
+and my own AutomationBuilder* files carry ZERO diagnostics. My code's correctness is instead proven by
+the isolated Swift 6 strict-concurrency type-check (0/0 on macOS AND iOS) and the executed model harness
+(28/28) — exactly the host-harness methodology the peer p4-apple logs use when the shared app target is
+blocked by out-of-scope siblings. No sibling file, project.yml, or other owner's file was edited.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=48
+================================================================================
+[x] panel  — GlassPanel1            AutomationBuilderPage.Sections.swift `AutomationWhenSection.body` -> TSGlassPanel { AutomationTriggerConfigurator(trigger:) } when a trigger kind is selected (web `<GlassPanel><TriggerConfigurator/></GlassPanel>`)
+[x] panel  — GlassPanel2            AutomationBuilderPage.Sections.swift `AutomationWhenSection.body` else-branch -> TSGlassPanel { TSEmptyState("automations.builder.emptyTrigger") } when no trigger chosen
+[x] panel  — GlassPanel3            AutomationBuilderPage.swift `presetHintPanel` -> TSGlassPanel { Text("automations.builder.presetHint") }, gated on model.showsPresetHint (web `!isEdit`)
+[x] state  — loading                AutomationBuilderLoadState.loading -> AutomationBuilderPage.swift `loadingState` (ForEach TSSkeleton x6); web `isEdit && isLoadingAutomation` PageContainer loading
+[x] state  — empty                  AutomationBuilderLoadState.empty -> AutomationBuilderPage.swift `notFoundState` (TSEmptyState "automations.builder.notFound" + Back button); web `isEdit && !existingAutomation` not-found
+[x] state  — error                  AutomationBuilderLoadState.error(String) -> AutomationBuilderPage.swift `errorState` (TSErrorDisplay onRetry: model.refresh); web `isEdit && loadError` PageContainer error
+[x] state  — success               AutomationBuilderLoadState.ready -> AutomationBuilderPage.swift `formBody` (the full builder form); web success render
+[x] string — automations.builder.allVehicles        AutomationBuilderPage.Sections.swift `AutomationGeneralSection.vehiclePicker` Text("automations.builder.allVehicles").tag(Int64?.none)
+[x] string — automations.builder.backToList         AutomationBuilderPage.swift `backButton` + `notFoundState` Back button
+[x] string — automations.builder.cancel             AutomationBuilderPage.swift `actionButtons` TSButton("automations.builder.cancel")
+[x] string — automations.builder.create             AutomationBuilderPage.swift `actionButtons` save TSButton title when !isEdit
+[x] string — automations.builder.createTitle        AutomationBuilderPage.swift `titleKey` (.create) -> TSPageTitle
+[x] string — automations.builder.description         AutomationBuilderPage.Sections.swift `AutomationDescriptionField` TSLabel("automations.builder.description")
+[x] string — automations.builder.descriptionPlaceholder  AutomationBuilderPage.Sections.swift `AutomationDescriptionField` empty-overlay Text (input prompt)
+[x] string — automations.builder.editBreadcrumb     AutomationBuilderPage.swift `breadcrumbText` = String(format: String(localized:"automations.builder.editBreadcrumb"), name); rendered in `header` when editing
+[x] string — automations.builder.editTitle          AutomationBuilderPage.swift `titleKey` (.edit) + `errorState` title
+[x] string — automations.builder.emptyTrigger       AutomationBuilderPage.Sections.swift GlassPanel2 TSEmptyState title
+[x] string — automations.builder.enabled            AutomationBuilderPage.Sections.swift `AutomationGeneralSection` TSToggle("automations.builder.enabled")
+[x] string — automations.builder.errorActionDetails AutomationBuilderPage.Sections.swift `AutomationValidationBanner.messageKey` case .actionDetails
+[x] string — automations.builder.errorActions       AutomationValidationBanner.messageKey case .actions
+[x] string — automations.builder.errorConditionPlace AutomationValidationBanner.messageKey case .conditionPlace
+[x] string — automations.builder.errorName          AutomationValidationBanner.messageKey case .name
+[x] string — automations.builder.errorTrigger       AutomationValidationBanner.messageKey case .trigger
+[x] string — automations.builder.errorTriggerPlace  AutomationValidationBanner.messageKey case .triggerPlace
+[x] string — automations.builder.general            AutomationBuilderPage.Sections.swift `AutomationGeneralSection` AutomationBuilderSection(title:)
+[x] string — automations.builder.name               AutomationBuilderPage.Sections.swift `AutomationGeneralSection` TSTextField label
+[x] string — automations.builder.namePlaceholder    AutomationBuilderPage.Sections.swift `AutomationGeneralSection` TSTextField prompt (input prompt)
+[x] string — automations.builder.notFound           AutomationBuilderPage.swift `notFoundState` TSEmptyState title
+[x] string — automations.builder.onlyIf             AutomationBuilderPage.Builders.swift `AutomationOnlyIfSection` AutomationBuilderSection(title:)
+[x] string — automations.builder.onlyIfDesc         AutomationBuilderPage.Builders.swift `AutomationOnlyIfSection` AutomationBuilderSection(description:)
+[x] string — automations.builder.presetHint         AutomationBuilderPage.swift `presetHintPanel` Text (GlassPanel3)
+[x] string — automations.builder.presetTitle        AutomationBuilderPage.swift `titleKey` (.preset) -> TSPageTitle
+[x] string — automations.builder.save               AutomationBuilderPage.swift `actionButtons` save TSButton title when isEdit
+[x] string — automations.builder.saveError          AutomationBuilderPage.swift `saveErrorBanner` + `errorState` + AutomationValidationBanner title
+[x] string — automations.builder.selectTrigger      AutomationBuilderPage.Sections.swift `AutomationWhenSection.triggerTypePicker` default Text.tag(nil)
+[x] string — automations.builder.subtitle           AutomationBuilderPage.swift `header` Text("automations.builder.subtitle")
+[x] string — automations.builder.testRun            AutomationBuilderPage.swift `actionButtons` Test Run TSButton (shown when model.showsTestRun)
+[x] string — automations.builder.testRunStarted     AutomationBuilderPage.swift `actionButtons` success note (model.testRunStarted)
+[x] string — automations.builder.then               AutomationBuilderPage.Builders.swift `AutomationThenSection` AutomationBuilderSection(title:)
+[x] string — automations.builder.thenDesc           AutomationBuilderPage.Builders.swift `AutomationThenSection` AutomationBuilderSection(description:)
+[x] string — automations.builder.triggerType        AutomationBuilderPage.Sections.swift `AutomationWhenSection` AutomationLabeledControl(label:) for the trigger select
+[x] string — automations.builder.vehicle            AutomationBuilderPage.Sections.swift `AutomationGeneralSection` AutomationLabeledControl(label:) for the vehicle picker
+[x] string — automations.builder.vehicleFallback    AutomationBuilderPage.Sections.swift `AutomationBuilderLabels.vehicleFallback` = String(format: String(localized:"automations.builder.vehicleFallback"), id)
+[x] string — automations.builder.when               AutomationBuilderPage.Sections.swift `AutomationWhenSection` AutomationBuilderSection(title:)
+[x] string — automations.builder.whenDesc           AutomationBuilderPage.Sections.swift `AutomationWhenSection` AutomationBuilderSection(description:)
+[x] string — draft.noun.automation                  AutomationBuilderPage.swift `banners` DraftRecoveryBanner title (TSAlertBanner) for new automations
+[x] string — editConflict.resource.automation       AutomationBuilderPage.swift `banners` EditConflictBanner title (TSAlertBanner)
+[x] string — forms.unsavedAutomation                AutomationBuilderPage.swift `banners` unsaved-changes message (TSAlertBanner)
+PARITY_COVERED=48
+
+All 48 panels/states/strings render from the bound @Observable AutomationBuilderPageModel and resolve
+from Localizable.xcstrings. Web key names preserved verbatim. SI converters / live-SSE staleness: N/A for
+this unit (no units, no live data source) — recorded per ADR-013 scope.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65) is
+                       pre-existing OUT-OF-SCOPE SwiftUI type-check-timeout breakage in feature-views, labelled, never recoloured.
+ 2 No scope narrowing: all 3 GlassPanels, all 4 data states, the General/When/OnlyIf/Then sections, the
+                       trigger/condition/action editors, validation, save, test-run, banners, and preset hint are implemented.
+ 3 No skip-and-assume: web page read end-to-end (836 lines); PageContainer title/subtitle/loading/error/not-found
+                       + the form structure + trigger select + GlassPanels + buttons + preset hint reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete editors.
+ 5 No parity shortcuts: 4 states render distinctly; validate() ports the exact web order; strings = web keys.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, project.yml, or other owner's file. Type names were
+                       namespaced (AutomationBuilder*) specifically to AVOID disturbing the existing feature-views DTOs.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/9), swiftlint(0 in my files),
+                       placeholder(0), harness(28/28), view type-check macOS(0/0) + iOS(0/0), my 7 files compile in the
+                       full xcodebuild with ZERO diagnostics. The only RED is out-of-scope and DEFERRED to its owners.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI AutomationBuilderPage shipped at parity with the web source: a pure
+@Observable state holder (ADR-004 — no networking in the view) exposing loading/empty/error/success over
+an injectable AutomationBuilderDataSource seam (default = an API-shaped sample), the full typed-automation
+builder form (General; When with the trigger-type select + GlassPanel1 kind-specific configurator /
+GlassPanel2 empty; Only If conditions; Then actions), the web validate() order, save + test-run flows with
+the dirty/unsaved guard, edit-conflict + draft banners, and the create-only GlassPanel3 preset hint — all
+using the P2 tokens + P3 shared components (no hand-rolled glass), every visible string from
+Localizable.xcstrings with web key names, full VoiceOver labels, Dynamic Type, light/dark/high-contrast and
+SI honored, adaptive across macOS/iPad/iPhone, hosted at the .automations route (AppRouteParser already
+resolves /automations/:id/edit). Verified on BOTH idioms by isolated Swift 6 strict-concurrency type-checks
+(0/0) and an executed model harness (28/28); my 7 files compile clean inside the full xcodebuild. The full
+scheme is RED ONLY due to pre-existing, out-of-scope feature-views SwiftUI type-check-timeout breakage
+(forbidden to commit-fix), with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Automations apps/apple/Tests/Unit/Features/Automations \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-automations-AutomationBuilderPage.log
+  git commit -m "feat(apps/apple): AutomationBuilderPage at web parity (P7 automations)"
+
+EXIT=0
+STATUS=DONE

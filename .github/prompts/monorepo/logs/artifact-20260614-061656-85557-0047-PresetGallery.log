@@ -1,0 +1,220 @@
+================================================================================
+p4-apple · P7 · page:automations/PresetGallery — SwiftUI / HIG parity
+================================================================================
+Artifact : page:automations/PresetGallery  (web route (unrouted))
+Web src  : web/src/features/automations/pages/PresetGallery.tsx
+Targets  : apple-macos + apple-ios (adaptive, ADR-002/006)
+Prompt   : p4-apple/P7/page:automations/PresetGallery
+Runner   : macOS (Darwin 26), Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, pwsh 7
+PARITY_REQUIRED=9
+
+--------------------------------------------------------------------------------
+FILES (created unless noted)
+--------------------------------------------------------------------------------
+apps/apple/Sources/Features/Automations/PresetGalleryModel.swift
+apps/apple/Sources/Features/Automations/PresetGalleryModel.Sample.swift
+apps/apple/Sources/Features/Automations/PresetGalleryPage.swift
+apps/apple/Sources/Features/Automations/PresetGalleryPage.Card.swift
+apps/apple/Sources/Features/Automations/PresetGalleryRouteRegistration.swift
+apps/apple/Tests/Unit/Features/Automations/PresetGalleryModelTests.swift
+apps/apple/Localization/Localizable.xcstrings   (modified: +6 keys, additive; numstat +66/-0)
+apps/parity/apple-ledger.json                   (modified: +2 rows, 9/9)
+.github/prompts/monorepo/logs/apple-page-automations-PresetGallery.log
+
+Surface line count: 775 lines across the 6 Sources/ + Tests/ files (web page 151 lines
+composed into a HIG-native decomposition — well above the >=70% completeness bar).
+
+--------------------------------------------------------------------------------
+RECORDED DEVIATIONS (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+1. Output path: the prompt's "Output" lists apps/apple/TeslaSync/Features/Automations/**, but
+   the established, BUILDING convention (every DONE sibling: AutomationsListPage, AutomationCard,
+   AutomationActivityFeed, admin/*, analytics/*) lives under apps/apple/Sources/Features/
+   Automations/**, which project.yml globs into the iOS + macOS app targets. Files are placed
+   there so they compile + are enumerated (xcodegen: 96 pbxproj refs).
+2. Filename + type collisions with a PRE-EXISTING, unrelated artifact: the feature-views layer
+   already ships a separate `PresetGallery` surface (TeslaSync/feature-views/PresetGallery.*),
+   declaring public `AutomationTriggerKind`, `AutomationPresetItem`, and a `PresetGalleryPhase`
+   also collided with TeslaSync/feature-views/AlertMessageEditor.Models.swift. Swift compiles one
+   module, so filenames AND public type names must be unique. Resolved by naming the page files
+   PresetGalleryPage*.swift and the page's own types uniquely (PresetTriggerKind / PresetGalleryItem
+   / PresetGalleryCategory / PresetGalleryResponse / PresetGalleryDataSource / PresetGalleryLoadPhase
+   / PresetGalleryState / PresetGalleryModel / PresetGalleryCard / PresetGalleryPage / …). All 16
+   verified collision-free against the whole target. The web hook name `useAutomationPresets` is
+   kept verbatim at the Swift call site (parity requirement).
+3. Web route is (unrouted): the web source is the preset-template grid the /automations preset
+   disclosure renders inline, not a standalone route. So no top-level AppRoute is claimed (scope
+   creep); the screen is exposed as a typed NavigationDestination (PresetGalleryLink) + a
+   …RouteRegistration factory, mirroring the DONE sibling AutomationCard / AutomationActivityFeed.
+4. Error state: the web treats a failed query as its empty state (data undefined -> presetList = []).
+   Per ADR-013 ("never a blank region") a distinct retryable error state was ADDED (TSQueryError +
+   refresh). The 3 REQUIRED states (loading / empty / success) are all implemented; error is additive.
+5. Install action: the web navigates to the typed builder pre-filled (/automations/new?preset=id),
+   a separate parity unit. Exposed as the injected onInstall shell hook (default no-op), mirroring
+   the sibling pages' onCreate/onNavigate seams — a real wired button to an out-of-scope destination.
+6. No SSE / staleness chip: useAutomationPresets is a STATIC query (web staleTime: STATIC), not a
+   live source, so ADR-013's >2-min staleness indicator does not apply here.
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+[placeholder]  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Automations -Language swift
+               PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+
+[swiftformat]  swiftformat --lint <6 surface+test files>
+               0/6 require formatting  (FORMAT_EXIT=0)
+
+[swiftlint]    swiftlint lint --strict <6 surface+test files>
+               Found 0 violations, 0 serious in 6 files  (LINT_EXIT=0)
+
+[typecheck]    swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG, real SDKs,
+               surface + its real P2 tokens (../design/generated/apple) + P3 components
+               (Sources/Components) + Sources/Theme.swift + Sources/Design:
+               iOS-18    (arm64-apple-ios18.0-simulator)  -> 0 errors / 0 warnings (IOS_EXIT=0)
+               macOS-15  (arm64-apple-macos15.0)           -> 0 errors / 0 warnings (MAC_EXIT=0)
+               (only the KMP-coupled Components/DataDisplay/UnitFormatters.swift — which this
+                surface does NOT use, no SI units on this page — is excluded; it needs the
+                Shared.xcframework's `Units` symbol. Same exclusion as the DONE siblings.)
+
+[harness]      Executable Swift 6 model harness (compiled + RUN against the real model files
+               PresetGalleryModel.swift + PresetGalleryModel.Sample.swift, -strict-concurrency=complete):
+               HARNESS_PASSED=19  HARNESS_FAILED=0  RUN_EXIT=0
+               covers: initial loading; sample/default -> success; empty source -> empty; failing
+               source -> error (state + phase); refresh; category filter narrows + unknown category
+               -> empty + nil category -> full catalog; iconMap (Lock/Sun/CarFront/ShieldCheck/Siren
+               + unknown -> shield.fill); triggerLabelKey kind + noTrigger fallback; negative action
+               count clamps; trigger raw-value parity.
+
+[KMP]          ./apps/apple/Scripts/build-shared-xcframework.sh
+               Gradle :core:assembleSharedXCFramework -> BUILD SUCCESSFUL (7m22s); Shared.xcframework
+               staged into apps/apple/Frameworks (so the full xcodebuild can link).
+
+[xcodegen]     xcodegen generate -> all 6 files enumerated in TeslaSync.xcodeproj (96 PresetGallery
+               pbxproj refs across the app + test targets).
+
+[build/test]   xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS Simulator' build
+               BUILD_EXIT=65 — RED, and RED for a PRE-EXISTING, OUT-OF-SCOPE reason PROVEN by a
+               clean-baseline reproduction:
+                 • WITH my changes: the ONLY file with `error:` is
+                   apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift
+                   ("cannot use explicit 'return' statement in the body of result builder
+                    'ViewBuilder'", lines 88 & 101). Zero errors reference any PresetGallery* file.
+                 • BASELINE (git stash -u my work; xcodegen; xcodebuild): IDENTICAL BUILD_EXIT=65,
+                   IDENTICAL sole error file Input.Previews.swift. The failure pre-exists my change.
+               Input.Previews.swift was committed at ed5f636e3 ("feat(apps/apple/shared-surfaces):
+               add Input surface (P4)") and is OUTSIDE my allowed file set (forbidden to fix,
+               covenant #7). `git status` shows my change set is exactly the 6 new files + the 2
+               additive edits (Localizable.xcstrings, apple-ledger.json) — Input.Previews.swift is
+               untouched. xcodebuild test cannot run because it must build the app first and hits
+               the same pre-existing error; the executed 19/19 model harness substitutes for test
+               execution — the identical disposition under which the DONE siblings
+               (p4-apple/P7 AutomationsListPage / AutomationActivityFeed / admin/* / analytics/*)
+               were accepted (see apps/macos-pending-verifications.md).
+               TEST_EXIT=blocked(pre-existing-out-of-scope-build-error).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=9
+================================================================================
+[x] panel  — GlassPanel1  (populated preset card)
+       PresetGalleryPage.Card.swift -> struct PresetGalleryCard -> TSGlassPanel { header (TSIconBox
+       + name + trigger-label subtitle + action-count TSBadge) + description (lineLimit 2) +
+       installButton } (web `PresetCard` `GlassPanel`).
+[x] panel  — GlassPanel2  (loading skeleton card)
+       PresetGalleryPage.Card.swift -> struct PresetGalleryCardSkeleton -> TSGlassPanel { TSSkeleton
+       icon + name/subtitle + body blocks } (web `PresetCardSkeleton` `GlassPanel`).
+[x] state  — loading
+       PresetGalleryPage.swift -> content `.loading` -> loadingGrid (LazyVGrid of 4
+       PresetGalleryCardSkeleton); PresetGalleryModel.galleryState == .loading.
+[x] state  — empty
+       PresetGalleryPage.swift -> emptyState -> TSEmptyState(title: "automations.presets.empty",
+       systemImage: "clock"); PresetGalleryModel.galleryState == .empty (presets.isEmpty).
+[x] state  — success
+       PresetGalleryPage.swift -> successGrid -> TSFadeIn { LazyVGrid { TSStaggerItem(index:) {
+       PresetGalleryCard } } } (web FadeIn + StaggerContainer + StaggerItem); galleryState == .success.
+[x] string — automations.builder.noTrigger
+       PresetGalleryModel.swift -> PresetGalleryItem.triggerLabelKey (triggerKind?.labelKey ??
+       "automations.builder.noTrigger"); rendered in PresetGalleryPage.Card.swift header
+       Text(LocalizedStringKey(preset.triggerLabelKey)). (Catalog key added, bare.)
+[x] string — automations.presets.actionCount
+       PresetGalleryPage.Card.swift -> actionCountText = String(format: String(localized:
+       "automations.presets.actionCount"), preset.actionCount) -> TSBadge (web Badge
+       {{count}} actions). (Catalog key pre-existing: "%lld actions".)
+[x] string — automations.presets.empty
+       PresetGalleryPage.swift -> emptyState TSEmptyState(title: "automations.presets.empty").
+       (Catalog key added, bare.)
+[x] string — automations.presets.install
+       PresetGalleryPage.Card.swift -> installButton TSButton { Label("automations.presets.install",
+       systemImage: "plus") } (web Install button). (Catalog key pre-existing: "Install".)
+PARITY_COVERED=9
+
+(The 4 required keys resolve from Localizable.xcstrings as PLAIN keys with the web names:
+ automations.presets.install + automations.presets.actionCount already existed; the additive
+ insert added automations.presets.empty + automations.builder.noTrigger + the four trigger-label
+ keys the gallery renders for parity (triggerSchedule/triggerEvent/triggerGeofence/triggerSignal).
+ git numstat +66/-0 on the catalog.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : BUILD_EXIT=65 is recorded verbatim with its real, PROVEN root cause — a
+                       pre-existing result-builder error in the out-of-scope shared-surfaces file
+                       Input.Previews.swift, reproduced byte-for-byte on a clean git-stash baseline
+                       WITHOUT my changes. The GREEN claim is scoped to my files + the in-scope
+                       gates, every one shown with real command output.
+ 2 No scope narrowing: 2 panels + 3 states + 4 strings = 9/9 implemented; the card's icon box,
+                       name, trigger-label subtitle, action-count badge, 2-line description, and
+                       full-width Install are all reproduced, plus the loading skeleton grid, the
+                       clock empty state, and the fade-in + staggered success grid.
+ 3 No skip-and-assume: web source read end-to-end; iconMap, triggerLabels (+ noTrigger fallback),
+                       the action-count interpolation, the category query param, and the
+                       isLoading/empty/cards branch are all ported (+ unit + harness proven).
+ 4 No stubs as final : PLACEHOLDER_COUNT=0; every region renders distinctly; the empty state is a
+                       full ContentUnavailableView; the success grid binds the real model presets;
+                       the sample source is an API-response-shaped fixture (not a "coming soon").
+ 5 No parity shortcuts: 3 states render distinctly and are state-machine tested + harness-run; all
+                       visible strings are the web keys from Localizable.xcstrings; SI not applicable
+                       (counts / text only — no units on this page).
+ 6 No delegation      : implemented here; no sub-agents.
+ 7 No predecessor bypass: no edits to the P4 shell, the pre-existing feature-views/PresetGallery
+                       artifact, or any sibling/owner file; the pre-existing Input.Previews.swift
+                       error is left untouched (out of scope). Only additive route registration via
+                       a self-owned …RouteRegistration + NavigationDestination.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — placeholder(0), swiftformat(0),
+                       swiftlint --strict(0), iOS-18 + macOS-15 swiftc -typecheck(0/0), model
+                       harness(19/19). The only RED is the pre-existing, out-of-scope, baseline-
+                       reproduced Input.Previews.swift build error.
+ 9 No silent drift    : changes confined to the files listed above; the 6 deviations are recorded.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI PresetGallery shipped at parity with the web source: an
+@Observable PresetGalleryModel (ADR-004 — no networking in the view) over an injected
+PresetGalleryDataSource whose method name mirrors the ported web hook verbatim
+(useAutomationPresets(category:)). The page reproduces the web responsive preset-card grid — a
+loading state (a grid of skeleton cards), a clock empty state (automations.presets.empty), and a
+fade-in + index-staggered success grid of preset cards (icon box, name, trigger-label subtitle,
+action-count badge, 2-line description, full-width Install) — built on the P2 tokens + P3 shared
+components (TSGlassPanel / TSCard / TSButton / TSBadge / TSIconBox / TSEmptyState / TSQueryError /
+TSSkeleton / TSFadeIn / TSStaggerItem), no hand-rolled glass; adaptive macOS/iPad (multi-column)
+vs iPhone-compact (single column); every visible string from Localizable.xcstrings with the web
+key names; VoiceOver labels/traits + Dynamic Type + light/dark. A retryable error state was added
+per ADR-013. Verified on BOTH idioms by real iOS-18 + macOS-15 Swift 6 strict-concurrency
+type-checks (0/0 on the surface) and an executed 19/19 model harness. The full xcodebuild scheme is
+RED (BUILD_EXIT=65) ONLY due to the pre-existing, out-of-scope result-builder error in
+shared-surfaces/Input.Previews.swift — reproduced identically on a clean baseline without my
+changes (forbidden to commit-fix) — the identical disposition under which the sibling P7 pages were
+accepted DONE.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Automations apps/apple/Tests/Unit/Features/Automations \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-automations-PresetGallery.log
+  git commit -m "feat(apps/apple): PresetGallery at web parity (P7 automations)"
+
+EXIT=0
+STATUS=DONE

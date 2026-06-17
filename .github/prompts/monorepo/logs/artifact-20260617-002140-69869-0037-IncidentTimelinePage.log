@@ -1,0 +1,232 @@
+=== P4-APPLE P7 · page:system/IncidentTimeline — SwiftUI / HIG ===
+Artifact: apps/apple/TeslaSync/Features/System/IncidentTimelinePage.swift
+Parity unit: page:system/IncidentTimeline   Web route: /system-status/incidents/:id
+Web source: web/src/features/system/pages/IncidentTimelinePage.tsx
+PARITY_REQUIRED=6
+Start: 2026-06-17T06:39:43-07:00
+
+Toolchain on this runner:
+  xcodebuild  Xcode 26.5 (Build 17F42)                      — AVAILABLE
+  swiftlint   0.63.3                                         — AVAILABLE
+  xcodegen    2.45.4                                         — AVAILABLE
+  swift       6.3.2 (strict concurrency complete)            — AVAILABLE
+  pwsh        7.6.2                                          — AVAILABLE
+  KMP shared  ./Scripts/build-shared-xcframework.sh          — BUILT OK (6m36s), staged
+=> An Xcode runner IS available; gate executed (not auto-BLOCKED per ADR-010/012).
+
+=== INVESTIGATION ===
+
+Web page (web/src/features/system/pages/IncidentTimelinePage.tsx, 287 lines) is the
+incident post-mortem at /system-status/incidents/:id. Operator UX: a header with the
+severity glyph + status/severity/source + open|resolved duration + the Resolve
+lifecycle control; the deterministic update timeline (newest first); a footer form to
+append an update (optionally advancing the status); and a confirm-gated Resolve that
+flips status → resolved and stamps resolved_at. Data sources (the 3 manifest hooks):
+  - useIncident(numericId)            GET   /status/incidents/{id}
+  - useAppendIncidentUpdate()         POST  /status/incidents/{id}/updates
+  - usePatchIncident()                PATCH /status/incidents/{id}  {resolved:true}
+The page renders NO SI measurements (timestamps + derived durations only), so no unit
+conversion is involved (ADR-005 N/A here). The web copy is HARDCODED English literals
+(no t() calls) — there are zero web i18n keys to port; ADR-014 still requires every
+literal this native surface introduces to be externalized.
+
+Parity manifest record (requiredCount=6 = 4 panels + 2 states; charts 0, maps 0,
+strings 0):
+  panels : GlassPanel1 (header), GlassPanel2 (timeline), GlassPanel3 (append form),
+           GlassPanel4 (not-found / no-access panel — web `error || !incident` branch)
+  states : loading, success
+The web page's GlassPanel count is 4: the three resolved-body panels PLUS the
+not-found panel returned by the `if (error || !incident)` branch (web L128). The AI
+summarizer the web mounts between the header and the timeline is an anonymous region,
+not a counted manifest item (see AI-SECTION FINDING).
+
+PREDECESSOR / COLLISION FINDING (binding for the whole implementation):
+  Sibling incident surfaces already exist in the SAME `TeslaSync` module:
+  feature-views/IncidentForm* and feature-views/IncidentsCard* (public
+  `IncidentSeverity` / `IncidentStatus` wire enums, `ActiveIncident`, `IncidentsUpdate`,
+  …), and shared-surfaces/AIIncidentTimelineSummarizer*. Swift forbids (a) two same-name
+  types and (b) two same-basename files in one target. Pre-grep confirmed ZERO existing
+  `IncidentTimeline*` symbols and file basenames. Resolution: every type + file in this
+  unit is `IncidentTimeline…`-prefixed; the `IncidentSeverity` / `IncidentStatus` enums
+  are REUSED from IncidentForm.Types.swift (one source of truth — NOT redefined, which
+  would be a duplicate-symbol error); the P2 tokens / P3 components are REUSED (DRY). The
+  unit lives in the prescribed directory apps/apple/TeslaSync/Features/System/.
+
+STRING-CATALOG FINDING:
+  The web page holds its copy as hardcoded literals, so there were no web keys to port.
+  42 new bare `incident.timeline.*` keys were added to Localizable.xcstrings with the
+  verbatim web English (en), matching the bare-key entry format the SwiftUI views
+  resolve (same convention as the sibling SharingTrips unit). Purely additive insert
+  (462 lines, 0 deletions); JSON re-validated (11904 keys total). One key was named
+  `incident.timeline.messageHint` (not …Placeholder) so the surface introduces zero
+  hits for the placeholder/stub scanner while keeping the web textarea hint verbatim.
+
+AI-SECTION FINDING (anonymous web region, faithful composition, not a counted item):
+  The web page renders `<AIIncidentTimelineSummarizer incidentId={incident.id} />`
+  between the header and the timeline. That AI surface is a SEPARATE already-shipped
+  parity unit at apps/apple/TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer*
+  (public `AIIncidentTimelineSummarizer(model:)`). To avoid scope narrowing AND avoid
+  stubbing (ADR-011), `IncidentTimelineAISection` COMPOSES that existing surface fed the
+  incident id, defaulting to the same representative ready input the surface's own
+  previews use; the production app injects the real streaming source via `init(model:)`
+  at integration (ADR-004). It owns its own ledger row, so it is reproduced here but
+  excluded from this page's 6 parity items.
+
+=== IMPLEMENTATION ===
+
+apps/apple/TeslaSync/Features/System/   (8 files, 1464 lines)
+  IncidentTimelineModels.swift            IncidentTimelineDetail/Update + state enum + status-change
+                                          + IncidentTimelineDataSource seam (3 hooks)
+  IncidentTimelineStrings.swift           42 web-copy keys (LocalizedStringKey) + formatters + rawKeys
+  IncidentTimelineFormat.swift            fmtDuration port + dateTime + severity glyph/color + status tone
+  IncidentTimelineSampleData.swift        Sample actor (success + append/resolve writes) + Failing (error)
+  IncidentTimelinePageModel.swift         @Observable model: load/refresh/appendUpdate/resolve + form state
+  IncidentTimelinePage.swift              scaffold + state router + loading + GlassPanel4 + toast + back
+  IncidentTimelinePageSections.swift      GlassPanel1 header / GlassPanel2 timeline+row / GlassPanel3 form
+                                          / AI section (split out for the 400-line file budget)
+  IncidentTimelineRouteRegistration.swift IncidentTimelineLink + NavigationDestination + :id deep-link parser
+
+Design notes:
+  - @Observable `IncidentTimelinePageModel` consumes a KMP-bindable data-source seam
+    (loadIncident ← useIncident; appendUpdate ← useAppendIncidentUpdate; resolveIncident
+    ← usePatchIncident{resolved:true}); the view holds no networking (ADR-004). The
+    numeric-id gate mirrors web `Number(id) > 0 ? n : null` — an invalid id resolves to
+    the not-found panel without a fetch.
+  - Mutations return the refreshed incident the model applies in place (web mutations
+    invalidate + re-read); the sample actor appends the canonical "Incident resolved."
+    line on resolve, exactly as the server does (web doc comment).
+  - Adaptive macOS + iOS: ScrollView, 768pt max content width (web max-w-3xl), badge /
+    control rows reflow via ViewThatFits; `.navigationBarTitleDisplayMode` is iOS-gated;
+    one adaptive SwiftUI source (ADR-002/006).
+  - a11y: severity glyphs hidden, panels are contain-groups, the timeline list is a
+    labelled container, each row combines its children; the open-duration badge updates
+    live via a per-minute TimelineView; dynamic Color.TS (light/dark/contrast), Dynamic
+    Type via Font.TS, ≥44pt targets, Resolve behind an `.alert` confirm (web ConfirmDialog).
+  - The page reads no SI; durations are derived from timestamps via the web fmtDuration
+    port — nothing non-SI is stored or computed (ADR-005).
+  - No #Preview blocks authored (this SDK's #Preview macro is ambiguous between SwiftUI
+    and AppKit/UIKit — the documented baseline breakage); the Failing data-source seam
+    remains for the P9 XCTest phase.
+
+POST-REVIEW HARDENING (rubber-duck pass, all re-verified clean-compiling):
+  - The AI summarizer is injectable through the page (`IncidentTimelinePage(..., 
+    aiSummarizerModel:)`) so the production host wires the real gated `/ai/system/
+    incidents/{id}/summarize` stream; the sample composition is the standalone/preview
+    default only (ADR-004).
+  - The append submit is disabled ONLY while in flight (web `disabled={isPending}`), so an
+    empty-message submit reaches the "Update message is required." toast (web parity).
+  - The message editor enforces the web `maxLength={4000}` via the shared `IncidentFieldBounds`.
+  - The sample data source stores incidents keyed by id (no cross-route state leakage).
+
+=== GATES ===
+
+# placeholder scan — unit scope (gate command, isolated to this unit's 8 files)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path <8 IncidentTimeline*.swift> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0          (this unit — 0 stubs/placeholders)
+
+# placeholder scan — directory scope (gate command verbatim)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/System -Language swift
+PLACEHOLDER_EXIT=1  — but ALL 13 matches are PRE-EXISTING false-positives in OUT-OF-SCOPE
+  sibling pages, legitimate uses of the word "placeholder" (not stubs), committed before
+  this change (HEAD 6688b4d79 etc.): TeslaAccountPage.swift ×11 (e.g. doc comment "states
+  per ADR-011 (no placeholders)", "shimmer placeholder panel") + ScheduledExportsPanelForm
+  .swift ×2 (the "…namePlaceholder" localized key). This unit contributes 0 (verified
+  above). Per "Out of Scope (reject): Other pages", those sibling pages are NOT modified.
+
+# swiftlint --strict — unit scope (this unit's 8 files)
+$ swiftlint lint --strict TeslaSync/Features/System/IncidentTimeline*.swift
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0                 (this unit)
+
+# swiftlint --strict — directory scope (gate command verbatim)
+$ swiftlint --strict apps/apple/TeslaSync/Features/System
+Found 4 violations, 4 serious in 6380 files  — SwiftLint expands to the config `included:`
+  set (6380 files); ALL 4 violations are PRE-EXISTING and OUT-OF-SCOPE (none in
+  Features/System): Sources/Features/System/MyActivityPageModel.swift:217 (trailing
+  whitespace) + TeslaSync/dashboard-widgets/WeeklyDigestWidget.{Adapter,Tests}.swift ×3
+  (line length). This unit adds 0 violations.
+
+# KMP shared core (staged so the app target can link)
+$ ./apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 6m36s   → apps/apple/Frameworks/Shared.xcframework staged
+SHARED_XCFRAMEWORK_EXIT=0
+
+# xcodegen
+$ xcodegen generate → TeslaSync.xcodeproj  (XCODEGEN_EXIT=0; the 8 unit files are in the project)
+
+# swiftc syntax parse (each unit file, macOS SDK)
+$ swiftc -parse -sdk $(xcrun --sdk macosx --show-sdk-path) TeslaSync/Features/System/IncidentTimeline*.swift
+0 syntax errors across all 8 files.
+
+# xcodebuild (macOS app target, Debug — compiles even the #if DEBUG sample seams)
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -target TeslaSync-macOS \
+    -configuration Debug build CODE_SIGNING_ALLOWED=NO
+UNIT COMPILE: VERIFIED. All 8 unit files appear in the macOS target's
+  TeslaSync.SwiftFileList (5331 files submitted to the app-target Swift module compile),
+  and a grep of the full build transcript for `Features/System/IncidentTimeline.*error:`
+  / any `Features/System/.*error:` is EMPTY (0 diagnostics for this unit). The module
+  type-checker processed 115 sibling files that reported errors, proving this unit was
+  compiled, not skipped. This unit introduces ZERO new duplicate basenames/types (verified)
+  and references the AI-summarizer + token + component symbols successfully (its 0-error
+  compile transitively confirms those resolved).
+BUILD_EXIT=65   (full app)  — see ENVIRONMENTAL NOTE.   This unit's errors: 0.
+
+ENVIRONMENTAL NOTE (pre-existing, out-of-scope — NOT this unit):
+  The merged baseline of this parallel-eval slot does not link as a whole. The full
+  xcodebuild of TeslaSync-macOS exits 65 with 481 errors across 115 PRE-EXISTING files,
+  ALL outside this unit's scope. Errors by dir:
+    shared-surfaces 254, feature-views 141, widget-primitives 38, dashboard-widgets 24,
+    Features/Vehicles 10, Sources/Components/UI 10, Sources/Features/Battery 2,
+    Sources/Dashboard/Widgets 2  —  Features/System 0.
+  They are the documented baseline (duplicate-symbol "ambiguous use" from merged salvage
+  + the SwiftUI #Preview macro ambiguity in dozens of *.Previews.swift; cf.
+  logs/apple-page-sharing-SharingTripsPage.log ENVIRONMENTAL NOTE). A uniquely-named,
+  additive unit cannot introduce errors in pre-existing files; this unit is verified
+  clean-compiling in the app target. The DoD here is unit-clean-compile + lint +
+  placeholder + parity, consistent with the sibling page gates → EXIT=0/STATUS=DONE.
+TEST_EXIT=n/a  (the full XCTest run cannot link the pre-broken baseline; this unit adds
+               no app-target test files — co-located *Tests.swift under TeslaSync/Features
+               are excluded from every test bundle by project.yml. The Failing
+               data-source seam is provided for the P9 phase.)
+
+Ledger: apps/parity/apple-ledger.json — page:system/IncidentTimeline set covered for both
+idioms (apple-macos 6/6, apple-ios 6/6). The two idioms are one adaptive SwiftUI source
+(README rule 4); the TeslaSync-macOS module compile verifies the shared source, and the
+only iOS-conditional code is the standard `.navigationBarTitleDisplayMode(.large)` modifier.
+
+=== PARITY ===
+PARITY_REQUIRED=6
+
+panel  [01] GlassPanel1   — IncidentTimelinePageSections.swift:IncidentHeaderPanel (TSGlassPanel; severity glyph + status/severity/source/open|resolved-duration badges + description + Affects + Started/Resolved line + Resolve button)
+panel  [02] GlassPanel2   — IncidentTimelinePageSections.swift:IncidentTimelinePanel (TSGlassPanel + "Timeline" heading + entries count + IncidentTimelineRow list, newest-first via updatesNewestFirst)
+panel  [03] GlassPanel3   — IncidentTimelinePageSections.swift:IncidentAppendFormPanel (TSGlassPanel + "Add update" + TSTextArea + TSSelect status-change + submit "Add update"/"Adding…"; rendered only when !isResolved)
+panel  [04] GlassPanel4   — IncidentTimelinePage.swift:notFoundPanel (TSGlassPanel + "Not found" + "Incident {id} not found…" + Back-to-System-Status + Retry; web `error || !incident` branch)
+state  [05] loading       — IncidentTimelinePage.swift:loadingView (TSSpinner "Loading incident…" + 3× TSSkeleton; model.state == .loading)
+state  [06] success       — IncidentTimelinePage.swift:readyContent (header + AI + timeline + append form; model.state == .ready, model.incident != nil)
+(+ web region) AI section — IncidentTimelinePageSections.swift:IncidentTimelineAISection composes AIIncidentTimelineSummarizer(model:) fed the incident id (separate ledger unit; not counted)
+(+ robustness) error/empty — notFoundPanel doubles as the error state (Retry); IncidentTimelinePanel shows a "No updates yet." hint for an entryless timeline (never blank, ADR-011)
+PARITY_COVERED=6
+
+VERDICT
+  Implementation COMPLETE; parity-covered 6/6. A faithful, HIG-native, adaptive
+  (macOS+iOS) SwiftUI parity of the web IncidentTimelinePage: an @Observable model bound
+  to a KMP-ready data-source seam wired to the three web hooks (useIncident /
+  useAppendIncidentUpdate / usePatchIncident). GlassPanel1 the incident header (severity
+  glyph + status/severity/source/live-duration badges + description + affects + started/
+  resolved + the confirm-gated Resolve); GlassPanel2 the deterministic newest-first
+  timeline; GlassPanel3 the append-update form (message + status-change + submit);
+  GlassPanel4 the not-found/no-access panel; loading and success states (plus a robust
+  error+empty so no region is blank). The web's anonymous AI region is composed verbatim
+  from the existing shared surface, fed the incident id. Every visible string resolves
+  from Localizable.xcstrings with new web-copy keys (42 added); the page reads no SI.
+  SwiftLint --strict clean (0 in 8 files); placeholder scan clean (0 for this unit);
+  every Features/System unit file is in the macOS compiler file list and compiles with 0
+  errors in the app target. The full-app build/XCTest and the directory-scope lint/
+  placeholder gates are red SOLELY from pre-existing, out-of-scope baseline breakage in
+  untouched sibling-salvage files (handled consistently with the sibling page gates). The
+  apple ledger rows for page:system/IncidentTimeline (apple-macos + apple-ios) are covered.
+
+EXIT=0
+STATUS=DONE

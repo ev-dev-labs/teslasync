@@ -1,0 +1,107 @@
+=== P4 Shared surface 0003 VisuallyHidden (Apple) ===
+Artifact: apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.*
+Web source (THE spec): web/src/components/a11y/VisuallyHidden.tsx
+Data source: useAnnouncer  (native port: VHAnnouncer, self-contained)
+Host: macOS (Darwin), Xcode swiftc 6.3.2; iOS Simulator 26.5 + macOS 26.5 SDKs; iPhone 16 sim.
+
+----------------------------------------------------------------------
+SURFACE COMPOSITION (10 .swift + 1 .strings = 2108 lines)
+----------------------------------------------------------------------
+  VisuallyHidden.swift            94   surface View + phase switch + header
+  VisuallyHidden.Adapter.swift   234   pure core: VHLivePriority, VHRenderMode (4 web modes),
+                                       VHSpecimen (+ariaTokens), VHAnnouncement, VHPadding, a11y summaries
+  VisuallyHidden.Model.swift     258   telemetry seam, presenter seam, VHConnection, Input, Resolved,
+                                       Projection, VisuallyHiddenModel (@Observable), Strings facade
+  VisuallyHidden.Seams.swift     238   VHAnnouncer (useAnnouncer port) + subscription, Source protocol,
+                                       Live/InMemory sources, VHCatalog, AccessibilityVisuallyHiddenPresenter
+  VisuallyHidden.Primitive.swift 148   REAL utility: .visuallyHidden() modifier + VisuallyHiddenText
+                                       (native sr-only), VHCodeChip, FlowChips/FlowLayout
+  VisuallyHidden.Views.swift     304   semantics row, live-region value, focusable skip-link demo,
+                                       specimen card, data body, freshness chip
+  VisuallyHidden.States.swift    102   loading / empty / error chrome
+  VisuallyHidden.Previews.swift   96   #Preview per state (data/empty/loading/error/stale/offline)
+  VisuallyHidden.strings          61   28 i18n keys (all native chrome; web component is anonymous → 0 t() keys)
+  VisuallyHidden.Tests.swift     247   24 tests: priority/rendermode/padding/specimen/input/projection/a11y
+  VisuallyHidden.ModelTests.swift 326  23 tests: model phases+connection+voicing, VHAnnouncer, live source
+
+Parity: surface renders the 4 web VisuallyHidden configurations as an inspector
+  (hidden sr-only / live-polite role=status / live-assertive role=alert / focusable skip-link),
+  each card showing the `as` element + the exact web ARIA tokens it produces, plus a live demo;
+  ships the real .visuallyHidden() utility; live regions bind the announcer feed + voice via
+  AccessibilityNotification.Announcement (assertive→.high, polite→.default). All states render.
+
+======================================================================
+HOST-RUNNABLE GATES (all green)
+======================================================================
+[1] swiftformat --lint  (VisuallyHidden.*.swift)        -> 0/10 require formatting   FORMAT_EXIT=0
+[2] swiftlint --strict  (VisuallyHidden.*.swift)        -> 0 violations, 0 serious in 10 files   LINT_EXIT=0
+[3] check-placeholders.ps1 (swift, surface files)       -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+        (run both as prompt-literal -Path …/VisuallyHidden and as a precise temp-dir scan of the 10 .swift files)
+[4] swiftc -typecheck  iOS-18  (arm64-apple-ios18.0-simulator, -swift-version 6)
+        surface (8 non-test files) + real Tokens.swift + full Sources/Design + Sources/Components
+        (minus SharedFacade-coupled UnitFormatters.swift) = 49 files -> 0 errors / 0 warnings   IOS_TYPECHECK_EXIT=0
+[5] swiftc -typecheck  macOS-15 (arm64-apple-macos15.0, -swift-version 6)
+        same 49 files -> 0 errors / 0 warnings   MAC_TYPECHECK_EXIT=0
+[6] executed runtime harness (real Adapter+Model+Seams+Views+States+surface compiled to a binary,
+        macOS-15, -swift-version 6 strict concurrency) -> HARNESS: 53/53 passed, 0 failed   HARNESS_EXIT=0
+        (covers priority/rendermode/padding/specimen ariaTokens/input/projection/a11y +
+         model phases/telemetry-once/stale-1shot-rearm/offline/refresh/stop +
+         voicing once-in-order/no-re-post/padded + VHAnnouncer build/skip/sub/unsub/drop/reset +
+         live source catalog/ingest/stop)
+[7] xcodegen generate -> Created TeslaSync.xcodeproj; enumerates all 11 files (66 pbxproj refs)   XCODEGEN_EXIT=0
+        VisuallyHidden.{swift,Adapter,Model,Seams,Primitive,Views,States,Previews,Tests,ModelTests}.swift + .strings
+
+======================================================================
+FULL-APP GATE (the prompt gate) — attempted live this run
+======================================================================
+Command: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+
+  • Pre-build Run Script assembled the KMP Shared.xcframework via Gradle:
+        :core:assembleSharedXCFramework  ->  BUILD SUCCESSFUL in 9m 14s
+        ✓ Shared.xcframework staged  (apps/apple/Frameworks/Shared.xcframework)
+  • Surface integrated into target 'TeslaSync':
+        CopyStringsFile … VisuallyHidden.strings … (in target 'TeslaSync')  [validated UTF-8]
+  • BUILD FAILED  ->  XCODEBUILD_EXIT=65
+  • Total compiler errors in the entire build: 1
+        feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to
+        type-check this expression in reasonable time; try breaking up the expression …
+        => PRE-EXISTING, UNRELATED to this surface (another agent's feature-views surface; the
+           RecentDrives* family is the documented parallel-merge blocker in
+           apps/macos-pending-verifications.md). ZERO VisuallyHidden errors.
+  • macOS leg (xcodebuild -scheme TeslaSync-macOS build test) additionally blocked by development
+        signing: `security find-identity -p codesigning` -> 0 valid identities found.
+
+IOS_EXIT=65        (pre-existing/unrelated RecentDrivesSection.Previews.swift; 0 VisuallyHidden errors)
+MAC_EXIT=blocked   (0 codesigning identities + same pre-existing RecentDrives* compile error)
+
+======================================================================
+CONCLUSION
+======================================================================
+The VisuallyHidden surface itself is fully GREEN and complete:
+  - real iOS-18 + macOS-15 swiftc -typecheck = 0 errors/0 warnings under Swift 6 strict concurrency,
+    compiled against the real generated Tokens.swift + the actual shared design system it uses;
+  - executed runtime harness 53/53 over the real Adapter/Model/Seams/Views/States/surface;
+  - swiftlint --strict 0/10, swiftformat --lint 0/10, placeholder gate PLACEHOLDER_COUNT=0 (0 opt-outs);
+  - i18n 0 web t() keys (anonymous web component) + 28 native chrome keys via the P1/S10 facade;
+  - xcodegen enumerates all 11 files (66 pbxproj refs);
+  - the KMP Shared.xcframework was assembled live (9m 14s) + staged, and the real iOS app-target
+    build integrated the surface (VisuallyHidden.strings copied) with ZERO VisuallyHidden errors.
+
+The full-app `xcodebuild build test` cannot reach EXIT=0 in this environment for reasons entirely
+outside this surface's scope: (1) a PRE-EXISTING, UNRELATED type-check-timeout error in another
+agent's feature-views/RecentDrivesSection.Previews.swift, and (2) macOS development signing
+(0 valid identities). Both are deferred to p4-apple/P99-0001-apple-acceptance-gate on macos-latest,
+consistent with every prior P4 Apple surface in apps/macos-pending-verifications.md.
+
+Per the prompt's gate ("EXIT=0 only when every step above is 0" / "or STATUS=BLOCKED with
+platform-capability evidence"), and the Honesty Covenant (no red-as-green): the surface is done +
+verified green in isolation, but the literal full-app gate is BLOCKED on the pre-existing/unrelated
+blockers above.
+
+Verification command on macOS CI (after the RecentDrives* collision is resolved + signing identities):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,195 @@
+=== P4 Feature view 0275 BatteryComparison (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — active DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.x · pwsh · OpenJDK 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" present (used) · macOS 15 SDK present.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh on THIS runner
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 7m19s; release
+                       XCFramework staged to apps/apple/Frameworks/Shared.xcframework). Gradle 8.14.5 +
+                       Kotlin/Native were warm in ~/.gradle (3.4G) + ~/.konan (1.6G). Resolves the
+                       macos-pending Shared.xcframework artifact row for running the Apple gate here.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 toolchain present
+                       → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/vehicles/components/BatteryComparison.tsx — the "Fleet Battery Status" panel:
+    BatteryComparison({ vehicles }) reads useTranslation('vehicles') + useUnits().formatDistance and runs
+    ONE useQuery (queryKey ['fleet-battery-states', ids]) that fans out fetchVehicleState(v.id) per
+    vehicle (refetchInterval 30_000), mapping each to { vehicle, state|null }. bars = entries whose
+    state !== null; if bars.length === 0 it returns null.
+      GlassPanel(p-5) → h3[ Activity icon (text-cyan-400)
+                            + t('fleet.batteryStatus','Fleet Battery Status') ]
+                      → div.space-y-3 → per bar:
+                          span.w-24.truncate (display_name || vin)
+                          div.h-3.rounded-full track → inner fill
+                              width: `${level}%`  (level = battery_level ?? 0)
+                              background: linear-gradient(90deg, ${color}80, ${color})
+                              boxShadow: 0 0 10px ${color}40           (color = batteryColor(level))
+                          span.w-10 `${level}%`
+                          span.w-16 formatDistance(rated_range ?? 0)
+  Helpers: batteryColor(level) = >60 #10b981(GOOD) / >25 #f59e0b(WARN) / else #ef4444(BAD) (lib/colors.ts).
+           formatDistance(meters, pref, {precision}) → SI metres → km/mi, DEFAULT_PRECISION.distance = 1,
+           `${formatNumber(value, locale, digits)} ${unit}`, em-dash sentinel for non-finite
+           (lib/unitConversion.ts; useUnits delegates here). battery_level + rated_range are SI off the
+           vehicle state; only rated_range is routed through the unit facade.
+
+ARTIFACTS SHIPPED (allowed set: feature-views/BatteryComparison.* + this log)
+  apps/apple/TeslaSync/feature-views/BatteryComparison.Adapter.swift   — pure Foundation core: vehicle/state
+                                                                         slices, BatteryComparisonEntry,
+                                                                         distance-unit + units, semantic tint
+                                                                         (batteryColor port) + thresholds,
+                                                                         SI formatDistance port (convert +
+                                                                         formatNumber + dash + precision 1),
+                                                                         percent + clamped fill fraction,
+                                                                         BatteryComparisonBar, projection
+                                                                         (drops nil states; content/empty
+                                                                         split), phase/status/connection,
+                                                                         surface slug, a11y summaries
+  apps/apple/TeslaSync/feature-views/BatteryComparison.Model.swift     — P1/S8 source seam + @Observable
+                                                                         model + update + in-memory source,
+                                                                         P1/S11 telemetry seam (view.opened),
+                                                                         P1/S10 strings facade, stale
+                                                                         auto-refresh, surfaceSlug
+  apps/apple/TeslaSync/feature-views/BatteryComparison.Views.swift     — tint→token map, header (Activity
+                                                                         glyph + title) + freshness chip +
+                                                                         connectivity banner, gradient+glow
+                                                                         fill track, bar row, bars list,
+                                                                         loading / empty / error states
+  apps/apple/TeslaSync/feature-views/BatteryComparison.swift           — BatteryComparison view: TSFadeIn +
+                                                                         TSGlassPanel shell + phase switch +
+                                                                         lifecycle + a11y summary
+  apps/apple/TeslaSync/feature-views/BatteryComparison.Previews.swift  — #if DEBUG previews
+                                                                         (content/empty/loading/error/stale/offline)
+  apps/apple/TeslaSync/feature-views/BatteryComparison.Tests.swift     — 30 XCTest cases (adapter + model + a11y)
+  apps/apple/TeslaSync/feature-views/BatteryComparison.strings         — P1/S10 table "BatteryComparison"
+  No shared wiring needed: project.yml (TeslaSync/feature-views) + .swiftlint.yml (feature-views) already
+  include the feature-views tree; i18n lives in the per-surface .strings table (same pattern as every other
+  feature-view), so the shared Localizable.xcstrings is untouched. xcodegen picks the new files up
+  automatically (42 references in the generated project.pbxproj across app + test targets).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(p-5)            → TSGlassPanel (the shared GlassPanel counterpart: regularMaterial + 1px
+                               Color.TS.border, padded TSSpacing.lg)
+  Activity (cyan)            → SF Symbol "waveform.path.ecg", foreground Color.TS.accent (web text-cyan-400)
+  title                      → Font.TS.panel (Color.TS.textPrimary)
+  batteryColor hex           → BatteryComparisonTint {success/warning/danger} → Color.TS.statusSuccess /
+                               statusWarning / statusDanger (>60 / >25 / else — ADR-006 semantic parity,
+                               no hex in code)
+  bar track h-3 rounded-full → GeometryReader + Capsule track (Color.TS.border.5) with a Capsule fill at
+                               width = clamped(level/100) of the track
+  linear-gradient + glow     → LinearGradient([tint.opacity(0.5), tint], leading→trailing) + a
+                               tint.opacity(0.35) radius-5 shadow (web `${color}80→${color}` + boxShadow)
+  `${level}%`                → percent text (Int(rounded), web shows the integral level verbatim)
+  formatDistance(rated_range)→ BatteryComparisonFormat.formatDistance (km/mi, precision 1, locale grouping,
+                               em-dash for non-finite — exact port of unitConversion.ts; parity-pinned)
+  display_name || vin        → BatteryComparisonVehicle.label (trimmed name, VIN fallback)
+  return null when empty     → native renders a friendly empty surface (ContentUnavailableView) — prompt
+                               state requirement ("never a blank box"); the only intentional, prompt-
+                               prescribed divergence from the web source
+  states                     → loading skeleton rows / empty / error (retry) / stale+offline freshness chip
+                               + banner — every prompt-required state renders, never a blank panel
+  i18n                       : every string via BatteryComparisonStrings (NSLocalizedString table
+                               "BatteryComparison"); zero English literals in code paths (fallbacks are the
+                               web t() defaults). Web key fleet.batteryStatus reproduced verbatim.
+  a11y                       : icon .accessibilityHidden; panel a11y summary (title + N vehicles); per-row
+                               combined label "{label}: {level}%, {range}"; Dynamic Type + Reduce Motion
+                               respected (TSFadeIn / TSSkeleton honour reduce-motion)
+  telemetry                  : view.opened surface="BatteryComparison" via BatteryComparisonSurface.slug
+                               (P1/S11), OSLog default sink
+
+GATES (raw exits on THIS runner)
+  [GREEN]    swiftformat --lint (6 BatteryComparison.* swift files)        : 0/6 require formatting   FORMAT_EXIT=0
+  [GREEN]    swiftlint --strict (6 BatteryComparison.* swift files)        : 0 violations             LINT_EXIT=0
+  [GREEN]    check-placeholders.ps1 (actual shipped surface .swift files)  : PLACEHOLDER_ALLOWED=0
+                                                                             PLACEHOLDER_COUNT=0       PLACEHOLDER_EXIT=0
+             (the prompt gate's bare -Path …/BatteryComparison matches no literal node and scans nothing;
+              to make the gate MEANINGFUL the actual BatteryComparison.*.swift sources were scanned. The
+              .strings file was additionally validated by the in-tree build's CopyStringsFile step as UTF-8.)
+  [GREEN]    BatteryComparison build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language
+             mode, swiftLanguageModes [.v6] + -strict-concurrency=complete = same as the app), compiling the
+             EXACT shipped BatteryComparison.* sources against the REAL repo shared library
+             (Sources/Components/** + Sources/Design/* + the generated design Tokens.swift; only
+             DataDisplay/UnitFormatters.swift excluded — it depends on the SharedFacade Units/UnitPreferences
+             that need the KMP runtime, which this surface does not use):
+                 Build complete!  ·  Executed 30 tests, with 0 failures (0 unexpected)   BUILD_EXIT=0 / TEST_EXIT=0
+  [GREEN]    SDK typecheck — iOS 18 simulator  (swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+             -target arm64-apple-ios18.0-simulator, same source set)                     IOS_TYPECHECK_EXIT=0
+  [GREEN]    SDK typecheck — macOS 15          (swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+             -target arm64-apple-macos15.0, same source set)                             MAC_TYPECHECK_EXIT=0
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO BatteryComparison errors; all blockers pre-exist this change):
+    Both schemes were run for real on this runner WITH the freshly-built Shared.xcframework staged + linked
+    (the scheme pre-action re-ran ":core:assembleSharedXCFramework" UP-TO-DATE in <1s). The build reached and
+    validated this surface's resources (CopyStringsFile BatteryComparison.strings → UTF-8, no error).
+    iOS  : 378 `error:` lines across 10 distinct .swift files — ALL pre-existing DUPLICATE-TYPE AMBIGUITIES
+           from two parallel-merged surface families whose state-holder types collide:
+             • RecentDrivesModel / RecentDrivesLoadStatus / RecentDrivesConnection / RecentDrivesUpdate —
+               defined BOTH in dashboard-widgets/RecentDrivesListWidget.Model.swift AND
+               feature-views/RecentDrivesSection.Model.swift|.Adapter.swift
+             • StateTimelineModel / …LoadStatus / …Connection / …Update — defined BOTH in
+               dashboard-widgets/StateTimelineWidget.Model.swift AND feature-views/StateTimeline.Model.swift
+           plus the cascade of "cannot infer contextual base in reference to member 'loading'/'loaded'/…"
+           in their Previews. grep "BatteryComparison.*error:" = 0; BatteryComparison is NOT among the 10
+           failing files. (BatteryComparison* types are uniquely prefixed and defined only in this surface's
+           own files, so they add nothing to the collision set.)
+    macOS: 2 errors — "TeslaSync-macOS" and "TeslaSyncWidgets-macOS" "have entitlements that require signing
+           with a development certificate"; this runner provisions no signing identity. grep
+           "BatteryComparison.*error:" = 0.
+    Both classes of failure are exactly what apps/macos-pending-verifications.md defers to the ADR-012
+    macos-latest signed CI runner and the P4/P99 Apple acceptance gate (cross-surface duplicate-type
+    de-confliction owned by the integration/acceptance gate; macOS dev-signing) — NOT by a single
+    feature-view prompt, and NOT in this prompt's allowed file set (BatteryComparison.* + this log). Per the
+    task rule "do not fix pre-existing unrelated breakage", they are left untouched. This matches the
+    sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date
+    (predecessor BatteryLevelChart 0097: IOS_EXIT=65 / MAC_EXIT=65).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65)
+                           and explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced (Activity+title, the per-vehicle bar with
+                           name/track/percent/range, the gradient+glow fill, the batteryColor tint, the
+                           formatDistance range, the bars.length===0 split) plus the full prompt state
+                           envelope (loading/error/stale/offline). 7 files + strings.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the KMP framework was
+                           actually built (7m19s) and BOTH xcodebuild schemes actually run — nothing assumed.
+                           The pre-existing collisions were verified by grepping the duplicate definitions.
+  4  No stubs as final   : complete production view + 30 real tests; placeholder scanner COUNT=0; no
+                           TODO/stub/mock/placeholder/Lorem in shipped code.
+  5  No parity shortcut  : tint thresholds, gradient/opacity/glow, SI distance factors (1000 / 1609.344) +
+                           precision 1 + em-dash, percent verbatim, typography, a11y, telemetry all mapped to
+                           platform tokens + unit-verified for web parity.
+  6  No delegation       : implemented directly; delegation FORBIDDEN; none used.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry all present and consumed; mirrors the BatteryLevelChart 0097 +
+                           VehicleGauges 0304 sibling precedents (units ported locally for testability).
+  8  No commit on red    : the COMMITTED artifact (BatteryComparison.* + this log) is GREEN on every runnable
+                           gate AND on a real isolated Swift 6 strict-concurrency build+test (30/30) and both
+                           SDK typechecks; the deferred full-app gate is RED only on pre-existing, unrelated
+                           surfaces (RecentDrives*/StateTimeline* duplicate types; macOS signing) this commit
+                           neither introduces nor touches.
+  9  No silent drift     : changes are confined to feature-views/BatteryComparison.* (7 files) + this log. The
+                           generated .xcodeproj and the staged Frameworks/Shared.xcframework are git-ignored
+                           and NOT committed. The one intentional web divergence (empty → friendly surface
+                           instead of returning null) is prompt-prescribed and documented above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic BatteryComparison shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 30 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the real generated design system + shared component library, and typechecks against BOTH the
+  iOS 18 and macOS 15 SDKs, with swiftlint / swiftformat / placeholder gates all green. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): with the KMP
+  Shared.xcframework freshly built and staged here, the only iOS errors are pre-existing duplicate-type
+  ambiguities across two unrelated parallel-merged surface families (RecentDrives* and StateTimeline*) and
+  the only macOS errors are pre-existing development-signing requirements — ZERO BatteryComparison errors in
+  either. Both are owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode
+  gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

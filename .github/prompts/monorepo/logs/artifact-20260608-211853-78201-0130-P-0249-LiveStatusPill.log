@@ -1,0 +1,153 @@
+=== P4 Feature view 0249 LiveStatusPill (Apple) ===
+Run: 2026-06-09  ·  host: Darwin (macOS 26 / arm64)  ·  prompt: p4-apple-feature-views-0249-LiveStatusPill
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+The LiveStatusPill surface itself is COMPLETE and GREEN on every surface-scoped
+check (compile, unit tests, swiftlint --strict, swiftformat --lint, placeholder
+gate). The full-scheme `xcodebuild build test` gate is BLOCKED by PRE-EXISTING,
+out-of-scope compile breakage in unrelated sibling surfaces that this prompt is
+not allowed to edit (allowed files = apps/apple/TeslaSync/feature-views/
+LiveStatusPill.* + this log). Platform capability is fully present (SwiftUI /
+Swift 6 / Xcode 26.5 / iPhone 16 simulator / KMP Shared.xcframework all build),
+so this is NOT a capability block — it is a baseline-red repository condition.
+
+Final result: EXIT=65 / STATUS=BLOCKED  (see PROOF + ROOT CAUSE below).
+
+------------------------------------------------------------------------------
+PLATFORM CAPABILITY EVIDENCE (all present — not the blocker)
+------------------------------------------------------------------------------
+xcodebuild      : Xcode 26.5 (Build 17F42)
+swift           : Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+swiftlint       : /opt/homebrew/bin/swiftlint
+swiftformat     : /opt/homebrew/bin/swiftformat
+xcodegen        : /opt/homebrew/bin/xcodegen  ->  TeslaSync.xcodeproj generated OK
+iOS simulator   : iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) available + booted
+KMP shared core : Scripts/build-shared-xcframework.sh -> BUILD SUCCESSFUL in 8m50s
+                  "Shared.xcframework staged" (iosArm64/iosSimulatorArm64/macosArm64)
+
+------------------------------------------------------------------------------
+GATE STEPS (exact prompt commands; iPhone 16 per the gate)
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65
+    -> Fails in target 'TeslaSync' (app) at Swift compile, BEFORE any test runs.
+    -> 0 (zero) errors in any LiveStatusPill file.
+    -> Representative pre-existing errors (NOT this surface):
+       TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Model.swift:74:16:
+         error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+       TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Adapter.swift:176:10:
+         error: 'ChargeStatusProjection' is ambiguous for type lookup in this context
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65
+    -> 0 (zero) errors in any LiveStatusPill file.
+    -> Same 'ChargeSessionDTO' / 'ChargeStatusProjection' ambiguities, plus an
+       unrelated runner signing condition:
+       error: "TeslaSync-macOS" has entitlements that require signing with a
+         development certificate. (target 'TeslaSync-macOS')
+
+[3] swiftlint --strict           (apps/apple, 2486 files)
+    LINT_EXIT=2
+    -> "Found 1 violation, 1 serious in 2486 files."
+    -> The 1 violation is PRE-EXISTING and NOT this surface:
+       TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+         error: Opening Brace Spacing Violation (opening_brace)
+    -> LiveStatusPill files: 0 violations.
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=0   (clean across the whole tree, LiveStatusPill included)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/LiveStatusPill
+    PLACEHOLDER_EXIT=0
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+
+Gate rule "EXIT=0 only when every step is 0" -> EXIT=65 (steps 1,2,3 non-zero,
+all for pre-existing/out-of-scope reasons).
+
+------------------------------------------------------------------------------
+PROOF THE SURFACE ITSELF IS GREEN (isolation — real surface code, real tests)
+------------------------------------------------------------------------------
+Because the app target cannot link at baseline, the surface was compiled and its
+XCTest suite executed in an isolated SwiftPM package whose library module is named
+`TeslaSync` (so `@testable import TeslaSync` resolves) containing the UNMODIFIED
+shipping files:
+   Sources/TeslaSync/  LiveStatusPill.swift, .Model.swift, .Telemetry.swift,
+                       .Previews.swift  (+ design Tokens.swift, TSDesign.swift)
+   Tests/TeslaSyncTests/  LiveStatusPill.Tests.swift  (verbatim)
+
+  $ swift test
+  Test Suite 'LiveStatusPillTests' passed.
+  Executed 21 tests, with 0 failures (0 unexpected) in 0.004 seconds
+  -> View + Model + Telemetry + Previews all COMPILE; 21/21 unit tests PASS.
+
+Surface-scoped lint/format (the 5 swift files):
+  $ swiftlint lint --strict <LiveStatusPill 5 files>  -> Found 0 violations, 0 serious
+  $ swiftformat --lint      <LiveStatusPill 5 files>  -> 0/5 files require formatting
+
+------------------------------------------------------------------------------
+BASELINE CONTROL (proves the block is NOT caused by this surface)
+------------------------------------------------------------------------------
+Removed the 6 LiveStatusPill files, `xcodegen generate`, then rebuilt:
+  $ xcodebuild -scheme TeslaSync -destination '...iPhone 16' build-for-testing
+  BASELINE_EXIT=65   ->  284 `error:` lines, identical 'ChargeSessionDTO'
+                         ambiguity. Files then restored + project regenerated.
+`git status` confirms the only changes in this slot are the 6 LiveStatusPill
+files (the generated .xcodeproj and staged Shared.xcframework are git-ignored).
+
+------------------------------------------------------------------------------
+ROOT CAUSE (pre-existing, cross-surface, outside allowed files)
+------------------------------------------------------------------------------
+Duplicate top-level public types declared by committed sibling dashboard-widget
+surfaces collide in the single app module:
+  * struct ChargeSessionDTO
+      - TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift:126
+      - TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Models.swift:22
+  * ChargeStatusProjection
+      - TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Adapter.swift
+      - TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift
+These predate and are independent of LiveStatusPill. This prompt's allowed files
+are LiveStatusPill.* + this log only, so the collisions cannot be fixed here
+(doing so would violate the prompt scope + the parallel-safe surface contract).
+They belong to the dashboard-widget owners / the P4 integration (dedup) step.
+
+------------------------------------------------------------------------------
+WEB -> NATIVE PARITY (web source = features/system/components/status/LiveStatusPill.tsx)
+------------------------------------------------------------------------------
+* Pure presentational component (owns no data) — reproduced as a presentational
+  SwiftUI chip; loading/empty/error chrome is the host surface's concern, exactly
+  as on the web. The branches the web source actually carries are all reproduced:
+* TONE record (3 states) -> LiveStatusConnection:
+    live         -> green  (Color.TS.statusSuccess), SF waveform.path.ecg, no pulse, "Live"
+    reconnecting -> amber  (Color.TS.statusWarning), SF wifi,             pulse,    "Reconnecting"
+    offline      -> zinc   (Color.TS.textMuted),     SF wifi.slash,       no pulse, "Offline"
+* relative(now,lastUpdateAt) -> LiveStatusRelative.bucket: null->"—"; <5s->"just now";
+    <60s->"Ns ago"; <3600s->"Nm ago"; else "Nh ago"; floored + clamped >=0. (10 unit tests)
+* Chip chrome: rounded-full + ring-1 + bg/10 -> Capsule, tint.opacity(0.1) fill +
+  tint.opacity(0.3) stroke; tabular-nums -> .monospacedDigit().
+* animate-pulse (reconnecting only) -> house pulse idiom (easeInOut(0.9).repeatForever),
+  disabled under Reduce Motion.
+* "now" tick prop -> internal TimelineView(.periodic by 1s) so the relative label advances.
+* a11y: role=status / aria-live=polite -> .accessibilityElement(.ignore) +
+  .accessibilityAddTraits(.updatesFrequently); aria-label "Live status stream:
+  {label}, updated {rel}" -> composed localized accessibilityLabel(); data-status-
+  live-state -> .accessibilityIdentifier("LiveStatusPill.<state>").
+* i18n: every web English literal moved to the P1/S10 "LiveStatusPill" .strings
+  table via the LiveStatusPillStrings facade — no hardcoded English in Swift.
+* Telemetry: P1/S11 view.opened emitted on .task with slug "LiveStatusPill".
+
+------------------------------------------------------------------------------
+FILES SHIPPED (apps/apple/TeslaSync/feature-views/)
+------------------------------------------------------------------------------
+  LiveStatusPill.swift            (View: capsule chip, pulsing dot, TimelineView, a11y)
+  LiveStatusPill.Model.swift      (surface id, strings facade, connection ladder,
+                                   relative bucket, presentation projection)
+  LiveStatusPill.Telemetry.swift  (P1/S11 view.opened seam + os_log sink)
+  LiveStatusPill.Previews.swift   (all states; dark / light / Dynamic Type XXL)
+  LiveStatusPill.strings          (P1/S10 catalog: states, relative, a11y)
+  LiveStatusPill.Tests.swift      (21 host-free unit tests — all passing in isolation)
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,223 @@
+================================================================================
+p4-apple · P7 · page:analytics/Timeline — SwiftUI / HIG parity
+================================================================================
+artifact : apps/apple/Sources/Features/Analytics/TimelinePage.swift (+ models, model, sample, sections, charts, table, format, route reg, tests)
+host     : macOS (Darwin); Xcode 26.5 Build 17F42; Apple Swift 6.3.2; swiftlint 0.63 + swiftformat 0.61 + xcodegen 2.45 + pwsh 7.x present
+parity   : page:analytics/Timeline  (manifest PARITY_REQUIRED=35 = 7 panels + 1 chart + 4 states + 23 strings)
+web src  : web/src/features/analytics/pages/TimelinePage.tsx  (route /timeline)
+data srcs: useVehicles -> GET /vehicles  (vehicle picker)
+           GET /vehicle-states/timeline?vehicle_id=&days=  (raw FSM transition events — web request())
+           GET /vehicle-states/summary?vehicle_id=&days=   (per-state durations — web request())
+           (all bound through one @Observable TimelinePageModel via an injected TimelineDataSource seam, ADR-004;
+            no live SSE on this surface — the page reads historical state, no EventSource — so no staleness indicator)
+
+FILES (allowed scope: Sources/Features/Analytics/**, navigation registration, the string catalog, this log)
+  NEW  apps/apple/Sources/Features/Analytics/TimelineModels.swift                (value types: vehicle/transition/row/by-state/summary/daily bucket/metrics/distribution segment/TimelineWindow)
+  NEW  apps/apple/Sources/Features/Analytics/TimelineFormat.swift                (display-boundary fmtInt/fmtPercent/formatHoursFromSeconds/duration/date + state color/tone + TimelineBucket classification)
+  NEW  apps/apple/Sources/Features/Analytics/TimelinePageModel.swift             (@Observable model: data-source seam, list state, load/refresh/select, derived metrics/distribution/dailyBreakdown/transitionRows)
+  NEW  apps/apple/Sources/Features/Analytics/TimelinePageModel.Sample.swift      (sample + empty + failing + data-error preview/test data sources)
+  NEW  apps/apple/Sources/Features/Analytics/TimelinePage.swift                  (adaptive View: header, vehicle picker + window menu + refresh, loading/empty/error/ready switch)
+  NEW  apps/apple/Sources/Features/Analytics/TimelinePage.Sections.swift         (4 metric cards + State Distribution proportional bar + 8-state legend)
+  NEW  apps/apple/Sources/Features/Analytics/TimelinePage.Charts.swift           (Daily Breakdown stacked BarChart via P3 TSBarChart + bucket legend)
+  NEW  apps/apple/Sources/Features/Analytics/TimelinePage.Table.swift            (State Transitions TSDataTable: Time/From/To/Duration/Trigger + state badge)
+  NEW  apps/apple/Sources/Features/Analytics/TimelineRouteRegistration.swift     (registers .timeline route)
+  NEW  apps/apple/Tests/Unit/Features/Analytics/TimelinePageModelTests.swift     (XCTest: states, metrics, distribution, binning, row indexing, window days, formatters)
+  EDIT apps/apple/Sources/App/AppRoute.swift           (add .timeline: Insights group, segment "timeline", SF symbol clock.arrow.circlepath)
+  EDIT apps/apple/Sources/TeslaSyncApp.swift           (compose TimelineRouteRegistration into the route-host chain)
+  EDIT apps/apple/Localization/Localizable.xcstrings   (+23 required timeline.*/error.loadFailed strings; +11 nav/chrome strings: route.timeline, spotlight desc, timeline.refresh, timeline.window.*)
+  EDIT apps/parity/apple-ledger.json                   (+2 rows: apple-macos / apple-ios -> done 35/35)
+
+Navigation note: the web route /timeline is single-segment, so AppRouteParser resolves it directly via the new
+route's pathSegment ("timeline") — no alias needed (cf. the sibling FleetCompare /vehicle-comparison). A dedicated
+.timeline route (Insights sidebar group) was added rather than displacing the existing .analytics route (covenant
+#7). MenuCommandCatalog.navigateCommands(), AppShell, SpotlightIndexer, and the command palette all derive from
+AppRoute.allCases, so the new case is auto-covered; the pathSegment is unique (testEveryRouteHasUniquePathSegment
+stays green); the route resolves to its Insights group (testEveryRouteResolvesToItsGroup stays green). The vehicle
+picker + trailing-window menu (web RangePicker presets -> ?days=N) + refresh mirror the web actions cluster.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) assembled via Gradle + staged (apps/apple/Scripts/build-shared-xcframework.sh) ---
+"FRAMEWORK_BUILD_DONE" ; staged slices: ios-arm64, ios-arm64-simulator, macos-arm64
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj
+GEN_EXIT=0
+
+--- swiftformat --lint (repo .swiftformat; my 10 new/test files) ---
+0/10 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (repo .swiftlint.yml; my 10 new/test files) ---
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+  [repo-wide --strict still reports a few PRE-EXISTING, OUT-OF-SCOPE violations
+   (e.g. TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift identifier_name a/b/c) — untouched here.]
+
+--- check-placeholders.ps1 -Path Sources/Features/Analytics -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=3
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  [the ALLOWED hits are the two ".redacted(reason: .placeholder)" SwiftUI loading skeletons in
+   TimelinePage.Charts.swift + TimelinePage.Sections.swift (the manifest's "loading -> redacted(reason:)"
+   requirement) + the sibling FleetCompare one; each annotated "// parity:allow redaction API ...". NOT stubs —
+   they drive the real loading redaction. No TODO/FIXME/Coming soon/Lorem/"not implemented"/fatalError anywhere.]
+
+--- Executed model harness (real TimelineModels + TimelineFormat + TimelinePageModel + Sample, Swift 6 strict-concurrency host binary) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   ../design/generated/apple/Tokens.swift Sources/Design/TSDesign.swift Sources/Components/UI/Badges.swift \
+#   Sources/Features/Analytics/{TimelineModels,TimelineFormat,TimelinePageModel,TimelinePageModel.Sample}.swift \
+#   TimelineHarness.swift -o timelineharness       (HARNESS_COMPILE_EXIT=0)
+72 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  initial=.loading + !isRefreshing + vehicles empty + no selection;
+  load -> .ready + auto-select vehicle 1 + 5 transitions + 8 by-state rows + !isLoadingData + no dataError;
+  empty vehicles -> .empty + no selection; vehicles fail -> .error; timeline+summary fail -> .ready + dataErrorMessage set + empty data (web anyError banner);
+  refresh clears isRefreshing + .ready; selectVehicle(2) reloads; selectVehicle(999) ignored;
+  metrics: totalTransitions=31, driving=3600s, charging=1800s, idle=10800s (online+parked+idle), sleeping=18600s (asleep+sleeping+offline), idle+sleep=29400s;
+  distribution: hasDistribution + 8 segments + percent math; sliver <0.3% dropped (web pct<0.3 -> null);
+  transitionRows sorted ascending + indices 0..4 + nextDate links neighbour + newest nextDate nil;
+  dailyBreakdown binned by UTC day [04-01,04-02,04-03] with driving/charging/idle(online)/sleeping buckets (web dailyBreakdown);
+  window days: today/yesterday=1, 7/30/90, mtd(2024-03-15)=15, ytd=75 (leap); sample seed -> .ready + rows + daily + distribution + transitions>0;
+  formatters: fmtInt grouping, formatHoursFromSeconds (0m/30m/1h/1h30m), duration (30s/2m/em-dash), fmtPercent, durationCell (next/to-now/em-dash), dayKey UTC, bucket classification, ISO parse tolerance
+HARNESS_RUN_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components + Units/Shared facade (Swift 6 strict concurrency, BOTH idioms) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   -F Frameworks/Shared.xcframework/<slice> ../design/generated/apple/Tokens.swift \
+#   Sources/Design/** Sources/Components/** Sources/SharedFacade/** Sources/Auth/** (minus app-wiring RootView.swift) \
+#   Sources/App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift Sources/Theme.swift Sources/Features/Analytics/**   (91 files)
+macOS  (arm64-apple-macos15.0)            -> 0 errors   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors   VIEW_TYPECHECK_IOS_EXIT=0
+  [exercises the #if os(iOS) horizontalSizeClass compact branch in TimelinePage (header title/actions reflow,
+   metric grid adaptive columns, compact-width selectors), ADR-002/006. Compiles my view + sections + charts +
+   table + format + model + sample + registration against the ACTUAL TSGlassPanel/TSCard/TSStatCard/TSSelect/
+   TSSelectOption/TSAlertBanner/TSEmptyState/TSErrorDisplay/TSPageTitle/TSPanelTitle/TSCaption/TSBadge/TSTone/
+   TSBarChart/TSChartSeries/TSChartPoint/TSChartPalette/TSDataTable/TSColumn/Color.TS/Font.TS/TSSpacing/TSRadius/
+   AppRoute/AppRouteHostRegistry/teslaSyncTheme sources, linking the real Shared.xcframework.]
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync -destination generic/platform=iOS Simulator -configuration Debug build) ---
+BUILD_EXIT=65  [BLOCKED by PRE-EXISTING, OUT-OF-SCOPE breakage — see note below; ZERO diagnostics in any of my files]
+TEST_EXIT=(not reached)  [the XCTest bundle hosts on the app target, blocked by the same out-of-scope breakage;
+                          model logic is instead proven GREEN by the executed harness (72/72) + view type-check (0/0 x2) above]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to defects in sibling LEGACY surfaces OUTSIDE
+this artifact's allowed files. Proven PRE-EXISTING by a baseline test: with my changes git-stashed and the project
+regenerated, HEAD STILL fails to build with the identical errors. Two independent classes observed:
+  1. TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+       error: escaping closure captures non-escaping parameter 'content'   (at a `TSGlassPanel { ... }` call)
+     — the SAME systematic `glass/@ViewBuilder _ content: () -> some View` bug class the predecessor
+       FleetCompare / FleetTelemetryCoverage / DiskForecast / ApiPlayground logs documented across the generated
+       shared-surfaces files (sibling AISuggestNewGeofences.swift, etc.).
+  2. TeslaSync/feature-views/AppearanceSettings.Controls.swift — a Swift 6.3.2 compiler IRGen CRASH
+       ("report_at_maximum_capacity" while emitting a concurrency reabstraction thunk @$sSbScA_pSgIeAghyg_SbIeAghn_TR),
+       reproduced deterministically in both batch and single-file compilation modes.
+NONE of the diagnostics are in my files (grep of every build log for Features/Analytics/Timeline*, AppRoute.swift,
+TeslaSyncApp.swift -> zero diagnostics). Because xcodebuild stops scheduling further compile tasks after the failing
+batch, my files' correctness is proven instead by the isolated Swift 6 type-check (0 errors on macOS+iOS, against the
+real tokens/components/Units+Shared) and the executed model harness (72/72) — the same host-harness + isolated-typecheck
+methodology the peer p4-apple page logs use when the shared bundle is blocked by out-of-scope siblings. No out-of-scope
+file was edited (the baseline test's temporary stash was popped; working tree restored).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=35
+================================================================================
+# evidence = file `symbol` (paths under apps/apple/Sources/Features/Analytics/)
+
+[x] panel  — Total-Transitions     TimelinePage.Sections.swift `TimelineMetricsSection` -> TSStatCard(title:"timeline.totalTransitions", value: integer(metrics.totalTransitions), systemImage:"arrow.left.arrow.right") (web MetricCard)
+[x] panel  — Driving-Time          TimelinePage.Sections.swift `TimelineMetricsSection` -> TSStatCard(title:"timeline.drivingTime", value: hours(metrics.drivingSeconds), systemImage:"car.fill")
+[x] panel  — Charging-Time         TimelinePage.Sections.swift `TimelineMetricsSection` -> TSStatCard(title:"timeline.chargingTime", value: hours(metrics.chargingSeconds), systemImage:"bolt.fill")
+[x] panel  — Idle-Sleep-Time       TimelinePage.Sections.swift `TimelineMetricsSection` -> TSStatCard(title:"timeline.idleSleepTime", value: hours(metrics.idleSleepSeconds), systemImage:"moon.fill")
+[x] panel  — GlassPanel5           TimelinePage.Sections.swift `TimelineDistributionSection` -> TSGlassPanel { TSPanelTitle("timeline.stateTimeline") + proportional bar (GeometryReader segments) + 8-state legend } (web State Distribution)
+[x] panel  — GlassPanel6           TimelinePage.Charts.swift `TimelineDailyBreakdownSection` -> TSGlassPanel { TSPanelTitle("timeline.dailyBreakdown") + TSBarChart(stacked) + TimelineBucketLegend } (web Daily Breakdown)
+[x] panel  — GlassPanel7           TimelinePage.Table.swift `TimelineTransitionsSection` -> TSGlassPanel { TSPanelTitle("timeline.stateTransitions") + TSDataTable } (web State Transitions)
+[x] chart  — BarChart              TimelinePage.Charts.swift `TimelineDailyBreakdownSection.series` -> TSBarChart(series: 4 stacked TSChartSeries, stacked: true) — P3 Swift Charts wrapper, never WKWebView (web recharts BarChart, 4 stacked bars)
+[x] state  — loading               TimelinePage.swift `loadingView` (ProgressView + TSCaption) + sections `.redacted(reason:.placeholder)` skeletons while isLoadingData (web PageContainer loading + Skeleton)
+[x] state  — empty                 TimelinePage.swift `emptyView` (TSEmptyState) + section TSEmptyState("timeline.noStateData"/"timeline.noDailyData"/"timeline.noTransitions") (web EmptyState per panel)
+[x] state  — error                 TimelinePage.swift `errorView` TSErrorDisplay(title:"error.loadFailed", onRetry: refresh) + `readyView` data-error TSAlertBanner(tone:.danger, title:"error.loadFailed") (web AlertBanner)
+[x] state  — success               TimelinePage.swift `readyView` -> metric cards + distribution + daily chart + transitions table, all bound from TimelinePageModel (web populated PageContainer body)
+[x] string — error.loadFailed      TimelinePage.swift `errorView` TSErrorDisplay(title:"error.loadFailed") + `readyView` TSAlertBanner(title:"error.loadFailed")
+[x] string — timeline.charging     TimelineFormat.swift `TimelineBucket.charging.titleKey` = "timeline.charging" (Daily Breakdown legend/series name)
+[x] string — timeline.chargingTime TimelinePage.Sections.swift `TimelineMetricsSection` TSStatCard(title:"timeline.chargingTime")
+[x] string — timeline.dailyBreakdown TimelinePage.Charts.swift `TimelineDailyBreakdownSection.header` TSPanelTitle("timeline.dailyBreakdown")
+[x] string — timeline.driving      TimelineFormat.swift `TimelineBucket.driving.titleKey` = "timeline.driving"
+[x] string — timeline.drivingTime  TimelinePage.Sections.swift `TimelineMetricsSection` TSStatCard(title:"timeline.drivingTime")
+[x] string — timeline.duration     TimelinePage.Table.swift `columns` TSColumn(id:"duration", title:"timeline.duration")
+[x] string — timeline.fromState    TimelinePage.Table.swift `columns` TSColumn(id:"from", title:"timeline.fromState")
+[x] string — timeline.idle         TimelineFormat.swift `TimelineBucket.idle.titleKey` = "timeline.idle"
+[x] string — timeline.idleSleepTime TimelinePage.Sections.swift `TimelineMetricsSection` TSStatCard(title:"timeline.idleSleepTime")
+[x] string — timeline.noDailyData  TimelinePage.Charts.swift `content` TSEmptyState(title:"timeline.noDailyData")
+[x] string — timeline.noStateData  TimelinePage.Sections.swift `content` TSEmptyState(title:"timeline.noStateData") + TimelinePage.swift `emptyView` message
+[x] string — timeline.noTransitions TimelinePage.Table.swift `body` TSEmptyState(title:"timeline.noTransitions")
+[x] string — timeline.selectVehicle TimelinePage.swift `actions` TSSelect(label:"timeline.selectVehicle") + `emptyView` TSEmptyState(title:"timeline.selectVehicle")
+[x] string — timeline.sleeping     TimelineFormat.swift `TimelineBucket.sleeping.titleKey` = "timeline.sleeping"
+[x] string — timeline.stateTimeline TimelinePage.Sections.swift `TimelineDistributionSection` TSPanelTitle("timeline.stateTimeline")
+[x] string — timeline.stateTransitions TimelinePage.Table.swift `TimelineTransitionsSection` TSPanelTitle("timeline.stateTransitions")
+[x] string — timeline.subtitle     TimelinePage.swift `titleBlock` Text("timeline.subtitle") + `loadingView` TSCaption
+[x] string — timeline.time         TimelinePage.Table.swift `columns` TSColumn(id:"ts", title:"timeline.time")
+[x] string — timeline.title        TimelinePage.swift `titleBlock` TSPageTitle("timeline.title") (+ route.timeline nav title)
+[x] string — timeline.toState      TimelinePage.Table.swift `columns` TSColumn(id:"to", title:"timeline.toState")
+[x] string — timeline.totalTransitions TimelinePage.Sections.swift `TimelineMetricsSection` TSStatCard(title:"timeline.totalTransitions")
+[x] string — timeline.trigger      TimelinePage.Table.swift `columns` TSColumn(id:"trigger", title:"timeline.trigger")
+PARITY_COVERED=35
+
+All 35 panels/chart/states/strings resolve from the bound @Observable TimelinePageModel and the
+Localizable.xcstrings catalog. Web key names preserved verbatim. Durations are SI seconds formatted as
+"Xh Ym" only at the SwiftUI render boundary (web formatHoursFromSeconds parity). SI converters / live-SSE
+staleness: N/A for this unit (no convertible units beyond duration display formatting; no live data source) —
+recorded per ADR-013 scope.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild) is pre-existing
+                       OUT-OF-SCOPE breakage + a toolchain IRGen crash, proven by a baseline stash test, never recoloured.
+ 2 No scope narrowing: all 7 panels, the stacked BarChart, all 4 data states, the vehicle picker + window menu +
+                       refresh, and adaptive macOS/iPad/iPhone layouts are implemented and verified.
+ 3 No skip-and-assume: the web page was read end-to-end; the metric cards + State Distribution bar + Daily Breakdown
+                       stacked chart + State Transitions table + duration math + day binning were reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete implementations.
+ 5 No parity shortcuts: 4 states each render distinctly; distribution drops <0.3% slivers (web guard); strings = web keys.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT commit any edit to sibling surfaces, project.yml, or other owners' files. The
+                       baseline test's temporary stash was popped; working tree restored.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/10), swiftlint --strict(0/10),
+                       placeholder(0), model harness(72/72), view type-check macOS(0/0) + iOS(0/0). The only RED is
+                       out-of-scope/toolchain and DEFERRED to its owners / the P99 integration gate.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI TimelinePage shipped at parity with the web source: a pure @Observable state holder
+(ADR-004 — no networking in the view) exposing loading/empty/error/success over an injectable TimelineDataSource
+seam (default = an API-response-shaped sample), driving four headline metric cards (Total Transitions / Driving /
+Charging / Idle-Sleep time), a proportional State Distribution bar with an 8-state legend, a stacked Daily
+Breakdown BarChart on the P3 Swift Charts wrapper (never a WKWebView), and a State Transitions DataTable with
+computed per-state durations — adaptive across macOS/iPad sidebar width and iPhone compact width (ADR-002/006)
+using the P2 tokens + P3 shared components (no hand-rolled glass). Every visible string resolves from
+Localizable.xcstrings with web key names; full VoiceOver labels/traits on panels, bar, and rows; durations format
+at the render boundary as SI seconds -> "Xh Ym". Deep-linkable via the new .timeline route (AppRouteParser resolves
+/timeline automatically) and hosted through the shell's route registry. Verified on BOTH idioms by isolated Swift 6
+strict-concurrency type-checks (0/0) and an executed model harness (72/72). The full xcodebuild scheme is RED ONLY
+due to pre-existing, out-of-scope sibling breakage + a toolchain IRGen crash (forbidden to commit-fix, proven
+pre-existing by a baseline stash test), with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Analytics apps/apple/Tests/Unit/Features/Analytics \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-analytics-TimelinePage.log
+  git commit -m "feat(apps/apple): TimelinePage at web parity (P7 analytics)"
+
+EXIT=0
+STATUS=DONE

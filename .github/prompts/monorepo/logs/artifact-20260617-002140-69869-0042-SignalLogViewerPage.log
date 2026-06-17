@@ -1,0 +1,170 @@
+=== P7 · page:telemetry/SignalLogViewer · Apple SwiftUI Implementation ===
+Target(s): apple (apple-macos + apple-ios)
+Parity unit: page:telemetry/SignalLogViewer
+Web route: /signal-log
+Web source: web/src/features/telemetry/pages/SignalLogViewerPage.tsx
+Output: apps/apple/TeslaSync/Features/Telemetry/SignalLogViewerPage.swift (+ model/strings/models/sample/route)
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 (Build 17F42) at /usr/bin/xcodebuild
+✓ Platform: Darwin (arm64)
+✓ swiftlint /opt/homebrew/bin/swiftlint
+✓ xcodegen /opt/homebrew/bin/xcodegen
+✓ pwsh    /opt/homebrew/bin/pwsh
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+✓ Reused shared P3 surface: apps/apple/TeslaSync/shared-surfaces/SignalQueryControls.* (SignalLogEntry,
+  SignalQueryHistoryAdapter, SignalHistoryPagination, SignalQueryTableState, SignalMultiSelectView,
+  SignalDataTableView, SignalAvailableFilter, SignalPaging)
+
+=== WEB SOURCE ANALYSIS ===
+Source: web/src/features/telemetry/pages/SignalLogViewerPage.tsx (198 lines)
+
+Data sources:
+  1. useSignals(vehicleId) → GET /signals/{vehicleId}/available   (catalog the selector lists)
+  2. deferred history query (web `queryFn`, manual "Query"):
+       selectedSignals.map(GET /signals/{vid}/{name}/history?from&to&limit=perPage*10)
+       → adaptSignalHistoryResp → flatten → sort newest-first; local pagination (slice).
+
+Composition (web):
+  - PageContainer(title="Signal Log Viewer", subtitle="Query signal history from Postgres",
+    actions=<VehicleSelect/>, copyLink); usePageTitle("Signal Log").
+  - vehicleId === 0 → EmptyState(signalLog.noVehicle / signalLog.noVehicleDesc).
+  - GlassPanel1: SignalSelector + Time Range RangePicker + Per Page Select + Query Button + records.
+  - !hasQueried → EmptyState("Select signals and click Query" / "Choose one or more …").
+  - else → SignalHistoryTable (paginated #/Timestamp/Signal/Value/Type rows).
+  - anyError → AlertBanner(danger): "error.loadFailed: {message}".
+
+1 panel · 4 data states (loading/empty/error/success) · 12 i18n strings.
+
+=== IMPLEMENTATION ===
+New files (apps/apple/TeslaSync/Features/Telemetry/):
+  - SignalLogViewerStrings.swift       — 12 web parity keys (computed LocalizedStringKey + rawKeys).
+  - SignalLogViewerModels.swift        — data-source seam (SignalLogViewerDataSource), catalog signal,
+                                         available-fetch phase. Reuses SignalLogEntry/adapter (P3).
+  - SignalLogViewerSampleData.swift    — SI-shaped fixture catalog + history (num/str/bool typed rows).
+  - SignalLogViewerPageModel.swift     — @MainActor @Observable: useSignals catalog, selection, range,
+                                         per-page, deferred query, local pagination, retry, banner.
+  - SignalLogViewerPage.swift          — SwiftUI View: header, error banner, no-vehicle state,
+                                         GlassPanel1 (SignalMultiSelectView + Time Range + Per Page +
+                                         Query + records), results (pre-query empty → SignalDataTableView).
+  - SignalLogViewerRouteRegistration.swift — SignalLogViewerLink + .signalLogViewerDestination() +
+                                         link(forPath:) resolving /signal-log (deep-link, ADR-002/006).
+Catalog: 11 keys added to Localizable.xcstrings (error.loadFailed already present → reused).
+
+Adaptive macOS (regular) + iOS (compact) via P2 tokens + P3 components; values render verbatim through
+the shared SI-aware formatters (history endpoint carries display-ready typed values — no non-SI compute);
+every literal resolves from Localizable.xcstrings with the web key names; no business logic in the view.
+
+=== PARITY ===
+PARITY_REQUIRED=17
+
+Panel coverage (1):
+✓ panel — GlassPanel1
+    SignalLogViewerPage.swift → `controlsPanel` (TSGlassPanel { SignalMultiSelectView + controlsRow })
+
+State coverage (4) — each bound through the @Observable model:
+✓ state — loading
+    runQuery() sets `tableState = .loading` → SignalDataTableView loading rows (resultsSection);
+    `availablePhase == .loading` → SignalMultiSelectView loadingRows. (SignalLogViewerPageModel.swift)
+✓ state — empty
+    pre-query: resultsSection else → TSEmptyState(selectAndQuery / selectAndQueryMessage);
+    no rows: `tableState == .empty` → SignalDataTableView empty note. (SignalLogViewerPage.swift)
+✓ state — error
+    `bannerError` → errorBanner(loadFailed); `tableState == .error` → SignalDataTableView inline retry;
+    `availablePhase == .error` → SignalMultiSelectView inline retry. (SignalLogViewerPageModel.swift)
+✓ state — success
+    `tableState == .rows` → SignalDataTableView grid over pagedRows + pager. (SignalLogViewerPage.swift)
+
+String coverage (12) — SignalLogViewerStrings.<symbol> → render site (all keys in Localizable.xcstrings):
+✓ string — Choose one or more signals, set a date range, then hit Query to browse signal history.
+    `selectAndQueryMessage` → resultsSection TSEmptyState message
+✓ string — Per Page              `perPage`              → perPageControl TSSelect label
+✓ string — Query                 `query`                → queryButton label + a11y
+✓ string — Query signal history from Postgres  `subtitle`  → header subtitle
+✓ string — Select signals and click Query      `selectAndQuery` → resultsSection TSEmptyState title
+✓ string — Signal Log            `navTitle`             → .navigationTitle (route/window title)
+✓ string — Signal Log Viewer     `title`                → header TSPageTitle
+✓ string — Time Range            `timeRange`            → timeRangeControl TSLabel + picker a11y
+✓ string — error.loadFailed      `loadFailed`           → errorBanner prefix
+✓ string — records               `records`              → recordsLabel ("{total} records")
+✓ string — signalLog.noVehicle   `noVehicle`            → noVehicleState TSEmptyState title
+✓ string — signalLog.noVehicleDesc `noVehicleDesc`      → noVehicleState TSEmptyState message
+
+PARITY_COVERED=17
+
+Notes:
+- Web `SignalSelector` is realized via the shared, fully-localized `SignalMultiSelectView` (P3) — its
+  loading/error/loaded leaf states are driven by `model.availableSelectState` (web `useSignals` status).
+- Web `SignalHistoryTable` is realized via the shared `SignalDataTableView` (P3) — same #/Timestamp/
+  Signal/Value/Type columns + server-style pager; rows adapted by the shared `SignalQueryHistoryAdapter`.
+- Web `RangePicker` is realized as a "Time Range"-labeled day-granular From/To DatePicker pair (HIG).
+- Vehicle picker is the page-header action in web (out of parity scope); the no-vehicle empty state is
+  reproduced (signalLog.noVehicle / signalLog.noVehicleDesc).
+- Deep-link: `/signal-log` → SignalLogViewerRouteRegistration.link(forPath:) → SignalLogViewerLink.
+
+=== GATE ===
+# Placeholder scan (ADR-011)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Telemetry -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# SwiftLint (repo canonical config: apps/apple/.swiftlint.yml; identifier_name min_length=2)
+$ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml <6 new SignalLogViewer*.swift>
+Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+  (Repo-wide `cd apps/apple && swiftlint --strict` reports 4 violations — all pre-existing and
+   out-of-scope: Sources/Features/System/MyActivityPageModel.swift,
+   TeslaSync/dashboard-widgets/WeeklyDigestWidget.{Adapter,Tests}.swift — none in Features/Telemetry.)
+
+# Build — in-module type-check is the canonical verification (full xcodebuild blocked by pre-existing baseline).
+
+# Gate 2 — swiftc -typecheck (Swift 6, complete concurrency): my 6 files + their FULL real
+# dependency closure (design tokens Tokens.swift, Sources/Design/*, the Sources/Components
+# library, and the entire SignalQueryControls shared surface — 56 files), both platforms:
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+    -sdk <iphonesimulator> -target arm64-apple-ios18.0-simulator <56 files>
+TYPECHECK_IOS_EXIT=0     → PASS (0 errors)
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+    -sdk <macosx> -target arm64-apple-macos15.0 <56 files>
+TYPECHECK_MACOS_EXIT=0   → PASS (0 errors)
+⇒ This page's 6 files (+ the navigation registration) compile clean in-module on macOS + iOS
+  under Swift 6 strict concurrency; they contribute ZERO originating errors.
+
+# Gate 4 — full xcodebuild (scheme TeslaSync, iOS Simulator, CODE_SIGNING_ALLOWED=NO):
+BUILD_EXIT=65 (PRE-EXISTING; not caused by this unit — none of the errors are in Features/Telemetry
+  as ORIGINATING declarations, and none reference this page's symbols / the /signal-log registration)
+Root causes (all out-of-scope, in files I am forbidden to modify):
+  • duplicate `enum TSSpacing` + `enum TSRadius` in TeslaSync/Features/System/StatusApiDocsPage.swift
+    shadow the generated design tokens → `ambiguous use of 'xs'/'lg'/'md'/'sm'` MODULE-WIDE. This is
+    the identical breakage that hits the already-merged SharingTripsPage.swift (20×) and ~50 other
+    pages across Sources/Features/Driving, Battery, Charging, feature-views, shared-surfaces, etc.
+  • `#Preview` macro ambiguity (SwiftUI + DeveloperToolsSupport both export `Preview`) across every
+    `#if DEBUG` preview in the baseline (468×, gated out of Release).
+  • duplicate `rounded(toPlaces:)` (Sources/Features/Analytics/LifetimeStatsModels.swift).
+  • Shared.xcframework missing the required architecture (KMP framework not built in this env).
+  The macOS scheme is additionally blocked earlier by dev-certificate entitlement signing
+  (TeslaSync-macOS / TeslaSyncWidgets-macOS) — the documented pre-existing baseline.
+
+BUILD_EXIT=65
+
+# Test — xcodebuild test (scheme TeslaSync).
+TEST_EXIT=SKIPPED
+  (No new XCTest bundle added; the page is verified by the in-module Release compile + the parity
+   evidence above. Co-located *Tests.swift under Features/ is not wired into any XCTest target, matching
+   the sibling SignalDiffPage / SharingTripsPage precedent.)
+
+=== SUMMARY ===
+✓ 1/1 panel (GlassPanel1), 4/4 data states (loading/empty/error/success), 12/12 strings → PARITY 17/17.
+✓ Gate 1 placeholder scan PASS (0). Gate 2 typecheck macOS+iOS Swift 6 complete-concurrency PASS (0).
+  Gate 3 swiftlint --strict PASS (0 in 6 files). Full xcodebuild red solely on pre-existing,
+  out-of-scope baseline (duplicate TSSpacing in StatusApiDocsPage + #Preview ambiguity + duplicate
+  rounded(toPlaces:) + unbuilt Shared.xcframework) — the same baseline that blocks SharingTripsPage.
+✓ Reuses the shared P3 SignalQueryControls surface (selector + results table + adapters) and the P2
+  design tokens; @Observable model over a KMP-ready data-source seam; Units-free (history is typed +
+  display-ready); every literal localized with the web key names; macOS + iOS adaptive; deep-linkable.
+✓ Allowed-files only: apps/apple/TeslaSync/Features/Telemetry/** (6 files), the nav registration,
+  Localizable.xcstrings (+11 keys; error.loadFailed reused), this log, and the apple ledger rows.
+
+EXIT=0
+STATUS=DONE

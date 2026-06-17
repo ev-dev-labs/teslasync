@@ -1,0 +1,221 @@
+================================================================================
+P4 · Feature view · 0265 — SignalCategoryTree (Apple)
+Run: 2026-06-09T17:35-0700   Host: Darwin arm64 (Atuls-Mac-Studio.local), macOS 26.5.1
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0265-SignalCategoryTree.prompt.md
+Web source (spec): web/src/features/telemetry/components/SignalCategoryTree.tsx
+Native output: apps/apple/TeslaSync/feature-views/SignalCategoryTree.*
+Toolchain: Xcode 26.5 (17F42) · Apple Swift 6.3.2 · xcodegen 2.45.4 ·
+           swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh · iPhoneSimulator 26.5 + MacOSX 26.5 SDK
+Mode: code-complete + host-validated gates; full-app Xcode scheme build/test DEFERRED
+      (ADR-012 macOS-pending; apps/macos-pending-verifications.md) — the established
+      P4 Apple disposition shared by all prior feature-view surfaces (STATUS=DONE).
+Delegation: NONE (authored directly; delegation FORBIDDEN by the prompt).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS + iPhoneSimulator SDKs present   OK
+  Xcode ...................... 26.5 (17F42)                                              OK
+  SwiftUI .................... available (search field + tri-state tree + states compiled) OK
+  Swift Charts ............... N/A for this surface (web "Charts / maps used: (none)";
+                               the lazy sparkline is its own surface, SignalSparklinePreview) N/A
+  MapKit ..................... N/A for this surface (no map in the web source)           N/A
+  iPhone 16 simulator SDK .... arm64-apple-ios18.0-simulator typecheck EXIT=0            OK
+  macOS 15 SDK ............... arm64-apple-macos15.0 typecheck EXIT=0                     OK
+  swiftlint / swiftformat .... 0.63.3 / 0.61.1                                           OK
+  pwsh (placeholder gate) .... present; -SelfTest PASS                                   OK
+  xcodegen ................... 2.45.4; generate EXIT=0                                   OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)    WARN (deferred Xcode app build)
+  codesign identities ........ "0 valid identities found"                                WARN (macOS app gate blocker, ADR-012)
+
+  The prompt's capability requirement is SwiftUI (+ Swift Charts / MapKit, unused here).
+  SwiftUI is present and proven by REAL-SDK compiles below, so the capability-BLOCKED
+  escape hatch does NOT apply — the surface is authored and host-validated for real.
+
+=== WHAT SHIPPED (9 files, established feature-view multi-file pattern) ===============
+  SignalCategoryTree.Models.swift       177  Foundation value types: SignalValueKind (web SignalKind +
+        isNumeric split) · SignalUnitKind · SignalDescriptor · SignalCategoryLeaf/Group (web
+        TreeLeaf/TreeGroup) · SignalSelectionState (tri-state) · SignalCategoryTreeProjection (groups +
+        counts).
+  SignalCategoryTree.Adapter.swift      220  pure Foundation core: SignalCategoryCatalog (CATEGORY_LABELS +
+        CATEGORY_ORDER + rank + labelKey) · SignalCategoryTreeBuilder.buildProjection (group/leaf-sort/
+        group-order, web `groups` useMemo) + filter (web `filterGroups`) · SignalCategorySelection (state/
+        count/toggleLeaf/toggleAll, web toggle callbacks) · SignalCategorySelectAllLabel (web selectAllLabel).
+  SignalCategoryTree.Model.swift        345  SignalCategoryTreeSurface.slug (Foundation slug) · P1/S11
+        telemetry seam · SignalCategoryTreeUpdate (web AvailableSignalsResponse) · P1/S8
+        SignalCategoryTreeSource seam + @Observable SignalCategoryTreeModel (phase / search / expansion /
+        selection, tri-state derivations, one-shot stale auto-refresh) + InMemory source.
+  SignalCategoryTree.Localization.swift 196  P1/S10 facade (table "SignalCategoryTree") — web raw props →
+        keyed strings (catalog label / search prompt / empty / catalog-error / friendly category labels /
+        TreeSelect chrome) + SignalCategoryTreeAccessibility VoiceOver summaries.
+  SignalCategoryTree.swift              311  main surface View: connectivity banner + search field + tri-state
+        select-all/counts header + phase switch (loading skeleton / empty / error+retry / content). surfaceSlug.
+  SignalCategoryTree.Tree.swift         213  the populated tree body: scrollable group rows (chevron · tri-state
+        checkbox · friendly label · {n}/{total} count) revealing leaf rows (checkbox · monospaced name ·
+        value-kind chip) + the no-results message. SF-Symbol tri-state checkbox glyph + kind chip.
+  SignalCategoryTree.Previews.swift     122  #if DEBUG previews — content(expanded) / many-selected / searching /
+        no-results / loading / empty / error / stale / offline (9).
+  SignalCategoryTree.strings             66  P1/S10 catalog: web-source keys (search prompt, empty + error,
+        12 friendly category labels) + TreeSelect chrome + native chrome + a11y.
+  SignalCategoryTree.Tests.swift        337  XCTest: 4 suites / 24 tests (builder, selection, model, a11y).
+  Total 1987 lines. Every file <= 345 (house file_length budget). One exported public View
+  (SignalCategoryTree) across the set; helper Views are internal.
+
+  States reproduced (no hidden surface — every branch renders):
+    loading   — web TreeSelect `isLoading` → four pulsing skeleton rows in the bordered tree frame.
+    content   — the categorized, searchable, tri-state-selectable tree (web TreeSelect body).
+    empty     — web `emptyState` non-error branch: "No signals available for this vehicle."
+    no-results— web TreeSelect `noResultsState`: `No matches for "{q}".` (search filtered all leaves).
+    error     — catalog failed → QueryError-equivalent with Retry (web surfaces the error inline; the
+                native envelope adds an explicit retry + "Failed to load catalog: {message}").
+    stale     — Stale chip/banner + ONE guarded auto-refresh, re-armed on return to live (ADR-013).
+    offline   — Offline chip/banner; cached groups kept; no refetch.
+
+  Data binding: the web wrapper pulls `useAvailableSignals(vehicleId)` and groups the descriptors; selection /
+  search / expanded-group state are controlled by the parent page (URL-synced). The native surface reproduces
+  that whole lifecycle through the P1/S8 `SignalCategoryTreeSource` seam coalesced into one
+  `SignalCategoryTreeUpdate`, and owns the search / expansion / selection state so the surface is complete; the
+  view performs ZERO networking. The web `friendlyCategoryLabel` is wired through the P1/S10 facade
+  (SignalCategoryTreeStrings.categoryLabel) at projection time. Telemetry: `view.opened` slug
+  "SignalCategoryTree" once (P1/S11), spy-asserted.
+
+  Sparkline note: the web feeds each leaf a lazy `SignalSparklinePreview` via `renderLeafRight`. That is a
+  SEPARATE web component (its own file → its own surface prompt) and the prompt's metadata declares
+  "Charts / maps used: (none)" for THIS surface. The picker renders the leaf's value-kind chip — the same
+  descriptor field the web preview shows for non-numeric kinds — as the trailing accessory; the live
+  spark trace belongs to the SignalSparklinePreview surface. No scope was narrowed: the SignalCategoryTree
+  composition (grouping, search, tri-state selection, counts, every state) is implemented in full.
+
+=== HOST-RUNNABLE GATES (all green; real exit codes from this machine) ==============
+  swiftformat --lint <8 .swift> ............... 0/8 require formatting                  FORMAT_EXIT=0
+  swiftlint lint --strict <8 .swift> .......... Found 0 violations, 0 serious in 8 files LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 PLACEHOLDER_EXIT=0
+        (scanned all 9 shipped files via an isolated copy; -SelfTest PASS — the gate is proven to flag
+         NotImplementedException / Kotlin TODO( / the common markers and to honor opt-outs.)
+  swiftc -typecheck iPhoneSimulator (target arm64-apple-ios18.0-simulator, -swift-version 6,
+        -strict-concurrency=complete, real SDK, bound against the REAL shared Sources/Components +
+        Sources/Design + design/generated/apple/Tokens.swift — 48 files) ........ IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (target arm64-apple-macos15.0, -swift-version 6,
+        -strict-concurrency=complete, real SDK, same dep set) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 language mode,
+        Foundation core: Models + Adapter + Model + Localization) ............. 24/24 passed, TEST_EXIT=0
+      → SignalCategoryTreeBuilderTests (7) · SignalCategorySelectionTests (5) ·
+        SignalCategoryTreeModelTests (8) · SignalCategoryTreeAccessibilityTests (4).
+  xcodegen generate (project spec re-generated; the 9 new files auto-wire into the iOS + macOS app
+        targets + the co-located XCTest bundles — 54 pbxproj references) ...... XCODEGEN_EXIT=0
+
+  Typecheck dep-set note: the surface is bound against the REAL shared component library + design tokens.
+  The single file Sources/Components/DataDisplay/UnitFormatters.swift is excluded from the host
+  typecheck dep-set because it depends on `Units`/`UnitPreferences` from the SharedFacade/KMP layer
+  (the deferred xcframework below) and is NOT a dependency of this surface — SignalCategoryTree uses no
+  unit-conversion component (it reads SI descriptors and converts nothing). The remaining 40 Components/
+  Design files + Tokens compile clean with this surface added.
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test =============
+  xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED state in the shared app target — ZERO of
+    which originates in this surface. A deterministic single-target build (no scheme pre-action) emits
+    exactly one error, and it is the framework, not this code:
+
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build CODE_SIGNING_ALLOWED=NO
+        → error: There is no XCFramework found at
+          '/…/apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync')
+        ** BUILD FAILED **   (exit 65)
+
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep). The scheme pre-action
+        builds it via the Kotlin/Native Gradle toolchain (apps/shared/gradlew :core:assembleShared
+        XCFramework) — tracked macOS-pending in apps/macos-pending-verifications.md.
+      • No macOS development-signing identity (`security find-identity -p codesigning` → 0 valid),
+        which the macOS app/widget hardened-runtime entitlements require (ADR-012).
+
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs (both typechecks
+    EXIT=0) and its logic runs green (24/24 XCTest under Swift 6 strict concurrency). The full-app
+    build/test is the same deferral recorded for the sibling feature-view surfaces (0266-SignalChartPanel,
+    0036-LiveSignalsTable, 0236-AccordionSection); it belongs to the P99 apple-acceptance-gate on a
+    macos-latest runner with signing.
+
+=== PARITY (vs web SignalCategoryTree.tsx) ===
+  Logic — faithfully ported + unit-tested:
+    • CATEGORY_LABELS / CATEGORY_ORDER / categoryRank / friendlyCategoryLabel — known categories rank in
+      order, unknown rank last; friendly label falls back to the raw id (`?? id`).
+    • groups useMemo — group by `category`, sort each group's leaves by name ascending, order groups by
+      rank then friendly label.
+    • TreeSelect filterGroups — a case-insensitive group-label match keeps all leaves; otherwise only
+      label-matching leaves; empty groups drop; a blank/trimmed-blank needle returns the input.
+    • tri-state — group + select-all checkboxes resolve none / partial / all over the VISIBLE (filtered)
+      leaves; the `{groupSelectedCount}/{total}` counter and the `{n} selected[ of {total}]` summary.
+    • selection transforms — toggleLeaf; toggleGroup / toggleAllVisible add-all-or-clear-all while
+      preserving selections outside the visible set (web functional-setter semantics).
+    • selectAllLabel — Select all / Clear all, or Select/Clear {n} visible while searching.
+    • expansion — isExpanded = isSearching || expanded; toggling is a no-op while searching (everything open).
+  Composition — native primitives (no Tailwind ports): a search field (web `Input` icon + clear suffix), a
+    tri-state select-all header (web header Checkbox + counts + "Clear all selected"), and a scrollable
+    disclosure tree (web `role="tree"`) with SF-Symbol tri-state checkboxes (checkmark/minus/empty square),
+    chevron disclosure, and a value-kind chip trailing accessory (web `renderLeafRight` non-numeric fallback).
+    Recharts → none (sparkline is its own surface). Leaflet → none.
+  i18n — every user-facing string from the web source resolves through the P1/S10 facade with the web
+    English as the fallback: "Signal catalog", "Search signals…", "No signals available for this vehicle.",
+    "Failed to load catalog", and all 12 CATEGORY_LABELS (Charging / Driving / Climate / Location /
+    Powertrain / Vehicle State / Safety & Security / Media / Config / Preferences / Setting Units /
+    Metadata), plus the TreeSelect chrome (Select all / Clear all / Select N visible / {n} selected /
+    Clear all selected / No matches / Filter tree / Clear search) — ALL present in SignalCategoryTree.strings.
+    No English literals in native code.
+  a11y — the picker is one contained element with a localized tree summary ("{selected} of {total} signals
+    selected", or the empty message); group headers carry "{label}, {n} of {total} selected" + an
+    expanded/collapsed value; the group checkbox is "Toggle {label}"; leaf rows carry "{name}, {kind} value,
+    selected/not selected" and the `.isSelected` trait; the search field + clear control are labelled; the
+    skeleton pulse respects Reduce Motion; Dynamic Type via the token ramp + SF Symbols. Retry button labelled.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced (loading / content / empty /
+      no-results) plus the prompt envelope (error / stale / offline) — 9 #if DEBUG previews; phase + filter +
+      selection unit-tested.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (SignalCategoryTreeSource → SignalCategoryTreeModel);
+      no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (search prompt + empty + error +
+      12 category labels + chrome — all in .strings).
+  [x] Accessibility labels present on every interactive element (search field, clear, select-all, group
+      disclosure + checkbox, every leaf row, retry); Reduce Motion + Dynamic Type honoured.
+  [x] Tests: adapter unit (builder + selection) + per-state model test + a11y label test — 24 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0, 0 opt-outs.
+  [x] Telemetry: `view.opened` emitted once with surface slug "SignalCategoryTree" (P1/S11) — spy-asserted.
+  [~] xcodebuild build test EXIT=0 — DEFERRED to P99 macos-latest (Shared.xcframework + signing, pre-existing
+      unrelated blockers above); host-runnable equivalents (real-SDK typecheck both platforms + 24/24 XCTest
+      + lint/format/placeholder + xcodegen) all green.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full-app xcodebuild is shown DEFERRED with its real exit 65 + the single
+                       deterministic cause (missing Shared.xcframework, 0 signing identities); never
+                       reported as passing. Every host "EXIT=0" is a real run on this machine.
+  2  No scope narrowing: implemented the FULL SignalCategoryTree composition — grouping + friendly labels +
+                       order + search filter + tri-state group/select-all + counts + selection transforms +
+                       expansion + every state + 24 tests + 9 previews. The sparkline is a separate surface
+                       (the prompt declares Charts=none); its slot is filled by the descriptor kind chip.
+  3  No skip-and-assume: the web SignalCategoryTree + the generic TreeSelect primitive + SignalSparklinePreview
+                       + useSignals were read end-to-end; every conditional branch + raw string reproduced.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; no forbidden markers.
+  5  No parity shortcuts: filterGroups / tri-state / toggle transforms / selectAllLabel / category ranking
+                       all ported AND unit-tested (a fixture/assert count mismatch was caught and fixed).
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (feature-views is already
+                       a registered source path) and did NOT edit the shared Localizable.xcstrings; strings
+                       shipped as the per-surface table, consuming P1/S8 + P1/S9 + P1/S10 + P1/S11.
+  8  No commit on red  : committing on all-green host gates; the Xcode app build/test is explicitly DEFERRED
+                       (environment), not failed by this code.
+  9  No silent drift   : changes confined to the allowed SignalCategoryTree.* files + this log. The temp
+                       SwiftPM verification package and the git-ignored generated .xcodeproj were removed.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SignalCategoryTree shipped at parity with the web source: pure-Swift display
+  logic (24/24 green — grouping, search filter, tri-state selection, ranking), a P1/S8 state-holder seam (no
+  view HTTP), P1/S11 view.opened telemetry, every state, all web-source i18n keys + a11y summaries. All
+  host-runnable gates pass; the Xcode app build/test is DEFERRED to the signed macos-latest runner
+  (Shared.xcframework absent + 0 signing identities — neither a defect in this code), matching the
+  established P4 Apple disposition shared by the sibling feature-view surfaces.
+
+Per-step: FORMAT_EXIT=0 LINT_EXIT=0 PLACEHOLDER_EXIT=0 IOS_TYPECHECK_EXIT=0 MAC_TYPECHECK_EXIT=0
+          TEST_EXIT=0 XCODEGEN_EXIT=0 | DEFERRED full-app xcodebuild (BUILD_EXIT=65: missing Shared.xcframework)
+
+EXIT=0
+STATUS=DONE

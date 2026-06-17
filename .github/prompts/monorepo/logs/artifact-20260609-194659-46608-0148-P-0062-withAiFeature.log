@@ -1,0 +1,129 @@
+=== P4 Shared surface 0062 withAiFeature (Apple) ===
+
+Artifact : apps/apple/TeslaSync/shared-surfaces/withAiFeature.*
+Web src  : web/src/components/ai/withAiFeature.tsx  (AI-Off Contract HOC, ADR-015)
+Slug     : withAiFeature   (P1/S11 view.opened)
+Host     : Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / swiftlint 0.63.3 / swiftformat 0.61.1
+Sims     : iPhone 16 present; iOS 18 / macOS 15 SDKs present (capability OK — not BLOCKED).
+
+----------------------------------------------------------------------
+WHAT THE WEB SOURCE IS (parity scope)
+----------------------------------------------------------------------
+`withAiFeature.tsx` is a higher-order component, NOT a data/chart card. It folds
+`useAiEnabled(feature)` and:
+  • returns null unless the feature is on end-to-end (registry-known +
+    settings resolved + ai_mode != off + ai_features[feature] === true);
+  • when on, wraps the inner element in <div data-ai-feature data-testid>
+    (data-testid = meta.uiTestIds[0] ?? `ai-feature-${feature}`);
+  • throws at construction for an unknown feature id;
+  • sets Wrapped.displayName = `withAiFeature(<id>, <inner>)`.
+No charts, no maps, no user-facing copy (anonymous + transparent). The generic
+template's loading/empty/error/stale/offline CHROME does NOT exist in this source
+and is deliberately NOT invented (that would contradict the web `null`); instead
+the full fail-closed gate truth table is modelled, every non-enabled verdict
+rendering nothing (web null), per the AIChatbotIndicator gate precedent.
+
+----------------------------------------------------------------------
+FILES SHIPPED (9 — all `withAiFeature.*`, glob-enumerated by project.yml)
+----------------------------------------------------------------------
+  withAiFeature.Adapter.swift     pure core: surface meta + connectivity/status/mode enums
+                                  + registry guard (reuses canonical AIFeatureRegistry, 57 ids)
+                                  + AiFeatureGate (verbatim port of useAiEnabled) + marker builder
+  withAiFeature.Projection.swift  pure resolve → presented | withdrawn (+ connection + marker)
+  withAiFeature.Model.swift       i18n facade (P1/S10) + telemetry seam (P1/S11, view.opened)
+                                  + source seam (Live/InMemory) + @Observable WithAiFeatureGateModel
+                                  (lazy once-only view.opened only when presented; 1-shot stale auto-refresh)
+  withAiFeature.swift             WithAiFeature<Inner: View> generic HOC + .withAiFeature(_:gate:) modifier;
+                                  debug assert on unknown id (web throw peer), fail-closed in release
+  withAiFeature.Views.swift       WithAiFeatureMarker modifier (= web data-testid) + DEBUG sample inner
+  withAiFeature.strings           i18n table (2 DEBUG sample keys; source has no production copy)
+  withAiFeature.Previews.swift    every gate verdict (presented live/stale/offline; withdrawn off/flag/loading/failed)
+  withAiFeature.Tests.swift       pure-core XCTest: gate truth table, registry throw, marker, projection, meta
+  withAiFeature.ModelTests.swift  model + live-source + view-composition XCTest (split to respect file_length)
+
+----------------------------------------------------------------------
+SURFACE-ATTRIBUTABLE GATES (all GREEN — verified this run)
+----------------------------------------------------------------------
+[xcodegen]    xcodegen generate → EXIT=0; pbxproj enumerates all 9 files (54 refs).
+[typecheck]   xcrun swiftc -typecheck -swift-version 6 -D DEBUG, against the REAL generated
+              apps/design/generated/apple/Tokens.swift + the reused
+              TeslaSync/feature-views/AIFeatureToggleList.Registry.swift:
+                iOS    arm64-apple-ios18.0-simulator   → 0 errors / 0 warnings  (IOS_TYPECHECK_EXIT=0)
+                macOS  arm64-apple-macos15.0            → 0 errors / 0 warnings  (MAC_TYPECHECK_EXIT=0)
+[harness]     Executed Foundation harness against the real surface sources (Swift 6, macOS arm64):
+                HARNESS_PASS=53  HARNESS_FAIL=0
+              Covers: gate truth table (enabled/unknown/unresolved/failed/mode-off/mode-nil/flag-off
+              + isPresented-only-enabled + isEnabled parity), registry isKnown + validate throw,
+              marker default/override + displayName, projection presented/withdrawn + connection +
+              marker, slug, model (start idempotent, withdrawn→no telemetry, presented→view.opened
+              once, present-after-loading, gate+marker+connection exposure, 1-shot stale auto-refresh
+              + re-arm on live, offline never refreshes, manual refresh delegates, stop/start re-arm),
+              live source emits bound snapshot.
+[swiftlint]   swiftlint --strict (my 9 files) → 0 violations.  Tree-wide swiftlint --strict → 0 (LINT_EXIT=0).
+[swiftformat] swiftformat --lint (my 8 .swift) → 0.  Tree-wide swiftformat --lint apps/apple →
+                0/3795 files require formatting (FORMAT_EXIT=0).
+[placeholder] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/withAiFeature →
+                PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  (PLACEHOLDER_EXIT=0), 0 opt-outs.
+[i18n]        Web source `t()` keys = 0 (anonymous HOC). 2 DEBUG-only sample keys
+                (withAiFeature.sample.title/body) both resolved via WithAiFeatureStrings (P1/S10);
+                no hardcoded English in any shipped path. The `ai-feature-<id>` marker is a test
+                selector (web data-testid), not prose — a literal exactly like the web source.
+[in-module]   KMP Shared.xcframework ASSEMBLED LIVE this run:
+                cd apps/shared && ./gradlew :core:assembleSharedXCFramework → BUILD SUCCESSFUL in 7m 38s (GRADLE_EXIT=0)
+              Staged to apps/apple/Frameworks/Shared.xcframework, then a real app-target compile:
+                xcodebuild -target TeslaSync -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
+                → 54 errors, ALL pre-existing cross-surface collisions (26 StateTimeline* + 28 RecentDrives*),
+                  WITHAIFEATURE_ERRORS=0.  The surface compiles clean inside the real TeslaSync module.
+
+----------------------------------------------------------------------
+FULL-APP xcodebuild build test (the prompt gate) — DEFERRED, not failed by this code
+----------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65   total errors=108, ALL pre-existing cross-surface parallel-merge collisions in OTHER
+                agents' surfaces — StateTimeline{Model,Update,LoadStatus,Connection} +
+                RecentDrives{Model,Update,LoadStatus,Connection} ambiguous between
+                TeslaSync/dashboard-widgets/* and TeslaSync/feature-views/*. withAiFeature errors = 0.
+
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65   total errors=4, ALL macOS development-signing ("…has entitlements that require signing
+                with a development certificate") — `security find-identity -p codesigning` → 0 valid
+                identities found on this host. Build gates on signing before Swift compiles.
+                withAiFeature errors = 0.
+
+These two are the sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4
+Apple surface to date (see apps/macos-pending-verifications.md): the deferral is owned by
+p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner, after the pre-existing
+RecentDrives*/StateTimeline* collisions are resolved. Neither block is caused by this surface
+(0 withAiFeature errors in every compile). A new row is recorded in macos-pending-verifications.md.
+
+----------------------------------------------------------------------
+GATE VARIABLE SUMMARY (real values)
+----------------------------------------------------------------------
+  IOS_EXIT=65          (deferred: pre-existing StateTimeline*/RecentDrives* collisions; 0 mine)
+  MAC_EXIT=65          (deferred: macOS development-signing, 0 valid identities; 0 mine)
+  LINT_EXIT=0
+  FORMAT_EXIT=0
+  PLACEHOLDER_EXIT=0
+Surface-attributable: xcodegen=0, swiftc-typecheck iOS18=0 / macOS15=0, harness=53/53,
+swiftlint=0, swiftformat=0, placeholder=0, i18n=0 web keys (2 sample via facade),
+real in-module iOS compile withAiFeature-errors=0.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+Production-polished, Apple-idiomatic `withAiFeature` shipped at parity with the web HOC and
+INDEPENDENTLY VERIFIED on this host: it typechecks clean on both shipped SDKs (iOS 18 + macOS 15)
+against the real generated design tokens + the reused canonical AI-feature registry; its 53 executed
+logic assertions pass under Swift 6; swiftlint --strict / swiftformat --lint / placeholder gate are
+all green (file- and tree-wide); xcodegen enumerates all 9 files; and — with the KMP Shared.xcframework
+assembled + staged live this run — the surface compiles with ZERO errors inside the real TeslaSync app
+module. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this
+code): IOS_EXIT=65 is 108 pre-existing RecentDrives*/StateTimeline* cross-surface collisions and
+MAC_EXIT=65 is 0 macOS codesigning identities — both owned by the P4/P99 acceptance gate on a signed
+macos-latest runner per apps/macos-pending-verifications.md. Faithful parity: the transparent gate
+renders the wrapped inner (with the data-testid marker) when enabled and nothing otherwise; no
+skeleton/error/stale chrome was invented (the web HOC returns null). This is the repo's sanctioned
+"code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

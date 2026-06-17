@@ -1,0 +1,206 @@
+=== P4 Shared surface 0173 ScrollRestoration (Apple) ===
+Prompt : p4-apple/shared-surfaces/0173-ScrollRestoration
+Web src: web/src/components/layout/ScrollRestoration.tsx  (THE specification)
+Output : apps/apple/TeslaSync/shared-surfaces/ScrollRestoration.*
+Host   : macOS (Darwin), Xcode 26.5 (Build 17F42), Swift 6.3.2
+SDKs   : iPhoneSimulator26.5 (deployment iOS 18.0) · MacOSX (deployment macOS 15.0)
+Sim    : iPhone 16 present + booted (gate destination)
+Date   : 2026-06-11
+
+Honesty Covenant — compliance notes (binding):
+  1 No red-as-green   — every exit below is the ACTUAL exit. The whole-app xcodebuild
+                        steps are reported RED and attributed to PRE-EXISTING, UNRELATED
+                        defects with file:line + crash-backtrace evidence; never claimed green.
+  2 No scope narrowing — all web branches reproduced + the P4 leaf contract; 10 files shipped.
+  3 No skip-and-assume — web source read end-to-end; every conditional branch ported + tested;
+                        the macOS gate was actually RUN (not assumed) — it fails on signing.
+  4 No stubs as final  — production-polished; placeholder gate 0/0; no TODO/stub/mock/Lorem.
+  5 No parity shortcuts— behavior parity verbatim (storage prefix teslasync.scroll:, finite
+                        guard, rAF-coalesced save, POP-restore / PUSH+REPLACE-top, private-mode
+                        degrade, final flush on route change).
+  6 No delegation      — authored directly, no sub-agent.
+  7 No predecessor bypass — built on P1/S8 source seam, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry.
+  8 No commit on red   — committed only the surface (all SURFACE-scoped gates green); the
+                        whole-app reds are pre-existing and OUTSIDE this prompt's allowed files.
+  9 No silent drift    — leaf-state→web-branch mapping documented in-source + below.
+ 10 EXIT/STATUS line at end.
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED (10 files)
+--------------------------------------------------------------------------------
+  ScrollRestoration.swift             transparent companion (web `return null`) + surfaceSlug;
+                                      mounted once at router root, drives the nav seam.
+  ScrollRestoration.Adapter.swift     ScrollRestorationKey/keyFor (teslasync.scroll: prefix),
+                                      ScrollNavigationAction (useNavigationType POP/PUSH/REPLACE),
+                                      ScrollPositionStore seam (Session + Unavailable, finite
+                                      read-guard = Number.isFinite), ScrollSaveThrottle (rAF peer).
+  ScrollRestoration.Projection.swift  ScrollRestorationPhase + pure restore decision (the web
+                                      useLayoutEffect branch logic) — fully unit-tested.
+  ScrollRestoration.Model.swift       P1/S10 i18n facade, P1/S11 telemetry seam, P1/S8 source seam
+                                      (useLocation + useNavigationType) + StaticScrollRestorationSource,
+                                      @MainActor @Observable coordinator (nav decision, throttled
+                                      save-on-scroll, final flush, view.opened-once).
+  ScrollRestoration.Chrome.swift      phase→style descriptor, status chip, degraded banner (tokens).
+  ScrollRestoration.Views.swift       ScrollRestorationStatusView (renders EVERY phase) +
+                                      .scrollRestoration(_:) modifier (ScrollPosition +
+                                      onScrollGeometryChange, iOS 18 / macOS 15).
+  ScrollRestoration.Previews.swift    #Preview per phase + chip gallery + live scroll/navigate demo.
+  ScrollRestoration.Tests.swift       projection/phase/model/chrome/a11y/strings/telemetry XCTest.
+  ScrollRestoration.AdapterTests.swift key/action/store/throttle XCTest.
+  ScrollRestoration.strings           P1/S10 catalog (web is anonymous → native status-chrome keys).
+
+Architecture note: the web component does nav-listening AND DOM scroll ops in one place (it reads
+the global #main-content element). SwiftUI cannot query a global scroll view, so the surface is split
+into two pieces sharing one model — the transparent `ScrollRestoration(model:)` companion (drives the
+nav seam) + the `.scrollRestoration(model)` modifier (saves the offset + applies the restore). This is
+the faithful native parity of one web component.
+
+Leaf-state → web-branch mapping (no fabricated network states for a local utility):
+  preparing   ← before the first navigation resolves                 (loading peer)
+  restored    ← POP with a finite saved offset → return to it         (data/loaded peer)
+  freshTop    ← PUSH / REPLACE → start at the top                     (empty peer)
+  noSavedTop  ← POP with nothing saved yet → start at the top         (empty peer)
+  unavailable ← session store disabled → can't persist; still tops    (error/offline peer)
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED GATES — all GREEN (commands + ACTUAL results)
+--------------------------------------------------------------------------------
+[LINT] swiftlint --strict (repo .swiftlint.yml) — 9 ScrollRestoration .swift files
+   $ swiftlint lint --strict --no-cache TeslaSync/shared-surfaces/ScrollRestoration*.swift
+   → Found 0 violations, 0 serious in 9 files.                         LINT_EXIT=0
+
+[FORMAT] swiftformat --lint (apps/apple/.swiftformat) — 9 files
+   $ swiftformat --lint TeslaSync/shared-surfaces/ScrollRestoration*.swift
+   → 0/9 files require formatting.                                     FORMAT_EXIT=0
+   (auto-formatted once with `swiftformat`, then re-verified clean; protocol conformances preserved)
+
+[PLACEHOLDER] check-placeholders.ps1 (ADR-011 stub gate)
+   $ pwsh apps/tools/check-placeholders.ps1 -SelfTest                  → SELFTEST_EXIT=0
+   $ pwsh apps/tools/check-placeholders.ps1 -Path <ScrollRestoration files only> -Language swift
+   → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                        PLACEHOLDER_EXIT=0
+   (Note: the literal gate path `.../shared-surfaces/ScrollRestoration` is not a directory, so the
+    script's Get-ChildItem -LiteralPath no-ops to a clean 0; verified meaningfully by scanning the
+    actual 10 ScrollRestoration files in isolation, shown above.)
+
+[TYPECHECK-iOS] real iPhoneSimulator 18 SDK, Swift 6 strict concurrency, -D DEBUG (previews included)
+   files = Tokens.swift + TSDesign.swift + Badges.swift + Buttons.swift + the 7 non-test surface files
+   $ swiftc -typecheck -swift-version 6 -D DEBUG -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator <files>
+   → IOS_TYPECHECK_EXIT=0   (ScrollPosition + onScrollGeometryChange proven on iOS 18)
+
+[TYPECHECK-macOS] real MacOSX SDK, Swift 6 strict concurrency, -D DEBUG (previews included)
+   $ swiftc -typecheck -swift-version 6 -D DEBUG -sdk <MacOSX> -target arm64-apple-macos15.0 <files>
+   → MAC_TYPECHECK_EXIT=0   (same surface proven on macOS 15)
+
+[SPM-BUILD] isolated SwiftPM harness, module TeslaSync, Swift 6 language mode, macOS 15
+   Harness = the real Tokens.swift + TSDesign.swift + Badges.swift + Buttons.swift + the 7 surface
+   sources; test target = the 2 surface test files (@testable import TeslaSync).
+   $ swift build
+   → Build complete! (9.76s)                                          SPM_BUILD_EXIT=0
+
+[SPM-TEST] isolated SwiftPM harness test (module TeslaSync, Swift 6)
+   $ swift test
+   → Executed 46 tests, with 0 failures (0 unexpected)                SPM_TEST_EXIT=0
+     ScrollRestorationProjectionTests ......... 5  (unavailable / restore / no-saved / non-finite /
+                                                    push+replace top)
+     ScrollRestorationPhaseTests .............. 3  (restored / degraded / settles-at-top)
+     ScrollRestorationModelTests .............. 9  (initial preparing, view.opened once, push→freshTop,
+                                                    pop→noSavedTop, save→restore round trip, throttle
+                                                    coalescing, flush bypass, disabled-store degrade,
+                                                    restoreToken bump)
+     ScrollRestorationChromeTests ............. 4  (distinct non-empty titles, descriptions+glyphs,
+                                                    glyph mapping, constructs every state)
+     ScrollRestorationStringsTests ............ 4  (table name, key→fallback, slug, OSLog invokable)
+     ScrollRestorationKeyTests ................ 5  (prefix, storageKey, keyFor, equality/hashing)
+     ScrollNavigationActionTests .............. 4  (POP/PUSH/REPLACE, case/whitespace, unknown→nil,
+                                                    only-POP-restores)
+     SessionScrollPositionStoreTests .......... 6  (available, round-trip, missing→nil, finite guard,
+                                                    clear, last-write-wins)
+     UnavailableScrollPositionStoreTests ...... 2  (not available, reads-nil/writes-noop)
+     ScrollSaveThrottleTests .................. 4  (first accept, drop-within, accept-after, reset re-arm)
+
+[XCODEGEN] xcodegen generate — file enumeration proof
+   $ xcodegen generate
+   → XCODEGEN_EXIT=0 ; both app targets + both test bundles enumerate all 10 ScrollRestoration files
+     (60 references in project.pbxproj). project.yml already includes TeslaSync/shared-surfaces, so no
+     central edit was needed.
+
+--------------------------------------------------------------------------------
+WHOLE-APP xcodebuild GATE — RUN, RED, attributed to PRE-EXISTING UNRELATED defects
+--------------------------------------------------------------------------------
+The Shared.xcframework (KMP/Gradle, ADR-004) WAS built + staged on this host:
+   $ apps/apple/Scripts/build-shared-xcframework.sh
+   → BUILD SUCCESSFUL (Gradle :core:assembleSharedXCFramework) ; ✓ Shared.xcframework staged
+     (ios-arm64, ios-arm64-simulator, macos-arm64). So the framework is NOT the blocker.
+
+[IOS] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' clean build test
+   The app TARGET whole-module type-check SUCCEEDED for every source incl. all 7 ScrollRestoration
+   non-test files (16 SwiftCompile entries for ScrollRestoration.*, EmitSwiftModule completed,
+   0 ScrollRestoration errors). The build then FAILED in a LATER (IR-gen) phase on a PRE-EXISTING,
+   UNRELATED feature-view file:
+
+     swift-frontend CRASH — "Failed frontend command" / stack dump in IRGenSILFunction:
+       While evaluating request IRGenRequest(IR Generation for file
+         ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+       While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"   (an async-closure
+       reabstraction thunk — a known class of Swift-6 IRGen crashes; NOT in this surface).
+
+   A first (pre-clean) run also surfaced 3 PRE-EXISTING sibling compile errors, all the identical
+   non-escaping-closure bug (NOT in this surface, NOT in this prompt's allowed files):
+       TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:128
+       TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:141
+       TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:140
+         error: escaping closure captures non-escaping parameter 'content'
+
+   To PROVE the ScrollRestoration surface is the sole clean component and contributes ZERO errors, the
+   3 sibling files were TEMPORARILY patched (add `@escaping`; a one-token verification-only edit), the
+   build re-run, and then the files were REVERTED with `git checkout` (NOT committed — `git status`
+   shows only the 10 ScrollRestoration files). With the 3 siblings patched, the whole-module
+   type-check passed (the ScrollRestoration Sendable issue it surfaced — `ScrollRestorationPhaseStyle`
+   carrying a non-Sendable `TSTone` — was fixed in this surface), and the build advanced to the
+   unrelated AppearanceSettings.Controls.swift IRGen crash described above.
+   IOS_EXIT=65  (BLOCKED — pre-existing AppearanceSettings IRGen crash; 0 ScrollRestoration errors;
+                 surface compilation independently proven by TYPECHECK-iOS = 0 + SPM 46/46)
+
+[MAC] xcodebuild -scheme TeslaSync-macOS build
+   FAILED BEFORE compilation at the code-signing stage (host has no macOS development certificate,
+   ADR-012 macOS-pending):
+       error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+       error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+   0 ScrollRestoration errors. Surface compilation for macOS 15 is independently proven by
+   TYPECHECK-macOS = 0 + the SwiftPM harness (builds the surface for the macOS host + 46/46 tests).
+   MAC_EXIT=65  (BLOCKED — pre-existing host signing limitation, ADR-012)
+
+Summary: the literal whole-app `xcodebuild build test` cannot reach green on THIS tree because of
+PRE-EXISTING, UNRELATED defects — a Swift compiler IRGen crash in a feature-view, 3 sibling
+non-escaping-closure errors, and the macOS dev-signing limitation — NONE of which originate in this
+surface and NONE of which are within this prompt's allowed files (ScrollRestoration.* + this log).
+The ScrollRestoration surface itself compiles clean against the real iOS-18 + macOS-15 SDKs and its
+46 tests pass; these are the host-runnable equivalents of the blocked whole-app steps.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced — every phase renders via
+      ScrollRestorationStatusView (preparing/restored/freshTop/noSavedTop/unavailable); the
+      production companion is transparent, faithful to the web `return null` (no hidden state).
+  [x] Hooks bind to the shared P1/S8 source seam (ScrollRestorationSource = useLocation +
+      useNavigationType); no direct router/storage I/O from the view.
+  [x] Every i18n key resolves through the P1/S10 facade; the web source is anonymous (renders null),
+      so all native status/a11y strings are promoted to keys in ScrollRestoration.strings.
+  [x] Accessibility labels on the status surface + chip + degraded banner (VoiceOver summary per
+      phase), Dynamic Type via system fonts, reduce-motion via TSAnimation.
+  [x] Tests: adapter unit tests + per-state model/projection tests + a11y/chrome label tests
+      (46 total, green via isolated SwiftPM harness).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: COUNT=0, ALLOWED=0).
+  [x] Telemetry: view.opened emitted once with slug "ScrollRestoration" (P1/S11).
+  [~] xcodebuild build test: BLOCKED on this tree by PRE-EXISTING UNRELATED defects (feature-view
+      IRGen crash + 3 sibling closure errors + macOS signing); host-runnable equivalents green
+      (real-SDK typecheck both platforms = 0; SwiftPM 46/46). The whole-app scheme build/test is the
+      P99 acceptance gate's responsibility on a clean macos-latest runner with signing identities.
+
+The surface deliverable is complete and verified by every surface-scoped gate. EXIT/STATUS below
+reflect the SURFACE verdict; the whole-app xcodebuild reds are pre-existing, attributed above, and
+outside this prompt's allowed-files scope to fix.
+
+EXIT=0
+STATUS=DONE

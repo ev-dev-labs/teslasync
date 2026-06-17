@@ -1,0 +1,98 @@
+=== P4 Shared surface 0140 Spinner (Apple) ===
+# Runner: Darwin 25.5.0 arm64 | Xcode 26.5 | Swift version 6.3.2
+
+### STEP 1/5 — iOS build test (scheme TeslaSync, iPhone 16) ###
+** BUILD FAILED **
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+Testing failed:
+IOS_EXIT=65
+
+### STEP 2/5 — macOS build test (scheme TeslaSync-macOS) ###
+** BUILD FAILED **
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+Testing failed:
+MAC_EXIT=65
+
+### STEP 3/5 — swiftlint --strict (apps/apple) ###
+Linting 'WatchDesignTokens.swift' (4342/4343)
+Linting 'TeslaSyncWidgets/Widgets/SystemHealthWidget.swift' (4343/4343)
+Done linting! Found 0 violations, 0 serious in 4343 files.
+LINT_EXIT=0
+
+### STEP 4/5 — swiftformat --lint apps/apple ###
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-95/apps/apple/.swiftformat
+SwiftFormat completed in 67.09s.
+0/4641 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+### STEP 5/5 — check-placeholders (Spinner) ###
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+ANALYSIS & EVIDENCE
+================================================================================
+
+GATE STEP RESULTS
+  STEP 1 iOS build test ........ IOS_EXIT=65   (RED — pre-existing sibling compile error, see below)
+  STEP 2 macOS build test ...... MAC_EXIT=65   (RED — runner has no development signing cert + same sibling errors)
+  STEP 3 swiftlint --strict .... LINT_EXIT=0   (GREEN — 0 violations across 4343 files)
+  STEP 4 swiftformat --lint .... FORMAT_EXIT=0 (GREEN — 0/4641 files require formatting)
+  STEP 5 check-placeholders .... PLACEHOLDER_EXIT=0 (GREEN — PLACEHOLDER_COUNT=0)
+
+ROOT CAUSE OF THE RED BUILD STEPS (both OUTSIDE this prompt's allowed-files scope)
+  This prompt's allowed files are: apps/apple/TeslaSync/shared-surfaces/Spinner.* and this log.
+  The Spinner surface is NOT the cause of either build failure:
+
+  (a) iOS — pre-existing sibling compile errors in COMMITTED files (HEAD ea1120cac), e.g.:
+        - apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24
+            "the compiler is unable to type-check this expression in reasonable time"
+        - apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129
+            "escaping closure captures non-escaping parameter 'content'"
+      These are not Spinner files and are forbidden to edit by the allowed-files constraint.
+
+  (b) macOS — the runner has no Apple development signing certificate (project.yml sets
+      DEVELOPMENT_TEAM: ""), so TeslaSync-macOS / TeslaSyncWidgets-macOS fail before compilation:
+            "...has entitlements that require signing with a development certificate."
+      This is a runner-capability limitation, identical for every parallel prompt.
+
+PROOF THE iOS FAILURE IS PRE-EXISTING (independent of Spinner)
+  Built HEAD with ALL Spinner.* files temporarily removed and the project regenerated.
+  Result: BUILD FAILED, EXIT=65, same sibling error:
+    apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error:
+      the compiler is unable to type-check this expression in reasonable time
+  i.e. the baseline does not compile even when this surface does not exist.
+
+PROOF THE SPINNER SURFACE ITSELF IS COMPLETE & CORRECT
+  1) In-tree compile: after fixing the surface, xcodebuild compiled every Spinner.* file with
+     ZERO errors attributable to them; the build only stopped later at the sibling files above.
+  2) Isolated module: the Spinner sources (Adapter/Model/Views/swift/Previews) + the generated
+     design tokens were compiled as a standalone SwiftPM module and the FULL co-located test
+     suite (Spinner.Tests.swift + Spinner.ModelTests.swift) was executed natively:
+         Test Suite 'All tests' passed — Executed 32 tests, with 0 failures (0 unexpected)
+         (standalone SpinnerKit SwiftPM module: Spinner sources + generated design tokens)
+       => adapter unit tests (size geometry, motion preference/plan, projection, bolt path),
+          model/source tests (view.opened once, apply→resolved, refresh), view-composition tests
+          for every size/mode/caption branch, and the accessibility status-label test ALL PASS.
+
+ACCEPTANCE CRITERIA SELF-ASSESSMENT
+  [x] Surface renders all branches from the web source (animated draw + reduced-static bolt,
+      sm/md/lg, optional caption, cyan/emerald glow) — verified by previews + composition tests.
+  [x] Binds via the P1/S8 state-holder layer (SpinnerModel + SpinnerSource); no HTTP in the view.
+      The sole web data source (useMotionPreference) is ported as SpinnerMotionPreference and read
+      at the view boundary from @Environment(\.accessibilityReduceMotion).
+  [x] Every i18n key from source resolves through the P1/S10 facade (spinner.loading); no English
+      literals in shipped code.
+  [x] Accessibility: composed role="status" element with label = caller label ?? localized
+      "Loading"; bolt is decorative (aria-hidden parity); .updatesFrequently trait.
+  [x] Tests: adapter unit + per-branch view composition + a11y label tests (32 assertions, pass).
+  [x] No TODO/stub/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+  [~] EXIT=0: NOT achievable here — blocked by pre-existing sibling compile errors and the macOS
+      signing-cert runner limitation, both outside the allowed-files scope. Per the prompt's
+      capability/runner BLOCKED clause, this is recorded honestly as BLOCKED (no red-as-green).
+
+EXIT=65
+STATUS=BLOCKED

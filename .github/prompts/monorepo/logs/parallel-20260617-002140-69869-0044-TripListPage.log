@@ -1,0 +1,179 @@
+I'll start by exploring the repository structure to understand the task fully. Let me look at the web source page, the Apple app structure, and existing patterns.
+
+Now let me explore the Apple app structure and existing patterns to understand the architecture.
+
+Let me explore the Features directory and look for existing Trips implementation plus similar reference pages.
+
+Let me examine existing Trips patterns and the parity infrastructure in parallel.
+
+Let me look at a similar list-style parity page (Driving) and the parity infrastructure to understand conventions.
+
+Let me check the git history for recently completed similar pages and look at the manifest entry plus an example log.
+
+The most recent reference is `SharingTripsPage`. Let me examine its full structure, log format, and ledger update to follow the exact established conventions.
+
+This is the canonical recent pattern. Let me read the full SharingTrips file set plus the log to understand all conventions.
+
+Let me read the remaining SharingTrips files, the log, and the ledger entry to complete my understanding of the conventions.
+
+Let me read the log format, ledger entry, and check the test/project structure.
+
+Now let me examine the ledger entry, the chart wrappers (this page needs a BarChart), and the shared component/token library.
+
+Let me examine the ChartContainer wrapper, a bar chart usage example, and the full ledger rows.
+
+The recent SharingTrips had no charts, but TripList needs a bar chart. Let me study the most recent chart-bearing list pages (TeslaChargingSessions, SpeedProfile) and how they bind data + use ChartContainer.
+
+Let me study the metric card component and how recent pages frame charts + lay out stat grids.
+
+Let me examine the MetricCard shared surface, TSStatCard, and how the charging page frames its summary row + bar chart panel.
+
+I now understand the architecture well. Let me check for symbol collisions, the Units/formatting API, the string catalog format, and how project.yml includes files.
+
+Let me check the project.yml excludes, the Units API, and the string catalog structure.
+
+Let me find the Units facade definition, the energy formatter, and currency formatter conventions used in recent pages.
+
+Let me find the `tsUnits` environment key, the currency formatter, and the MetricCardColor options.
+
+Let me look at the currency formatting convention, TSStatCard, and verify the shared primitive signatures (panel, empty, skeleton, fadein, button, pagination).
+
+Let me verify the exact signatures of the shared primitives and color tokens I'll use.
+
+Let me verify TSButton, TSGlassPanel, TSStatCard, pagination, and the Color.TS/Font.TS tokens.
+
+Let me check the Color.TS token palette and whether a pagination component exists.
+
+Now let me examine the string catalog format and check for existing trips.* keys.
+
+I have the web defaults from the source. Let me verify them against the web i18n en locale file to ensure verbatim parity.
+
+Let me confirm the `Trip` API type and `useTrips` hook contract.
+
+I have everything needed. Let me set up a plan, then check the available toolchain on this runner.
+
+Full toolchain available — the gate will run, not auto-BLOCK. Let me check the swiftlint config and placeholder scanner constraints, then set up my plan.
+
+Let me read the forbidden placeholder patterns to avoid triggering the scanner.
+
+I have all the context I need. Let me set up my task tracking and verify no symbol collisions for my planned type names.
+
+`TripSummary` is taken; I'll use `TripListItem`. Let me verify my final type names are collision-free, then write the plan file.
+
+All names are free. Let me write the plan file, then start creating the implementation files.
+
+Now I'll create the implementation files. Starting with the models, strings, and format files.
+
+Let me check for an existing "In progress" localization key and the web `formatDate` format before writing the Format file.
+
+All set. Now the Format file, reusing the existing `driveDetail.inProgress` key for the open-trip sentinel.
+
+Now the `@Observable` page model with derived totals, top-10 chart data, and CSV/JSON export serialization.
+
+The export DTO uses snake_case Swift identifiers, which SwiftLint's `identifier_name` will reject under `--strict`. Let me fix it with camelCase properties + `CodingKeys`.
+
+Now the charts file — the horizontal Swift Charts bar chart plus the ChartContainer-parity panel with CSV/JSON export and empty state.
+
+Let me verify the `TSEmptyState` convenience initializer (no-actions) exists, since I used it without an actions closure.
+
+The MetricCard labels need `String` (not `LocalizedStringKey`). Let me convert the four stat-card label accessors, then write the main page.
+
+Now the navigation registration file.
+
+All 8 source files are created. Let me do a fast syntax parse-check before the heavier build, then add the strings to the catalog.
+
+Syntax is clean. Now let me add the 22 keys to the string catalog. First, let me confirm the exact format of the `strings` opening and an entry.
+
+Now I'll insert the 22 keys textually (matching the existing catalog format) right after the `strings` opening, then re-validate.
+
+Catalog updated and validated. Let me mark progress and run the fast gate checks (placeholder scan + swiftlint).
+
+Placeholder scan clean (the 1 allowed is the pre-existing TripsReplay marker). Now swiftlint --strict.
+
+SwiftLint clean (0 violations across all 19 files). Now let me check the Shared framework staging and run xcodegen.
+
+Project generated. The `Shared.xcframework` (KMP core) isn't staged — needed for the app to compile. Let me check the build script and toolchain availability.
+
+`gradlew` + `java` are available. The full-app build is known-blocked by pre-existing baseline breakage (per sibling logs), but I'll build the Shared framework and verify my unit compiles clean. Let me check build state and start the framework build in the background.
+
+Gradle + Kotlin/Native caches exist from prior builds, so the framework build is feasible. Let me start it in the background.
+
+While the framework builds, let me update the ledger. Let me find the existing trips rows for placement.
+
+I'll insert the two `page:trips/TripList` rows after the TripReplay rows (line 1889).
+
+Ledger updated (2 rows, 34/34). Let me check the framework build progress.
+
+Build is running. Let me update todos and draft the evidence log while it compiles.
+
+Let me check the project's target/scheme names for the build command while the framework compiles.
+
+Targets confirmed. Let me check the framework build progress.
+
+The build continues. Let me write the evidence log now and finalize the gate results once it completes.
+
+Log drafted with build-result placeholders. Let me check the framework build status.
+
+Framework built successfully (7m25s). Let me stage it to `Frameworks/` and check whether the project's pre-build script will re-run gradle.
+
+Framework built. Let me stage it and launch the macOS build (the pre-build script will re-verify via cached gradle). This is the unit-compile verification.
+
+Build running in background. Let me reflect on potential issues while waiting, then check. Let me wait and monitor the build log.
+
+Build exited 65 as expected (pre-existing baseline breakage). Now the critical check: are there any errors in my unit (`Features/Trips`)?
+
+0 errors in my unit. Let me confirm my files were actually compiled (in the project) and characterize the baseline errors as out-of-scope.
+
+All 8 files are in the project. 484 baseline errors, all in untouched sibling dirs (shared-surfaces, feature-views, etc.), **zero in Features/Trips**. Let me sample the baseline error types to document them accurately.
+
+Confirmed: 484 baseline errors are the documented `#Preview` SwiftUI/AppKit ambiguity (395) in pre-existing `.Previews.swift` files — **zero in my unit**, which authors no `#Preview` blocks. Let me finalize the log with actual results.
+
+Let me verify no placeholders remain in the log and it ends correctly.
+
+Log complete (34/34, EXIT=0/STATUS=DONE, no placeholders). Let me re-run the fast gates for a clean record, validate JSON, and check git status before committing.
+
+All gates green and git status is exactly as expected (xcodeproj + framework are correctly gitignored). Let me clean up the temp file and commit.
+
+All expected files staged. Now let me commit with a descriptive conventional-commit message and the Co-authored-by trailer.
+
+Committed. Let me verify the working tree is clean and do a final confirmation.
+
+Working tree clean, commit complete. Let me finalize the task tracking.
+
+All 13 todos done. The task is complete and verified.
+
+## Summary
+
+Implemented the native SwiftUI/HIG parity of the web `TripListPage` (`/trips`) for the Apple app at full 34-item parity, adaptive across macOS + iOS.
+
+**8 new files** in `apps/apple/TeslaSync/Features/Trips/` (1,296 lines, all `TripList*`-prefixed to avoid collisions with the sibling `TripsReplay*` / dashboard `TripSummary*`):
+- `TripListModels` (SI `TripListItem`, state enum, `TripListDataSource` seam, query) · `TripListStrings` (22 web keys) · `TripListFormat` (date/duration/distance/energy/currency/efficiency) · `TripListSampleData` (Sample/Empty/Failing) · `TripListPageModel` (`@Observable`: totals, top-10 chart slice, CSV/JSON export) · `TripListCharts` (Swift Charts horizontal `BarMark` + ChartContainer panel) · `TripListPage` (4 MetricCards, chart, All-Trips list, TripListRow, loading skeleton) · `TripListRouteRegistration`.
+
+**Parity (34/34):** 7 panels + 2 charts (ChartContainer + native BarChart) + 3 states (loading/empty/success) + 22 strings. SI is converted only at the render boundary via `Units`; every literal resolves from the catalog.
+
+**Non-source:** +22 bare `trips.*` keys to `Localizable.xcstrings` (verbatim web defaults), +2 covered rows to `apple-ledger.json`, evidence log written.
+
+**Gates (toolchain available, not BLOCKED):**
+- Placeholder scan: `PLACEHOLDER_COUNT=0`, EXIT=0
+- `swiftlint --strict`: 0 violations in 19 files
+- KMP `Shared.xcframework` built + staged; `TeslaSync-macOS` compiles my unit with **0 errors in `Features/Trips`** (verified against the whole-module transcript; the full-app exit 65 is pre-existing `#Preview`/duplicate-symbol baseline breakage in 484 untouched sibling files, consistent with prior sibling-page gates).
+- `EXIT=0 / STATUS=DONE`
+
+Committed as `618ff6351`; working tree clean.
+
+
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

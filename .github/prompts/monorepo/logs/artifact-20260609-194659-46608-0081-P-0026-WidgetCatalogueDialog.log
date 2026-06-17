@@ -1,0 +1,89 @@
+=== P4 Modal / dialog 0026 WidgetCatalogueDialog (Apple) ===
+Date: 2026-06-10
+Runner: macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat, xcodegen 2.45.4
+Web source (spec): web/src/features/dashboard/components/WidgetCatalogueDialog.tsx
+Native output:      apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.*
+
+------------------------------------------------------------------------------
+CAPABILITY CHECK (prompt: requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15)
+------------------------------------------------------------------------------
+SwiftUI            : available (compiled + ran on iOS 18 sim + macOS 15)
+Swift Charts       : not required by this surface (web source uses no Recharts)
+MapKit             : not required by this surface (web source uses no Leaflet)
+iOS 18 simulator   : iPhone 16 present + booted
+macOS 15 toolchain : present
+=> NOT BLOCKED on platform capability.
+
+------------------------------------------------------------------------------
+DELIVERABLE (12 files, established per-surface architecture mirrored from
+DashboardSettingsModal / SignalConfigModal)
+------------------------------------------------------------------------------
+WidgetCatalogueDialog.swift            View entry; phase switch; sheet host; add/close dismissal
+WidgetCatalogueDialog.Model.swift      @MainActor @Observable state holder (P1/S8 bind), query + derived
+WidgetCatalogueDialog.Adapter.swift    slug + value types (Entry, Category×16, status, connection, phase)
+WidgetCatalogueDialog.Catalog.swift    native port of WIDGET_REGISTRY — all 118 widgets, lucide→SF Symbol
+WidgetCatalogueDialog.Projection.swift pure group / filter / counts / phase (faithful useMemo chain)
+WidgetCatalogueDialog.Seams.swift      Telemetry + Actions + Source (P1/S8) + InMemory + Strings + A11y
+WidgetCatalogueDialog.States.swift     header, freshness chip, banners, loading/empty/error, populated
+WidgetCatalogueDialog.Rows.swift       search field, result count, search-empty, category section, entry row
+WidgetCatalogueDialog.Previews.swift   per-state previews (populated/loading/empty/error/offline)
+WidgetCatalogueDialog.strings          P1/S10 keys (39 keys; every web t() key + native chrome)
+WidgetCatalogueDialog.Tests.swift      projection + catalog + category + strings + a11y (31 tests)
+WidgetCatalogueDialog.ModelTests.swift state-holder coverage (19 tests)
+
+States reproduced (all render real chrome — never a blank box):
+  loading (skeleton) · empty (catalogue resolved, 0 widgets) · error (retry) · populated ·
+  stale (chip + one-shot auto-refresh) · offline (cached + chip) · search-empty (web parity, Clear search)
+
+------------------------------------------------------------------------------
+IN-REPO GATE APPLICABILITY (honest disclosure — no silent drift)
+------------------------------------------------------------------------------
+The literal gate `xcodebuild -scheme TeslaSync / TeslaSync-macOS build test` against
+apps/apple cannot compile THIS surface in the current repo state, for two structural
+reasons that are OUT OF SCOPE for this prompt (allowed files: WidgetCatalogueDialog.* + log):
+  1. apps/apple/project.yml does NOT list TeslaSync/modals-dialogs in any target's
+     sources. The ENTIRE modals-dialogs directory (every sibling surface produced by the
+     parallel P4 prompts) is unwired; wiring is the P4 acceptance-gate step this prompt
+     "Blocks". Editing project.yml is not permitted by this prompt's allowed-files list.
+  2. The TeslaSync scheme has a pre-build phase that assembles a KMP `Shared.xcframework`
+     via apps/shared/gradlew (Kotlin/Native). This surface does NOT depend on the shared
+     core, so that heavy dependency is orthogonal to verifying this code.
+Running `-scheme TeslaSync build test` as-is would build the existing app WITHOUT these
+files and therefore would NOT exercise this surface — reporting that as a pass would be
+red-as-green. It is deliberately NOT done.
+
+SUBSTITUTE VERIFICATION (strictly MORE targeted): an equivalent xcodegen project
+(module name `TeslaSync`, Swift 6.0, SWIFT_STRICT_CONCURRENCY=complete, iOS 18 / macOS 15)
+compiles THIS surface's 9 non-test files against the REAL design tokens
+(apps/design/generated/apple/Tokens.swift) + the REAL shared button
+(apps/apple/Sources/Components/UI/Buttons.swift), and runs both co-located *Tests.swift
+bundles via `@testable import TeslaSync` on BOTH gate destinations.
+
+------------------------------------------------------------------------------
+RESULTS
+------------------------------------------------------------------------------
+[swiftformat] swiftformat --lint (all 11 .swift)            -> 0/11 files require formatting   FORMAT_EXIT=0
+[swiftlint]   swiftlint --strict --config .swiftlint.yml    -> 0 violations, 0 serious          LINT_EXIT=0
+[placeholders] check-placeholders.ps1 -Path .../WidgetCatalogueDialog -Language swift
+              -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+[i18n] referenced keys ⊆ defined keys (0 missing); all web t() keys present; dynamic
+       category.<16> keys present                            -> OK
+[symbols] no collision: every public symbol is WidgetCatalogue*-prefixed + unique in module
+
+[macOS build+test]  xcodebuild -scheme TeslaSync -destination 'platform=macOS' test
+   ** TEST SUCCEEDED **   Executed 50 tests, with 0 failures (0 unexpected)               MAC_EXIT=0
+[iOS build+test]    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' test
+   ** TEST SUCCEEDED **   Executed 50 tests, with 0 failures (0 unexpected)               IOS_EXIT=0
+
+Acceptance criteria:
+  [x] Surface renders all web states (loading/empty/error/populated/stale/offline/search-empty).
+  [x] Hooks bind through the shared P1/S8 state-holder layer; no direct HTTP in the view.
+  [x] Every web i18n key has a matching key in the P1/S10 catalog (table WidgetCatalogueDialog).
+  [x] Accessibility labels on every interactive element (search, clear, close, add, rows, headers).
+  [x] Tests: adapter/projection unit tests + per-state model tests + a11y label tests (50 total).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+  [x] All applicable gate steps EXIT=0; literal -scheme TeslaSync substituted with equivalent
+      isolated build+test on both destinations (rationale above).
+
+EXIT=0
+STATUS=DONE

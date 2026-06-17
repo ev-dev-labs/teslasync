@@ -1,0 +1,238 @@
+================================================================================
+P4 · Dashboard widget · 0053 — GeofenceWidget (Apple)
+Run: 2026-06-09T00:1x-0700   Host: Darwin arm64   Slot: 20260608-211853-78201/slot-43
+Prompt: P4/dashboard-widgets/0053 — GeofenceWidget
+Web source (spec): web/src/features/dashboard/widgets/GeofenceWidget.tsx
+Registry (canonical): web/src/features/dashboard/widgets/registry/maps.ts → "geofence-status"
+Mode: code-complete + host-built-in-isolation + host-unit-green (37/37). The repo-wide
+      Xcode `build test` is RED for THREE pre-existing reasons OUTSIDE this prompt's
+      allowed files (see GATE §[2][3][5]); none is a defect in this surface.
+================================================================================
+
+=== CAPABILITY PROBE (every line is a real probe on this host) ===
+  swift ...................... Apple Swift 6.3.2, macOS SDK 26.5                       OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42)                                      OK
+  iPhone 16 simulator ........ present (booted)                                        OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                             OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                  OK
+  java ....................... OpenJDK 17.0.19 (Kotlin/Native)                         OK
+  Shared.xcframework ......... BUILT (debug+release) + STAGED to apps/apple/Frameworks OK
+        gradle :core:assembleSharedXCFramework — BUILD SUCCESSFUL in 24m54s.
+        Ran with an ISOLATED GRADLE_USER_HOME=/tmp/geofence-gradle-home so the 40
+        parallel slots' `gradle --stop` could not kill the release-link daemon
+        (the 0060 precedent's mitigation). Slow wall-time = host contention, not error.
+
+  Capability note: this surface uses SwiftUI + MapKit (web Leaflet → MapKit) and NO
+  Swift Charts (web "Charts/maps used: (none)"). SwiftUI + MapKit are AVAILABLE and
+  PROVEN by a real host compile + executed unit suite below, so the capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable on the runner") does NOT apply —
+  the surface is authored + host-built + host-unit-green for real. The BLOCKED status
+  at the foot of this log is NOT a capability block; it is a PRE-EXISTING, out-of-
+  allowed-scope repo baseline breakage (sibling Charge* widgets + macOS signing env).
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.*) ===
+  GeofenceWidget.Adapter.swift     255  pure (Foundation-only) projection: haversine,
+                                         hasCoords(OR), inside, currentZone, fmtRadius,
+                                         name `?? '—'`. Web numeric pipeline, 1:1.
+  GeofenceWidget.Model.swift       357  P1/S8 state-holder seam (GeofenceSource→Model) +
+                                         P1/S11 telemetry + registry + DTOs + phases +
+                                         stale auto-refresh. SwiftUI-free, @MainActor.
+  GeofenceWidget.Strings.swift      67  P1/S10 i18n facade + testable a11y summaries
+                                         (split out of Model to honour the ≤400-line rule)
+  GeofenceWidget.swift             292  the surface: glass shell + header(icon/title/
+                                         freshness/refresh) + compact (cols≤1) badge +
+                                         all states (loading/empty/error/content)
+  GeofenceWidget.Map.swift         324  MapKit canvas (fence MapCircles green-in/gray-out
+                                         + vehicle marker) + fence list/rows + badges +
+                                         freshness chip + stale/offline banner
+  GeofenceWidget.Previews.swift    166  #if DEBUG previews — content/no-map/loading/empty/
+                                         error/stale/offline/compact(inside)/compact(no-zone)
+  GeofenceWidget.Tests.swift       242  XCTest: adapter + format + a11y (23 methods)
+  GeofenceWidget.ModelTests.swift  208  XCTest: model phases/telemetry/refresh + registry
+                                         (14 methods)
+  GeofenceWidget.strings            45  P1/S10 catalog contribution (22 keys)
+  One exported SwiftUI view per file; no direct HTTP in the view; no `Shared` import in
+  the surface (decoupled via the GeofenceSource seam). All Geofence* type names are
+  unique to this surface (grep proof below), so this surface adds ZERO collisions.
+
+=== PARITY (vs web GeofenceWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (GeofenceSource → GeofenceModel):
+    useGeofences, useVehicleState, useVehicles, useUnits, useTranslation. The production
+    app wires GeofenceSource over the KMP LocationStore (useGeofences) + VehicleStore
+    (useVehicleState / useVehicles' `vehicles?.[0]` fallback) + SettingsStore (useUnits)
+    as StateHolderModel<LoadableState<…>>; the view performs NO networking.
+  Projection → GeofenceProjectionBuilder is a 1:1 port of the web useMemo pipeline:
+    haversineMeters (R=6 371 000), hasCoords = `vLat !== 0 || vLon !== 0` (OR, not AND —
+    pinned by testSingleNonZeroComponentCountsAsCoordinate), distance = hasCoords ?
+    haversine : Infinity, inside = distance <= (radius ?? 0), currentZone =
+    first(inside && enabled), name `?? '—'` (nil-only — matched to the spec after review),
+    enabled `?? true`. fmtRadius = `${fmtNumber(convertDistanceFromSI(m, unit), 1)} ${unit}`
+    (÷1000 / ÷1609.344 / ÷0.3048; grouped, half-away-from-zero). Verified by executed tests.
+  Composition → WidgetShell chrome (scope icon + "Geofence Status" title + live/stale/
+    offline freshness chip + refresh) · compact (cols≤1) → centred crosshair + current-zone
+    badge ("No zone") · WidgetMapView → MapKit Map with a fence MapCircle per zone
+    (green `#22c55e` inside / gray `#6b7280` outside at 0.15 fill, 2pt stroke) + a vehicle
+    marker, shown when `hasCoords && rows>=3` (web showMap) · fence list → name + "Radius:
+    <value>" + Disabled/Inside(dot)/Outside badge, the inside&enabled row tinted green +
+    ring. Recharts→none / Leaflet→MapKit.
+  Shared components → reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton
+    / TSGeo / DashboardWidgetRegistration (compiled against VERBATIM copies of the REAL
+    apps/apple deps — proven by the swift-test harness below).
+  States (all render) → loading (skeleton chrome) · empty ("No geofences configured",
+    web emptyMessage) · error (first-class phase + retry) · stale (freshness chip +
+    "Reconnecting — zones may be stale" banner + auto-refresh) · offline (cached zones +
+    "Offline — showing last known zones" banner) · content. Phase resolution keeps cached
+    zones visible behind refresh/failed re-fetch, matching the web shell.
+  i18n → all 7 source keys + registry description resolve through the P1/S10 facade with
+    the web t(key,default) fallback: widget.geofence.{title, noZone, noFences, radius,
+    disabled, inside, outside} (web source) + .description (registry) + native chrome
+    (live/stale/offline/refresh/retry/loading/errorTitle/emptyHint/staleBanner/offlineBanner)
+    + a11y (mapA11y/markerA11y) → 22/22 code-referenced keys PRESENT in the .strings table
+    (diff-verified). No English literals in native code.
+  a11y → the map carries a localized label; every fence row + the compact badge combine to
+    a spoken summary (GeofenceAccessibility.compactSummary / rowSummary / emptySummary —
+    name · Radius · Inside/Outside/Disabled); refresh + retry buttons carry accessibilityLabel;
+    Dynamic Type via tokens; Reduce-Motion respected (no animated marker pulse used).
+  Telemetry → GeofenceModel.start() emits viewOpened(surface:"GeofenceWidget") → bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (executed).
+  Registry → GeofenceWidget.registration: id "geofence-status", category "maps", default
+    2×4, min 1×2, max 4×40 (+ clamp()), matching registry/maps.ts. Asserted (executed).
+
+=== GATE — STEPS EXECUTED ON THIS HOST (real output, real exit codes) ===
+[1] swift test  (a throwaway SPM package at /tmp/geofence-harness compiling the ACTUAL
+    GeofenceWidget.{Adapter,Model,Strings,swift,Map,Previews}.swift sources together with
+    VERBATIM copies of the real Shared-free deps — design Tokens + TSDesign + TSMaterial +
+    Components/UI{Badges,Cards,Typography,Buttons} + Components/Maps{GeoHelpers} +
+    Components/Feedback{Skeletons} + DashboardWidgetInfra — under Swift 6 language mode /
+    complete strict concurrency, then RUNNING the suite):
+      Executed 37 tests, with 0 failures (0 unexpected).
+      SWIFT_TEST_EXIT=0                                                              OK
+      Suites: GeofenceAdapterTests (11) · GeofenceFormatTests (6) ·
+              GeofenceModelTests (11) · GeofenceRegistryTests (3) ·
+              GeofenceAccessibilityTests (6).
+      This is the per-surface verification of THIS code (the 0060 precedent's primary
+      method): real compile + real run, honest green — NOT assumed.
+
+[2] iOS app BUILD (full Sources/ + dashboard-widgets/ tree + the staged release
+    Shared.xcframework, Debug, iPhone 16 simulator, Swift 6 strict concurrency):
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+      ** BUILD FAILED **  (exit 65, 5 compile failures)  IOS_BUILD_EXIT=65            RED (pre-existing, NOT this surface)
+      ── Every failure is a PRE-EXISTING type-name collision between THREE sibling Charge*
+         widgets in the single app module, NONE in GeofenceWidget:
+           'ChargeSessionDTO' is ambiguous — defined in BOTH
+              ChargeStatusLiveWidget.Model.swift AND ChargeSessionChartWidget.Models.swift
+           'ChargeStateDTO' is ambiguous — defined in BOTH
+              ChargeStatusLiveWidget.Model.swift AND ChargeStatusWidget.Model.swift
+           (+ ChargeUnitPrefs / ChargeStatusProjection / ChargeDistanceUnit / ChargeLoadStatus
+            / ChargeConnection / ChargeStatusUpdate cascades from the same duplicates)
+      ── These files are COMMITTED (git: 7d8b9e473 "merge(parallel): …P-0020-ChargeStatusLiveWidget")
+         and are OUTSIDE this prompt's allowed files (GeofenceWidget.* only). The
+         DashboardWidgetInfra.swift header explicitly warns against exactly this anti-pattern
+         ("previously redefined inside each generated widget's *.Model.swift, which collided
+         in the single app module"). Fixing them is the owning prompts' (0019/0020/0021) job;
+         doing so here would violate Honesty rules 7 (predecessor bypass) + 9 (silent drift).
+      ── PROOF this surface is clean: `grep error: ios_build.log | grep -i geofence` → 0 hits;
+         `grep 'struct/enum/class Geofence' Sources TeslaSync | grep -v GeofenceWidget.` → 0 hits.
+         The compiler type-checked the Geofence files and reported NOTHING; the isolated
+         harness §[1] compiles + runs them green.
+
+[3] macOS app BUILD TEST (full tree + staged release Shared.xcframework, Debug):
+      xcodebuild -scheme TeslaSync-macOS build test
+      ** TEST FAILED **   MAC_EXIT=65                                                RED (pre-existing env, NOT this surface)
+      ── Failed at the SIGNING/planning stage BEFORE any Swift compilation began (0 SwiftCompile
+         lines in the log). The only 'error:' lines are code-signing entitlements:
+           "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing
+           with a development certificate.
+      ── This headless slot has DEVELOPMENT_TEAM="" and no dev certificate — the exact
+         macOS-on-headless limitation the 0060 precedent + ADR-012 record as DEFERRED to a
+         signed GUI macos-latest runner. Not a compile error, not this surface, not fixable
+         from within GeofenceWidget.* (entitlements/project.yml are out of allowed scope).
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 9 new files):
+      0/2017 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                  OK
+
+[5] swiftlint --strict
+      (a) the surface's 8 Swift files, explicit paths:
+          Done linting! Found 0 violations, 0 serious in 8 files.
+          SURFACE_SWIFTLINT_EXIT=0                                                   OK
+      (b) the bare gate `swiftlint --strict` from apps/apple (included: paths):
+          Found 1 violation — PRE-EXISTING, NOT this surface:
+            LiveSignalSparklinesWidget.Builder.swift:158:9 Opening Brace Spacing (opening_brace)
+          SWIFTLINT_GATE_EXIT=2                                                      RED (pre-existing, NOT this surface)
+          ── LiveSignalSparklinesWidget is committed + owned by sibling prompt 0056; it is
+             OUTSIDE this prompt's allowed files. The surface's own 8 files are 0-violation.
+
+[6] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                             OK
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented;
+      each has a #if DEBUG preview; phase logic unit-tested (executed, §[1]).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 22/22 present (diff-verified).
+  [x] Accessibility labels on every interactive element; map + rows carry spoken summaries.
+  [x] Tests: adapter + format + per-state model + registry + a11y — 37/37 GREEN (executed).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [~] EXIT=0/STATUS=DONE — NOT achievable in this repo state: the repo-wide `build test`
+      and bare `swiftlint --strict` are RED for THREE pre-existing, out-of-allowed-scope
+      reasons (§[2] sibling Charge* collisions · §[3] macOS signing env · §[5b] sibling
+      LiveSignalSparklines lint nit). The surface itself is COMPLETE and GREEN on every
+      surface-scoped gate. → STATUS=BLOCKED (external/pre-existing), EXIT=1.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : §[2] iOS BUILD and §[3] macOS TEST are shown ** FAILED ** with their
+                       real non-zero exits; §[5b] shows the bare lint RED. NOT painted green.
+  2  No scope narrowing: implemented ALL states + map + list + compact + i18n + a11y +
+                       telemetry + registry.
+  3  No skip-and-assume: every host step executed; the unit suite was RUN (37/37), not assumed.
+  4  No stubs as final : complete implementation; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the .tsx data/composition/states; the one review
+                       finding (name trim vs spec `?? '—'`) was FIXED to match the spec exactly.
+  6  No delegation     : authored directly; a code-review agent was used for read-only review
+                       only (it modified nothing).
+  7  No predecessor bypass: did NOT touch the sibling Charge*/LiveSignalSparklines files,
+                       project.yml, the dashboard grid, or the shared Localizable.xcstrings —
+                       strings shipped as the per-surface table.
+  8  No commit on red  : the SURFACE's own gates are all GREEN (harness 37/37 + isolated
+                       compile + surface swiftlint 0 + swiftformat 0 + placeholder 0); the
+                       committed reds are PRE-EXISTING and external to this surface and are
+                       NOT introduced by this commit (the repo was already red at HEAD).
+  9  No silent drift   : changes confined to the allowed GeofenceWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native GeofenceWidget shipped at parity with the web source: pure-Swift
+  projection (executed-green tests for haversine / hasCoords-OR / inside / currentZone /
+  fmtRadius / name `?? '—'`), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, a MapKit
+  canvas with green-inside/gray-outside fence circles + a vehicle marker, the compact current-
+  zone badge, the fence list with Disabled/Inside/Outside badges, every state + i18n key +
+  a11y summary, registry-correct (geofence-status, 2×4 / 1×2 / 4×40). The surface compiles and
+  its 37-test suite runs GREEN in isolation under Swift 6 complete strict concurrency.
+
+  The literal repo-wide `xcodebuild build test` + bare `swiftlint --strict` cannot reach EXIT=0
+  in this repo state for THREE pre-existing, out-of-allowed-scope reasons — sibling Charge*
+  widget duplicate-type collisions (0019/0020/0021), the macOS code-signing environment
+  limitation (ADR-012, signed GUI runner), and a sibling LiveSignalSparklines lint nit (0056).
+  None is a defect in or omission from this surface, and none is fixable from within the
+  GeofenceWidget.* allowed-files boundary. Reported honestly as BLOCKED rather than DONE so the
+  RED whole-app build is never misrepresented as green.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Adapter.swift \
+          apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Model.swift \
+          apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Strings.swift \
+          apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.swift \
+          apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Map.swift \
+          apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Previews.swift \
+          apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.Tests.swift \
+          apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.ModelTests.swift \
+          apps/apple/TeslaSync/dashboard-widgets/GeofenceWidget.strings \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0053-GeofenceWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add GeofenceWidget surface (P4)"
+
+EXIT=1
+STATUS=BLOCKED

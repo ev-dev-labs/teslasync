@@ -1,0 +1,143 @@
+I'll start by exploring the repository structure and reading the web source page to understand what needs parity.
+
+Full toolchain is available (Xcode 26.5, swiftlint, swift 6.3.2, pwsh). The gate can actually run. Let me explore the existing Apple app structure and a recently completed parity page for patterns.
+
+Let me read the existing Vehicle feature files and the most recently completed parity page (TripDetailPage) to understand the established patterns.
+
+Let me examine the TripDetailPage (most recent parity work), the shared component library, the string catalog, and a sample log file.
+
+The component library is elsewhere. The Sharing feature is the closest analog (data tables, sharing domain). Let me read the full Sharing parity set, find the shared component library, and inspect the project config and a sample log.
+
+The Sources dir holds the shared component library. Let me read the project config, the key shared components, the TripDetail models, a sample parity log, and locate the string catalog.
+
+Let me read the shared components I'll need, the design tokens, a sample log file, and find the string catalog.
+
+The pattern is clear. Let me check the web API hooks/types for VehicleAccess, the string catalog format, key UI components (DataTable, Badges, Buttons), design tokens, and a parity test example.
+
+The `vehicleAccess.*` keys already exist in the catalog. Let me check their exact format, read the web types, and read the key UI components and design tokens.
+
+Let me look at how a sibling presents tabular data, plus the Badges, Buttons, Typography, Cards components and design tokens.
+
+Let me read Buttons, Typography, design tokens, Motion, and the DataDisplay/Overlays components for StatusBadge/TimeStamp/ConfirmDialog/CopyButton equivalents.
+
+Let me read the design tokens, Motion, DataDisplay, Overlays components, and the Sharing route registration + a parity test example.
+
+Let me read the Motion, StatusIndicators, Utility (copy), Overlays components, the generated design tokens, and the date formatters.
+
+Let me find the ConfirmDialog pattern, the date formatters, the generated tokens, the Sharing route/sample/test files.
+
+Let me read a ConfirmDialog usage, the generated tokens, and an existing parity test to mirror its assertions.
+
+Let me check the confirmationDialog pattern, the Shared.xcframework status (build dependency), existing tests location, and the TripDetail log's PARITY section format.
+
+Critical findings: the Shared.xcframework isn't prebuilt (7-min Gradle build), and the merged baseline's full-app build is pre-broken by ~7k out-of-scope errors. Let me check tooling availability, do the collision check, and inspect the placeholder scanner. I'll kick off the long framework build early.
+
+There's an existing `VehicleAccessWidget` family — I must avoid symbol collisions in the single `TeslaSync` module. Let me inspect its public types, then kick off the long Gradle framework build in the background.
+
+There's a large existing `VehicleAccess*` namespace in dashboard-widgets — I'll prefix all my types with `VehicleAccessPage`/distinct names to avoid collisions. The Gradle framework build is the long pole, so I'll start it in the background now and inspect component imports meanwhile.
+
+The Components/Design tree only imports system frameworks, so I can type-check my unit standalone without the framework. Let me read the date-format helper, TSSkeleton, and the web StatusBadge/TimeStamp components to match their rendering.
+
+Let me check the FSM dot colors for the status mapping and confirm the Gradle build is progressing.
+
+I have the status-color mapping (pending→online/green, revoked→offline/red, other→asleep/neutral). Let me set up tracking, verify all 27 catalog keys exist with values, and check the Gradle build.
+
+All 27 keys exist with values matching web defaults — no catalog edit needed. Gradle build still running. Let me record the plan and start implementing.
+
+All 27 keys verified. Now implementing. Let me create the Models, SampleData, and Strings files.
+
+Now the SampleData and Strings files.
+
+Now the Strings file with all 27 keys, the date formatter, and the status-display mapping.
+
+Now the view model.
+
+The view model is done. Now the largest file — the Drivers/Invitations sections with an adaptive, checkbox-free table and the confirm dialogs. First let me add per-section retry methods to the model.
+
+The Gradle framework build completed. Let me check its output while I continue writing the sections.
+
+Framework built successfully. Let me stage it to the Frameworks dir (the build script does this), then continue with the Sections file.
+
+Now the Sections file with the adaptive checkbox-free table, both panels, and confirm dialogs.
+
+Now the root Page view and the navigation registration.
+
+All 7 files written. Let me update tracking, run a collision check for my type names, and prepare a targeted type-check.
+
+The collision grep is slow over the large tree. Let me locate the `Units`/`UnitPreferences` definitions (needed for an isolated type-check) and wait for the collision result.
+
+Collision check is clean. Let me check the SharedFacade imports, then run a targeted type-check of my files plus dependencies.
+
+`Units+Facade` pulls in the `Shared` framework, so I'll exclude `UnitFormatters.swift` and the Charts/Maps wrappers (unused by my page) from the isolated check. Let me locate `TSInlineCallout` and confirm no other `Units` references in the component subdirs I need.
+
+Minimal dependency set identified. Let me run an isolated type-check of my 7 files plus the exact component/design/token files they depend on, under Swift 6 strict concurrency.
+
+No errors in my files, but 2 errors total in dependencies. Let me see them.
+
+Only error is a dependency I under-included (`TSMetricBar`). My 7 files have zero errors. Let me add the remaining DataDisplay files (except the `Shared`-dependent one) to get a fully green isolated compile.
+
+A real error surfaced in my code (previously masked): the `trailing` parameter's opaque-type default. Let me fix it with the standard generic pattern.
+
+Let me re-run the isolated type-check to confirm zero errors in my files.
+
+Isolated type-check passes with **zero errors/warnings** under Swift 6 strict concurrency. Now the lint and placeholder gates.
+
+Placeholder scan clean (COUNT=0). SwiftLint found 7 violations in my files — all fixable: line length, `empty_count`, `file_length` (split needed), and trailing-closure style. Let me view the exact spots.
+
+All fixable. I'll wrap the long string lines, and split `VehicleAccessSections.swift` into a reusable `VehicleAccessTable.swift` (table, chips, header, error) plus the two sections — fixing `empty_count` and the trailing-closure style along the way. Let me apply the string wrap and recreate the split files.
+
+Now create the reusable table file (with `itemCount` fix):
+
+Now the two sections with corrected `itemCount:` labels and non-trailing button closures:
+
+Now 8 files. Let me re-run the isolated type-check and swiftlint on all of them.
+
+Both clean: **0 type errors, 0 lint violations** in my 8 files. Now the full gate. Let me lint the whole Vehicles dir (gate command) and regenerate the Xcode project to include my new files.
+
+SwiftLint config lints the whole project (6383 files) — the 4 violations it found are all pre-existing files **outside** my scope (System/, dashboard-widgets/), not my code. Project regenerated successfully with my files included. Let me confirm the config behavior and kick off the authoritative xcodebuild in the background.
+
+Confirmed: I've only added my 8 files; the 4 lint violations are pre-existing out-of-scope files. The iOS build is running. Let me inspect the apple-ledger structure while it builds.
+
+Ledger needs two new rows (macOS + iOS) for `page:vehicles/VehicleAccess` with covered=required=32. Let me wait for the build to progress.
+
+The pipeline exit came from `tail`, not xcodebuild — it shows "(24 failures)". Let me analyze the actual build log: error count and whether any are in my files.
+
+Build failed with 508 pre-existing errors across out-of-scope baseline files (shared-surfaces, feature-views, dashboard-widgets, even the sibling `VehicleDetailSections.swift`) — but **zero in my VehicleAccess files**. Let me verify my files were actually compiled by the real build and aren't among the failed commands.
+
+My files produce zero errors and none are in the failed commands. The 508 errors span 100+ pre-existing files (sema ran over the whole module — not aborted early), confirming my clean compile is genuine. Let me do a final check that my new public types didn't cause any redeclaration/ambiguity errors anywhere.
+
+Let me confirm my files were actually part of the real target's compile (Xcode batches and names commands after one file). I'll check the target's Swift file list in DerivedData.
+
+**Definitive proof**: all 8 of my files are in the real iOS target's `SwiftFileList`, sema ran over the whole module (508 errors across 100+ files, not aborted), and **zero** errors are in my files. The build failure is 100% pre-existing, out-of-scope baseline breakage (matching the documented sibling-gate situation). Let me update tracking and write the parity log.
+
+Now I'll write the comprehensive parity log.
+
+Log written. Now update the apple ledger with the two covered rows (macOS + iOS).
+
+Let me verify the ledger JSON is valid and the diff is clean (not a full reformat).
+
+The em-dash got ASCII-escaped on line 2 — let me fix that by re-writing with `ensure_ascii=False` to keep the diff to just the 2 new rows.
+
+Clean 18-line diff, JSON valid. Let me verify git status (the regenerated `.xcodeproj` and staged framework should be gitignored, not committed).
+
+Git status is exactly as intended (8 new files + ledger + log; xcodeproj and framework correctly gitignored). Let me commit using the prompt's exact command.
+
+Committed (10 files, 1738 insertions). Let me mark tracking complete and run a final consolidated verification of the gates.
+
+Final isolated type-check: **0 errors, 0 warnings**. Everything verified and committed. Let me clean up temporary build artifacts.
+
+Task complete. The native SwiftUI/HIG parity of `VehicleAccessPage` is implemented, verified, and committed.
+
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

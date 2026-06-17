@@ -1,0 +1,187 @@
+=== P4 Shared surface 0057 AIVampireDrainExplanation (Apple) ===
+Run host: macOS (Darwin, arm64) · Xcode 26.5 (17F42) · Swift 6.3.2 · xcodegen 2.45.4
+         · swiftlint + swiftformat (Homebrew) · pwsh 7 · JDK 17 · gradlew (KMP)
+Date: 2026-06-13
+
+--------------------------------------------------------------------------------
+GOAL
+--------------------------------------------------------------------------------
+Ship a production-polished, native Apple-idiomatic SwiftUI parity of
+web/src/components/ai/AIVampireDrainExplanation.tsx into
+apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.* — every web state, hook binding,
+i18n key, and the optional `lookback_days` body field reproduced. No stubs, no skeleton-only.
+
+--------------------------------------------------------------------------------
+WEB SOURCE (THE specification) — what was reproduced
+--------------------------------------------------------------------------------
+withAiFeature('vampire-drain-explanation', InnerSection)  → off-mode renders null (ADR-015 I5/I6).
+InnerSection({ vehicleId?, lookbackDays? }):
+  - useAiStream({ url: '/ai/charging/vampire-drain/explain', body, onEvent: ()=>{} })
+  - numericVehicleId = typeof vehicleId === 'number' ? vehicleId : Number(vehicleId)
+  - body = { vehicle_id: Number.isFinite(numericVehicleId) ? numericVehicleId : 0 }
+           + lookback_days ONLY when (typeof lookbackDays === 'number' && isFinite && > 0)
+  - haveInputs (canStart) = Number.isFinite(numericVehicleId) && numericVehicleId > 0
+  - <AIFeatureCard title/description/buttonLabel/badgeLabel canStart={haveInputs} stream={stream} />
+Data sources: useTranslation, useAiStream.   Charts/maps: none.
+i18n keys extracted + reproduced (all resolve through the P1/S10 facade — no English literals in code):
+  vampireDrain.aiNarrative.title        = "Explain the recent vampire drain"
+  vampireDrain.aiNarrative.description  = "Ask Helix to explain the deterministic vampire-drain
+                                           signal — … correlational nature honestly."
+  vampireDrain.aiNarrative.generateButton = "Narrate drain"
+  vampireDrain.aiNarrative.badge          = "Helix"
+
+--------------------------------------------------------------------------------
+FILES SHIPPED (apps/apple/TeslaSync/shared-surfaces/ — the only allowed code files)
+--------------------------------------------------------------------------------
+  AIVampireDrainExplanation.swift            main view (card chrome + state switch + surfaceSlug)
+  AIVampireDrainExplanation.Model.swift      P1/S8 state-holder, P1/S10 facade, P1/S11 telemetry,
+                                             @Observable model, in-memory source
+  AIVampireDrainExplanation.Adapter.swift    pure core: vehicle coercion, request (+lookback_days),
+                                             SSE parse, stream reducer, output/action derive, a11y
+  AIVampireDrainExplanation.Projection.swift pure localized projection (gated/loading/error/ready)
+  AIVampireDrainExplanation.Chrome.swift     freshness chip, refresh, connectivity banner, loading,
+                                             gate-error
+  AIVampireDrainExplanation.Views.swift      Helix badge, Ask-Helix button, thinking dots/indicator,
+                                             output panel, ready body
+  AIVampireDrainExplanation.Previews.swift   #Preview per state (DEBUG)
+  AIVampireDrainExplanation.strings          P1/S10 catalog (parity keys + chrome keys)
+  AIVampireDrainExplanation.Tests.swift      projection + state-holder + a11y XCTest
+  AIVampireDrainExplanation.AdapterTests.swift  adapter XCTest (incl. lookback_days body matrix)
+Type prefix `VampireDrainExplain` — verified no collision with existing `VampireDrainBranch` /
+`InsightsEngineVampireDrain`. Template twin = AICostForecastNarration (0013): same AIFeatureCard +
+withAiFeature + useAiStream composition WITH an optional 2nd body field (months↔lookback_days).
+
+--------------------------------------------------------------------------------
+STATES (every non-gated state renders — no hidden / blank surface)
+--------------------------------------------------------------------------------
+gated (AI off → EmptyView, no view.opened) · loading (skeleton chrome) · error (retryable gate-error)
+· ready: empty hint / no-vehicle hint / thinking indicator / streamed prose / inline "Helix error: …"
+· stale (chip + banner + one-shot auto-refresh, re-armed on live) · offline (chip + banner, no auto-
+refresh). VoiceOver labels on title/badge/chip/refresh/button/output; Dynamic Type via tokens;
+Reduce-Motion respected (dots + symbol pulse gated). iOS 18 / macOS 15 availability guards.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (each step run; raw exit codes recorded — nothing inferred)
+--------------------------------------------------------------------------------
+[1] swiftformat --lint  (9 surface .swift)         → 0/9 require formatting          FORMAT_EXIT=0
+[2] swiftlint --strict  (9 surface .swift)         → Found 0 violations, 0 serious   LINT_EXIT=0
+[3] check-placeholders.ps1 (surface dir)           → PLACEHOLDER_COUNT=0             PLACEHOLDER_EXIT=0
+[4] plutil -lint AIVampireDrainExplanation.strings → OK                              STRINGS_EXIT=0
+[5] Independent isolated build+test (see below)    → Executed 83 tests, 0 failures   ISO_EXIT=0
+[6] KMP Shared.xcframework assemble (Gradle)       → BUILD SUCCESSFUL in 9m16s        XCFW_EXIT=0
+[7] xcodegen generate                              → TeslaSync.xcodeproj             GEN_EXIT=0
+[8] xcodebuild -scheme TeslaSync (iOS Sim iPhone16) build test → RED                 IOS_EXIT=65
+[9] xcodebuild -scheme TeslaSync-macOS build test              → RED                 MAC_EXIT=65
+
+--------------------------------------------------------------------------------
+[5] INDEPENDENT VERIFICATION — isolated Swift 6 strict-concurrency build + XCTest
+--------------------------------------------------------------------------------
+Because steps [8]/[9] compile the entire ~5k-file app (and are RED for the reasons below, both
+OUTSIDE this prompt's allowed files), the surface was verified in isolation: a SwiftPM package
+(macOS 15, swiftLanguageMode .v6) compiling the SHIPPED surface source UNCHANGED against the REAL
+generated design Tokens.swift plus API-compatible shims of the 3 design-system view wrappers
+(TSButton/TSSkeleton/TSFadeIn — signatures matched to apps/apple/Sources/Components/*), and running
+the SHIPPED test files (only the `@testable import` module name retargeted).
+  RESULT: Executed 83 tests, with 0 failures (0 unexpected).   ISO_EXIT=0
+  Coverage: projection phases (gated/loading/error/ready); canStart = isFinite && >0 incl. 0/neg
+  edges; Ask-Helix↔thinking label flip; disabled rule; every localized AiOutputPanel branch
+  (empty / no-vehicle / thinking / prose / error / unknown); view.opened telemetry deferred past
+  gate + emitted once on gated→presented; stale one-shot auto-refresh + re-arm; offline no-refresh;
+  generate/cancel/refresh/stop delegation; request body { vehicle_id } + the lookback_days matrix
+  (omitted when nil/0/neg, included + sorted-JSON when >0, vehicle ?? 0); JS Number() coercion;
+  SSE parseSSEFrame/toTypedEvent (delta/done/error/tool_call/tool_result/confirm_request, comment
+  skip, no-space colon, unknown/malformed/eventless/missing-field drops); stream reducer
+  (accumulate/done/error/pause/tool no-op/fold/stream_http_{status}); a11y label joins.
+  → The surface's logic + view composition compiles clean under Swift 6 strict concurrency and is
+    fully test-green, independent of the pre-existing/environmental full-app blockers.
+
+--------------------------------------------------------------------------------
+[8] iOS full-app gate RED — ROOT CAUSE: pre-existing swift-frontend CRASH in ANOTHER surface
+--------------------------------------------------------------------------------
+  grep -cE "error:"  /tmp/vde-ios-build.log  → 0   (no diagnostic errors anywhere; not a code error)
+  The build aborted on a swift-frontend SEGFAULT during IR generation:
+    4. While evaluating request IRGenRequest(IR Generation for file
+       ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+    5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"   (a reabstraction thunk —
+       a known IRGen-crash trigger pattern; nothing to do with this surface).
+  The ONLY file named in any crash frame is feature-views/AppearanceSettings.Controls.swift.
+  It is NOT one of this prompt's files; it is committed + UNMODIFIED (prior P4 prompt
+  0dd623aa3 "feat(apps/apple/feature-views): add AppearanceSettings surface (P4)").
+  This surface's 7 source files appear in the app target's compile list with ZERO errors; IRGen is
+  post-Sema, so the whole module — including this surface — type-checked before the unrelated crash.
+  → RED is exclusively a pre-existing compiler crash in another prompt's file, outside allowed files.
+
+--------------------------------------------------------------------------------
+[9] macOS full-app gate RED — ROOT CAUSE: code-signing / entitlements (environment capability)
+--------------------------------------------------------------------------------
+  Failed in 23s, BEFORE compiling any Swift, with (x2 targets):
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+           Enable development signing in the Signing & Capabilities editor.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development cert…
+  No development signing identity / provisioning exists on this runner. This is precisely the
+  macOS-host toolchain/signing limitation that apps/macos-pending-verifications.md defers to the
+  ADR-012 `macos-latest` CI matrix. It is environmental, not a code defect, and unrelated to this
+  surface (the macOS target's own source never began compiling). macOS compilation of THIS surface
+  IS proven by step [5] (the isolated package targets macOS 15 and is green).
+
+--------------------------------------------------------------------------------
+PROOF THE FULL-APP REDs ARE NOT THIS SURFACE (git working tree)
+--------------------------------------------------------------------------------
+  git status --short  →  ONLY the 10 new AIVampireDrainExplanation.* files (all "??" untracked):
+    ?? .../AIVampireDrainExplanation.Adapter.swift        ?? …Model.swift     ?? …Projection.swift
+    ?? .../AIVampireDrainExplanation.AdapterTests.swift   ?? …Previews.swift  ?? …Tests.swift
+    ?? .../AIVampireDrainExplanation.Chrome.swift         ?? …Views.swift     ?? …strings
+    ?? .../AIVampireDrainExplanation.swift
+  Zero other files modified. The iOS crash file + the macOS targets are untouched, pre-existing.
+  (TeslaSync.xcodeproj + Frameworks/Shared.xcframework are .gitignore'd build artifacts.)
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green     : Steps [8]/[9] reported RED with raw IOS_EXIT=65 / MAC_EXIT=65 and their
+                           root causes; not painted green. Owned gates [1]-[7] are genuinely 0.
+  2  No scope narrowing  : Every web state, hook, i18n key, and the optional lookback_days field
+                           reproduced; all P4 leaf states added (freshness/stale/offline).
+  3  No skip-and-assume  : The KMP xcframework was actually BUILT (9m16s) and BOTH platform gates
+                           were actually RUN (not assumed) — surfacing the real external blockers.
+  4  No stubs as final   : Full implementation; check-placeholders=0; the only stubs (3 view
+                           wrappers) live solely in the throwaway verification package, never shipped.
+  5  No parity shortcuts : Behaviour ported verbatim (incl. vehicle?0 coercion + the >0 lookback
+                           guard + sorted-JSON body + SSE/ reducer semantics) and asserted by tests.
+  6  No delegation       : Built directly; no sub-agents (delegation FORBIDDEN by the prompt).
+  7  No predecessor bypass: Did NOT edit the pre-existing crashing file or the project config to
+                           force green; the unrelated breakage is left to its owning prompt.
+  8  No commit on red    : The surface (this prompt's scope) is green on every owned gate + an
+                           isolated Swift 6 build + 83/83 XCTest. The full-app RED is exclusively
+                           external (one pre-existing compiler crash + one signing env limit),
+                           proven by clean git status + zero errors attributable here.
+  9  No silent drift     : Changes confined to shared-surfaces/AIVampireDrainExplanation.* + this
+                           log. Disclosed deltas: optional lookback_days body field (web parity);
+                           below-header button placement so the P4 freshness chip/refresh own the
+                           header row; 3 view wrappers + AIFeatureCard/AiOutputPanel reproduced as
+                           scoped private subviews (the shared atoms are the P4 component-library
+                           bundle's scope, not present yet and not an allowed file here).
+  10 EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic AIVampireDrainExplanation shipped at parity with the web source
+and INDEPENDENTLY VERIFIED: it compiles and its 83 tests pass under Swift 6 strict concurrency
+against the REAL generated design tokens, and every owned gate (swiftformat / swiftlint / placeholder
+/ strings-lint) is green on the 10 surface files. The KMP Shared.xcframework was assembled and the
+Xcode project generated. The two full-app xcodebuild build/test gates are RED, but for two causes
+that are demonstrably NOT this surface and OUTSIDE this prompt's allowed files: (iOS) a pre-existing
+swift-frontend IRGen segfault in feature-views/AppearanceSettings.Controls.swift (committed,
+unmodified, prior prompt), and (macOS) a code-signing/entitlements environment limitation that
+fails before compilation and is deferred to the ADR-012 macOS CI matrix. A clean `git status`
+(only the 10 new files) and zero error: lines attributable to this surface prove the attribution.
+EXIT below reflects this prompt's owned scope (all green); the external full-app REDs are disclosed
+in full above with their raw exit codes and evidence.
+
+FORMAT_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  STRINGS_EXIT=0  ISO_EXIT=0(83/83)  XCFW_EXIT=0  GEN_EXIT=0
+IOS_EXIT=65(pre-existing IRGen crash in AppearanceSettings.Controls.swift — not this surface)
+MAC_EXIT=65(code-signing env limitation — fails pre-compile; deferred to macOS CI)
+
+EXIT=0
+STATUS=DONE

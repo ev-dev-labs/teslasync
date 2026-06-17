@@ -1,0 +1,185 @@
+=== P4 Shared surface 0039 AIPredictiveMaintenance (Apple) ===
+run: 2026-06-11T06:10Z  toolchain: Xcode 26.5 / swift 6.3.2  host: macOS 26 (arm64)
+web source: web/src/components/ai/AIPredictiveMaintenance.tsx
+artifact:   apps/apple/TeslaSync/shared-surfaces/AIPredictiveMaintenance.{swift,Adapter,Model,Projection,Views,Chrome,Previews,Tests,AdapterTests,strings}
+
+## Parity scope (web source → native)
+Web `AIPredictiveMaintenance` = `withAiFeature('predictive-maintenance', InnerSection)` composing
+`useTranslation` + `useAiStream({ url: '/ai/maintenance/predict', body })` rendering the shared
+`AIFeatureCard` (title / description / Ask-Helix button / "Helix" badge / emptyHint) → `AiOutputPanel`.
+  • withAiFeature gate          → PredictiveMaintenanceAvailability (.gated withdraws the surface; ADR-015 §I5)
+  • useAiStream('/ai/maintenance/predict')
+                                → PredictiveMaintenanceRequest (body { vehicle_id } ONLY — no `days`)
+                                  + SSE parser + delta-accumulating reducer (PredictiveMaintenanceStreamReducer)
+  • haveScope (number && finite && > 0)
+                                → PredictiveMaintenanceRequest.haveScope == (vehicleID ?? 0) > 0
+                                  (nil / 0 / negative are OUT of scope — body coerces to 0)
+  • canStart = haveScope        → button disabled + emptyHint "Select a vehicle first." beneath description
+  • AIFeatureCard title/description/buttonLabel/badge/emptyHint + AiOutputPanel
+                                → PredictiveMaintenanceReady + PredictiveMaintenanceOutputPanel
+                                  (empty / no-vehicle / thinking / prose / failed branches)
+States reproduced: gated · loading · error(gate) · ready  ×  output {empty / no-vehicle / thinking /
+      prose / stream-error / unknown-error}  ×  freshness {live / stale / offline} (chip + banner +
+      one-shot stale auto-refresh). a11y: VoiceOver labels, Dynamic Type via tokens, Reduce Motion.
+      P1/S11 view.opened telemetry deferred past the gate (web data-ai-feature marker parity).
+ADR-015: §I3 baseline intact (never replaces the deterministic reminders) · §I8 propose-only
+      (read-only narration over the maintenance envelope — no mutation of items/reminders/thresholds).
+Charts/maps: none (web source uses none).
+
+## Shipped files (apps/apple/TeslaSync/shared-surfaces/AIPredictiveMaintenance.*)
+  AIPredictiveMaintenance.Adapter.swift
+  AIPredictiveMaintenance.AdapterTests.swift
+  AIPredictiveMaintenance.Chrome.swift
+  AIPredictiveMaintenance.Model.swift
+  AIPredictiveMaintenance.Previews.swift
+  AIPredictiveMaintenance.Projection.swift
+  AIPredictiveMaintenance.Tests.swift
+  AIPredictiveMaintenance.Views.swift
+  AIPredictiveMaintenance.strings
+  AIPredictiveMaintenance.swift
+
+## Line counts
+      46 AIPredictiveMaintenance.strings
+     125 AIPredictiveMaintenance.swift
+     129 AIPredictiveMaintenance.Previews.swift
+     155 AIPredictiveMaintenance.Projection.swift
+     169 AIPredictiveMaintenance.Chrome.swift
+     245 AIPredictiveMaintenance.Views.swift
+     311 AIPredictiveMaintenance.AdapterTests.swift
+     343 AIPredictiveMaintenance.Adapter.swift
+     375 AIPredictiveMaintenance.Model.swift
+     383 AIPredictiveMaintenance.Tests.swift
+    2281 total   (non-test source 1541 + strings 46 + tests 694; cf. sibling 0043 AIRangePrediction 2148)
+
+## [1/6] swiftformat --lint (surface scope)  [gate: FORMAT_EXIT]
+  0/9 files require formatting.
+  FORMAT_EXIT=0
+  (tree-wide re-confirm: swiftformat --lint apps/apple → 0/4285 files require formatting, 2 skipped. EXIT=0)
+
+## [2/6] swiftlint --strict (surface scope)  [gate: LINT_EXIT]
+  Done linting! Found 0 violations, 0 serious in 9 files.
+  LINT_EXIT=0
+  (tree-wide re-confirm: swiftlint --strict → Found 0 violations, 0 serious in 3987 files. EXIT=0)
+
+## [3/6] placeholder scan (per shipped swift file)  [gate: PLACEHOLDER_EXIT]
+  check-placeholders.ps1 -Path TeslaSync/shared-surfaces/AIPredictiveMaintenance → PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0
+  per-file grep (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem|not implemented|stub|mock):
+    0  AIPredictiveMaintenance.swift
+    0  AIPredictiveMaintenance.Adapter.swift
+    0  AIPredictiveMaintenance.Model.swift
+    0  AIPredictiveMaintenance.Projection.swift
+    0  AIPredictiveMaintenance.Views.swift
+    0  AIPredictiveMaintenance.Chrome.swift
+    0  AIPredictiveMaintenance.Previews.swift
+    0  AIPredictiveMaintenance.Tests.swift
+    0  AIPredictiveMaintenance.AdapterTests.swift
+  PLACEHOLDER_EXIT=0
+
+## i18n parity (P1/S10)
+  4/4 web keys present in BOTH the projection source and the .strings catalog, 0 dead, 0 missing:
+    maintenance.aiPredictive.title   "Helix maintenance advisor"  src=Y strings=Y
+    maintenance.aiPredictive.button  "Predict maintenance"        src=Y strings=Y
+    maintenance.aiPredictive.badge   "Helix"                      src=Y strings=Y
+    maintenance.aiPredictive.emptyHint "Select a vehicle first."  src=Y strings=Y
+  (+ the web AIFeatureCard/AiOutputPanel literals helix.askHelix / helix.thinking / helix.errorLabel /
+   ai.common.errorUnknown + the long privacy description maintenance.aiPredictive.description, and the
+   native-only P4 leaf chrome/output keys: live/stale/offline/staleBanner/offlineBanner/refresh/
+   errorTitle/retry/loadingA11y/output.a11yTitle/output.emptyHint/output.noVehicleHint — by design.)
+  No English literals in the Swift sources — every visible string flows through PredictiveMaintenanceStrings.
+
+## [4/6] isolated Swift 6 strict-concurrency build + XCTest (surface vs REAL design tokens)
+harness: SwiftPM module 'TeslaSync' = 7 surface sources (swift/Adapter/Model/Projection/Views/Chrome/
+         Previews) + apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Components/** +
+         apps/apple/Sources/Design/** (minus UnitFormatters.swift — its `Units.format*` calls resolve
+         through the KMP SharedFacade `UnitPreferences`, absent in the isolated module and unused by
+         this surface); test target = AIPredictiveMaintenance.{Tests,AdapterTests}.swift;
+         swiftLanguageMode(.v6) (== app SWIFT_VERSION 6.0 + strict-concurrency complete); macOS host.
+  Executed  4 tests, with 0 failures  — PredictiveMaintenanceProjectionPhaseTests
+  Executed  9 tests, with 0 failures  — PredictiveMaintenanceProjectionReadyTests (canStart > 0 incl. nil/0/negative; emptyHint)
+  Executed  7 tests, with 0 failures  — PredictiveMaintenanceProjectionOutputTests (empty/no-vehicle/thinking/prose/error/unknown)
+  Executed 13 tests, with 0 failures  — PredictiveMaintenanceModelTests (wiring/telemetry/freshness auto-refresh/delegation)
+  Executed  2 tests, with 0 failures  — PredictiveMaintenanceAccessibilityTests
+  Executed  7 tests, with 0 failures  — PredictiveMaintenanceRequestTests (path/body no-days/haveScope/coercion/sorted-JSON)
+  Executed 14 tests, with 0 failures  — PredictiveMaintenanceSSEFrameTests
+  Executed  8 tests, with 0 failures  — PredictiveMaintenanceStreamReducerTests
+  Executed  8 tests, with 0 failures  — PredictiveMaintenanceOutputDeriveTests
+  Executed  3 tests, with 0 failures  — PredictiveMaintenanceActionDeriveTests
+  Test Suite 'All tests' passed.  Executed 75 tests, with 0 failures (0 unexpected).
+  -> body {"vehicle_id":7} (scoped) / {"vehicle_id":0} (nil/0/negative) + bare /ai/maintenance/predict +
+     SSE parse/reducer/output/action + projection (gated/loading/error/ready, canStart>0 boundary,
+     emptyHint, Ask-Helix label flip, every AiOutputPanel branch) + model wiring/telemetry/freshness +
+     accessibility labels + surfaceSlug == "AIPredictiveMaintenance" — all green.
+  ISO_BUILD_TEST_EXIT=0
+
+## xcodegen enumeration (project.yml globs TeslaSync/shared-surfaces into app + test targets)
+  xcodegen generate: XCODEGEN_EXIT=0 (project created)
+  pbxproj references to AIPredictiveMaintenance.*: 60
+  distinct files enumerated: Adapter, AdapterTests, Chrome, Model, Previews, Projection, strings, swift, Tests, Views (10/10)
+
+## [5/6] full-app iOS Simulator build test  (scheme TeslaSync, iPhone 16)
+   cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test CODE_SIGNING_ALLOWED=NO
+   Shared.xcframework: built + staged live this run (Gradle :core:assembleSharedXCFramework; ~15 min wall incl. app compile).
+   IOS_EXIT=65   ** TEST FAILED ** (build failed → testing cancelled)
+   total 'error:' lines = 2; errors attributed to AIPredictiveMaintenance.* = 0  <-- THIS SURFACE COMPILES CLEAN IN THE REAL APP MODULE
+   ROOT CAUSE (pre-existing, unrelated, OUTSIDE allowed files) — both errors are in sibling surfaces I did not touch:
+     TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to type-check this expression in reasonable time
+     TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures non-escaping parameter 'content'
+   `git status --porcelain` confirms my change set is EXACTLY the 10 new AIPredictiveMaintenance.* files (all `??`);
+   RecentDrivesSection.Previews.swift and AIGeofenceAwareAutomationSuggestions.swift are untouched by me → errors pre-existing.
+   (corroborated by sibling logs 0099 ProgressRing / 0095 MetricCard / 0094 LiveIndicator: IOS_EXIT=65 at this HEAD.)
+
+## [6/6] full-app macOS build test  (scheme TeslaSync-macOS)
+   cmd: xcodebuild -scheme TeslaSync-macOS build test
+   MAC_EXIT=65   ** TEST FAILED **
+   total 'error:' lines = 4; compile errors = 0; errors attributed to AIPredictiveMaintenance.* = 0
+   ROOT CAUSE (runner capability, unrelated): code-signing requires a development certificate the unsigned runner lacks:
+     TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+     TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+   (macOS compilation of this surface is independently proven GREEN by [4/6], which runs on the macOS host under Swift 6.)
+
+=== Honesty Covenant (binding) ===
+ 1 No red-as-green   : IOS_EXIT/MAC_EXIT pasted RAW as 65 and labelled FAILED — never reported green. The full-app
+                       build is disclosed as DEFERRED (pre-existing sibling compile errors + macOS signing), not passing.
+ 2 No scope narrowing : every web render branch reproduced — the withAiFeature gate (.gated withdraws the surface),
+                       the AIFeatureCard title/description/badge, the Ask-Helix button (label flip + disabled rule),
+                       the emptyHint "Select a vehicle first." beneath the description when !canStart, and every
+                       AiOutputPanel branch (empty / thinking / prose / error). Plus the P4 leaf freshness axis
+                       (live/stale/offline chip+banner+one-shot auto-refresh), loading + gate-error chrome.
+ 3 No skip-and-assume : every runnable gate executed on THIS runner; raw exits pasted. The deferred iOS/macOS blockers
+                       were each re-confirmed by a real xcodebuild error line + a `git status` proving the error-owning
+                       files are untouched by me — not assumed. The isolated build/test is a real `swift test` run.
+ 4 No stubs as final  : complete production surface + 75 real tests; placeholder COUNT=0 on every shipped swift file;
+                       no TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-impl/stub/mock. The OSLog telemetry default
+                       is a working logging seam the app overrides; InMemory source is a test/preview affordance.
+ 5 No parity shortcut : the haveScope `> 0` rule (nil/0/negative out-of-scope — DISTINCT from the 0043 range surface's
+                       `!= null`), the body `{ vehicle_id }` with NO `days`, the 0-coercion for out-of-scope ids, the
+                       SSE parse/reducer, the AiOutputPanel order, and the AIFeatureCard button/emptyHint are each
+                       unit-asserted against the web expressions. Tailwind/hex → P1/S9 tokens (Color.TS.accent/border/
+                       textPrimary/textSecondary/textMuted/surfaceGlass/statusWarning/statusDanger, Font.TS, TSSpacing,
+                       TSRadius) — no ported classes, no raw hex. The long privacy description is reproduced verbatim.
+ 6 No delegation      : implemented directly; no agents (delegation FORBIDDEN for this tier).
+ 7 No predecessor bypass: binds P1/S8 state-holder (PredictiveMaintenanceModel + Source seam), P1/S9 tokens (via the
+                       real Tokens.swift + Sources/Components TSButton/TSFadeIn/TSSkeleton), P1/S10 i18n
+                       (PredictiveMaintenanceStrings + AIPredictiveMaintenance.strings), and P1/S11 view.opened
+                       telemetry. Honours the established P4 isolated-build + DEFERRED full-app disposition.
+ 8 No commit on red   : the committed artifact (10 AIPredictiveMaintenance.* files + this log) is GREEN on swiftformat,
+                       swiftlint --strict, placeholder, AND a real Swift 6 strict-concurrency build + 75/75 XCTest
+                       against the REAL design tokens. The deferred full-app gate is blocked only by pre-existing,
+                       unrelated, out-of-allowed-files sibling compile errors (iOS) and runner code-signing (macOS).
+ 9 No silent drift    : changes confined to TeslaSync/shared-surfaces/AIPredictiveMaintenance.* + this log. No sibling
+                       surface, project.yml, or token file was touched. The generated .xcodeproj, the staged
+                       Shared.xcframework, the ios/mac build logs, and the isolated harness are git-ignored / not committed.
+10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIPredictiveMaintenance shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 75 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the REAL design system (Tokens.swift + Sources/Components + Sources/Design), via the Xcode 26.5 toolchain,
+  with swiftformat / swiftlint --strict / placeholder all green on the surface files (and tree-wide), the #Preview
+  matrix compiling, and 4/4 web i18n keys resolved. The full-app iOS + macOS xcodebuild build/test gate is DEFERRED
+  (not failed by this code) on pre-existing, unrelated, out-of-allowed-files blockers — sibling compile errors in
+  RecentDrivesSection.Previews.swift + AIGeofenceAwareAutomationSuggestions.swift on iOS, and development
+  code-signing on the unsigned macOS runner — owned by the P4 acceptance gate on a signed runner.
+
+EXIT=0
+STATUS=DONE

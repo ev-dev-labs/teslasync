@@ -1,0 +1,129 @@
+=== P4 Shared surface 0003 VisuallyHidden (Apple) ===
+Date: 2026-06-10
+Runner: macOS (Darwin), Xcode 26.5 (17F42), iOS 26.5 SDK / macOS 26.5 SDK,
+        Simulator runtime iOS 26.5 (iPhone 16, deployment target iOS 18.0).
+Toolchain: swiftlint, swiftformat, xcodegen, pwsh, OpenJDK 17 (KMP) all present.
+
+--------------------------------------------------------------------------------
+DELIVERABLE (this prompt's scope) — apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.*
+--------------------------------------------------------------------------------
+SwiftUI parity of web `components/a11y/VisuallyHidden.tsx` + its `useAnnouncer` data
+source and `AnnouncerRegion`. Files shipped (all namespaced `VisuallyHidden*` to avoid
+module-wide symbol collisions):
+
+  VisuallyHidden.Adapter.swift     pure core: priority/mode/role, `liveProps` parity
+                                   (role/aria-live/aria-atomic), `cn('sr-only', focusable
+                                   && FOCUSABLE_BASE)` parity, rotating ZWSP de-dup,
+                                   announcement value type, a11y label composition.
+  VisuallyHidden.Model.swift       P1/S8 state-holder, P1/S11 `view.opened` telemetry,
+                                   P1/S10 i18n facade, poster seam, projection, model.
+  VisuallyHidden.Announcer.swift   `useAnnouncer` bus parity + canonical/in-memory sources.
+  VisuallyHidden.States.swift      loading / empty / error chrome (P4 leaf contract).
+  VisuallyHidden.Views.swift       visually-hidden primitive (.visuallyHidden modifier),
+                                   two hidden live regions (AnnouncerRegion parity),
+                                   priority chip, announcement row/list, modes reference,
+                                   focusable skip link, freshness chip, system poster.
+  VisuallyHidden.swift             the surface view (slug "VisuallyHidden").
+  VisuallyHidden.Previews.swift    data / empty / loading / error / stale / offline.
+  VisuallyHidden.strings           P1/S10 i18n keys (no English literals in code).
+  VisuallyHidden.Tests.swift       adapter/projection/semantics tests.
+  VisuallyHidden.ModelTests.swift  model/announcer/source/poster tests.
+
+Wiring required so the gate can compile/test/lint the new directory (additive, non-
+conflicting): apps/apple/project.yml (TeslaSync + TeslaSync-macOS app targets and the
+TeslaSyncTests + TeslaSync-macOSTests bundles gain `TeslaSync/shared-surfaces`), and
+apps/apple/.swiftlint.yml `included:` gains `TeslaSync/shared-surfaces`.
+
+--------------------------------------------------------------------------------
+GATE STEPS (verbatim outcomes)
+--------------------------------------------------------------------------------
+[1] KMP Shared.xcframework (build pre-action prerequisite for both app targets)
+    apps/apple/Scripts/build-shared-xcframework.sh  ->  BUILD SUCCESSFUL in 6m 43s
+    "Shared.xcframework staged" to apps/apple/Frameworks/Shared.xcframework
+    FRAMEWORK_EXIT=0
+
+[2] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ** BUILD FAILED ** / ** TEST FAILED **
+    IOS_EXIT=65
+    Root cause (NOT this surface): 48 "'RecentDrives*' / 'StateTimeline*' is ambiguous
+    for type lookup" errors — duplicate type definitions shipped in BOTH
+    TeslaSync/feature-views/{RecentDrivesSection,StateTimeline}.* AND
+    TeslaSync/dashboard-widgets/{RecentDrivesListWidget,StateTimelineWidget}.*
+    (RecentDrivesModel, RecentDrivesUpdate, RecentDrivesConnection, RecentDrivesLoadStatus,
+    StateTimelineModel, StateTimelineUpdate, StateTimelineConnection, StateTimelineLoadStatus)
+    plus their downstream "cannot infer contextual base in reference to member
+    'loaded/live/loading/failed/stale/offline'" cascades.
+    Errors located in apps/apple/TeslaSync/shared-surfaces (this surface): 0
+
+[3] xcodebuild -scheme TeslaSync-macOS build test
+    ** BUILD FAILED ** / ** TEST FAILED **
+    MAC_EXIT=65
+    Root cause (NOT this surface): (a) the same RecentDrives*/StateTimeline* ambiguous-type
+    collisions; (b) "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require
+    signing with a development certificate" — no signing identity on this runner.
+    Errors located in apps/apple/TeslaSync/shared-surfaces (this surface): 0
+
+[4] swiftlint --strict        ->  Done linting! Found 0 violations, 0 serious in 3244 files.
+    LINT_EXIT=0
+
+[5] swiftformat --lint apps/apple  ->  0/3463 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0
+
+[6] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/VisuallyHidden
+    PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+THIS SURFACE — INDEPENDENT VERIFICATION (every check available on this runner)
+--------------------------------------------------------------------------------
+A. Isolated type-check (real Swift 6 strict-concurrency frontend, iOS 18 simulator target):
+   xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+     -target arm64-apple-ios18.0-simulator <VisuallyHidden.* + design system>
+   -> 0 errors in VisuallyHidden.* (compiles cleanly against the real design tokens +
+      shared components).
+
+B. In-target compile (the real `xcodebuild` TeslaSync module build): the VisuallyHidden.*
+   files passed semantic analysis with 0 errors as part of the full app module (see [2]/[3];
+   "shared-surfaces errors = 0"). The module-level failures are entirely in the pre-existing
+   sibling surfaces named above.
+
+C. Tests executed (real toolchain, swift test, macOS 15 host, swift-version 6):
+   the shipped VisuallyHidden.Tests.swift + VisuallyHidden.ModelTests.swift compiled against
+   the shipped VisuallyHidden.* sources + the design system:
+       Test Suite 'All tests' passed
+       Executed 56 tests, with 0 failures (0 unexpected)
+   Coverage: priority/role/mode mapping, `liveProps` + `sr-only/focusable` class parity,
+   ZWSP de-dup, announcement value type, VoiceOver label composition, count interpolation,
+   projection across loading/empty/error/data + newest-first ordering + per-priority latest,
+   model telemetry-once, phase transitions, stale one-shot auto-refresh (+ re-arm), offline
+   caching, poster speak-once + hydration-no-replay + stale-no-double-speak, announcer bus
+   (announce/subscribe/unsubscribe/reset/bounded-history), canonical source subscribe/
+   propagate/refresh/stop, and the surface slug.
+
+--------------------------------------------------------------------------------
+BLOCK ANALYSIS (Honesty Covenant rule 1: no red-as-green)
+--------------------------------------------------------------------------------
+The shipped surface is complete and passes every check that isolates it (A, B, C, [4], [5],
+[6]). The full `build test` gate ([2]/[3]) CANNOT go green on this runner for three reasons,
+ALL pre-existing and outside this prompt's allowed scope (other surfaces / platform):
+
+  R1 (predecessor, out of scope): duplicate `RecentDrives*` and `StateTimeline*` type
+     definitions across the feature-views and dashboard-widgets sibling surfaces make the
+     TeslaSync module ambiguous. These files are owned by their own prompts; this prompt's
+     "Out of Scope" + "Delegation: FORBIDDEN" forbid editing them, and editing them would
+     also race other parallel slots. Verified unmodified by this prompt (git status clean).
+
+  R2 (platform capability): with the R1 collisions temporarily set aside for verification,
+     the next failure is a swift-frontend crash during whole-module IR generation
+     ("report_at_maximum_capacity" / SmallVector capacity overflow while emitting a
+     reabstraction thunk) — a toolchain scale limit on this generated ~3,300-file module,
+     independent of this surface.
+
+  R3 (platform/environment): TeslaSync-macOS requires a development signing certificate that
+     is not present on this runner.
+
+This surface added only 8 small Swift files (namespaced) + additive build wiring; it does
+not contribute to R1/R2/R3 and removing it would not change them.
+
+EXIT=65
+STATUS=BLOCKED

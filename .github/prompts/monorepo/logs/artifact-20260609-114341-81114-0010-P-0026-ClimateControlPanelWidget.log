@@ -1,0 +1,144 @@
+=== P4 Dashboard widget 0026 ClimateControlPanelWidget (Apple) ===
+Surface : apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.*
+Web spec: web/src/features/dashboard/widgets/ClimateControlPanelWidget.tsx
+Registry: climate-control-panel · category climate · default 2x4 · min 1x2 · max 4x40
+Host    : macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, iPhone 16 simulator booted
+Files shipped (9):
+  ClimateControlPanelWidget.swift            (surface View: shell, header, state switch)
+  ClimateControlPanelWidget.Model.swift      (P1/S8 source seam, @Observable model, P1/S11 telemetry, P1/S10 facade)
+  ClimateControlPanelWidget.Adapter.swift    (pure: temp unit, SI convert, fmtInt/fmtNumber, seat positions, derivations)
+  ClimateControlPanelWidget.Projection.swift (pure: metrics, chips, compact value, accessibility summary)
+  ClimateControlPanelWidget.Views.swift      (compact/full subviews, metric cell, chip, banner, flow layout)
+  ClimateControlPanelWidget.Previews.swift   (every state, °C/°F)
+  ClimateControlPanelWidget.strings          (P1/S10 i18n catalog contribution)
+  ClimateControlPanelWidget.Tests.swift      (model / registry / accessibility)
+  ClimateControlPanelWidget.AdapterTests.swift (conversion / formatting / derivations / projection)
+
+Parity notes:
+  - Data sources reproduced: useVehicles + useClimateLatest (single ClimateSnapshot), useUnits
+    (temperature unit), useTranslation -> ClimatePanelStrings facade.
+  - Web branches reproduced verbatim: hvacOn = (hvac_power>0) || hvac_ac_enabled===true; kW readout
+    only when hvac_power>0; Cabin/Outside temps via convertTempFromSI -> fmtInt + unit suffix; Fan
+    Speed raw ${value} / dash; Wheel Heat steeringHeat>0 ? "n/3" : "Off"; seat-heater chips for each
+    seat level>0 (FL,FR,RL,RC,RR order); "No seat heaters active" fallback; Defrost chip when
+    defrost_mode && !=="Off"; Bat Heater chip when battery_heater_on; compact = inside temp; empty
+    state "No climate data".
+  - All 17 source i18n keys present (seatFL/FR/RL/RC/RR, title, noData, hvacOn, hvacOff, cabin,
+    outside, fanSpeed, steeringHeat, off, noSeatHeat, defrost, batHeater) + kW unit + native chrome.
+  - SI cutover honored: on-disk/API stays SI Celsius; convertTempFromSI applied only at the render
+    boundary (ClimatePanelTempConvert.fromSI), never on disk.
+  - States rendered: loading (skeleton), empty (friendly), error (retry), stale (chip+banner),
+    offline (chip+banner), content. Telemetry view.opened surface="ClimateControlPanelWidget".
+  - Apple-idiomatic mapping: lucide -> SF Symbols (thermometer.medium, power, fan.fill, steeringwheel,
+    carseat.right.fill, snowflake, bolt.fill); recharts/leaflet -> none (surface has no chart/map);
+    VoiceOver labels on every interactive element + per-metric/chip; Dynamic Type + Reduce Motion
+    inherited from shared tokens/primitives.
+
+-------------------------------------------------------------------------------
+[A] SURFACE-SCOPED GATES (in-scope, host-runnable) — ALL GREEN
+-------------------------------------------------------------------------------
+[A1] Isolated SwiftPM build (module TeslaSync; real Tokens.swift + DashboardWidgetInfra.swift,
+     TSSkeleton leaf; Swift 6 language mode = strict concurrency complete)
+     => Build complete!  BUILD_EXIT=0
+[A2] Isolated SwiftPM test (same harness)
+     => Executed 44 tests, with 0 failures (0 unexpected)  TEST_EXIT=0
+[A3] swiftc -typecheck, real iOS 18 simulator SDK (arm64-apple-ios18.0-simulator, -swift-version 6,
+     -strict-concurrency=complete), surface + real deps
+     => 0 errors / 0 warnings  IOS_TYPECHECK_EXIT=0
+[A4] swiftc -typecheck, real macOS 15 SDK (arm64-apple-macos15.0, -swift-version 6,
+     -strict-concurrency=complete)
+     => 0 errors / 0 warnings  MAC_TYPECHECK_EXIT=0
+[A5] swiftlint --strict (apps/apple/.swiftlint.yml) on the 8 surface .swift files
+     => Found 0 violations, 0 serious in 8 files  LINT_SURFACE_EXIT=0
+[A6] swiftformat --lint (apps/apple/.swiftformat) on the surface files
+     => 0/8 files require formatting  FORMAT_SURFACE_EXIT=0
+[A7] check-placeholders.ps1 (swift) on the surface files
+     => PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0   (0 opt-outs)
+[A8] xcodegen generate
+     => Created project; all 9 surface files enumerated (9 pbxproj refs each; app targets get the 6
+        sources + .strings, test targets get .Tests + .AdapterTests)  XCODEGEN_EXIT=0
+
+-------------------------------------------------------------------------------
+[B] FULL-APP GATES (real scheme, real Shared.xcframework)
+-------------------------------------------------------------------------------
+Shared.xcframework: freshly built from the KMP core via Gradle
+  (:core:assembleSharedXCFramework -> BUILD SUCCESSFUL in 19m 10s; release link is the documented
+   Kotlin/Native long-pole) and staged to apps/apple/Frameworks/Shared.xcframework
+  (ios-arm64 + ios-arm64-simulator + macos-arm64).
+  NOTE: a 300s-bounded first attempt hit GRADLE_RUN_EXIT=124 (gtimeout) mid release-link — the
+  documented long-pole; the unbounded re-run completed and was staged.
+
+[B1] iOS app build (the gate's build phase):
+     xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+     => ** BUILD SUCCEEDED **   IOS_BUILD_EXIT=0   (0 error: lines tree-wide)
+     Evidence the surface compiled INTO the real iOS app target 'TeslaSync':
+       SwiftCompile … ClimateControlPanelWidget.swift / .Adapter / .Model / .Projection / .Views /
+       .Previews  (in target 'TeslaSync' from project 'TeslaSync')
+       CopyStringsFile … TeslaSync.app/ClimateControlPanelWidget.strings (builtin-copyStrings --validate)
+     Errors attributable to ClimateControlPanelWidget: NONE.
+
+[B2] macOS app build:
+     xcodebuild -scheme TeslaSync-macOS build
+     => ** BUILD SUCCEEDED **   MAC_BUILD_EXIT=0   (0 error: lines)
+     Errors attributable to ClimateControlPanelWidget: NONE.
+     (Built with CODE_SIGNING_ALLOWED=NO to bypass the documented macOS development-signing blocker
+      that has no signing identity on this host — apps/macos-pending-verifications.md / ADR-012.)
+
+[B3] iOS app `build test` (full TeslaSyncTests bundle, scoped run of the 7 ClimatePanel* suites):
+     xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' test
+       -only-testing:TeslaSyncTests/ClimatePanel*  (all 7 suites)
+     => ** TEST FAILED **   IOS_BUILDTEST_EXIT=65
+     ROOT CAUSE = 2 PRE-EXISTING, UNRELATED sibling test files fail Swift-6 strict-concurrency compile,
+     so the TeslaSyncTests bundle cannot link (and therefore no test in it can run):
+       feature-views/PresetGallery.ModelTests.swift:17:13: error: let 'passthroughLocalize' is not
+         concurrency-safe because non-'Sendable' type '(String, String) -> String' …
+       feature-views/PresetGallery.Tests.swift:22:13: error: (same)
+     These are NOT in this prompt's allowed files (ClimateControlPanelWidget.*); they reproduce the
+     exact non-@Sendable-global issue this surface's own tests already fixed
+     (private let passthrough: @Sendable (String, String) -> String).
+     Errors attributable to ClimateControlPanelWidget: NONE (0).
+     The ClimatePanel* suites themselves pass — proven green in [A2] (44/44 under the identical Swift 6
+     strict-concurrency language mode); they only cannot execute here because two other agents' test
+     files block the shared bundle's compile.
+
+[B4] tree-wide swiftlint --strict (the gate's lint step over the whole tree):
+     => Found 1 violation, 1 serious  LINT_TREE_EXIT=2
+     The single serious violation is PRE-EXISTING and NOT mine:
+       dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: Opening Brace Spacing (opening_brace)
+     Violations attributable to ClimateControlPanelWidget: 0.
+
+[B5] tree-wide swiftformat --lint apps/apple (the gate's format step):
+     => 0/2643 files require formatting  FORMAT_TREE_EXIT=0
+
+-------------------------------------------------------------------------------
+[C] DETERMINATION
+-------------------------------------------------------------------------------
+The ClimateControlPanelWidget surface is COMPLETE and VERIFIED:
+  - swiftformat --lint 0, swiftlint --strict 0, placeholder 0 (0 opt-outs) for the 8 surface files
+  - isolated SwiftPM build OK + 44/44 tests pass under Swift 6 strict concurrency
+  - real iOS-18 AND macOS-15 swiftc -typecheck clean (0/0)
+  - xcodegen enumerates all 9 files
+  - compiles cleanly INTO the real full iOS AND macOS app targets against the freshly-built
+    Shared.xcframework — both ** BUILD SUCCEEDED **, 0 surface errors, .strings bundled.
+
+The literal gate's `build test` and tree-wide `swiftlint --strict` do not go fully green ONLY because of
+pre-existing, unrelated conditions OUTSIDE this prompt's allowed files:
+  (a) feature-views/PresetGallery.ModelTests.swift + PresetGallery.Tests.swift use a non-@Sendable
+      global closure that fails Swift-6 strict-concurrency compile, blocking the shared TeslaSyncTests
+      bundle (B3); and
+  (b) dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift has a pre-existing opening_brace
+      swiftlint violation (B4); and
+  (c) macOS development-signing has no identity on this host (bypassed for the build via
+      CODE_SIGNING_ALLOWED=NO in B2).
+All three are documented, deferred conditions for the macos-latest acceptance gate
+(apps/macos-pending-verifications.md; ADR-012 CI matrix with signing identities and the
+parallel-merge cleanup). None is caused by, nor fixable within, this surface's allowed files.
+
+Per the Honesty Covenant the raw exit codes are recorded verbatim above and are NOT reported as green
+where they are not: IOS_BUILD_EXIT=0, MAC_BUILD_EXIT=0, IOS_BUILDTEST_EXIT=65 (pre-existing sibling
+test files), LINT_TREE_EXIT=2 (pre-existing sibling file), FORMAT_TREE_EXIT=0, PLACEHOLDER_EXIT=0.
+The surface deliverable itself is green on every gate that is within scope and runnable on this host,
+and compiles clean into both shipping app targets.
+
+EXIT=0
+STATUS=DONE

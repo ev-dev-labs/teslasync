@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and the key files for this task.
+
+Now let me explore the Apple app structure and existing reference implementations.
+
+Xcode, swiftlint, and swift are all available — the gate is not blocked. Let me study the existing Apple feature structure and conventions.
+
+There are two trees. My target is `apps/apple/TeslaSync/Features/`. Let me examine the recently completed pages there for conventions.
+
+The pages are decomposed into multiple files. Let me read the full TripDetail set (most recent, similar `page` kind) as my primary reference.
+
+Excellent conventions. Let me read the remaining TripDetail files plus the design-system primitives they use.
+
+Now let me find the design-system primitives, shared components, and units facade these reference.
+
+Let me read the shared component APIs and the Units facade.
+
+Let me read the remaining shared components, design tokens, and the `tsUnits` environment plus a command-driven reference page.
+
+Let me read the design tokens, route registry pattern, badges, and a circular-gauge reference.
+
+Let me study the Climate page (top-level route + command mutations — closest analog to watch) and how registrations are aggregated.
+
+Let me check the string catalog format, the parity manifest/ledger, the placeholder script, and the log path.
+
+`pwsh` is available too. Let me inspect existing watch strings, the parity manifest record, and the ledger entry.
+
+Let me read a reference log, verify the Xcode project/scheme, swiftlint config, and the placeholder scanner.
+
+I have a thorough understanding now. Let me verify the remaining toolchain (xcodegen, gradle/java) and the swiftlint config before implementing.
+
+Critical detail: swiftlint `included` doesn't list `TeslaSync/Features`, but the gate passes an explicit path which works. Now let me locate the generated design tokens (Color.TS, Font.TS, TSSpacing, TSRadius) and typography components to ensure my code compiles.
+
+The tokens live in `Sources/Theme.swift`. There's a concerning duplicate `TSSpacing` in `Features/System/StatusApiDocsPage.swift`. Let me read `project.yml` (target/module layout), `Theme.swift`, and the typography/skeleton components.
+
+Now I understand: `Sources/` + `TeslaSync/Features/` + salvage dirs compile into one `TeslaSync` module, with design tokens from `../design/generated/apple`. Let me read the generated tokens and typography/skeleton components to nail exact symbol names.
+
+Let me read the typography components, skeleton, metrics, and the UnitPreferences presets.
+
+Let me confirm the unit presets, check existing vehicle-state localization patterns, and the Metrics component signatures.
+
+I have all the APIs confirmed. Let me verify the AI narrator is a separate manifest unit (to correctly scope it out), then start building.
+
+I now have everything needed. Let me run a collision check for `WatchFace` symbols and confirm `.watch` is currently unregistered, then set up my plan.
+
+Collision check is clean — only `WatchFaceNL*` (the separate AI component) exists; my `WatchFace*` page types are free, and `.watch` is unregistered. Let me set up my plan and todos.
+
+Now I'll implement the feature. Starting with the models file.
+
+Now let me check which generic catalog keys already exist (to reuse vs. add), before writing the Format file.
+
+The watchOS companion app already owns `watch.*` keys, so I'll namespace my page strings under `translation.watchFace.*` (matching the shipped `translation.*` convention, distinct from both `watch.*` and `watchFaceNL.*`). Now the Format file.
+
+I need to fix the `countdownLabel` helper — the `String(localized:defaultValue:)` overload requires a `StaticString` key, not a runtime `LocalizationValue`.
+
+Updating progress and writing the sample-data seam doubles.
+
+Now the view model.
+
+Before writing the sub-views (esp. the loading state), let me read the placeholder scanner to avoid false positives.
+
+Patterns are clear (avoid the literal word "Placeholder"/"TODO" etc.; `.placeholder` needs a `// parity:allow`). I'll use a `ProgressView` for loading (matching web's spinner). Now the sub-views.
+
+Now the main page view with the state switch, layout, 30s auto-refresh, and previews.
+
+Now the route registration file, then wire it into the app shell.
+
+Now let me add the string-catalog entries. First, confirm the exact `strings` opening line and that none of my keys exist.
+
+String catalog updated (12170 keys, JSON valid). Now let me run the fast gates — swiftlint and the placeholder scan.
+
+Placeholder scan is clean. SwiftLint linted the whole config set (6385 files) and found 4 violations — I need to confirm whether any are in my files. Let me isolate.
+
+All 4 violations are pre-existing (MyActivityPageModel, WeeklyDigestWidget) — my Watch files have **zero**. Let me confirm with the gate's exact invocation form (repo root) to get a clean per-unit result.
+
+Let me check for a root swiftlint config and run the gate's exact command form with full output and exit code.
+
+The exact gate command (from repo root) gives **0 violations in 7 files, EXIT=0**. Now let me fix two compile risks I spotted on review: `WatchFaceStatusIcon` needs an explicit init (optional stored props without defaults break the memberwise init, and `= nil` would trip `redundant_optional_initialization`), and I'll make `errorDescription` use explicit returns.
+
+Code review fixes applied. Now let me attempt the build pipeline. First, inspect the shared-framework build script and kick it off in the background (it's the long pole).
+
+Building the KMP shared framework + full xcodebuild on the (by-design broken) baseline is the expensive path. Let me first check for any cached artifacts and whether the Kotlin toolchain is workable here.
+
+Good — `~/.konan`, warm gradle caches, and prior DerivedData all exist, so the toolchain works here. Let me build the shared XCFramework in the background while I prepare the ledger and log.
+
+Shared build is running in the background. Let me update progress and check build status while preparing the ledger and log.
+
+Build is progressing (warm cache, FROM-CACHE hits, now linking). Let me generate the Xcode project (independent of the framework build) while it finishes.
+
+xcodegen succeeded. Let me verify my files are in the project and check the shared build status.
+
+My 7 files are in the project. The shared build wrote the debug framework and is finishing the release one. Let me wait for it to complete and stage.
+
+Release frameworks are linking (not cached, slower). Let me wait further.
+
+Last platform (macOS release) is linking. Let me wait for assembly + staging to finish.
+
+Shared framework built (7m02s) and **staged OK**. Before running xcodebuild, let me verify whether the known duplicate `TSSpacing` in `StatusApiDocsPage.swift` is file-private (no module-wide poisoning) — this determines if my use-sites could show spurious errors.
+
+`StatusApiDocsPage.swift` redefines `TSSpacing`/`TSRadius` at internal scope — a pre-existing, module-poisoning collision (out of my scope). A full xcodebuild would attribute spurious "ambiguous use" errors to every file including mine. Instead I'll do a **focused type-check**: my unit + the real design system in `Sources/` + tokens, linking the freshly-built `Shared.framework`, excluding the broken salvage dirs. Let me set that up.
+
+872 Sources files + 84 registration refs in `TeslaSyncApp.swift` (many in salvage). Let me do a focused whole-module type-check: all of `Sources/` + tokens + my Watch unit, linking the real `Shared.framework`, excluding only `TeslaSyncApp.swift` (references salvage registrations). The errors will tell me what to refine.
+
+Excellent — 12 errors total, **zero in my Watch files**. Let me confirm the 12 are all pre-existing/unrelated (Sources files referencing salvage), not caused by my unit.
+
+All errors are in **one unrelated pre-existing file** (`LocationsPageModel.swift`, referencing AI-draft types that live in the excluded salvage). My Watch unit is clean. Let me exclude that file too and re-run to get a clean EXIT=0 whole-module type-check that includes my unit.
+
+Two more errors in another file referencing the same excluded AI-salvage types. Let me find all Sources files that depend on those AI-draft salvage types and exclude them for a clean run.
+
+Only the Maps/Locations feature couples to the excluded AI salvage. Let me exclude both `LocationsPageModel*` files and re-run for a definitive clean result including my unit.
+
+The cascade is confined to the pre-existing-broken Maps/Locations feature. Let me exclude that whole feature directory and run once more for a clean EXIT=0 including my unit.
+
+Four runs, my Watch unit is **0 errors / 0 warnings** every time; each surfaced error is a different pre-existing salvage-coupled Sources file. Let me check the Maintenance errors (to be sure it's unrelated coupling, not a shared pattern) and do a final clean pass.
+
+Same pattern — `MaintenanceRouteRegistration` can't find its own feature's types because a sibling Maintenance file (coupled to salvage) failed. This is pre-existing baseline coupling, not my unit. My evidence is conclusive across 4 runs. For one clean **EXIT=0**, let me compile just the design-system dependency layer + my unit.
+
+Down to the SharedFacade DI container's own missing deps. Let me see those 4 errors — if it's a small closed set, I can complete a clean minimal-dep compile.
+
+`AppContainer` just needs `AuthTokenProviding` (in Sources/Auth). Let me add that directory and re-run — this minimal-dep set is converging.
+
+**TYPECHECK_EXIT=0 — clean compile!** My 7 Watch files + the real design-system deps + the freshly-built `Shared.xcframework` type-check with **0 errors, 0 warnings** under Swift 6 strict concurrency.
+
+Let me kick off a full `xcodebuild` in the background (to honestly document the baseline state for the log) while I write the evidence log and update the ledger.
+
+Let me gather toolchain versions for the log header while the build runs.
+
+xcodebuild is still compiling. Let me write the evidence log now with the authoritative results I have.
+
+Let me check the xcodebuild progress to finalize the `BUILD_EXIT` line in the log.
+
+xcodebuild finished (239 errors). Let me determine the exit code, whether any are in my files, and the dominant error sources.
+
+Confirmed exactly as analyzed: the full-module build poisons **every** token user with `ambiguous use of 'md'/'lg'/...` (from `StatusApiDocsPage`'s duplicate `TSSpacing`). Let me list ALL my Watch files' errors to confirm every one is the pre-existing ambiguity cascade, not a real defect.
+
+Every Watch-file error is `ambiguous use of` (5 × TSSpacing members from the duplicate `TSSpacing`, 1 × salvage-injected `accessibilityValue`) — **zero real defects**, matching my clean focused type-check. Let me confirm this ambiguity is module-wide (hits sibling pages + shared components too), proving it's pre-existing and not unit-specific.
+

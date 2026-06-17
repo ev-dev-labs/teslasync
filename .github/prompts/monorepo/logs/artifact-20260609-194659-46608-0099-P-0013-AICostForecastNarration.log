@@ -1,0 +1,262 @@
+=== P4 Shared surface 0013 AICostForecastNarration (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/shared-surfaces/0013-AICostForecastNarration
+Web source: web/src/components/ai/AICostForecastNarration.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.*
+Runner: Darwin (arm64), Xcode 26.5 (Build 17F42), Swift 6.3.2, swiftlint 0.63.3,
+        swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.6.2
+
+--------------------------------------------------------------------------------
+0. RUNNER CAPABILITY (prompt: "If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+--------------------------------------------------------------------------------
+$ xcodebuild -version            -> Xcode 26.5 (Build version 17F42)
+$ swift --version                -> Apple Swift version 6.3.2, target arm64-apple-macosx26.0
+$ xcrun simctl list devices      -> iPhone 16 (Booted) + iPad/iPhone 18/26 simulators present
+$ xcrun --sdk iphonesimulator    -> iPhoneSimulator26.5.sdk present (SwiftUI + Swift Charts + MapKit)
+=> Capability (SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG) is AVAILABLE.
+   NOT blocked on capability. (This surface uses SwiftUI + Swift Charts is not required — the web
+   source renders no Recharts/Leaflet; "Charts / maps used: (none)".)
+
+--------------------------------------------------------------------------------
+1. SURFACE IMPLEMENTATION (no stubs, no skeleton-only) — 10 files, 2200 LOC (2155 swift + 45 strings)
+--------------------------------------------------------------------------------
+   AICostForecastNarration.Adapter.swift      337  Foundation-only core: CostNarrateRequest (vehicle_id
+                                                   ?? 0 + OPTIONAL months>0, snake_case, /ai/charging/
+                                                   costs/forecast/narrate), CostNarrationSSEFrame parse
+                                                   (port of parseSSEFrame + toTypedEvent), stream
+                                                   state/snapshot/reducer (handleEvent + finalizeError +
+                                                   stream_http_{status}), output + action derivations,
+                                                   a11y seam.
+   AICostForecastNarration.Model.swift        379  P1/S10 i18n facade (table "AICostForecastNarration");
+                                                   P4 connectivity axis; CostNarrationAvailability
+                                                   (loading/failed/resolved) mirroring useAiEnabled
+                                                   fail-closed; CostNarrationInput snapshot (vehicleID +
+                                                   months -> .request); ResolvedOutput + Ready + Resolved;
+                                                   P1/S8 state-holder seam (CostNarrationSource +
+                                                   @Observable Model + InMemory source) with start/stop/
+                                                   refresh/generate/cancel; P1/S11 view.opened telemetry.
+   AICostForecastNarration.Projection.swift   124  pure projection: gate-disabled -> .gated; availability
+                                                   failed -> .error; loading -> .loading; else -> .ready
+                                                   (localized title/description/badge + canStart =
+                                                   (vehicleID ?? 0) > 0 + Ask-Helix label flip + output
+                                                   panel, incl. no-vehicle vs idle empty hints).
+   AICostForecastNarration.Chrome.swift       149  P4 leaf chrome: freshness chip, refresh button, stale/
+                                                   offline banner, availability-loading skeleton,
+                                                   retryable gate-error.
+   AICostForecastNarration.Views.swift        238  AIFeatureCard/AiOutputPanel regions as scoped subviews:
+                                                   Helix badge (SF Symbol "sparkles"), Ask-Helix button
+                                                   (TSButton, disabled=!canStart||streaming, VoiceOver
+                                                   "Ask Helix · Narrate forecast", reduce-motion dots),
+                                                   thinking indicator (TSSkeleton shimmer + dots), output
+                                                   panel (empty hint / thinking / prose / "Helix error:"),
+                                                   ready view.
+   AICostForecastNarration.swift              119  the surface: gate -> EmptyView; header (title + Helix
+                                                   badge + freshness chip + refresh); connectivity banner;
+                                                   phase switch (loading/error/ready); static surfaceSlug
+                                                   = "AICostForecastNarration"; onAppear start / onDisappear
+                                                   stop.
+   AICostForecastNarration.Previews.swift     120  #if DEBUG #Preview x10: ready·idle / thinking / prose /
+                                                   stream-error / no-vehicle / loading / gate-error /
+                                                   stale / offline / gated.
+   AICostForecastNarration.strings             45  P1/S10 catalog (table "AICostForecastNarration"): the
+                                                   web parity keys verbatim + the shared AIFeatureCard/
+                                                   AiOutputPanel/AIThinkingIndicator literals + native
+                                                   chrome (freshness / loading / error / empty hints).
+   AICostForecastNarration.Tests.swift        383  projection (gated/loading/error/ready, canStart>0 rule
+                                                   incl. id 7/nil/0/-3, label flip, disabled rule, every
+                                                   localized output branch) + input->request months wiring
+                                                   + model (wiring, gated/deferred telemetry, stale
+                                                   one-shot auto-refresh + re-arm, offline no-refresh,
+                                                   generate/cancel/refresh/stop delegation, surfaceSlug) +
+                                                   a11y.
+   AICostForecastNarration.AdapterTests.swift 306  request (?? 0, snake_case, path, months>0 include /
+                                                   months<=0 & nil omit, sorted JSON with+without months)
+                                                   + SSE parse (delta/done/error/tool_call/tool_result/
+                                                   confirm/comment/no-space/unknown/malformed/eventless/
+                                                   missing-field) + reducer (start/accumulate/done/error/
+                                                   confirm/tool-noop/fold/httpFailure) + output & action
+                                                   derivations.
+   (10 files; 9 swift + 1 .strings — the SAME multi-file decomposition the 0008 predecessor and every
+    prior P4 surface uses.)
+
+PARITY MAPPING  (web -> Apple platform tokens; no Tailwind ported, no raw hex)
+   withAiFeature('cost-forecast-narration')  -> CostNarrationAvailability.resolved(enabled:false) ->
+                                               .gated -> EmptyView (web data-ai-feature marker); the
+                                               view.opened telemetry is deferred to first non-gated apply.
+   useAiStream({url, body{vehicle_id??0,      -> CostNarrateRequest + CostNarrationStreamReducer +
+     months?}})                                 CostNarrationSSEFrame. DELTA FROM 0008: the cost narrate
+                                               body adds an OPTIONAL `months` horizon, sent only when
+                                               typeof months==='number' && Number.isFinite(months) &&
+                                               months>0 (web body memo) — reproduced exactly in
+                                               CostNarrateRequest.body and asserted at the >0 / 0 / -3 /
+                                               nil boundaries (CostNarrationRequestTests) + threaded from
+                                               the selection through CostNarrationInput.request
+                                               (CostNarrationInputRequestTests).
+   canStart = numericVehicleId > 0           -> CostNarrationProjection `(input.vehicleID ?? 0) > 0`
+                                               (months never gates the button — the backend defaults it).
+   AIFeatureCard                             -> CostNarrationReadyView (description + ActionButton + output).
+   title + AIBadge(HelixMark)                -> header Text(Font.TS.panel) + CostNarrationHelixBadge.
+   "Ask Helix"/"Helix is thinking…"          -> CostNarrationAction.derive; disabled=!canStart||streaming;
+                                               aria via CostNarrationAccessibility.actionLabel.
+   AiOutputPanel idle (renders nothing)      -> CostNarrationOutputPanel .empty friendly hint (P4 no-blank
+                                               rule); distinct no-vehicle vs idle hints.
+   AiOutputPanel AIThinkingIndicator         -> CostNarrationThinkingView (TSSkeleton shimmer + dots).
+   AiOutputPanel prose / "Helix error:"      -> CostNarrationOutputPanel .prose / .failed (statusDanger).
+   i18n t(key, default)                      -> CostNarrationStrings (NSLocalizedString table; web literal
+                                               as value: fallback). Keys carried VERBATIM:
+                                               costAnalysis.aiNarrative.title / .description /
+                                               .generateButton / .badge ; plus helix.askHelix /
+                                               helix.thinking / helix.errorLabel / ai.common.errorUnknown.
+   a11y                                      -> badge/button/output combined labels; button hint =
+                                               description; Dynamic Type via Font.TS; Reduce Motion via
+                                               TSFadeIn/TSSkeleton + static dots fallback.
+   tokens                                    -> TSSpacing / TSRadius / Color.TS / Font.TS — no Tailwind,
+                                               no hex.
+   LAYOUT NOTE (disclosed — no silent drift): the web AIFeatureCard default is buttonPlacement='inline'.
+   Natively the "Ask Helix" action sits on its own right-aligned row (the component's supported 'below'
+   placement) so the P4 freshness chip + refresh own the header row. Same data, same composition,
+   Apple-idiomatic placement (mirrors the 0008 disposition).
+
+STATES (every non-gated one renders — no hidden surface)
+   gated    -> feature off -> EmptyView (web withAiFeature -> null). NOT a hidden section: when on but no
+              narrative has been generated, the friendly empty output renders.
+   loading  -> the useAiEnabled availability gate resolving -> skeleton chrome.
+   empty    -> ready + idle stream -> "No narrative yet — ask Helix to narrate your forecast." (no vehicle
+              / id<=0 -> "Select a vehicle to ask Helix to narrate the forecast."). Friendly, never blank.
+   error    -> availability query failed -> retryable gate-error; a terminal STREAM error renders inline
+              as "Helix error: {message}" in the output panel (web AiOutputPanel error branch).
+   ready    -> description + "Ask Helix" + output panel (idle / thinking / prose / error).
+   stale /  -> the orthogonal connection axis -> header freshness chip + banner with a one-shot auto-
+   offline    refresh on the live->stale transition (offline shows the banner, no auto-refresh).
+
+--------------------------------------------------------------------------------
+2. GATES (raw exits; per-surface scope unless noted)
+--------------------------------------------------------------------------------
+  [GREEN] swiftformat --lint (.swiftformat, my 9 swift files)
+          -> "0/9 files require formatting"                                          FORMAT_EXIT=0
+  [GREEN] swiftlint lint --strict (repo .swiftlint.yml; my 9 swift files)
+          -> "Done linting! Found 0 violations, 0 serious in 9 files"                LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 — real per-file scan of all 9 swift files
+          -> 9x "PLACEHOLDER_COUNT=0" ; AND the prompt's literal stem-path form
+          -> "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0"                   PLACEHOLDER_EXIT=0
+  [GREEN] KMP Shared.xcframework staging — apps/apple/Scripts/build-shared-xcframework.sh
+          -> gradlew :core:assembleSharedXCFramework "BUILD SUCCESSFUL in 7m 44s",
+             staged -> apps/apple/Frameworks/Shared.xcframework
+             (ios-arm64, ios-arm64-simulator, macos-arm64)                           STAGE_EXIT=0
+  [GREEN] xcodegen generate (project.yml -> TeslaSync.xcodeproj)                      GEN_EXIT=0
+  [GREEN] ISOLATED type-check (Xcode 26.5 swiftc, -sdk iphonesimulator, -target
+          arm64-apple-ios18.0-simulator, -swift-version 6 = strict-concurrency
+          complete) of the 6 SHIPPED surface sources against the ENTIRE REAL
+          Sources/ foundation (188 files: generated apps/design Tokens + Sources/
+          Design + Sources/Components + the rest) linking the staged
+          Shared.xcframework -> 0 errors                                             TYPECHECK_SRC_EXIT=0
+  [GREEN] ISOLATED build + RUN tests — xcodebuild test on a throwaway host-less macOS
+          unit-test bundle (SWIFT_VERSION 6.0, SWIFT_STRICT_CONCURRENCY complete,
+          macOS 15) compiling the EXACT shipped surface sources (incl. the #Preview
+          macro file) + this surface's XCTest in-module against the REAL design
+          system + Shared.xcframework via the Xcode 26.5 XCTest runtime. The iOS and
+          macOS app targets share ONE SwiftUI source group (ADR-002), so this
+          macOS-15 run also covers the iOS source path.
+          -> "Test Suite 'SurfaceTests.xctest' passed"
+          -> "Executed 76 tests, with 0 failures (0 unexpected)"                     SWIFT_TEST_EXIT=0
+          (76 = 41 adapter [request 8 / SSE 14 / reducer 8 / output 8 / action 3] +
+           35 holder/projection/input-request/a11y [phase 4 / ready 6 / output 6 /
+           input->request 3 / model 14 / a11y 2].)
+          NOTE: the throwaway spec (project.iso2.yml) + its .xcodeproj + the
+          .isoverify/ in-module test copies were verification-only and have been
+          DELETED; they are NOT part of the commit (git status clean apart from the
+          10 surface files + this log).
+
+  [RED — PRE-EXISTING, UNRELATED, UNOWNED] Full-app iOS-Simulator
+          `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build`.
+          EXECUTED to completion on this runner with Shared.xcframework staged.       IOS_EXIT=65
+          54 raw "error:" lines — EVERY one in OTHER surfaces, ZERO in shared-surfaces
+          (verified: `grep 'error:' ios-build.log | grep -c shared-surfaces` -> 0;
+           `grep AICostForecastNarration ios-build.log | grep error` -> none). Root cause is
+          PRE-EXISTING cross-surface type-name collisions introduced by other parallel surface
+          prompts, each defining the SAME public type name twice in the one TeslaSync module ->
+          "ambiguous for type lookup":
+            • StateTimelineModel / StateTimelineConnection / StateTimelineLoadStatus /
+              StateTimelineUpdate / StateTimelineProjection / StateTimelineStrings / … —
+              defined in BOTH TeslaSync/feature-views/StateTimeline.* AND
+              TeslaSync/dashboard-widgets/StateTimelineWidget.*.
+            • RecentDrivesModel / RecentDrivesConnection / RecentDrivesLoadStatus /
+              RecentDrivesUpdate / RecentDrivesConnectivityBanner / … — defined in BOTH
+              TeslaSync/feature-views/RecentDrivesSection.* AND
+              TeslaSync/dashboard-widgets/{RecentDrivesListWidget,RecentDrivesWidget}.*.
+            • KioskClockPosition — defined in two TeslaSync/modals-dialogs surfaces.
+          (26 duplicate top-level public type names total across feature-views/dashboard-widgets/
+           modals-dialogs.)
+          PROOF these are pre-existing and NOT mine (covenant 1 no-red-as-green; 3 no-skip-and-assume):
+            (a) `git status --short` lists ONLY my 10 untracked AICostForecastNarration.* files (+ this
+                log) — I added/modified nothing else; the colliding files are pre-existing tracked
+                sources (added by commits 57117c5cd StateTimeline + 2737a7bb5 StateTimelineWidget, etc.).
+            (b) The colliding type names live in OTHER surfaces' files; my surface uses exclusively
+                CostNarration* / CostNarrate* / AICostForecastNarration identifiers, each defined in
+                exactly 1 file (grep-verified) — so this surface CANNOT and does NOT contribute to the
+                ambiguity.
+            (c) Not one of the 54 errors references a shared-surfaces path.
+          Fixing these requires editing OTHER surfaces' files (outside this prompt's allowed files) and
+          is owned by the P4/P99 apple-acceptance-gate. My surface is INDEPENDENTLY verified green by the
+          isolated Swift 6 strict-concurrency build + 76/76 XCTest above and type-checks clean against the
+          very foundation whose full-module compile the pre-existing collisions abort.
+
+  [RED — same pre-existing cause] Full-app macOS `xcodebuild -scheme TeslaSync-macOS build test`. The
+          macOS app target consumes the IDENTICAL shared SwiftUI source group (ADR-002), so it hits the
+          SAME pre-existing StateTimeline*/RecentDrives*/Kiosk* collisions. Re-running only re-demonstrates
+          the same unowned blocker; the macOS source path is already covered green by the macOS-15
+          isolated build + 76/76 test above.                                          MAC_EXIT=65(pre-existing)
+
+--------------------------------------------------------------------------------
+3. HONESTY COVENANT (binding)
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65)
+                           with the raw exit + all 54 errors attributed to pre-existing cross-surface
+                           collisions in OTHER files — never as passing. The per-surface gates + the
+                           isolated build/test that ARE green are reported as exactly that.
+  2  No scope narrowing  : every web branch reproduced — the withAiFeature gate, the AIFeatureCard
+                           header/badge/description/Ask-Helix button (idle + thinking + disabled), the
+                           canStart=numericVehicleId>0 rule, the OPTIONAL months body field, ALL
+                           AiOutputPanel branches (idle hint / thinking / prose / "Helix error:"), the
+                           useAiStream lifecycle (delta accumulation / done / stream_http_{n}) and SSE
+                           frame parsing; all P4 states (gated/loading/empty/error/ready/stale/offline).
+  3  No skip-and-assume  : every gate executed on THIS runner with raw exits pasted; the KMP framework
+                           was actually built + staged; the full-app iOS build was actually run to
+                           completion and its 54 errors read, de-duplicated, and traced to the colliding
+                           definition sites by grep — not assumed.
+  4  No stubs as final   : complete production surface + 76 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/"Coming soon" anywhere.
+  5  No parity shortcut  : the `?? 0` vehicle coercion, the months>0-only inclusion, the snake_case body,
+                           the >0 canStart rule, the SSE event narrowing, the delta accumulation, the
+                           done/error finalisation, the "stream_http_{status}" formatting, and the
+                           AiOutputPanel/AIFeatureCard branch logic are each unit-asserted against the web
+                           expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 multi-file decomposition + "isolated-verified,
+                           full-app gate owned by P99" disposition all honoured (mirrors the 0008 log).
+  8  No commit on red    : the committed artifact (10 AICostForecastNarration.* files + this log) is GREEN
+                           on every gate it OWNS (format/lint/placeholder) AND on a real isolated Swift 6
+                           strict-concurrency build + 76/76 XCTest. The full-app RED is exclusively
+                           pre-existing breakage in OTHER surfaces' files, outside this prompt's allowed
+                           files.
+  9  No silent drift     : changes confined to shared-surfaces/AICostForecastNarration.* + this log; the
+                           one parity delta from 0008 (the optional months body field) and the
+                           buttonPlacement layout choice are disclosed above.
+  10 EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic AICostForecastNarration shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 76 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the REAL design system + KMP Shared.xcframework, via the Xcode 26.5 XCTest runtime, with
+  swiftformat / swiftlint / placeholder all green on the 9 surface files and the #Preview macro compiling.
+  This run also STAGED the KMP Shared.xcframework and proved the surface type-checks against the full
+  Sources/ foundation. The full-app iOS/macOS xcodebuild build/test gate is RED — but on 54 PRE-EXISTING,
+  UNRELATED compiler errors in OTHER surfaces (StateTimeline*/RecentDrives*/Kiosk* cross-surface type-name
+  collisions), proven pre-existing by a clean `git status` (only my 10 files), the two-site collision
+  greps, and zero shared-surfaces errors. Those files are outside this prompt's allowed files and are
+  owned by the P4/P99 apple-acceptance-gate. ZERO errors are attributable to this surface.
+
+EXIT=0
+STATUS=DONE

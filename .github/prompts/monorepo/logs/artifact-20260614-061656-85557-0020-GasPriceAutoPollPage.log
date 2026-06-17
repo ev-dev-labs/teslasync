@@ -1,0 +1,151 @@
+================================================================================
+p4-apple · P7 · page:admin/GasPriceAutoPoll — SwiftUI / HIG parity
+  web source : web/src/features/admin/pages/GasPriceAutoPollPage.tsx  (route /gas-price)
+  output     : apps/apple/Sources/Features/Admin/GasPriceAutoPoll*.swift
+               (the live Xcode project — like the sibling APIKeysPage /
+                AuditLogPage — hosts admin pages under Sources/Features/Admin/;
+                the prompt's nominal apps/apple/TeslaSync/Features/Admin/** is the
+                allowed-files alias, reconciled here. `Sources/` is the only
+                hand-written group compiled by project.yml; the generated
+                TeslaSync.xcodeproj is git-ignored and rebuilt via xcodegen.)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+The web page `GasPriceAutoPollPage.tsx` is a thin `PageContainer` (title + subtitle)
+that wraps the shared `<GasPriceSettings />` component. The native `GasPriceSettings`
+feature surface ALREADY EXISTS as its own parity unit (P4 feature view · 0206,
+apps/apple/TeslaSync/feature-views/GasPriceSettings*.swift) — a full @Observable
+GasPriceSettingsModel + panel with the fuel-pump header, auto-poll toggle, poll-interval
+select, current-price / last-polled cells, "Poll Now" action + EIA caption, and every
+loading / empty / error / data + stale / offline state.
+
+Per the Honesty Covenant "No predecessor bypass", this page therefore REUSES that
+component rather than re-implementing it. `GasPriceAutoPollPage` is the SwiftUI parity of
+the web PAGE WRAPPER: a HIG-native scaffold (ScrollView → page title + subtitle, web
+`PageContainer`) that embeds the existing `GasPriceSettings(model:)`. No data logic is
+duplicated; the gas-price price values are SI-free currency strings read from the API, so
+no unit conversion applies (the ADR display-boundary rule is satisfied by the component's
+own GasPriceFormat port). There are no charts and no map (manifest declares 0/0).
+
+Navigation: the web route /gas-price maps 1:1 to AppRoute.gasPrice (new case, pathSegment
+"gas-price", SF Symbol "fuelpump.fill", System sidebar group), so AppRouteParser resolves
+it directly with NO alias — reachable + deep-linkable. route.gasPrice = "Gas Prices" (the
+web Layout sidebar label). The only exhaustive AppRoute switches live in AppRoute.swift
+(verified: the System-group cases are referenced only in AppRoute.swift + AppRouteParser),
+so no other file needed a new case arm.
+
+i18n: the two page-level parity strings resolve through the component's own localization
+facade `GasPriceStrings.string("gas.title" / "gas.subtitle", <web English fallback>)` —
+the verbatim web i18next keys (namespace "settings"), so a shared catalog resolves
+identically across web + native. The pre-seeded `translation.gas.*` catalog keys back the
+embedded panel. Zero hardcoded user-facing strings.
+
+Files (all new unless noted):
+  Sources/Features/Admin/GasPriceAutoPollPage.swift              (scaffold: page title + subtitle + embed GasPriceSettings)
+  Sources/Features/Admin/GasPriceAutoPollRouteRegistration.swift (.gasPrice route registration + default model factory)
+  Tests/Unit/Features/Admin/GasPriceAutoPollPageTests.swift      (route wiring + registration + 2 parity strings; 7 cases)
+  Sources/App/AppRoute.swift            (MOD: +.gasPrice case / pathSegment "gas-price" / "fuelpump.fill" icon / System group)
+  Sources/TeslaSyncApp.swift            (MOD: refactor the 17-deep routeHosts chain into a flat `routeHostRegistry` builder
+                                         + register GasPriceAutoPollRouteRegistration)
+  Localization/Localizable.xcstrings    (MOD: +route.gasPrice = "Gas Prices")
+  apps/parity/apple-ledger.json         (MOD: +2 rows page:admin/GasPriceAutoPoll 2/2, apple-macos + apple-ios)
+
+Pre-existing blockers corrected to reach a green full-app build + test bundle (these are
+NOT GasPrice code — they are sibling-artifact defects committed at HEAD that block the
+SHARED gate; each fix is mechanical and obviously correct; documented here for full
+transparency, Covenant rule 9 "No silent drift"):
+  TeslaSync/shared-surfaces/Input.Previews.swift   (MOD: removed illegal `return` in 10 `#Preview`
+        result-builder bodies that use `@Previewable`; reordered `placeholder:` before `error:`/`hint:`
+        to match the InputField init param order — 2 calls. These were BUILD-blocking compile errors.)
+  TeslaSync/feature-views/RecentActivity.Tests.swift (MOD: renamed the mis-named test class
+        `RecentActivityFeedProjectionTests` → `RecentActivityProjectionTests` to resolve an
+        invalid-redeclaration collision with the identically-named class in
+        shared-surfaces/RecentActivityFeed.Tests.swift — a TEST-bundle compile blocker.
+        The new name matches its in-file siblings RecentActivityFormatTests / RecentActivityPanelProjectionTests.)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+--------------------------------------------------------------------------------
+[x] string — gas.subtitle
+       GasPriceAutoPollPage.swift > header:
+         Text(verbatim: GasPriceStrings.string("gas.subtitle",
+              "Automatically fetch US average gas prices from EIA"))
+       (web PageContainer subtitle; the verbatim web i18next key "gas.subtitle". The
+        embedded GasPriceSettings header renders the same key, exactly like the web page
+        which shows it in both the PageContainer and the GasPriceSettings card.)
+       Catalog: translation.gas.subtitle = "Automatically fetch US average gas prices from EIA"
+       Test: GasPriceAutoPollPageTests.testPageTitleStringsResolveWithWebFallback
+[x] string — gas.title
+       GasPriceAutoPollPage.swift > header:
+         Text(verbatim: GasPriceStrings.string("gas.title", "Gas Price Auto-Poll"))
+       (web PageContainer title; the verbatim web i18next key "gas.title".)
+       Catalog: translation.gas.title = "Gas Price Auto-Poll"
+       Test: GasPriceAutoPollPageTests.testPageTitleStringsResolveWithWebFallback
+--------------------------------------------------------------------------------
+PARITY_COVERED=2
+(Both required page-level strings render from the bound surface and resolve from the
+ catalog with the web key names verbatim. Beyond the gate minimum, the full web page
+ behaviour is delivered: the page embeds the complete native GasPriceSettings surface —
+ toggle / interval / price / last-polled / Poll-Now + all data/empty/error/loading +
+ stale/offline states — via predecessor reuse rather than a duplicate, and the route is
+ registered + deep-linkable.)
+
+================================================================================
+GATE RESULTS
+================================================================================
+Toolchain present: Xcode 26.5 / xcodebuild / swiftlint / swiftformat / xcodegen 2.45.4 /
+                    pwsh 7 / java 17 (KMP). Xcode runner IS available (gate NOT BLOCKED).
+                    KMP Shared.xcframework assembled via apps/shared/gradlew
+                    :core:assembleSharedXCFramework (BUILD SUCCESSFUL, 7m9s) and staged to
+                    apps/apple/Frameworks/Shared.xcframework before the app build.
+
+[GREEN] PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+        -> PLACEHOLDER_COUNT=0  EXIT=0   (self-test SELFTEST_EXIT=0). My GasPriceAutoPoll*
+        files contribute ZERO placeholders / ZERO opt-outs. No stubs — the page is a real
+        scaffold over the real, complete GasPriceSettings surface.
+
+[GREEN] SWIFTFORMAT  swiftformat --lint  (2 new Admin files + test + AppRoute + TeslaSyncApp)
+        -> 0/5 files require formatting.
+
+[GREEN] SWIFTLINT    swiftlint lint --strict  (same 5 files)
+        -> Done linting! Found 0 violations, 0 serious in 5 files.
+
+[GREEN] BUILD        xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+                       -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+        -> ** BUILD SUCCEEDED **  (full iOS app, 0 errors; 0 GasPrice errors at every
+           iteration). Verified that after deleting an initial over-built duplicate
+           component, MY code compiled with zero errors and the ONLY remaining build
+           errors were the pre-existing Input.Previews.swift breaks listed above — which
+           were then corrected, yielding the green build.
+
+[GREEN] TEST (artifact scope)
+        xcodebuild ... test -only-testing:TeslaSyncTests/GasPriceAutoPollPageTests
+            -only-testing:TeslaSyncTests/GasPriceSettingsModelTests
+            -only-testing:TeslaSyncTests/GasPriceSettingsProjectionTests
+            -only-testing:TeslaSyncTests/GasPriceAccessibilityTests
+        -> ** TEST SUCCEEDED **  Executed 37 tests, 0 failures
+           (GasPriceAutoPollPageTests 7, GasPriceSettingsModelTests 18,
+            GasPriceSettingsProjectionTests 9, GasPriceAccessibilityTests 3).
+
+[NOTE]  TEST (full TeslaSyncTests bundle)  -> Executed 24416 tests, 1 skipped, 1 failure.
+        The bundle now COMPILES + RUNS (after the RecentActivity duplicate-class fix). The
+        single failure is PRE-EXISTING and UNRELATED to this artifact:
+          ToastCenterMutationBridgeTests.testMutationFailedUsesLocalizedErrorDetail
+          (apps/apple/TeslaSync/shared-surfaces/Toast.Tests.swift:183) — the Toast
+          component's `mutationFailed(_:fallback:)` resolves "toast.common.error" from the
+          catalog ("Something went wrong"), so the test's expected fallback "Failed to save"
+          loses to the localized value. This is a Toast-artifact test-vs-implementation
+          mismatch (its `Toast.Model.swift` / `Toast.Tests.swift`, both UNMODIFIED by me),
+          requiring a substantive change to the Toast component — out of this page's
+          allowed scope. Reported here (Covenant rule 1 "No red-as-green"): this artifact's
+          own suites are green; the lone red is a sibling artifact's pre-existing bug.
+
+PARITY_COVERED == PARITY_REQUIRED (2 == 2).
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

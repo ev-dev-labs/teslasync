@@ -1,0 +1,131 @@
+=== P4 Dashboard widget 0090 SleepEfficiencyWidget (Apple) ===
+Date: 2026-06-09
+Host: macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + pwsh present
+Branch: auto/20260608-211853-78201/50
+Web source (spec): web/src/features/dashboard/widgets/SleepEfficiencyWidget.tsx
+Native output: apps/apple/TeslaSync/dashboard-widgets/SleepEfficiencyWidget.*
+
+--------------------------------------------------------------------------------
+CAPABILITY CHECK (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG)
+--------------------------------------------------------------------------------
+xcodebuild -version           -> Xcode 26.5 (Build 17F42)            [available]
+swift --version               -> Apple Swift 6.3.2                   [available]
+swiftlint / swiftformat / pwsh-> present (homebrew)                  [available]
+iPhoneSimulator SDK           -> iPhoneSimulator26.5.sdk (iOS 18+)   [available]
+MacOSX SDK                    -> MacOSX26.5.sdk (macOS 15+)          [available]
+Charts/MapKit not used by this surface (web "Charts/maps used: (none)").
+=> Toolchain is fully available. This is NOT a platform-capability block.
+
+--------------------------------------------------------------------------------
+ARTIFACT — what shipped (8 Swift files + 1 .strings, all SleepEfficiencyWidget.*)
+--------------------------------------------------------------------------------
+SleepEfficiencyWidget.swift          surface view (SwiftUI), every state, compact gate (size.cols<=1)
+SleepEfficiencyWidget.Views.swift    radial gauge / stat cluster / loading shimmer / connectivity banner
+SleepEfficiencyWidget.Model.swift    @Observable model + P1/S8 source seam + P1/S11 telemetry + registry + i18n facade
+SleepEfficiencyWidget.Models.swift   Foundation-only value types (DTO, FormatPrefs, Copy, projected pieces)
+SleepEfficiencyWidget.Adapter.swift  pure projector: efficiencyColor bands + fmtNumber pipeline (port-parity)
+SleepEfficiencyWidget.Previews.swift #Preview for loading/empty/error/stale/offline/content + 2 grid sizes
+SleepEfficiencyWidget.Tests.swift    adapter/format/band/registry/a11y unit tests
+SleepEfficiencyWidget.ModelTests.swift  phase-resolution + state-holder + telemetry tests
+SleepEfficiencyWidget.strings        P1/S10 i18n catalog (web keys + native chrome + VoiceOver templates)
+
+Parity with the web source:
+- Registry (registry/energy.ts -> "sleep-efficiency"): id=sleep-efficiency, category=energy,
+  default 1x2, min 1x2, max 3x40. Verified by SleepEfficiencyWidgetRegistryTests (+ clamp).
+- Gauge value = sleep_efficiency_pct, max 100, unit "%", label "Efficiency" (hidden when compact).
+- efficiencyColor bands ported 1:1 (STRICT): >95 good #10b981, >85 fair #f59e0b, else poor #ef4444.
+- Stats in web order: Avg Drain/Day = fmtNumber(sentry_off_drain_rate*24, 2) "%";
+  Total Sleep = fmtNumber(sum(total_minutes for state in {asleep,offline})/60, 0) "h";
+  Wake Events = recent_events.length.
+- States reproduced: loading (shimmer), empty ("No sleep efficiency data"), error (+retry),
+  stale + offline (cached value + banner/chip), content. Data bound via P1/S8 source seam (no HTTP in view).
+- i18n: every web key resolves through the P1/S10 facade; no English literals in the view.
+- a11y: VoiceOver labels on gauge + each stat + chips; Dynamic Type fonts; reduce-motion honored.
+- Telemetry: model.start() emits view.opened with surface slug "SleepEfficiencyWidget" (P1/S11).
+
+--------------------------------------------------------------------------------
+HOST-RUNNABLE VERIFICATION — all GREEN (surface verified in isolation)
+--------------------------------------------------------------------------------
+[1] swiftformat --lint (8 files, repo .swiftformat)            -> 0/8 require formatting   FORMAT_EXIT=0
+[2] swiftlint --strict (8 files, repo .swiftlint.yml)          -> 0 violations, 0 serious  LINT_EXIT=0
+[3] check-placeholders.ps1 (real scan of copied files, swift)  -> PLACEHOLDER_COUNT=0       PLACEHOLDER_EXIT=0
+    (note: the literal gate path .../SleepEfficiencyWidget is a non-existent leaf, which the
+     script treats as "nothing to scan" => 0. A REAL scan of the 9 copied files also gives 0.)
+[4] Isolated SwiftPM build (Swift 6 lang mode, -strict-concurrency=complete, macOS host)
+    surface + tokens + infra + minimal TSSkeleton -> "Build complete! (9.05s)"               BUILD_EXIT=0
+[5] Isolated SwiftPM tests (XCTest)  -> Executed 31 tests, with 0 failures (0 unexpected)     TEST_EXIT=0
+    (Band 2, Format 7, Adapter 9, Registry 2, Accessibility 1, Phase 1, Model 9 = 31)
+[6] swiftc -typecheck iOS 18 simulator (arm64-apple-ios18.0-simulator, swift 6, strict)       IOS_TYPECHECK_EXIT=0
+[7] swiftc -typecheck macOS 15        (arm64-apple-macos15.0,           swift 6, strict)       MAC_TYPECHECK_EXIT=0
+[8] xcodegen generate -> project created; all 9 SleepEfficiencyWidget.* files enumerated
+    (6 sources + .strings in app targets; 2 *Tests.swift in the XCTest bundles)               XCODEGEN_EXIT=0
+
+--------------------------------------------------------------------------------
+FULL-APP GATE — BLOCKED by PRE-EXISTING, UNRELATED issues (NOT this artifact)
+--------------------------------------------------------------------------------
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+       - Scheme pre-action "Stage Shared.xcframework" ran Gradle (:core:assembleSharedXCFramework)
+         and staged the KMP framework successfully ("✓ Shared.xcframework staged",
+         "ProcessXCFramework ... Shared.framework ios simulator"). The previously-missing
+         Frameworks/Shared.xcframework is therefore NOT a blocker on this host.
+       - Compilation then FAILED with 74 errors, ALL in pre-existing sibling Charge* widgets:
+            20  dashboard-widgets/ChargeStatusLiveWidget.Previews.swift
+            19  dashboard-widgets/ChargeStatusWidget.Previews.swift
+            14  dashboard-widgets/ChargeSessionChartWidget.Previews.swift
+             6  dashboard-widgets/ChargeStatusLiveWidget.Model.swift
+             5  dashboard-widgets/ChargeStatusWidget.Model.swift
+             4  dashboard-widgets/ChargeStatusLiveWidget.Adapter.swift
+             3  dashboard-widgets/ChargeStatusWidget.Adapter.swift
+             2  dashboard-widgets/ChargeStatusLiveWidget.Content.swift
+             1  dashboard-widgets/ChargeSessionChartWidget.Model.swift
+         Root cause = parallel-merge duplicate-symbol collisions: 'ChargeSessionDTO',
+         'ChargeUnitPrefs', 'ChargeStatusProjection', 'ChargeStateDTO' are each defined in TWO
+         files (e.g. struct ChargeSessionDTO in ChargeStatusLiveWidget.Model.swift AND
+         ChargeSessionChartWidget.Models.swift) -> "ambiguous for type lookup", cascading to
+         "cannot infer contextual base in reference to member 'loaded'/'live'/..." etc.
+       - SleepEfficiencyWidget errors in the full-app build: 0 (zero).                          IOS_EXIT=65
+[macOS] xcodebuild -scheme TeslaSync-macOS build
+       - FAILED at the signing stage BEFORE compilation:
+         "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require signing with a
+          development certificate. Enable development signing." (no dev identity on this runner)
+       - SleepEfficiencyWidget errors: 0 (build never reached compilation).                     MAC_EXIT=65
+
+Both full-app blockers are exactly the items already tracked in
+apps/apple/macos-pending-verifications.md for the sibling P4 Apple surfaces
+(ToolCard / AlertMessageEditor / FSMTimelineChart): "pre-existing parallel-merge
+collisions ... + macOS development-signing", deferred to
+`p4-apple/P99-0001-apple-acceptance-gate` (runs on macos-latest with signing identities).
+They are OUTSIDE this prompt's allowed-files scope (apps/apple/TeslaSync/dashboard-widgets/
+SleepEfficiencyWidget.* + this log) — `git status` shows ONLY the 9 SleepEfficiencyWidget
+files added; no Charge* file was touched, so these errors are pre-existing and unrelated.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all states from the web source (loading/empty/error/stale/offline/content).
+[x] Hooks bind to the shared P1/S8 state-holder seam; no direct HTTP in the view.
+[x] Every web i18n key has a matching key in the P1/S10 catalog (SleepEfficiencyWidget.strings).
+[x] Accessibility labels present on gauge, every stat, chips, and interactive buttons.
+[x] Tests: adapter unit tests + per-state model/phase tests + a11y label test (31 passing).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (real placeholder scan = 0).
+[~] EXIT=0 / STATUS=DONE  -> the surface's host-runnable gates are all 0; the aggregate full-app
+    xcodebuild build+test cannot reach 0 on this host due to pre-existing, unrelated Charge*
+    duplicate-symbol collisions (iOS) and missing macOS development-signing — deferred to the
+    P4 acceptance gate. Reported honestly as BLOCKED (no red-as-green).
+
+--------------------------------------------------------------------------------
+PER-STEP EXIT SUMMARY
+--------------------------------------------------------------------------------
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+ISOLATED_BUILD_EXIT=0
+ISOLATED_TEST_EXIT=0   (31 tests, 0 failures)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+XCODEGEN_EXIT=0
+IOS_EXIT=65            (full-app: 74 pre-existing Charge* errors, 0 SleepEfficiencyWidget)
+MAC_EXIT=65            (full-app: macOS development-signing, 0 SleepEfficiencyWidget)
+
+EXIT=65
+STATUS=BLOCKED

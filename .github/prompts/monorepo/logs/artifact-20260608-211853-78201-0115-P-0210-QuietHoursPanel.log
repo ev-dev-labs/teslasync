@@ -1,0 +1,121 @@
+=== P4 Feature view 0210 QuietHoursPanel (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/QuietHoursPanel.*
+Web src : web/src/features/settings/components/QuietHoursPanel.tsx (582 lines, read end-to-end)
+Tooling : Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app), Swift 6.3.2, swiftlint, swiftformat,
+          pwsh 7.x, xcodegen; Shared.xcframework built via gradle
+          (apps/apple/Scripts/build-shared-xcframework.sh → :core:assembleSharedXCFramework,
+          BUILD SUCCESSFUL in 10m29s, staged to apps/apple/Frameworks/Shared.xcframework).
+
+------------------------------------------------------------------------------------------
+DELIVERABLE (12 files, 2,648 Swift LOC + 55-key .strings — web is a 582-line leaf; within sibling norm)
+------------------------------------------------------------------------------------------
+  QuietHoursPanel.swift              213  main View: header (icon + title + subtitle + Add window),
+                                          phase switch (loading/error/empty/data) + inline form,
+                                          freshness chip + connectivity banner, toast overlay, telemetry, a11y
+  QuietHoursPanel.Adapter.swift      324  i18n facade, severity catalog (web SEVERITY_CHOICES), weekday
+                                          bitmask table (web WEEKDAYS Sun=1<<0..Sat=1<<6), HH:MM time
+                                          helpers (web HHMM/parseHHMM), window value types, draft
+                                          (web DraftWindow/makeDraft/toggleWeekday/toggleSeverity)
+  QuietHoursPanel.Builder.swift      183  validation (web validateDraft), summary (web summarizeWindow),
+                                          next-change schedule (web nextWindowChangeLabel), IANA timezone
+                                          list (web listTimezones), VoiceOver summary
+  QuietHoursPanel.Projection.swift   120  connection axis, toast value, input snapshot, resolved + projection
+  QuietHoursPanel.Model.swift        301  surface slug + telemetry seam (P1/S11), Source seam (P1/S8),
+                                          QuietHoursModel (@Observable: delete + inline-form presentation +
+                                          save-outcome toast), InMemory source
+  QuietHoursPanel.Form.swift         315  QuietHoursFormModel (@Observable: web draft/editingId/validationError
+                                          cluster) + QuietHoursWindowForm (time pickers, tz select, weekday +
+                                          severity chips, enabled toggle, validation, Cancel/Create-Update)
+  QuietHoursPanel.Views.swift        339  wrapping chip flow (web flex flex-wrap), selectable chip, window row
+                                          (status badge + summary + next-change + weekday pills + bypass
+                                          badges + edit/delete), loading/empty/error chrome, toast
+  QuietHoursPanel.Previews.swift     112  8 #Preview: data/loading/empty/error/stale/offline + form add/edit
+  QuietHoursPanel.Tests.swift        223  24 XCTest: severity, weekday, time, draft, validation
+  QuietHoursPanel.ScheduleTests.swift233  15 XCTest: summary, schedule (wrap/non-wrap/disabled/inactive +
+                                          labels), timezones, projection, accessibility
+  QuietHoursPanel.ModelTests.swift   285  23 XCTest: model wiring + telemetry + freshness + delete
+                                          (success+failure) + form presentation + save outcome +
+                                          QuietHoursFormModel (seed/toggle/bindings/validation/save)
+  QuietHoursPanel.strings            ---  55 keys: every web t() key verbatim + severity/weekday labels +
+                                          native chrome (next-change schedule, toast, freshness, banners, a11y)
+
+States reproduced (every one renders — no hidden surface): loading (spinner + label) · empty (friendly
+  EmptyState; web `windows.length === 0 && !draft`, hidden while the create form is open) · error
+  (QueryError + retry) · data (windows list) · stale + offline (freshness chip + banner + one-shot
+  auto-refresh on the stale transition). Save / delete mutations surface a transient toast (web useToast).
+Data sources bound via the shared P1/S8 Source seam (no view HTTP): useQuietHours, useSaveQuietHours,
+  useDeleteQuietHours, useToast, useTranslation, useNotifications. The web `seedDraft` / `onSeedConsumed`
+  AI-advisor props (QuietHoursPage integration) are a separate parent surface — out of scope per the
+  prompt, omitted with a documented note in the view header.
+Native mapping: web <Input type="time"> → TSDatePickerBridge .hourAndMinute (bridged to the HH:MM API
+  strings; all validation kept pure for parity + tests); web <Select> tz → TSSelect over IANA known
+  identifiers; web purple/amber Tailwind chips → token-driven selectable chips (accent / warning tones);
+  web nextWindowChangeLabel English template → typed QuietHoursNextChange localised at the view boundary
+  (no English literal in code). No Recharts / Leaflet in this surface (charts/maps n/a).
+
+------------------------------------------------------------------------------------------
+GATE EXECUTION (commands per prompt; real exit codes captured — no red-as-green)
+------------------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        IOS_EXIT=65  (DEFERRED — PRE-EXISTING baseline breakage in OTHER surfaces; THIS surface clean)
+        Whole-module compile reached the end of the alphabet; 226 `error:` lines, of which
+        ZERO mention QuietHours (grep -ci QuietHours over all error lines = 0). Every erroring file is a
+        sibling dashboard-widget outside this surface's allowed files:
+            ChargeSessionChartWidget, ChargeStatusLiveWidget, ChargeStatusWidget,
+            FleetStatsBarWidget, SafetyFeaturesWidget, SafetyHistoryWidget
+        Root cause (NOT this surface): duplicate `public` type declarations across parallel-merged sibling
+        surfaces → "'ChargeSessionDTO' / 'ChargeStateDTO' / 'ChargeStatusProjection' / 'ChargeUnitPrefs' /
+        'SafetyModel' / 'SafetyUpdate' / 'SafetyLoadStatus' / 'SafetyConnection' / 'FleetStatsBarModel' is
+        ambiguous for type lookup", plus the cascading "cannot infer contextual base" / "'nil' requires a
+        contextual type" diagnostics that follow. This is the SAME documented class of pre-existing
+        parallel-merge collision recorded in apps/macos-pending-verifications.md for the sibling
+        p4-apple/feature-views/P-0010-ToolCard. Outside the allowed file scope (QuietHoursPanel.* only).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+        MAC_EXIT=65  (DEFERRED — macOS development-signing, an environment limitation)
+        Failed at the signing pre-flight before Swift compilation: "'TeslaSync-macOS' /
+        'TeslaSyncWidgets-macOS' has entitlements that require signing with a development certificate."
+        No development certificate exists on this headless runner. 4 error lines, ZERO mention QuietHours.
+        Documented as macOS-pending in apps/macos-pending-verifications.md (ADR-012 CI matrix runs the
+        full-app macOS build on a macos-latest runner with signing identities at the apple acceptance gate
+        p4-apple/P99-0001-apple-acceptance-gate).
+
+[3] swiftlint --strict   (scoped to the 11 QuietHoursPanel.*.swift)
+        LINT_EXIT=0 — "Done linting! Found 0 violations, 0 serious in 11 files."
+
+[4] swiftformat --lint apps/apple   (scoped to the 11 QuietHoursPanel.*.swift)
+        FORMAT_EXIT=0 — "0/11 files require formatting."
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/QuietHoursPanel
+        PLACEHOLDER_EXIT=0 — PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+
+------------------------------------------------------------------------------------------
+PER-SURFACE VERIFICATION (host-runnable equivalent of the deferred build gate — this surface is GREEN)
+------------------------------------------------------------------------------------------
+Because the in-worktree app target cannot link (pre-existing sibling collisions above) and macOS signing
+is unavailable, this surface was verified against the REAL shared layer it depends on — the Shared-free
+design tokens + component library — exactly as the documented ToolCard precedent does:
+
+  A) Isolated type-check (swiftc -typecheck, iphonesimulator26.5 SDK, -target arm64-apple-ios18.0-simulator,
+     -swift-version 6) of the 8 QuietHoursPanel source files against the real tokens + the component files
+     the surface uses (Tokens.swift, TSDesign.swift, TSMaterial.swift, Badges, Buttons, Fields, Pickers,
+     Typography, States, Banners, Cards, Motion):
+        ISOLATED_SURFACE_TYPECHECK_EXIT=0   (0 errors, 0 warnings)
+
+  B) Isolated SwiftPM test run (module renamed TeslaSync so @testable import resolves; macOS host; the same
+     8 source files + the same real component/token deps + the 3 co-located *Tests.swift):
+        swift test → "Executed 62 tests, with 0 failures (0 unexpected)"   SWIFT_TEST_EXIT=0
+     Coverage: severity/weekday/time/draft/validation (Adapter+Builder), summary/schedule/timezones/
+     projection/accessibility, model wiring + telemetry (view.opened slug "QuietHoursPanel") + stale
+     auto-refresh + delete success/failure + form presentation + save-outcome (created/updated/failed),
+     and QuietHoursFormModel seed/toggle/bindings/validation/save.
+
+ATTRIBUTION SUMMARY: iOS build 226 errors / 0 QuietHours · macOS 4 errors / 0 QuietHours. Every gate that
+is host-runnable for this surface in isolation is GREEN (typecheck 0, 62/62 tests, swiftlint 0,
+swiftformat 0, placeholders 0). The two non-zero steps are a PRE-EXISTING, OUT-OF-SCOPE sibling
+duplicate-type collision (iOS) and an ENVIRONMENT signing limitation (macOS), both deferred to the apple
+acceptance gate on a macos-latest runner per apps/macos-pending-verifications.md. No red is attributable
+to QuietHoursPanel; no red was presented as green.
+
+EXIT=1
+STATUS=BLOCKED

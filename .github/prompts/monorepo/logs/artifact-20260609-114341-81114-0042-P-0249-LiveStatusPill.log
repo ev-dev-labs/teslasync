@@ -1,0 +1,161 @@
+=== P4 Feature view 0249 LiveStatusPill (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/LiveStatusPill.*
+Web src  : web/src/features/system/components/status/LiveStatusPill.tsx  (THE specification)
+Runner   : Darwin arm64 (Apple Mac Studio), 2026-06-09
+Honesty covenant: 1 no red-as-green · 2 no scope narrowing · 3 no skip-and-assume ·
+                  4 no stubs-as-final · 5 no parity shortcut · 6 no delegation ·
+                  7 no predecessor bypass · 8 no commit-on-red · 9 no silent drift ·
+                  10 log ends EXIT=<int> STATUS=<DONE|BLOCKED>
+
+################################################################
+# CAPABILITY PROBE (this runner)                               #
+################################################################
+  Xcode                : 26.5 (Build 17F42)            PRESENT
+  Swift                : 6.3.2 (swiftlang-6.3.2.1.108) PRESENT
+  iOS Simulator        : iPhone 16 (18.x) booted       PRESENT
+  iphonesimulator SDK  : iPhoneSimulator26.5.sdk        PRESENT
+  macOS SDK            : MacOSX (15/26.5)               PRESENT
+  xcodegen             : /opt/homebrew/bin/xcodegen     PRESENT
+  swiftlint            : /opt/homebrew/bin/swiftlint     PRESENT
+  swiftformat          : /opt/homebrew/bin/swiftformat   PRESENT
+  pwsh (placeholders)  : /opt/homebrew/bin/pwsh          PRESENT
+  java (KMP Gradle)    : openjdk 17.0.19                 PRESENT
+  => SwiftUI / Swift Charts / MapKit capability is AVAILABLE. The surface uses
+     SwiftUI only (no chart, no map — the web leaf is a pure presentational pill).
+
+################################################################
+# DELIVERABLE (allowed files: feature-views/LiveStatusPill.*)  #
+################################################################
+  LiveStatusPill.Adapter.swift  - pure projection core: LiveStatusTone (web StatusLiveState:
+                                  live|reconnecting|offline) + LiveConnectionState fold
+                                  (open/stale->live, connecting/reconnecting->reconnecting,
+                                  closed->offline); LiveStatusRelativeAge ladder ported from the
+                                  web relative() (5/60/3600 thresholds, floor, future-clamp to
+                                  just-now, nil->em-dash); LiveStatusProjection.present (per-tone
+                                  label-key/SF-Symbol/pulse). No store / no view / no bundle.
+  LiveStatusPill.Model.swift    - P1/S8 state-holder seam (LiveStatusSource + InMemory source +
+                                  @Observable LiveStatusPillModel), P1/S11 telemetry seam
+                                  (view.opened / screen_view, os.Logger sink), P1/S10 facade
+                                  (LSPStrings, table "LiveStatusPill"). No HTTP in the view.
+  LiveStatusPill.Views.swift    - presentational subviews: LSPStatusDot (pulsing dot, Reduce-Motion
+                                  aware) + LSPPillBody (tinted capsule: dot · glyph · label · middot
+                                  · monospaced relative stamp). Tokens only (P1/S9), no raw hex.
+  LiveStatusPill.swift          - the surface: TimelineView(.periodic 1s) drives the live stamp
+                                  (native analogue of the web `now` prop); role=status ->
+                                  .updatesFrequently + localized VoiceOver label; start/stop drive
+                                  telemetry + the P1/S8 source.
+  LiveStatusPill.Previews.swift - DEBUG previews: live·just-now / live·5m(stale) / reconnecting·—
+                                  (initial) / reconnecting·30s / offline·2h.
+  LiveStatusPill.strings        - P1/S10 catalog (table LiveStatusPill): every web literal keyed
+                                  (Live/Reconnecting/Offline, just now, %llds/%lldm/%lldh ago,
+                                  aria-label). Em-dash "—" + middot "·" kept verbatim (punctuation).
+  LiveStatusPill.Tests.swift    - XCTest (TeslaSync(/-macOS) bundles): relative-age ladder bounds,
+                                  LiveConnectionState fold, per-tone projection, i18n wording,
+                                  a11y label, model wiring + view.opened-once telemetry.
+
+  Web-source parity (every branch reproduced — covenant #2 / #5):
+    web TONE.live         -> green  dot, no pulse, Activity glyph  -> statusSuccess + waveform.path.ecg
+    web TONE.reconnecting -> amber pulse dot,       Wifi  glyph    -> statusWarning + wifi
+    web TONE.offline      -> zinc   dot, no pulse,  WifiOff glyph  -> textMuted     + wifi.slash
+    web relative(): null->"—"; <5s->"just now"; <60s->"Ns ago"; <60m->"Nm ago"; else "Nh ago"
+                    (Math.max(0,…) future-clamp preserved)
+    web aria-label "Live status stream: {label}, updated {rel}" -> localized + .updatesFrequently
+  States contract: the web leaf is a pure presentational pill fed by its parent
+    (useStatusLiveSSE). Its three connection tones ARE its states; the loading/initial
+    state = reconnecting + "—" (the web useState seed); empty(no-data) = the "—" stamp;
+    stale = the growing relative stamp while the tone stays live (exactly how the web pill
+    signals a quiet stream); offline = the offline tone. No fabricated skeleton/error boxes
+    (the web source has none — adding them would be drift, covenant #2/#9).
+
+################################################################
+# GATE RESULTS                                                 #
+################################################################
+SCOPED / HOST-RUNNABLE GATES on the LiveStatusPill surface — ALL GREEN:
+  swiftformat --lint  (6 swift files)                         : 0/6 require formatting   EXIT=0
+  swiftlint --strict  (6 swift files, .swiftlint.yml)         : 0 violations, 0 serious  EXIT=0
+  check-placeholders.ps1 (feature-views/LiveStatusPill)       : COUNT=0  ALLOWED=0        EXIT=0
+  xcodegen generate                                           : project written; 7 files,
+                                                                42 pbxproj refs (app + test) EXIT=0
+  Gradle :core:assembleSharedXCFramework (KMP Shared)         : BUILD SUCCESSFUL in 20m;
+                                                                release Shared.xcframework
+                                                                staged (ios-arm64 +
+                                                                ios-arm64-simulator + macos-arm64) EXIT=0
+  isolated SwiftPM build (Swift 6, strictConcurrency=complete): Build complete            EXIT=0
+  isolated SwiftPM test  (real shipped Model/Adapter/Views)   : 20/20 tests passed         EXIT=0
+  swiftc -typecheck  iOS 18  (arm64-apple-ios18.0-simulator)  : 0 errors / 0 warnings      EXIT=0
+  swiftc -typecheck  macOS 15 (arm64-apple-macos15.0)         : 0 errors / 0 warnings      EXIT=0
+  swiftc -wmo -c     iOS 18  (EMIT-OBJECT — runs IRGen/codegen): Mach-O arm64 produced     EXIT=0
+  swiftc -wmo -c     macOS 15 (EMIT-OBJECT — runs IRGen/codegen): Mach-O arm64 produced    EXIT=0
+
+AUTHORITATIVE FULL-APP GATE — RED (reported red, not green — covenant #1):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+                                                              : ** BUILD FAILED **   IOS_EXIT=65
+  xcodebuild -scheme TeslaSync-macOS build test               : ** BUILD FAILED **   MAC_EXIT=65
+
+  Root cause (IDENTICAL on both platforms) — PRE-EXISTING, UNRELATED to this surface:
+    A Swift 6.3.2 compiler CRASH (not a source diagnostic) during IR Generation:
+      "While evaluating request IRGenRequest(IR Generation for file
+        .../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift)"
+      swift-frontend ... -> abort() -> Stack dump / "Please submit a bug report".
+    Evidence (both build logs):
+      • file:line:col: error: diagnostics across the whole build            = 0
+      • LiveStatusPill.* on any error / crash / stack-dump / failed line     = 0
+      • the crashing file AppearanceSettings.Controls.swift is `git`-tracked
+        and UNCHANGED by this task (git status: only the 7 LiveStatusPill.*
+        files are new). It is OUTSIDE this prompt's allowed-files and the task
+        rules forbid touching unrelated pre-existing breakage.
+    The crashing alphabetical batch is {AnomalyInlineRow.*, App*, AppearanceSettings.*};
+    the LiveStatusPill (L) files are not in it. The surface itself is PROVEN to pass the
+    exact failing phase: `swiftc -wmo -c` emit-object (IRGen/codegen) on BOTH the iOS-18
+    and macOS-15 SDKs produced valid Mach-O objects (EXIT=0 above).
+
+################################################################
+# HONESTY COVENANT DISPOSITION                                 #
+################################################################
+  1  no red-as-green : the iOS+macOS xcodebuild build/test gate is reported RED
+                       (IOS_EXIT=65 / MAC_EXIT=65); not claimed to pass.
+  2  no scope narrow : every web region/branch reproduced (3 tones, pulse, glyph family,
+                       the floor+future-clamp relative ladder w/ all buckets, the em-dash,
+                       the aria-label). No invented states.
+  3  no skip-assume  : every gate executed on THIS runner; raw exits captured; the IRGen
+                       crash confirmed on TWO independent builds (iOS + macOS).
+  4  no stubs        : complete production view + state-holder + 20 real passing tests;
+                       placeholder scanner = 0.
+  5  no parity short : tone/opacity/glyph/pulse/typography/a11y/telemetry/i18n mapped to
+                       platform tokens; relative arithmetic verified against the web source.
+  6  no delegation   : implemented directly; no sub-agents.
+  7  no predecessor  : binds P1/S8 (LiveStatusSource + LiveConnectionState fold), P1/S9
+                       tokens, P1/S10 facade, P1/S11 telemetry — all consumed.
+  8  no commit-on-red: the COMMITTED artifact (7 LiveStatusPill.* files + this log) is GREEN
+                       on every gate that exercises it, incl. real iOS-18 + macOS-15 IRGen
+                       emit-object. The full-app red is a pre-existing toolchain crash on an
+                       unrelated, untouched file — NOT in the committed artifact.
+  9  no silent drift : changes confined to the 7 feature-views/LiveStatusPill.* files + this
+                       log (git status verified). pending-verifications.md NOT edited (outside
+                       allowed-files); the integrator should record the deferral row there.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  The LiveStatusPill surface is production-complete and Apple-idiomatic, at parity with the
+  web source, and INDEPENDENTLY VERIFIED green on every host-runnable scoped gate — including
+  a real Swift-6 strict-concurrency SwiftPM build + 20/20 tests and, decisively, `swiftc -wmo
+  -c` EMIT-OBJECT (the IRGen/codegen phase) on BOTH the iOS-18 and macOS-15 SDKs.
+
+  The two authoritative `xcodebuild build test` gate steps are RED (65) — blocked by a
+  PRE-EXISTING, deterministic Swift 6.3.2 IRGen compiler crash on
+  apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift, a file outside this
+  prompt's allowed-files that this task neither modified nor is permitted to fix. This is the
+  same class of "code-complete surface; full-app Apple build blocked by pre-existing, unrelated
+  breakage" deferred by every prior P4 feature-view to the macos-latest
+  p4-apple/P99-0001-apple-acceptance-gate (see apps/macos-pending-verifications.md). Because the
+  prompt's gate requires EXIT=0 on ALL steps and the xcodebuild steps are genuinely red for a
+  cause outside the allowed file set, the honest status is BLOCKED (with toolchain evidence
+  above), NOT a green DONE.
+
+  Re-run verification on the P99 acceptance gate (once the AppearanceSettings.Controls.swift
+  IRGen crash is resolved on the toolchain owned there):
+    cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+EXIT=1
+STATUS=BLOCKED

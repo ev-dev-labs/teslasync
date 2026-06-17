@@ -1,0 +1,157 @@
+=== P4 Feature view 0265 SignalCategoryTree (Apple) ===
+host: macOS (Darwin) | Xcode 26.5 (Build 17F42) | Swift 6.3.2
+date: 2026-06-09
+toolchain present: xcodebuild, swift, swiftc, swiftlint, swiftformat, xcodegen, pwsh, gradle/Java17
+simulator: iPhone 16 (booted)
+capability check (prompt requirement — SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15):
+  PRESENT. The surface compiles clean against BOTH the iphonesimulator (iOS 18) and macosx (macOS 15)
+  SDKs under Swift 6 strict concurrency (see SDK typecheck below). This surface uses no charts/maps
+  (web "Charts / maps used: (none)"), so Swift Charts / MapKit are not exercised here.
+
+----------------------------------------------------------------------
+SHIPPED SURFACE — apps/apple/TeslaSync/feature-views/SignalCategoryTree.*
+----------------------------------------------------------------------
+  SignalCategoryTree.swift             root View (titlebar+freshness, search, select-all header, phase
+                                       body, view.opened slug) — parity of SignalCategoryTree.tsx
+  SignalCategoryTree.Models.swift      value types (value/unit kind + normalizers, descriptor DTO,
+                                       tri-state, injected copy, phase/status/connection, update)
+  SignalCategoryTree.Projection.swift  projected leaf/group/projection (web TreeGroup/TreeLeaf), surface
+                                       slug, a11y summary builder
+  SignalCategoryTree.Adapter.swift     pure projector — group-by-category + leaf/group sort (web grouping
+                                       useMemo), search filter (web filterGroups), counts + tri-state,
+                                       selection algebra (toggleLeaf/Group/AllVisible), expand toggle,
+                                       phase resolver, sparkline gate, stale-age label
+  SignalCategoryTree.Model.swift       P1/S8 state-holder seam + @Observable model + P1/S10 i18n facade
+                                       + P1/S11 telemetry seam + InMemory source
+  SignalCategoryTree.States.swift      loading skeleton / empty / no-results / error (retry) — never blank
+  SignalCategoryTree.Views.swift       tri-state checkbox, search field, freshness chip, connectivity
+                                       banner, select-all header
+  SignalCategoryTree.Rows.swift        group header row, leaf row, leaf accessory (kind chip + unit badge
+                                       = web renderLeafRight slot), tree list
+  SignalCategoryTree.Previews.swift    #Preview per state (content/expanded/searching/no-results/loading/
+                                       empty/error/stale/offline/sparklines-off)
+  SignalCategoryTree.Tests.swift       adapter + value-type unit tests (grouping/filter/counts/tri-state/
+                                       selection algebra/phase/age/normalizers)
+  SignalCategoryTree.ModelTests.swift  state-holder + accessibility tests (search→project, selection +
+                                       onChange forwarding, expand, sparkline toggle, phases, telemetry,
+                                       stale auto-refresh/offline, VoiceOver summaries/labels)
+  SignalCategoryTree.strings           P1/S10 catalog (tree chrome + 12 category labels + kind/unit
+                                       labels + state envelope + a11y keys)
+  file lengths: all <= 341 lines (SwiftLint file_length warning 400 satisfied under --strict)
+
+Parity notes (web SignalCategoryTree.tsx + the wrapped TreeSelect primitive):
+  - data: useAvailableSignals(vehicleId) bound via the P1/S8 SignalCategoryTreeSource seam; no HTTP in
+    the view. (useSignals module / useAvailableSignals hook — the two prompt data sources.)
+  - shared component used: @/components/forms (TreeSelect) — reproduced natively (grouped disclosure
+    rows, tri-state group + select-all checkboxes, search filter that keeps a whole group on a label
+    match, {selected}/{total} counts, select/clear-visible, expand-while-searching). TreeSelect is an
+    atomic component covered by the P4 component-library bundle prompt; this surface owns the
+    SignalCategoryTree composition on top of it.
+  - leaf renderLeafRight (web SignalSparklinePreview): this surface owns only the catalog DESCRIPTOR, so
+    the leaf accessory renders the value-kind chip (web non-numeric "(kind)" chip) + a unit badge, gated
+    by the SAME web rule enabled = isSearching || expanded. The live sparkline trend line is the child
+    SignalSparklinePreview surface (its OWN prompt + useSignalHistory source) — out of scope here.
+  - every web state reproduced: loading / content / empty (emptyState) / no-results (noResultsState) /
+    error (query.isError) PLUS native stale + offline freshness (ADR-013). i18n: no English literals in
+    code (all via the P1/S10 facade). a11y: VoiceOver labels/values on every control, Dynamic Type
+    (Font.TS), reduce-motion-respecting skeleton. telemetry: view.opened("SignalCategoryTree").
+
+======================================================================
+GATE STEPS
+======================================================================
+
+--- swiftformat --lint (surface, 11 swift files) ---
+0/11 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (surface, 11 swift files) ---
+Done linting! Found 0 violations, 0 serious in 11 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SignalCategoryTree ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- swiftc -typecheck (real iOS 18 simulator SDK, Swift 6, Tokens.swift + 8 non-test files) ---
+0 errors / 0 warnings.
+IOS_SDK_TYPECHECK_EXIT=0
+
+--- swiftc -typecheck (real macOS 15 SDK, Swift 6, Tokens.swift + 8 non-test files) ---
+0 errors / 0 warnings.
+MAC_SDK_TYPECHECK_EXIT=0
+
+--- isolated SwiftPM build + run tests (module TeslaSync, Swift 6, macOS 15) ---
+Tokens.swift + the 9 non-test surface files compile as the TeslaSync library; the 2 *Tests.swift run.
+Executed 55 tests, with 0 failures (0 unexpected).
+  SignalCategoryTreeGroupingTests / FilterTests / CountTests / ExpansionTests / SelectionAlgebraTests /
+  PhaseTests / ModelTests / AccessibilityTests
+HARNESS_EXIT=0
+
+--- Shared.xcframework (KMP, required by the app target link) ---
+Gradle :core:assembleSharedXCFramework -> BUILD SUCCESSFUL in 8m03s
+-> staged apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64)
+
+--- xcodegen generate ---
+Created project at apps/apple/TeslaSync.xcodeproj (XCODEGEN_EXIT=0).
+All 12 SignalCategoryTree members enumerated (72 pbxproj references across the iOS app, macOS app, and
+the iOS/macOS XCTest bundles).
+
+--- iOS gate: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+** BUILD FAILED ** / ** TEST FAILED ** (3 failed SwiftCompile batches)
+IOS_EXIT=65 (FAIL)
+SignalCategoryTree.* errors in this run: 0  (grep "error:" | grep SignalCategoryTree == 0)
+Cause (PRE-EXISTING, OUT OF SCOPE — duplicate-type declarations from parallel-merge of OTHER prompts):
+  284 error lines, ALL "'<Type>' is ambiguous for type lookup", from types each DECLARED TWICE in the
+  tree (verified: `grep -rl 'struct/enum <Type>'` returns 2 files for each):
+    ChargeSessionDTO, ChargeStateDTO, ChargeStatusProjection, ChargeUnitPrefs  (dashboard-widgets:
+      ChargeStatusWidget.*, ChargeStatusLiveWidget.*, ChargeSessionChartWidget.*)
+    SafetyModel, SafetyUpdate, SafetyLoadStatus, SafetyConnection  (SafetyFeaturesWidget.*,
+      SafetyHistoryWidget.*)
+    FleetStatsBarModel (FleetStatsBarWidget.*), DrivingCoachLoadStatus (DrivingCoach*)
+  Files with errors: ChargeStatus*/ChargeSession*/Safety*/DrivingCoach*/FleetStatsBar* widgets +
+  DrivingCoachSection.* — NONE in this prompt's allowed scope (apps/.../feature-views/SignalCategoryTree.*).
+  `git status` confirms this changeset ADDS only SignalCategoryTree.* (+ git-ignored .xcodeproj); it
+  modifies none of the erroring files. My Signal*/SignalCategoryTree* types collide with nothing
+  (`grep -rl 'struct/enum SignalDescriptor'` outside my files == 0).
+  => The whole-module compile of the real TeslaSync app target (with the real shared components, design
+     tokens, and the KMP Shared.xcframework) reports ZERO errors for all SignalCategoryTree files on iOS.
+
+--- macOS gate: xcodebuild -scheme TeslaSync-macOS build test ---
+** TEST FAILED **
+MAC_EXIT=65 (FAIL)
+Cause (ENVIRONMENT + PRE-EXISTING, OUT OF SCOPE):
+  Fails at signing BEFORE compile — "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that
+  require a development signing certificate; none is present on this runner. (Underneath, the macOS app
+  target shares the same duplicate-type sources as the iOS target.) The SignalCategoryTree surface itself
+  type-checks clean against the macOS 15 SDK (MAC_SDK_TYPECHECK_EXIT=0 above).
+
+======================================================================
+CONCLUSION
+======================================================================
+The SignalCategoryTree surface is COMPLETE, web-parity, and GREEN on every gate that is runnable on this
+host within the prompt's allowed file scope:
+  swiftformat --lint = 0 | swiftlint --strict = 0 | placeholder = 0 | isolated swift build + 55 XCTest = 0
+  | real iOS-18 + macOS-15 swiftc -typecheck = 0 | xcodegen enumerates all 12 files | the real Xcode
+  whole-module app-target compile reports 0 SignalCategoryTree errors on iOS with the KMP framework staged.
+
+The scheme-level `build test` cannot reach EXIT=0 because the SHARED app/test targets are broken by
+PRE-EXISTING issues in files OUTSIDE this prompt's allowed scope (SignalCategoryTree.*):
+  R1. Duplicate-type declarations across dashboard-widgets (ChargeSessionDTO / ChargeStateDTO /
+      ChargeStatusProjection / ChargeUnitPrefs / SafetyModel / SafetyUpdate / SafetyLoadStatus /
+      SafetyConnection / FleetStatsBarModel) + DrivingCoach* — "ambiguous for type lookup" (each type
+      declared in 2 files; a parallel-merge artifact of other prompts).
+  R2. macOS targets need a development signing certificate absent on this runner.
+None are introduced by, or fixable within, this prompt's file scope. Per the Honesty Covenant (rule 1 no
+red-as-green, rule 2 no scope narrowing, rule 6 no delegation, rule 7 no predecessor bypass), the surface
+is shipped + the scheme gate is reported BLOCKED with the evidence above rather than falsely marked green
+or "fixed" by editing other prompts' surfaces. This mirrors the committed P4 feature-view precedent in
+apps/macos-pending-verifications.md (e.g. SettingsSearch / FSMTimelineChart): surface green on every
+host-runnable gate, full-app scheme build deferred to the p4-apple/P99-0001 macOS acceptance runner.
+
+Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signing identities, clean tree):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,164 @@
+=== P4 Shared surface 0161 TreeSelect (Apple) ===
+
+Surface : apps/apple/TeslaSync/shared-surfaces/TreeSelect.*
+Web spec: web/src/components/forms/TreeSelect.tsx  (generic tri-state two-level tree multi-select)
+Runner  : Darwin arm64 · Xcode 26.5 (Build 17F42) · Apple Swift 6.3.2 · swiftlint + swiftformat (homebrew)
+          KMP Shared.xcframework assembled from apps/shared (Gradle :core:assembleSharedXCFramework) and
+          staged at apps/apple/Frameworks/Shared.xcframework before the build.
+
+------------------------------------------------------------------------------------------------------
+GATE STEPS (verbatim commands, real exit codes)
+------------------------------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Result: ** TEST FAILED ** (build failed before tests)
+    TreeSelect contribution: ALL 10 TreeSelect source files compiled with ZERO errors inside the real
+    iOS app build:
+        Compiling TreeSelect.swift, TreeSelect.Adapter.swift, TreeSelect.Projector.swift,
+                  TreeSelect.Keyboard.swift, TreeSelect.Strings.swift, TreeSelect.Model.swift,
+                  TreeSelect.Controls.swift, TreeSelect.Rows.swift, TreeSelect.Views.swift,
+                  TreeSelect.Previews.swift   (in target 'TeslaSync')
+    The full-app build failed on exactly TWO PRE-EXISTING, OUT-OF-ALLOWED-FILES sibling surfaces — not
+    on this surface (total iOS `error:` lines = 2, neither in TreeSelect):
+        shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+            error: escaping closure captures non-escaping parameter 'content'
+        shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+            error: escaping closure captures non-escaping parameter 'content'
+    Those files are owned by other surface prompts; the allowed-files scope for THIS prompt is
+    TreeSelect.* only, so they are deliberately left untouched (Honesty Covenant 2/6/7/9).
+    IOS_EXIT=65
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Result: ** TEST FAILED ** (build failed before tests)
+    Blocker is RUNNER CODE-SIGNING CAPABILITY (no development certificate / DEVELOPMENT_TEAM on this
+    runner) — the "dedicated signed runner" the P4 disposition reserves the full-app gate for:
+        error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+               Enable development signing in the Signing & Capabilities editor.
+               (in target 'TeslaSync-macOS' from project 'TeslaSync')
+        error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+               certificate. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+    MAC_EXIT=65
+
+[3] swiftlint --strict        (repo-wide, apps/apple)
+    Done linting! Found 0 violations, 0 serious in 4429 files.
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    0/4727 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/TreeSelect
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------------------------------
+INDEPENDENT SURFACE VERIFICATION (the real proof this surface is gate-clean)
+------------------------------------------------------------------------------------------------------
+Because the full-app xcodebuild gate is red on the two pre-existing sibling files [1] and on macOS
+code-signing [2] — neither caused by, nor fixable within, this surface's allowed files — TreeSelect was
+verified in ISOLATION against the REAL design system, under the app's own build rules:
+
+  Harness : /tmp/tsiso  (SwiftPM, module name `TeslaSync`, platforms [.macOS(.v15)],
+            swiftSettings [.swiftLanguageMode(.v6)] == app SWIFT_VERSION 6.0 + STRICT_CONCURRENCY complete)
+  Sources : the 10 TreeSelect.* source files + the REAL apps/design/generated/apple/Tokens.swift
+            (Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion — the actual P1/S9 tokens, unmodified)
+  Tests   : TreeSelect.AdapterTests.swift + TreeSelect.ProjectorTests.swift + TreeSelect.Tests.swift
+
+  Command : DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
+  Result  : Test Suite 'All tests' passed — Executed 81 tests, with 0 failures (0 unexpected)
+            (build = SUCCESS under Swift 6 strict concurrency; all 9 #Preview macros in
+             TreeSelect.Previews.swift compiled under -DDEBUG.)
+
+  Coverage (81 tests):
+    • Adapter (value types + resolve): surface slug; input derived helpers (needle/trim/isSearching/
+      totalLeafCount/expansion-controlled); body-mode precedence (loading > empty > noResults > populated);
+      unconditional header flags + counts; per-group tri-state + row indices; collapsed sentinel indices;
+      search-forces-expansion; value-type + projection Equatable.
+    • Projector (pure logic): filterGroups (label-match keeps all leaves / leaf-subset / drop-zero /
+      case-insensitive); buildRows (collapsed / expanded / search-expands-all); isExpanded + toggleExpanded;
+      toggleLeaf / toggleGroup / toggleAllVisible (visible-enabled only, selection-outside-filter preserved,
+      disabled skipped, all-disabled no-op); clampFocusIndex; the full roving-tabindex keyboard table
+      (Up/Down bounds, Home/End, Right-expand, Left-collapse, Left-leaf->parent, Space group/leaf,
+      Space-disabled-ignored, Enter group-only, empty-rows ignored); i18next {{token}} interpolation.
+    • Model + Views + Strings: once-only view.opened (P1/S11) + stop/start idempotency; routed selection /
+      search / expansion (controlled vs. uncontrolled); focus clamp; handleKey application; polite summary
+      announcement on change; surface + every subview composes in every branch; injected-model seam; the
+      P1/S10 facade fallbacks + interpolation (selectAllLabel / counts / group+leaf a11y / summary /
+      checkbox + expansion a11y values).
+
+  PARITY NOTE (web semantics reproduced exactly, incl. the subtle one): the TOP-LEVEL select-all
+  (`allVisibleSelected`) tests EVERY visible leaf INCLUDING disabled ones (web `visibleLeafIds.every`),
+  whereas the GROUP tri-state (`allGroupSelected`) tests only the ENABLED leaves
+  (web `visibleEnabledLeaves.every`). Both are implemented and asserted as the web behaves.
+
+  STATE PARITY: the web source's real branches are reproduced in full — `loading` (skeleton body),
+  `empty` (no groups), `noResults` (search filtered everything out), and `populated`. The generic
+  template's `error` / `stale` / `offline` states do NOT exist in this CONTROLLED PRESENTATIONAL primitive
+  (its only data "hook" is `useId`; selection/search/expansion arrive as props, there is no fetch to fail,
+  age, or lose connectivity to). Inventing them would fabricate states the source lacks; the owning page
+  holds any such chrome — same disposition as sibling presentational primitives (ActiveFilterChips 0147).
+
+------------------------------------------------------------------------------------------------------
+DELIVERED FILES (14, all within the allowed scope; git working tree touches nothing else)
+------------------------------------------------------------------------------------------------------
+  TreeSelect.swift            public generic TreeSelect<Leaf> + TreeLeaf/TreeGroup + prop/injected inits
+  TreeSelect.Adapter.swift    surface slug, closure-free value types, input, rows, keyboard intents, projection
+  TreeSelect.Projector.swift  pure filter/expansion/rows/resolve/tri-state/toggles + interpolation
+  TreeSelect.Keyboard.swift   pure roving-tabindex keyboard table (TreeSelectProjector extension)
+  TreeSelect.Strings.swift    P1/S10 i18n facade (web t(key, default) peers)
+  TreeSelect.Model.swift      P1/S8 @Observable state holder + P1/S11 telemetry seam + announcer seam
+  TreeSelect.Controls.swift   tri-state checkbox/checkmark, search field, skeleton, placeholder, live announcer
+  TreeSelect.Rows.swift       group header row + leaf row + focus ring
+  TreeSelect.Views.swift      container (search/header/body/summary) + header + keyboard mapping
+  TreeSelect.Previews.swift   9 #Preview macros across every state
+  TreeSelect.strings          per-surface i18n catalog (verbatim web literals)
+  TreeSelect.AdapterTests.swift / TreeSelect.ProjectorTests.swift / TreeSelect.Tests.swift   (81 tests)
+
+------------------------------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------------------------------
+  1  No red-as-green      : the two failing xcodebuild steps are reported RED (IOS_EXIT=65, MAC_EXIT=65)
+                            and the overall STATUS is BLOCKED. Nothing red is dressed as green.
+  2  No scope narrowing   : every web branch + feature reproduced (tri-state, search, controlled selection
+                            + expansion, disabled leaves + reasons, right slots, roving-tabindex keyboard,
+                            loading/empty/no-results/populated, sr-only polite summary).
+  3  No skip-and-assume   : read the web source end-to-end; the subtle select-all-vs-group disabled-leaf
+                            semantics are reproduced + asserted, not assumed.
+  4  No stubs as final    : no TODO/stub/mock/placeholder/Lorem (placeholder scanner = 0); full impls.
+  5  No parity shortcuts  : tri-state thresholds, select-all label, counts, group/leaf a11y, and the sr
+                            summary are each unit-asserted against the web expressions (locale-independent).
+  6  No delegation        : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: honoured the P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n facade, and P1/S11
+                            view.opened seams; no sibling surface or shared file modified.
+  8  No commit on red     : the COMMITTED artifact (14 TreeSelect.* files + this log) is GREEN on
+                            swiftformat, swiftlint --strict, the placeholder scanner, AND a real Swift 6
+                            strict-concurrency build + 81/81 XCTest. The full-app xcodebuild gate is RED on
+                            causes OUTSIDE this artifact (pre-existing sibling compile errors + macOS
+                            signing) and is recorded as BLOCKED rather than claimed green.
+  9  No silent drift      : changes confined to apps/apple/TeslaSync/shared-surfaces/TreeSelect.* + this
+                            log; the generated .xcodeproj + staged Shared.xcframework are git-ignored; the
+                            /tmp isolated harness is outside the repo.
+ 10  EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic TreeSelect shipped at parity with the web source and INDEPENDENTLY
+VERIFIED: it compiles and its 81 tests pass under the app's own Swift 6 strict-concurrency rules, against
+the REAL design tokens, via the Xcode 26.5 Swift toolchain, with swiftformat / swiftlint --strict /
+placeholder all GREEN (repo-wide) and all 9 #Preview macros compiling. The 10 TreeSelect source files also
+compiled with ZERO errors INSIDE the real iOS app build.
+
+The full-app iOS-Simulator + macOS xcodebuild build/test gate is RED for reasons this surface neither
+caused nor is permitted to fix:
+  • iOS : two PRE-EXISTING compile errors in OUT-OF-ALLOWED-FILES sibling surfaces
+          (AIGeofenceAwareAutomationSuggestions.swift, AIAutoNameUnnamedLocations.swift) — a toolchain
+          escaping-closure tightening unrelated to TreeSelect.
+  • macOS: development code-signing is unavailable on this runner (no certificate / DEVELOPMENT_TEAM).
+Both are owned by the P4 acceptance gate on a dedicated signed runner (and by the respective sibling
+prompts), per the established P4 disposition. Because the literal gate cannot reach EXIT=0 here and I will
+not relabel that as DONE, the status is BLOCKED with the full evidence above.
+
+EXIT=65
+STATUS=BLOCKED

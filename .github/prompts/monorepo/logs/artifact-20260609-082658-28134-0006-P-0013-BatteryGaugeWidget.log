@@ -1,0 +1,128 @@
+=== P4 Dashboard widget 0013 BatteryGaugeWidget (Apple) ===
+Surface : BatteryGaugeWidget  (registry id "battery-gauge", category "battery", 1x2 / 1x2 / 2x40)
+Web spec: web/src/features/dashboard/widgets/BatteryGaugeWidget.tsx
+Output  : apps/apple/TeslaSync/dashboard-widgets/BatteryGaugeWidget.{swift,Model,Adapter,Views,Previews,Tests}.swift + .strings
+Date    : 2026-06-09  (runner: Darwin arm64)
+
+--------------------------------------------------------------------------------
+TOOLCHAIN / CAPABILITY (ADR-002 / prompt capability clause)
+--------------------------------------------------------------------------------
+Xcode 26.5 (Build 17F42)            -> present at /Applications/Xcode.app  (DEVELOPER_DIR override)
+Swift 6.3.2                          -> present
+iOS Simulator runtime iOS 26.5       -> present (iPhone 16 destination available)
+swiftlint / swiftformat / xcodegen   -> present (homebrew)
+SwiftUI + Swift Charts + MapKit      -> present (this surface uses SwiftUI only; no charts/maps in source)
+
+The required SDK/toolchain IS available. The whole-app gate is nonetheless RED for reasons
+entirely outside this surface's allowed file scope (see BLOCKERS). This surface itself is
+complete and independently verified GREEN (see ISOLATED VERIFICATION).
+
+--------------------------------------------------------------------------------
+GATE STEP RESULTS (xcodebuild via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+--------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (BLOCKED — pre-existing duplicate-type collisions in SIBLING widgets)
+    Errors total: 284.  Errors in BatteryGaugeWidget.* files: 0  (grep -c = 0).
+    Distinct "ambiguous for type lookup" types (all defined twice+ by sibling widgets, NOT this surface):
+        ChargeConnection, ChargeDistanceUnit, ChargeLoadStatus, ChargeSessionDTO, ChargeStateDTO,
+        ChargeStatusProjection, ChargeStatusUpdate, ChargeUnitPrefs, DrivingCoachConnection,
+        DrivingCoachLoadStatus, FleetStatsBarModel, SafetyConnection, SafetyLoadStatus,
+        SafetyModel, SafetyUpdate
+    Example collisions (committed repo state, files this prompt MAY NOT edit):
+        ChargeStatusLiveWidget.Model.swift  vs  ChargeStatusWidget.Model.swift   (Charge* types)
+        SafetyHistoryWidget.Model.swift     vs  SafetyFeaturesWidget.Model.swift (Safety* types)
+        FleetStatsBarWidget.Model.swift     vs  feature-views/FleetStatsBar.Model.swift
+    => The single app module fails to type-check because many parallel-generated widgets declare
+       same-named per-widget types. This surface deliberately uses fully-prefixed type names
+       (BatteryGaugeWidget*/BatteryGaugeWidgetBand) and adds ZERO collisions.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (BLOCKED — runner lacks an Apple development signing certificate)
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    (macOS additionally inherits the same pre-existing sibling-widget collisions as [1].)
+
+[3] swiftlint --strict        LINT_EXIT=2
+    Found 1 violation, 1 serious in 2637 files.
+    The ONLY violation is pre-existing and NOT in this surface:
+        TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: opening_brace
+    BatteryGaugeWidget.* (6 files): 0 violations  (scoped run below).
+
+[4] swiftformat --lint apps/apple     FORMAT_EXIT=0
+    0/2641 files require formatting (whole tree, including this surface). PASS.
+
+[5] check-placeholders.ps1 -Path apps/apple/.../BatteryGaugeWidget   PLACEHOLDER_EXIT=0
+    PLACEHOLDER_COUNT=0 / PLACEHOLDER_ALLOWED=0.
+    Real scan of the 6 source files (copied to a temp dir, -Language swift): PLACEHOLDER_COUNT=0.
+    Manual grep (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|stub|mock): CLEAN.
+
+--------------------------------------------------------------------------------
+SCOPED VERIFICATION OF THIS SURFACE (BatteryGaugeWidget.* only)
+--------------------------------------------------------------------------------
+swiftlint --strict  <6 files> : Done linting! Found 0 violations, 0 serious in 6 files.   PASS
+swiftformat --lint  <6 files> : 0/6 files require formatting.                              PASS
+Official iOS build errors in BatteryGaugeWidget.* : 0                                      PASS (compiles)
+
+--------------------------------------------------------------------------------
+ISOLATED VERIFICATION (proves the surface builds + every test passes on this runner)
+--------------------------------------------------------------------------------
+A throwaway SwiftPM package linked this surface's 5 source files against ONLY its real
+dependencies (generated design Tokens.swift, the TSSkeleton it uses, DashboardWidgetInfra.swift),
+with the test file's `@testable import TeslaSync` repointed at the harness module. This bypasses
+the unrelated sibling-widget collisions so the surface itself can be compiled + exercised.
+
+  swift build : Build complete!   (BUILD_EXIT=0)
+                Compiled BatteryGaugeWidget.{Model,Adapter,Views,swift,Previews}.swift cleanly.
+  swift test  : Executed 25 tests, with 0 failures (0 unexpected).   (TEST_EXIT=0)
+
+  Coverage (25 tests across 8 suites):
+    - BatteryGaugeWidgetBandTests          : web batteryColor thresholds (>50 high / >20 medium /
+                                             else low; strict >, 50->medium, 20->low; NaN/neg->low)
+    - BatteryGaugeWidgetFormatTests        : fmtNumber gauge readout (integer 0 dp, fraction precision,
+                                             clamp into 0..100, non-finite -> 0)
+    - BatteryGaugeWidgetAdapterTests       : cached DTO -> projection parity (value/unit "%"/label
+                                             "Battery"/band/fraction/a11y), charging flag, band per
+                                             level, >100 clamp, level 0 = low band (not empty),
+                                             localized-copy injection
+    - BatteryGaugeWidgetPhaseTests         : resolvePhase matrix (loading/empty/loaded/failed x state)
+    - BatteryGaugeWidgetModelTests         : loading/empty/error/content, view.opened telemetry once,
+                                             refresh delegation, stale auto-refresh, connection tracking
+    - BatteryGaugeWidgetRegistryTests      : canonical battery-gauge id/category/sizes + clamp envelope
+    - BatteryGaugeWidgetAccessibilityTests : VoiceOver summary (idle + "… . Charging")
+
+--------------------------------------------------------------------------------
+PARITY NOTES (features/dashboard/widgets/BatteryGaugeWidget.tsx)
+--------------------------------------------------------------------------------
+Data sources  : useVehicles + useVehicleState  -> bound via BatteryGaugeWidgetSource (P1/S8 seam);
+                no networking in the view.  Active vehicle + battery_level + is_charging only.
+Shared comps  : @/components/feedback EmptyState -> ContentUnavailableView (empty state).
+                WidgetGaugeHero/RadialGauge      -> BatteryRadialGauge (track + banded value arc +
+                                                     inline value+"%", "Battery" label below ring).
+States        : loading (skeleton) / empty ("No battery data") / error (QueryError-equiv + Retry) /
+                stale (chip + banner + auto-refresh) / offline (chip + cached) / content. All render.
+i18n keys     : widget.battery, widget.charging, widget.noBattery (verbatim from source) + native
+                chrome + a11y keys, all in BatteryGaugeWidget.strings (table "BatteryGaugeWidget"),
+                resolved through the P1/S10 facade. No English literals in the view.
+Colour band   : #10b981 / #f59e0b / #ef4444 (high/medium/low) ported 1:1 in sRGB.
+Telemetry     : view.opened emitted once on start with slug "BatteryGaugeWidget" (P1/S11).
+A11y          : VoiceOver labels on gauge + charging chip + refresh/retry; Dynamic Type via tokens;
+                Reduce Motion honored (arc/charging-pulse animations gated).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] All web-source states reproduced (loading/empty/error/stale/offline/content).
+[x] Hooks bind to the shared P1/S8 state-holder seam; no direct HTTP in the view.
+[x] Every source i18n key has a matching key in the P1/S10 catalog (BatteryGaugeWidget.strings).
+[x] Accessibility labels present on every interactive element.
+[x] Tests: adapter unit + per-state model/phase + registry + a11y (25 tests, all pass in isolation).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate + manual grep clean).
+[~] EXIT=0 NOT achievable: the shared whole-app build is RED due to PRE-EXISTING duplicate-type
+    collisions in ~20 sibling widget files (Charge*/Safety*/FleetStatsBar*/DrivingCoach* ...) that
+    this prompt's allowed-files list forbids editing, plus the macOS dev-signing entitlement which
+    the runner cannot satisfy. ZERO of the 284 build errors and the 1 lint violation are in this
+    surface. This surface is independently verified GREEN (build + 25/25 tests + lint + format +
+    placeholder). Reported as BLOCKED per the prompt's sanctioned BLOCKED path with evidence above.
+
+EXIT=65
+STATUS=BLOCKED

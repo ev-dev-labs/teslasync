@@ -1,0 +1,194 @@
+================================================================================
+P4 · Dashboard widget · 0017 — ChargeHistoryWidget (Apple)
+Run: 2026-06-09T16:05Z   Host: Darwin arm64 (20 cores)   Branch: auto/20260609-082658-28134/8
+Base: 62e18b5afec6c235084ce2a8db7014e6a061f257
+Prompt: P4/dashboard-widgets/0017 — ChargeHistoryWidget
+Web source (spec): web/src/features/dashboard/widgets/ChargeHistoryWidget.tsx
+Registry (canonical): web/src/features/dashboard/widgets/registry/charging.ts → "charge-history"
+Mode: code-complete + author-controlled gates GREEN + real iOS-18-SDK compile of the surface
+      PROVEN. Full-app xcodebuild build/test BLOCKED by a PRE-EXISTING broken base in
+      apps/apple (sibling-surface symbol collisions) outside this prompt's Allowed-files
+      scope. The widget itself emits ZERO compile errors on both iOS and macOS.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ..................... Apple Swift 6.3.2 (host) / Xcode 26.5 toolchain for builds        OK
+  swiftlint ................. /opt/homebrew/bin/swiftlint 0.63.3                                 OK
+  swiftformat ............... /opt/homebrew/bin/swiftformat 0.61.1                               OK
+  pwsh (placeholder gate) ... /opt/homebrew/bin/pwsh                                             OK
+  Xcode ..................... Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app/…     OK
+  xcodegen .................. /opt/homebrew/bin/xcodegen                                          OK
+  iPhone 16 simulator ....... present (83717DEE-70A3-4325-AA61-CBDDD3140989)                     OK
+  java (Kotlin/Native) ...... OpenJDK 17.0.19 (Homebrew)                                         OK
+  Android SDK (KMP cfg) ..... /opt/homebrew/share/android-commandlinetools (local.properties)    OK
+  Shared.xcframework ........ BUILT + STAGED from apps/shared :core:assembleSharedXCFramework
+                              (ios-arm64 / ios-arm64-simulator / macos-arm64), BUILD SUCCESSFUL  OK
+
+  Charts/maps capability note: this surface uses Swift Charts (web Recharts AreaChart via
+  AreaChartWrapper → SwiftUI Charts AreaMark + LineMark + RuleMark) and NO MapKit (the prompt
+  lists "Charts/maps used: none"). SwiftUI + Swift Charts are available and the surface is
+  compiled for real against the iPhoneSimulator 26.5 SDK (see VERIFICATION). The
+  capability-BLOCKED escape hatch for "SwiftUI/Charts unavailable" does NOT apply — the
+  toolchain is fully present and the widget compiles. The BLOCK below is a different,
+  pre-existing cause (a broken sibling base), documented with evidence.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/ChargeHistoryWidget.*) ===
+  ChargeHistoryWidget.Models.swift     120  domain value types (session DTO / vehicle / point / projection)
+  ChargeHistoryWidget.Builder.swift    106  pure cached→projection adapter + SI→kWh converter seam + fmtNumber parity
+  ChargeHistoryWidget.Model.swift      274  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 strings facade + a11y
+  ChargeHistoryWidget.Chart.swift      180  Swift Charts gradient area+line chart (selection tooltip, per-point a11y)
+  ChargeHistoryWidget.swift            366  the surface (glass shell + header + freshness + all states + compact/standard)
+  ChargeHistoryWidget.Previews.swift   147  #if DEBUG previews — one per state (content/wide/loading/empty×2/error/stale/offline)
+  ChargeHistoryWidget.Tests.swift      314  XCTest: converter + builder + format + model + registry + a11y (26 methods)
+  ChargeHistoryWidget.strings           44  P1/S10 catalog contribution (5 source keys + native chrome/chart/a11y keys = 22)
+  Total 1551 lines. Every .swift file ≤400 (house file_length). One exported View per file.
+  DashboardWidgetSize/DashboardWidgetRegistration are REUSED from the in-module shared infra
+  (Sources/DashboardWidgets/DashboardWidgetInfra.swift) — no redeclaration. All public type
+  names are ChargeHistory-prefixed and verified module-globally collision-free
+  (grep "ChargeHistory" across apps/apple before authoring → 0 prior symbols).
+
+=== PARITY (vs web ChargeHistoryWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (ChargeHistorySource →
+    ChargeHistoryModel): useVehicles (scoped id), useTranslation('dashboard'), useQuery
+    (['charging', id, 'recent-10'] → GET /charging?vehicle_id=&limit=10). The production app
+    wires the source over the KMP charging/vehicle stores; the view performs NO HTTP.
+  Projection → ChargeHistoryBuilder is a 1:1 port of the web `chartData` + `stats` memos:
+    • map each session → kWh via convertEnergyFromSI(wh,'kWh') == wh/1000 (converter seam),
+      keyed by the pre-reverse ordinal `i: String(index)` (preserved as axisLabel).
+    • `.reverse()` so oldest is leftmost; stable zero-padded plotKey for ordering.
+    • Total = Σenergy, Avg = total/len (fmt(_,1)); energyUnit fixed "kWh".
+    • hasData == web `chartData.length > 1` (≥2 sessions; 1 or 0 → empty state).
+  Layout → isCompact == web `size.cols <= 1` (column-only). Compact = stat row only (no chart),
+    matching WidgetChartSummary compact; standard = stat row + AreaChart. Glass WidgetShell
+    parity: title "Charge History" + BarChart3-equivalent green icon, freshness chip, refresh.
+  Chart → web Recharts AreaChart (#10b981 monotone gradient, h=200, y=`${v} kWh`) →
+    SwiftUI Charts AreaMark+LineMark with Color.TS.statusSuccess (== #10b981) gradient,
+    monotone interpolation, tap-to-inspect RuleMark tooltip, thinned x-ticks on narrow widths.
+  i18n → table "ChargeHistoryWidget"; all 5 web source strings present + verified:
+    widget.chargeHistory.title/total/avg, widget.noChargeHistory, widget.chargeHistory.description.
+  Registry → id "charge-history", category "charging", default 2×4, min 2×2, max 4×40 — unit-tested.
+
+=== STATES (every state renders; no hidden surfaces) ===
+  loading  → skeleton chrome (stat skeletons + chart skeleton)         [ChargeHistoryModel.Phase.loading]
+  empty    → ContentUnavailableView "No charge sessions yet" + hint    [≤1 session OR none; web hasData>1]
+  error    → icon + title + message + Retry affordance                 [.failed w/o cached points]
+  stale    → amber banner + auto-refresh after 30s grace               [connection .stale]
+  offline  → muted "showing last saved sessions" banner + cached chart [connection .offline]
+  content  → stat row (Total/Avg kWh) + gradient area chart            [≥2 sessions]
+  Cached points stay visible behind refresh/offline/error so a transient failure never blanks
+  a populated widget (web shell keeps the last chartData).
+
+=== ACCESSIBILITY ===
+  VoiceOver: chart accessibilityLabel + summary value ("Total X kWh. Avg Y kWh."); per-point
+  accessibilityLabel (ordinal) + accessibilityValue ("<energy> kWh"); stat cells combine to
+  "<label> <value> kWh"; freshness/refresh/open buttons labelled; icons accessibilityHidden.
+  Dynamic Type via Font.TS tokens + minimumScaleFactor on metric values; Reduce Motion honored
+  (chart animation nil-guarded, skeleton shimmer gated). a11y summary/point builders are pure
+  + unit-tested (ChargeHistoryAccessibilityTests).
+
+=== VERIFICATION (author-controlled — all GREEN) ===
+  [1] Foundation-only typecheck (adapter core: Models + Builder)
+        swiftc -typecheck Models.swift Builder.swift                      → EXIT=0
+  [2] Real iPhoneSimulator 26.5 SDK typecheck of the FULL surface
+        swiftc -typecheck -sdk iPhoneSimulator26.5 -target …ios18.0-simulator -swift-version 6
+        (Tokens + Typography + TSMaterial + Cards + Skeletons + Infra + my 6 view/logic files)
+                                                                          → EXIT=0
+  [3] Testable module build (sources + real deps, -enable-testing)
+        swiftc -emit-module -enable-testing -module-name TeslaSync …      → EXIT=0
+  [4] Tests EXECUTED GREEN — 26/26 XCTest methods pass (0 failures, 0 unexpected) in an
+        isolated SwiftPM harness built from the surface's 5 source files + the REAL
+        Tokens/DashboardWidgetInfra + a verbatim TSSkeleton (the widget has NO dependency on
+        sibling surfaces or the KMP framework, so the suite runs standalone):
+            cd <harness> && swift test  →  Test Suite 'All tests' passed
+                                           Executed 26 tests, with 0 failures (0 unexpected)
+        The in-tree TeslaSyncTests/TeslaSync-macOSTests XCTest bundles cannot run ONLY because
+        the whole-app build is blocked by the pre-existing sibling base (see GATE) — not by
+        anything in these tests. (Bare `swiftc -typecheck` cannot import XCTest's function-like
+        C asserts; that is a harness limitation proven universal via a 3-line probe and is moot
+        now that the suite executes green under SwiftPM.)
+  [5] swiftlint --strict on the 7 widget files                           → 0 violations
+  [6] swiftformat --lint on the 7 widget files                           → 0 require formatting
+  [7] placeholder gate (pwsh check-placeholders.ps1 on the surface)      → PLACEHOLDER_COUNT=0, EXIT=0
+  [8] Within BOTH full-app builds below, the widget's 8 files emit ZERO compile errors
+        (grep "error:" … | grep -ci ChargeHistory == 0 on iOS AND macOS).
+
+=== GATE (exact prompt commands, executed; honest exit codes) ===
+  xcodegen generate ........................................................ EXIT=0
+  Shared.xcframework (apps/shared :core:assembleSharedXCFramework) .......... BUILD SUCCESSFUL, staged
+
+  [iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+         build test CODE_SIGNING_ALLOWED=NO ................................ IOS_EXIT=65 (** TEST FAILED **)
+         Cause: PRE-EXISTING compile errors in sibling surfaces (NOT this prompt's files).
+         Dominant errors: "'<Type>' is ambiguous for type lookup" (duplicate symbol defs
+         across siblings, e.g. ChargeSessionDTO defined in BOTH ChargeSessionChartWidget.Models.swift
+         AND ChargeStatusLiveWidget.Model.swift — both base/untouched) + cascading
+         "cannot infer contextual base in reference to member 'loaded'/'live'/…" in their Previews.
+         Affected sibling surfaces (untouched, outside Allowed files): ChargeSessionChartWidget,
+         ChargeStatusWidget, ChargeStatusLiveWidget, ChargingProgressWidget, ChargingSection,
+         ChargingSessionDetailWidget, ChargingTelemetryWidget, DrivingCoachWidget,
+         DrivingCoachSection, SafetyFeaturesWidget, SafetyHistoryWidget, FleetStatsBarWidget,
+         FleetApiSection, EnergySnapshotWidget, RecentDriveWidget, SummaryStats*, Temperature*,
+         TemplateGallery, SystemHealthWidget, SuperchargerHistoryWidget, AlertCountWidget … (20+).
+         ChargeHistoryWidget.* errors in this log: 0.
+
+  [mac]  xcodebuild -scheme TeslaSync-macOS build test CODE_SIGNING_ALLOWED=NO ... MAC_EXIT=65 (** TEST FAILED **)
+         Identical pre-existing error profile (same shared sibling sources).
+         ChargeHistoryWidget.* errors in this log: 0.
+
+  swiftlint --strict (tree-wide, apps/apple) ............................... LINT_EXIT=2
+         1 violation total, PRE-EXISTING, in LiveSignalSparklinesWidget.Builder.swift:158
+         (opening_brace) — base/untouched sibling, outside Allowed files. ChargeHistory: 0.
+         (Same single pre-existing violation noted by sibling prompt logs in this base lineage.)
+
+  swiftformat --lint apps/apple (tree-wide) ................................ FORMAT_EXIT=0
+         0/2642 files require formatting (my files included).
+
+  check-placeholders.ps1 (apps/apple/.../ChargeHistoryWidget) .............. PLACEHOLDER_EXIT=0
+
+=== HONESTY COVENANT DISPOSITION ===
+  1 No red-as-green ...... The full xcodebuild build+test is RED; it is reported RED here, NOT
+                           as green. STATUS=BLOCKED (not DONE) precisely because IOS/MAC/LINT≠0.
+  2 No scope narrowing ... Every web state/section/i18n key/a11y was implemented (see above).
+  3 No skip-and-assume ... Web source read end-to-end; isCompact=cols≤1 and hasData=len>1 ported faithfully.
+  4 No stubs as final .... Zero placeholders (gate [7]); full implementations only.
+  5 No parity shortcuts .. Area chart, dual stats, empty-on-single-session, freshness — all reproduced.
+  6 No delegation ........ Authored directly; no sub-agent built the surface.
+  7 No predecessor bypass  Did not edit/disable any sibling surface to force a green build.
+  8 No commit on red ..... The widget is purely ADDITIVE (8 new files, 0 errors on both platforms,
+                           all author gates green). It introduces NO red — the base was already
+                           red before these files existed and is byte-for-byte as red after
+                           (ChargeHistory error count = 0). The pre-existing sibling breakage is
+                           OUTSIDE this prompt's Allowed files (ChargeHistoryWidget.* + this log)
+                           and the constraints forbid touching it. The deliverable is committed
+                           with this fully transparent BLOCKED log so the work is preserved and
+                           nothing is misrepresented.
+  9 No silent drift ...... All deviations (XCTest-macro harness limitation; pre-existing base)
+                           are documented above with reproduction evidence.
+ 10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ChargeHistoryWidget shipped at parity with the web source: a pure
+  Swift cached→projection adapter (SI watt-hours → kWh at the display boundary), P1/S8
+  state-holder seam (no view HTTP), Swift Charts gradient area+line chart with tap tooltip and
+  per-point VoiceOver, P1/S11 telemetry, every web state + i18n key + a11y label, registry-correct
+  (charge-history, charging, 2×4 / 2×2 / 4×40, hasData>1, isCompact=cols≤1). The surface is
+  PROVEN to compile against the real iPhoneSimulator 26.5 SDK with the real in-module design
+  tokens/infra/skeleton/typography dependencies, builds as a testable module, has its full
+  26-method XCTest suite EXECUTING GREEN (0 failures) in an isolated SwiftPM harness, is
+  swiftlint- and swiftformat-clean, has zero placeholders, and emits ZERO compile errors
+  inside BOTH the full iOS and macOS app builds.
+
+  The full Xcode build+test gate cannot reach EXIT=0 because the slot's apps/apple base is
+  PRE-EXISTINGLY broken: 20+ sibling dashboard-widget / feature-view surfaces fail to compile
+  with duplicate-symbol ("ambiguous for type lookup") collisions and their cascades. These files
+  are unmodified base code, outside this prompt's Allowed-files scope, and the constraints
+  explicitly forbid modifying them (and other parallel agents own them). This is therefore a
+  pre-existing-base BLOCK, not a defect in or omission from this surface.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=65
+STATUS=BLOCKED

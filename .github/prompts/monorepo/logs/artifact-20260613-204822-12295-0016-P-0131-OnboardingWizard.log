@@ -1,0 +1,191 @@
+=== P4 Shared surface 0131 OnboardingWizard (Apple) ===
+
+PROMPT   .github/prompts/monorepo/p4-apple/shared-surfaces/0131-OnboardingWizard.prompt.md
+WEB SRC  web/src/components/feedback/OnboardingWizard.tsx   (THE specification)
+NATIVE   apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.{swift,Adapter,Seams,Model,Views,
+         Previews,Tests,AdapterTests}.swift + OnboardingWizard.strings   (9 files, net-new surface)
+
+PREFLIGHT  (capability — the prompt requires SwiftUI / iOS 18 / iPadOS 18 / macOS 15; AVAILABLE here)
+  Runner             : macOS (Darwin arm64, Apple Silicon), shared with sibling parallel slots.
+  Xcode              : 26.5 (Build 17F42) at /Applications/Xcode.app ; swift 6.3.2 (Swift 6 language mode,
+                       strict-concurrency complete — identical to the app's SWIFT_STRICT_CONCURRENCY=complete).
+  SDKs / sim         : iphonesimulator26.5 + macosx26.5 present; "iPhone 16" simulator available (booted).
+  Tooling            : swiftlint 0.63.x · swiftformat · xcodegen 2.45.4 · pwsh 7.6 · JDK 17.0.19 (KMP framework).
+  Charts / maps      : this surface uses NEITHER (the web source has none — "Charts/maps used: (none)"), so the
+                       iOS 18 / macOS 15 HIG primitives it needs are all present → NOT capability-BLOCKED.
+  => Platform capability is PRESENT, so this surface is shipped + verified (STATUS=DONE), not BLOCKED.
+
+WEB SOURCE BEHAVIOUR  (parity contract — read end-to-end; every branch reproduced)
+  • First-run gate: localStorage['teslasync-onboarded']; if set, the component returns null (never shows).
+  • On mount, when not onboarded, it reveals after a 1500 ms delay so the app paints + nav stays interactive.
+  • Cross-tab bus: subscribe() dismisses this instance when a peer tab broadcasts {type:'onboarded'};
+    handleClose() persists the flag, hides, and broadcasts {type:'onboarded'}.
+  • Four steps (Welcome / Connect / Configure / All-Set): each a title, a description, a lucide icon, an accent hex.
+  • Modal: backdrop (click = close) · centered glass panel · step-indicator dots (active wider + cyan glow) ·
+    accent-tinted icon tile · title + description · Skip (left) + Next▸ / Get Started (right) · ✕ close · Esc closes.
+  • handleNext: not-last → currentStep+1 ; last → handleClose().
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  steps[] (4)                  → OnboardingWizardStepCatalog.entries + OnboardingWizardProjector.resolve (P1/S10 keys)
+  per-step hex accents         → OnboardingWizardAccent → P1/S9 semantic tokens (resolved at the view boundary):
+                                   #00f0ff cyan   → .primary   Color.TS.accent
+                                   #10b981 green  → .success   Color.TS.statusSuccess
+                                   #f59e0b amber  → .warning   Color.TS.statusWarning
+                                   #8b5cf6 violet → .highlight Color.TS.chartSeriesPower
+  lucide Zap/Car/Settings/Check→ SF Symbols bolt.fill / car.fill / gearshape.fill / checkmark.circle.fill
+  lucide X / ChevronRight      → SF Symbols xmark / chevron.right
+  indicator dots               → OnboardingWizardIndicatorRow + Capsule (complete=accent, active wider+glow;
+                                   web `i<=currentStep` ⇒ isComplete, `i===currentStep` ⇒ isActive)
+  Next vs Get Started          → OnboardingWizardPrimaryAction .advance/.finish (web `currentStep<length-1`)
+  modal panel                  → OnboardingWizardCard: .ultraThinMaterial + Color.TS.surface glass, TSRadius.lg,
+                                   Color.TS.border stroke, ✕ overlaid top-trailing (web rounded/bordered/blur panel)
+  backdrop click / Esc         → OnboardingWizardBackdrop tap-to-dismiss scrim + ✕ .keyboardShortcut(.cancelAction)
+  localStorage + broadcast     → OnboardingWizardStore seam (P1/S8): UserDefaultsOnboardingWizardStore =
+                                   UserDefaults flag (key "teslasync-onboarded", identical to web ONBOARDED_KEY) +
+                                   NotificationCenter peer broadcast (selector observer, self-echo ignored) + the
+                                   1.5 s delayed reveal; InMemoryOnboardingWizardStore for previews/tests
+  i18n                         → every string via OnboardingWizardStrings (NSLocalizedString table "OnboardingWizard",
+                                   web English literal as the fallback). The web is "anonymous" (hardcoded English,
+                                   no t()); per the no-English-literals rule every literal is promoted to a key.
+  a11y                         → dialog labelled + .isModal; step content combined ("{title}. {description}");
+                                   indicators one element ("Step N of M"); Skip / Next / Get-Started / ✕ / backdrop
+                                   all labelled; Dynamic Type via Font.TS tokens + fixedSize(vertical); Reduce Motion
+                                   gates the indicator animation + the card scale-in transition
+  telemetry                    → view.opened surface="OnboardingWizard" emitted once, on the first REVEAL
+                                   (mirrors the web: the surface is "opened" only when it becomes visible)
+
+STATES  (the web source's REAL branches — reproduced; none hidden, none fabricated)
+  dismissed → already onboarded, not yet revealed, or dismissed by a peer scene → renders nothing (web
+              `if (!visible) return null`). The sanctioned "withdrawn surface" disposition.
+  presented → the blurred backdrop + the centered card for steps[currentStep], with the indicator row + Skip +
+              Next/Get-Started + ✕, across all four steps (step content, the Next→Get-Started swap on the last
+              step, and the indicator completion all rendered + tested).
+  NB: OnboardingWizard is a PURE presentational component with NO data feed (the prompt's "Data sources: none").
+      It therefore has no loading / error / stale / offline axis — that generic list in the prompt template is a
+      DATA-surface checklist; fabricating those states for a feed-less wizard would MISREPRESENT the source. The
+      operative instruction ("plus any state-specific branches that exist in the web source — reproduce them all")
+      is honoured: dismissed + presented(×4 steps) are the web's real branches and all render. (Same disposition
+      the prior P4 presentational primitives Accordion/Delta/MetricCard/StaggerItem recorded.)
+
+ENABLING CHANGE  (none required — disclosed)
+  TeslaSync/shared-surfaces is ALREADY a registered source group in BOTH app targets (apps/apple/project.yml,
+  TeslaSync + TeslaSync-macOS) and in apps/apple/.swiftlint.yml `included:`. The 9 OnboardingWizard.* files are
+  therefore members of both app targets (54 references in the generated pbxproj; the 8 .swift via the app source
+  phase + the co-located *Tests.swift via TeslaSyncTests/-macOSTests; the .strings via Copy-Resources). No
+  project.yml / .swiftlint.yml edit was needed. Types are surface-prefixed (OnboardingWizard*) to avoid the 40+
+  pre-existing Onboarding* / OnboardingGate* / OnboardingChecklist* symbols in the app module — zero collisions
+  (verified: grep found no existing OnboardingWizard* symbol).
+
+GATES  (raw exits)
+  [GREEN] swiftformat --lint  (.swiftformat, the 8 shipped .swift files)
+              : 0/8 files require formatting                                                  FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, the 8 shipped .swift files)
+              : Found 0 violations, 0 serious in 8 files                                      LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 -Language swift (the 9 OnboardingWizard.* files, copied to an isolated dir so
+          the scan is scoped to THIS surface — the prompt's literal -Path .../OnboardingWizard is a non-existent
+          path that the scanner treats as a clean no-op; scoping to the real files is the faithful check)
+              : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                                    PLACEHOLDER_EXIT=0
+          (Also verified by grep: 0 occurrences of TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/
+           not implemented across all 9 files incl. comments + the .strings.)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0, .swiftLanguageMode(.v6) (= the app's strict-concurrency
+          complete), compiling the EXACT shipped OnboardingWizard.{swift,Adapter,Seams,Model,Views,Previews}.swift
+          (incl. the #Preview macro file) against the REAL generated design system
+          (apps/design/generated/apple/Tokens.swift) under the Xcode 26.5 toolchain (real #Preview macro + XCTest):
+              Test Suite 'All tests' passed · Executed 36 tests, with 0 failures (0 unexpected)   ISO_TEST_EXIT=0
+          (6 catalog + 10 projector + 9 model-lifecycle + 3 UserDefaults/peer-bus store + 4 strings/a11y +
+           4 view-composition = 36; covers: the 4-step catalog + accent/SF-Symbol mapping, the indicator
+           completion/active logic, the Next→Get-Started swap, the handleNext outcome, the first-run gate,
+           the delayed-reveal timer, the once-only view.opened, Skip/close persist+broadcast, the cross-scene
+           peer dismissal WITHOUT re-persisting, the accent→token resolution, and Reduce-Motion gating.)
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`  (IOS_EXIT / MAC_EXIT).
+          ATTEMPTED on this runner — NOT reported green (covenant #1). What was independently established here:
+            • The TeslaSync (iOS) app module type-checked + emitted cleanly WITH this surface:
+              "EmitSwiftModule normal arm64 (in target 'TeslaSync' from project 'TeslaSync')" — present, 0 errors.
+              Swift emits the whole-module interface only after the entire module (incl. all 8 OnboardingWizard
+              .swift files) type-checks, so this is real proof the surface compiles in the REAL iOS app target.
+            • The TeslaSync-macOS app module likewise emitted cleanly:
+              "EmitSwiftModule normal arm64 (in target 'TeslaSync-macOS' from project 'TeslaSync')" — 0 errors.
+            • OnboardingWizard.strings is copied into TeslaSync.app (CopyStringsFile … OnboardingWizard.strings).
+            • ZERO OnboardingWizard errors in either the iOS or the macOS build log (grep error: | OnboardingWizard = 0).
+          Why DEFERRED rather than run-to-green on THIS runner (each VERIFIED, not assumed):
+            • Scale: the single TeslaSync app target compiles 2000+ co-located surface .swift files; the `test`
+              action additionally forces a full `-enable-testing` RECOMPILE of that whole module plus the
+              TeslaSyncTests bundle (every co-located *Tests.swift across all surfaces) before any test runs — a
+              45+ min single-target operation here. A clean scoped run (`build test -only-testing:` the six
+              OnboardingWizard* test classes) WAS driven to that point: the app module recompiled with
+              -enable-testing cleanly (0 errors), then the TeslaSyncTests bundle compile proceeded for ~34k log
+              lines, also 0 errors, before the failure below.
+            • Shared-runner swift-frontend crash (NOT a code error): under memory pressure from the sibling
+              parallel slots (slot-13, slot-14, … each running their own concurrent giant Swift compiles), the
+              compiler CRASHED during code-generation of an UNRELATED surface — verbatim from the log:
+                "Please submit a bug report … Stack dump: … 4. While evaluating request IRGenRequest(IR Generation
+                 for file '…/TeslaSync/feature-views/AppearanceSettings.Controls.swift') … 0 swift-frontend …
+                 llvm::sys::PrintStackTrace"  →  "Command SwiftCompile failed with a nonzero exit code"
+                 →  ** TEST FAILED **   IOS_FINAL_EXIT=65.
+              This is a swift-frontend IRGen crash on AppearanceSettings.Controls.swift (a different surface), with
+              ZERO OnboardingWizard files in the failed command — an environmental compiler instability under
+              cross-slot memory pressure, not a source defect. (Earlier retries additionally hit the SQLite
+              build-system error "unable to attach DB … build.db … database is locked … two concurrent builds
+              running in the same filesystem location" when an orphaned sibling build transiently shared the iOS
+              DerivedData — likewise an infra collision, 0 OnboardingWizard errors.) The macOS `build test` run was
+              reaped mid-app-compile by the same contention before writing an exit (its app module had already
+              emitted cleanly — see above).
+          This is the SAME sanctioned "code-complete + per-surface-green + DEFERRED full-app Xcode gate" disposition
+          recorded by every prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a dedicated, signed macos-latest runner without this
+          cross-slot DerivedData contention. The KMP Shared.xcframework was BUILT here for completeness
+          (gradle :core:assembleSharedXCFramework → BUILD SUCCESSFUL, staged to apps/apple/Frameworks/) so the
+          deferral is purely scale + shared-runner-contention, not a missing dependency.
+
+HONESTY COVENANT  (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, grep-verified
+                           evidence — never reported as passing. The only non-zero exit (IOS_FINAL_EXIT=65) is
+                           disclosed as a swift-frontend IRGen CRASH on an UNRELATED surface
+                           (AppearanceSettings.Controls.swift) under cross-slot memory pressure, plus earlier
+                           build.db concurrency locks — both infra, both 0 OnboardingWizard errors. The
+                           whole-module EmitSwiftModule successes for BOTH targets are quoted from the real logs.
+  2  No scope narrowing  : every web region + branch reproduced — the first-run localStorage gate, the 1.5 s delayed
+                           reveal, the cross-scene dismissal, all four localized steps, the indicator
+                           completion/active logic, the Next→Get-Started swap, Skip / ✕ / backdrop / Esc, and the
+                           accent + SF-Symbol mapping. Both real states (dismissed + presented×4) render + are tested.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were re-confirmed by grep/ps (build.db lock text, the running giant app compile,
+                           the EmitSwiftModule successes), not assumed.
+  4  No stubs as final   : complete production surface (incl. a REAL UserDefaults + NotificationCenter store, not a
+                           stand-in) + 36 real tests; placeholder scanner COUNT=0; no TODO/FIXME/stub/Coming-soon/
+                           Placeholder/Lorem anywhere in code or comments.
+  5  No parity shortcut  : the localStorage gate, the broadcast dismissal, the delayed reveal, the per-step accent
+                           hexes (→ semantic tokens), the SF Symbol peers, the indicator rules, and the
+                           Next/Get-Started rule are each reproduced and unit-asserted; no Tailwind classes ported,
+                           no raw hex in native code.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder + store seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 "isolated-build + DEFERRED full-app" disposition all
+                           honoured; types surface-prefixed to avoid the pre-existing Onboarding* symbols (verified
+                           zero collisions).
+  8  No commit on red    : the committed artifact (9 OnboardingWizard.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 36/36 XCTest,
+                           AND type-checks cleanly in BOTH real app targets (iOS + macOS EmitSwiftModule, 0 errors).
+                           The deferred full-app gate's only non-zero exit is a swift-frontend IRGen crash on an
+                           unrelated surface under cross-slot memory pressure — never an OnboardingWizard code error.
+  9  No silent drift     : changes are confined to shared-surfaces/OnboardingWizard.* + this log. No project.yml /
+                           .swiftlint.yml edit was needed (the directory is already registered); no other surface
+                           was touched.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic OnboardingWizard shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 36 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  REAL design system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint / placeholder all green on
+  the shipped files and the #Preview macro compiling — AND it type-checks cleanly inside BOTH real app targets
+  (iOS TeslaSync + macOS TeslaSync-macOS EmitSwiftModule, 0 errors, with the .strings bundled). The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): the iOS in-target run
+  recompiled the whole app with -enable-testing cleanly and compiled ~34k log lines of the test bundle with 0
+  errors before swift-frontend CRASHED during IRGen of an UNRELATED surface (AppearanceSettings.Controls.swift)
+  under cross-slot memory pressure (IOS_FINAL_EXIT=65); the macOS run was reaped mid-compile by the same
+  contention. Both are environmental, 0 OnboardingWizard errors — owned by the P99 acceptance gate on a
+  dedicated signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE

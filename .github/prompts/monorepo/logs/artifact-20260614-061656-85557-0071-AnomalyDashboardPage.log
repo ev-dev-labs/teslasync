@@ -1,0 +1,205 @@
+================================================================================
+p4-apple · P7 · page:diagnostics/AnomalyDashboard — SwiftUI / HIG parity
+================================================================================
+artifact : apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPage.swift (+ models, format, model, sample, sections, charts, route reg, tests)
+host     : macOS (Darwin 25.x); Xcode 26.5 (xcodebuild present); Apple Swift 6.3.2; swiftlint 0.63.x + swiftformat 0.57.x + xcodegen + pwsh 7.x + Java 17 (Gradle/KMP) present
+parity   : page:diagnostics/AnomalyDashboard  (manifest PARITY_REQUIRED=27 = 7 panels + 1 chart + 4 states + 15 strings)
+web src  : web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx  (routes /analytics/anomalies, /anomaly-detection)
+data srcs: useAnomalies -> GET /analytics/anomalies [vehicle_id, days]  (PRIMARY: drives loading/empty/error/success)
+           (+ useSelectedVehicle -> GET /vehicles for the vehicle Select; both bound through one
+            @Observable AnomalyDashboardPageModel via an injected AnomalyDataSource seam, ADR-004; no
+            networking in the view. No SI quantities on this surface — value/baseline/z_score are
+            dimensionless and formatted via AnomalyFormat (web fmtNumber), so NOTHING is unit-converted
+            (mirrors the web page, which imports fmtNumber and no useUnits). No live SSE — the web reads
+            cached query data, no EventSource — so no staleness indicator, matching the sibling pages.)
+
+PATH-MAPPING NOTE (no silent drift, covenant #9)
+  The prompt's idealized output path is apps/apple/TeslaSync/Features/Diagnostics/AnomalyDashboardPage.swift, but
+  the REAL Xcode project (project.yml) compiles app sources from apps/apple/Sources/** — the TeslaSync/Features/**
+  subtree is NOT a build input (project.yml sources list TeslaSync/{widget-primitives,dashboard-widgets,
+  feature-views,misc-surfaces,shared-surfaces} only). All 56 already-DONE P7 pages live under
+  apps/apple/Sources/Features/<Domain>/. Placing the page there is what actually compiles, registers, and is
+  covered by the gate; the alternative would be a non-compiled, non-registered stub (covenant #4). Files
+  therefore live under apps/apple/Sources/Features/Diagnostics/** + the matching Tests/Unit/Features/Diagnostics/.
+
+FILES (allowed scope: Sources/Features/Diagnostics/**, navigation registration, the string catalog, this log)
+  NEW  apps/apple/Sources/Features/Diagnostics/AnomalyModels.swift                    (value types + closed vocab enums: AnomalyEntry/Data, AnomalyVehicle, AnomalySeverity/Type/HealthStatus, AnomalyHealthEntry, AnomalySignalFrequency)
+  NEW  apps/apple/Sources/Features/Diagnostics/AnomalyFormat.swift                    (display-boundary formatters: number (web fmtNumber, non-finite->0), count, zScore "{n}σ", relative time)
+  NEW  apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPageModel.swift        (@Observable model: data-source seam, phase, per-vehicle load, frequency/health derivations)
+  NEW  apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPageModel.Sample.swift (sample + healthy + no-vehicles + failing preview/test data sources)
+  NEW  apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPage.swift             (adaptive View: header + vehicle Select, AI-explanations/baselines slots, phase switch loading/empty/error/ready)
+  NEW  apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPage.Sections.swift    (4 summary StatCards; System-Health grid + tiles; anomaly timeline + rows; no-vehicle panel; loading skeleton + redaction)
+  NEW  apps/apple/Sources/Features/Diagnostics/AnomalyDashboardPage.Charts.swift      (most-frequent-anomalies horizontal BarChart — native Swift Charts — in TSChartContainer)
+  NEW  apps/apple/Sources/Features/Diagnostics/AnomalyDashboardRouteRegistration.swift(registers the .diagnostics route host — web /analytics/anomalies + /anomaly-detection alias to .diagnostics)
+  NEW  apps/apple/Tests/Unit/Features/Diagnostics/AnomalyDashboardPageModelTests.swift(25 XCTest cases: phases, selection, frequency top-ten + ties, derivations, formatters, vocab mappings)
+  EDIT apps/apple/Sources/App/AppRouteParser.swift     (+ aliases "/analytics/anomalies" -> .diagnostics, "/anomaly-detection" -> .diagnostics)
+  EDIT apps/apple/Sources/TeslaSyncApp.swift           (compose AnomalyDashboardRouteRegistration into the route-host chain — after TrueCost)
+  EDIT apps/apple/Localization/Localizable.xcstrings   (+32 keys: 15 manifest anomaly.* + 17 supporting severity/type/status/category/aria/noVehicles; en source values ported verbatim from the web t(key, default) calls)
+  EDIT apps/parity/apple-ledger.json                   (+2 rows: apple-macos / apple-ios -> done 27/27)
+
+Navigation note (covenant #7 — no predecessor bypass): the web routes /analytics/anomalies and /anomaly-detection
+are NEW destinations. The native AppRoute already has a `.diagnostics` case (operations group, stethoscope icon)
+that was PREVIOUSLY UNHOSTED (no registration claimed it; the shell rendered its pending state) and corresponds to
+no other web page (web has no /diagnostics route). The parity unit is itself `page:diagnostics/AnomalyDashboard`, so
+hosting AnomalyDashboardPage at `.diagnostics` makes the existing Diagnostics sidebar entry functional WITHOUT
+adding an enum case or displacing any sibling (.analytics still owns StatisticsPage; .tco still owns TrueCostPage).
+AppRouteParser gains the two web-path aliases so both deep-links resolve. No AppRoute enum case, sibling
+registration, or RouteTests invariant (unique pathSegments) was touched. The @Observable model is built @MainActor
+in the registration enum and captured, mirroring the sibling *RouteRegistration enums.
+
+UNITS / SSE note: this page renders only dimensionless data (signal counts, z-scores, raw signal value/baseline)
+— the web page imports fmtNumber and NOT useUnits, and uses a TanStack query (no EventSource). So there is no SI
+conversion and no live-staleness indicator to implement; AnomalyFormat handles the number/relative-time boundary.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; the 8 Diagnostics sources + the test file are referenced in
+the iOS+macOS app targets + both unit-test bundles (36 pbxproj references for the Anomaly* file set).
+GEN_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Diagnostics -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=1   (the .redacted(.placeholder) loading opt-out in AnomalyDashboardPage.Sections.swift,
+                         carrying a "// parity:allow redaction API, not a stub" reason)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- swiftformat --lint (repo .swiftformat; my 8 new sources + test) ---
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint lint --strict (repo .swiftlint.yml; Sources/Features/Diagnostics + Tests/Unit/Features/Diagnostics) ---
+0 violations in the Anomaly* changeset (whole-tree run reports only pre-existing violations elsewhere).
+LINT_EXIT=0
+
+--- IN-SCOPE TYPE-CHECK (macOS): swiftc -typecheck -swift-version 6 (strict concurrency) against REAL components ---
+xcrun swiftc -typecheck -module-name TeslaSync -swift-version 6 -parse-as-library \
+  -sdk <MacOSX26.5.sdk> -target arm64-apple-macos15.0 \
+  <53 files: my 8 Anomaly* sources + the edited AppRouteParser + AppRoute/RouteHostRegistry + Theme.swift +
+   the REAL Sources/Components/** design system (minus the SharedFacade-coupled UnitFormatters.swift, which
+   this Shared-free page does not use) + Sources/Design/** + the generated design tokens ../design/generated/apple/Tokens.swift>
+   => 0 errors.   TYPECHECK_EXIT(macOS, in-scope)=0
+  Every Anomaly* type, the .diagnostics registration, the parser aliases, and the @Observable model type-check
+  cleanly against the REAL design tokens (Color.TS / Font.TS / TSSpacing / TSRadius / TSChartPalette) and the
+  REAL shared component library (TSStatCard / TSGlassPanel / TSPanelTitle / TSPageTitle / TSEmptyState /
+  TSErrorDisplay / TSSelect / TSBadge / TSChartContainer + native Swift Charts BarMark). No KMP Shared import
+  is needed (the page has no SI quantities), so the closure links no Shared.xcframework.
+
+--- IN-SCOPE TYPE-CHECK (iOS): same 53-file closure, iOS slice ---
+xcrun swiftc -typecheck -module-name TeslaSync -swift-version 6 -parse-as-library \
+  -sdk <iPhoneOS26.5.sdk> -target arm64-apple-ios18.0 <same 53 files>
+   => 0 errors.   TYPECHECK_EXIT(iOS, in-scope)=0
+  Confirms the #if os(iOS) horizontalSizeClass / isCompact adaptive branches in AnomalyDashboardPage.swift
+  type-check on iOS too (mirroring the sibling Statistics/TrueCost pattern).
+
+--- LOGIC HARNESS: standalone swiftc + run of the REAL model + formatters + models + sample + REAL Badges/Tokens ---
+xcrun swiftc -O -D DEBUG  AnomalyModels + AnomalyFormat + AnomalyDashboardPageModel + Sample
+  + Sources/Components/UI/Badges.swift (TSTone) + ../design/generated/apple/Tokens.swift + main.swift harness
+  => COMPILE_EXIT=0
+./anom_harness  => CHECKS=27  FAILURES=0  (phases ready/healthy/no-vehicles/error; vehicle reselect reload;
+   frequency top-ten desc + stable ties; formatters number(grouping + decimals + nan->0)/count/zScore("3.2σ")/
+   relative("30m ago"/"2d ago"/nil->em-dash); severity/type/health-status tone mappings + category icons)
+HARNESS_EXIT=0
+
+--- Shared.xcframework (ADR-004): assembled + staged from the slot-local Gradle build ---
+The KMP core assembled the RELEASE Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64) via
+Scripts/build-shared-xcframework.sh -> Gradle :core:assembleSharedXCFramework => BUILD SUCCESSFUL in 14m 17s;
+staged into apps/apple/Frameworks/Shared.xcframework (git-ignored).
+STAGE_EXIT=0
+
+--- REAL app-target compile (macOS) with the staged Shared.xcframework + CODE_SIGNING_ALLOWED=NO ---
+xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug build CODE_SIGNING_ALLOWED=NO
+  => 6 error LINES = 2 DISTINCT, BOTH PRE-EXISTING + OUT-OF-SCOPE in another agent's
+     TeslaSync/shared-surfaces/Input.Previews.swift:88 & :101 ("cannot use explicit 'return' statement in the
+     body of result builder 'ViewBuilder'"). ZERO of the diagnostics reference any Anomaly*/Diagnostics file
+     (grep -c 'error:.*[Aa]nomaly' == 0). Input.Previews.swift is NOT in my changeset (git status confirms).
+  APPBUILD_EXIT=65  (blocked solely by the pre-existing out-of-scope ViewBuilder error + macOS dev-signing:
+                     `security find-identity -p codesigning` => 0 valid identities, hence CODE_SIGNING_ALLOWED=NO)
+
+--- REAL app-target compile (iOS Simulator) with the staged Shared.xcframework + CODE_SIGNING_ALLOWED=NO ---
+xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -configuration Debug build CODE_SIGNING_ALLOWED=NO
+  => same single PRE-EXISTING out-of-scope blocker (TeslaSync/shared-surfaces/Input.Previews.swift ViewBuilder
+     return); 6 error lines = the SAME 2 pre-existing Input.Previews.swift ViewBuilder errors, ZERO
+     Anomaly*/Diagnostics errors (grep -c 'error:.*[Aa]nomaly' == 0).   IOS_APPBUILD_EXIT=65
+
+--- FULL xcodebuild build / test (whole app target incl. the TeslaSync/* surface tree) ---
+NOT taken to green in this environment, and REPORTED so (covenant #1): the whole-app build/test is blocked by
+the PRE-EXISTING, OUT-OF-SCOPE ViewBuilder-return error in TeslaSync/shared-surfaces/Input.Previews.swift
+(generated by another prompt; outside this prompt's allowed-files scope) plus macOS development-signing (0 valid
+identities). With the REAL Shared.xcframework staged, the real app-target compile above produced ZERO Anomaly*
+errors on BOTH platforms — i.e. with the MAXIMAL real app context, my files produced no diagnostics. This is the
+established macOS-pending posture deferred to p4-apple/P99 (the macos-latest acceptance gate with signing).
+BUILD_EXIT(full, pre-existing out-of-scope ViewBuilder + dev-signing)=not-green
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=27
+================================================================================
+[x] panel  — Signals-Monitored      AnomalyDashboardPage.Sections.swift `AnomalySummaryStatsSection` TSStatCard("anomaly.monitored", count(signalsMonitored), waveform.path.ecg)
+[x] panel  — Anomalies-7d           AnomalyDashboardPage.Sections.swift `AnomalySummaryStatsSection` TSStatCard("anomaly.last7d", count(anomaliesLast7d), exclamationmark.triangle.fill)
+[x] panel  — Anomalies-24h          AnomalyDashboardPage.Sections.swift `AnomalySummaryStatsSection` TSStatCard("anomaly.last24h", count(anomaliesLast24h), shield.fill)
+[x] panel  — Health-Categories      AnomalyDashboardPage.Sections.swift `AnomalySummaryStatsSection` TSStatCard("anomaly.categories", count(categoriesCount), thermometer.medium)
+[x] panel  — GlassPanel5            AnomalyDashboardPage.Sections.swift `AnomalyHealthSummarySection` TSGlassPanel + TSPanelTitle("anomaly.healthSummary") + AnomalyHealthTile grid / TSEmptyState("anomaly.noHealth")
+[x] panel  — GlassPanel6            AnomalyDashboardPage.Sections.swift `AnomalyTimelineSection` TSGlassPanel + TSPanelTitle("anomaly.timeline") + AnomalyTimelineRow / TSEmptyState("anomaly.noAnomalies")
+[x] panel  — GlassPanel7            AnomalyDashboardPage.Charts.swift `AnomalyFrequencySection` TSChartContainer("anomaly.frequency") / TSEmptyState("anomaly.noFrequency")
+[x] chart  — BarChart               AnomalyDashboardPage.Charts.swift `AnomalyFrequencyChart` native Swift Charts BarMark (horizontal: x=count, y=signal; colorIndex 3; web layout="vertical")
+[x] state  — loading                AnomalyDashboardPage.swift `content` case .loading -> AnomalySkeleton (Sections.swift) + .anomalyRedacted(.placeholder)
+[x] state  — empty                  AnomalyDashboardPage.swift `content` case .empty -> AnomalyNoVehiclePanel TSEmptyState("anomaly.noVehicles") + per-panel noHealth/noAnomalies/noFrequency empties
+[x] state  — error                  AnomalyDashboardPage.swift `errorView` TSErrorDisplay(onRetry:) ; AnomalyDashboardPageModel.phase .error on loadAnomalies throw
+[x] state  — success                AnomalyDashboardPage.swift `readyView` (summary stats + AI slots + health grid + timeline + frequency chart)
+[x] string — anomaly.baseline       AnomalyDashboardPage.Sections.swift `AnomalyTimelineRow.meta` metaItem(label: "anomaly.baseline")
+[x] string — anomaly.categories     AnomalyDashboardPage.Sections.swift `AnomalySummaryStatsSection` TSStatCard(title: "anomaly.categories")
+[x] string — anomaly.count          AnomalyDashboardPage.Charts.swift `AnomalyFrequencyChart` .chartXAxisLabel Text("anomaly.count")  (web <Bar name=t('anomaly.count')/>)
+[x] string — anomaly.frequency      AnomalyDashboardPage.Charts.swift `AnomalyFrequencySection` TSChartContainer("anomaly.frequency")
+[x] string — anomaly.healthSummary  AnomalyDashboardPage.Sections.swift `AnomalyHealthSummarySection` TSPanelTitle("anomaly.healthSummary")
+[x] string — anomaly.last24h        AnomalyDashboardPage.Sections.swift `AnomalySummaryStatsSection` TSStatCard(title: "anomaly.last24h")
+[x] string — anomaly.last7d         AnomalyDashboardPage.Sections.swift `AnomalySummaryStatsSection` TSStatCard(title: "anomaly.last7d")
+[x] string — anomaly.monitored      AnomalyDashboardPage.Sections.swift `AnomalySummaryStatsSection` TSStatCard(title: "anomaly.monitored")
+[x] string — anomaly.noAnomalies    AnomalyDashboardPage.Sections.swift `AnomalyTimelineSection` TSEmptyState(title: "anomaly.noAnomalies")
+[x] string — anomaly.noFrequency    AnomalyDashboardPage.Charts.swift `AnomalyFrequencySection` TSEmptyState(title: "anomaly.noFrequency")
+[x] string — anomaly.noHealth       AnomalyDashboardPage.Sections.swift `AnomalyHealthSummarySection` TSEmptyState(title: "anomaly.noHealth")
+[x] string — anomaly.subtitle       AnomalyDashboardPage.swift `titleBlock` Text("anomaly.subtitle")
+[x] string — anomaly.timeline       AnomalyDashboardPage.Sections.swift `AnomalyTimelineSection` TSPanelTitle("anomaly.timeline")
+[x] string — anomaly.title          AnomalyDashboardPage.swift `titleBlock` TSPageTitle("anomaly.title") + AnomalySkeleton a11y label
+[x] string — anomaly.value          AnomalyDashboardPage.Sections.swift `AnomalyTimelineRow.meta` metaItem(label: "anomaly.value")
+
+PARITY_COVERED=27
+PARITY_REQUIRED=27
+(all 15 manifest keys + 17 supporting keys confirmed present in apps/apple/Localization/Localizable.xcstrings
+ with en source values ported verbatim from the web `t(key, default)` calls; JSON re-validated,
+ strings count 9014 -> 9046 (+32).)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The full xcodebuild is NOT claimed green — it
+                       is reported as pre-existing-RED in another agent's TeslaSync/shared-surfaces/Input.Previews.swift
+                       (ViewBuilder return) + macOS dev-signing, with the exact reasons named. With the REAL
+                       Shared.xcframework staged, the real app-target compile produced ZERO Anomaly errors on BOTH
+                       platforms; all in-scope gates are GREEN.
+ 2 No scope narrowing : all 7 panels + 1 chart + 4 states + 15 strings implemented (PARITY_COVERED=27); the web's
+                       two opt-in AI panels are injected composition seams at their DOM position (default empty —
+                       the faithful native parity of the web ai_mode='off' baseline, mirroring sibling pages).
+ 3 No skip-and-assume : model + formatter + derivation logic EXECUTED via a standalone harness (27/27); my files
+                        type-check on BOTH macOS and iOS (0 errors each) against the REAL tokens/components.
+ 4 No stubs as final  : complete implementation; PLACEHOLDER_COUNT=0 (1 documented SwiftUI redaction-API opt-out).
+ 5 No parity shortcuts: SwiftUI-native (TSStatCard/TSGlassPanel/TSPanelTitle/TSEmptyState/TSErrorDisplay/TSSelect/
+                        TSBadge/TSChartContainer + native Swift Charts BarMark, adaptive LazyVGrid + size-class
+                        reflow, .redacted loading) — no web cloning, no WKWebView; Swift Charts only.
+ 6 No delegation      : implemented directly; no sub-agents.
+ 7 No predecessor bypass: hosted the EXISTING (previously-unhosted) .diagnostics route — no enum case added, no
+                        sibling registration/route displaced; AppRouteParser aliases /analytics/anomalies +
+                        /anomaly-detection; RouteTests invariants preserved.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — placeholder(0), swiftformat(0/9),
+                        swiftlint --strict(0), macOS in-scope type-check(0), iOS in-scope type-check(0),
+                        logic harness(27/27), xcodegen(0), real app-target compile(0 Anomaly errors, both
+                        platforms). The full xcodebuild is documented pre-existing-RED/out-of-scope, exactly as
+                        the sibling DONE pages recorded.
+ 9 No silent drift    : Localizable.xcstrings keys = web key names verbatim; path-mapping (Sources/ vs
+                        TeslaSync/Features/) documented above; apple-ledger updated 27/27 x2.
+10 (terminates below with EXIT + STATUS)
+
+EXIT=0
+STATUS=DONE

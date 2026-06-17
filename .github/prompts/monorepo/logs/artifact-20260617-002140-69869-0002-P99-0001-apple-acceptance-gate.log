@@ -1,0 +1,370 @@
+================================================================================
+P4 · P99 · 0001 — Apple macOS + iOS Acceptance Gate
+Prompt: .github/prompts/monorepo/p4-apple/P99-0001-apple-acceptance-gate.prompt.md
+Run at: 2026-06-17T07:28:21Z (UTC)
+Host:   Darwin 25.5.0 arm64  |  user=atulgupta
+Repo:   /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2
+Branch: auto/20260617-002140-69869/2  |  HEAD=a52455f9e
+Severity: Acceptance gate · Delegation: FORBIDDEN (no sub-agents launched)
+================================================================================
+
+HONESTY COVENANT (binding, verbatim):
+  1 No red-as-green   2 No scope narrowing   3 No skip-and-assume   4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+GOAL: Run the Apple acceptance gate WITHOUT fixing code. Prove macOS + iOS/iPadOS parity
+      ledgers are 100%, all quality gates green, and signed archives are producible.
+      Per Spec: do NOT fix code, do NOT narrow scope, do NOT launch agents.
+
+=== PREFLIGHT ===
+
+--- [PF.0] Clean working tree (before gate) ---
+?? .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+(only the acceptance log itself is untracked above; rest of tree is clean)
+
+--- [PF.1] Toolchain versions ---
+xcodebuild:  Xcode 26.5 Build version 17F42 
+swift:       swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint:   0.63.3 @ /opt/homebrew/bin/swiftlint
+swiftformat: 0.61.1 @ /opt/homebrew/bin/swiftformat
+xcodegen:    Version: 2.45.4  @ /opt/homebrew/bin/xcodegen
+pwsh:        PowerShell 7.6.2 @ /opt/homebrew/bin/pwsh
+
+--- [PF.2] Code-signing identities (gate REQUIRES signed iOS + macOS archives) ---
+     0 valid identities found
+
+--- [PF.3] Archive credentials / provisioning profiles ---
+Provisioning profiles dir ABSENT: /Users/atulgupta/Library/MobileDevice/Provisioning Profiles
+DEVELOPMENT_TEAM env: <unset>
+
+--- [PF.4] Destinations ---
+iOS Simulator 'iPhone 16' availability:
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+
+--- [PF.5] Predecessor verification — P4/P0..P9 canonical gate logs (need STATUS=DONE) ---
+  P0-0001   => p4-p0-0001-apple-scaffold.log                STATUS=DONE
+  P1-0001   => p4-p1-0001-shared-facade.log                 STATUS=DONE
+  P2-0001   => p4-p2-0001-design-tokens.log                 STATUS=DONE
+  P3-0001   => p4-p3-0001-ui-components.log                 STATUS=DONE
+  P3-0002   => p4-p3-0002-charts-components.log             STATUS=DONE
+  P3-0003   => p4-p3-0003-data-display-components.log       STATUS=DONE
+  P3-0004   => p4-p3-0004-feedback-forms-components.log     STATUS=DONE
+  P3-0005   => p4-p3-0005-maps-motion-components.log        STATUS=DONE
+  P4-0001   => p4-p4-0001-app-structure-navigation.log      STATUS=DONE
+  P5-0001   => p4-p5-0001-auth-onboarding.log               STATUS=DONE
+  P6-0001   => p4-p6-0001-live-data-sse.log                 STATUS=DONE
+  P6-0002   => p4-p6-0002-push-notifications.log            STATUS=DONE
+  P8-0001   => p4-p8-0001-widgetkit-widgets.log             STATUS=DONE
+  P8-0002   => p4-p8-0002-intents-handoff-menus.log         STATUS=DONE
+  P8-0003   => p4-p8-0003-watchos-companion-settings.log    STATUS=DONE
+  P9-0001   => p4-p9-0001-xctest-unit.log                   STATUS=DONE
+  P9-0002   => CANONICAL LOG MISSING
+  >> P0..P9 RESULT: canonical_missing=1 non_done=0
+
+--- [PF.6] Predecessor verification — generated P7 page logs (need STATUS=DONE) ---
+  NON-DONE P7 page: apple-page-system-DBHealthPage.log => <no STATUS line>
+  >> P7 PAGES RESULT: total=105 done=104 non_done=1
+
+--- [PF.7] Parity ledger artifacts required by the Gate command ---
+  MISSING: apps/parity/apple-macos-ledger.json
+  MISSING: apps/parity/apple-ios-ledger.json
+  MISSING: apps/tools/check-parity-ledger.ps1
+  Note: only a COMBINED apps/parity/apple-ledger.json exists:
+    apps/parity/apple-ledger.json (65634 bytes)
+
+--- [PF.8] Shared.xcframework dependency (required to compile the app targets) ---
+  apps/apple/Frameworks/ contents:
+  Shared.xcframework: ABSENT (only .gitkeep) — built by apps/apple/Scripts/build-shared-xcframework.sh
+
+--- [PF.9] Generated Xcode project ---
+  .xcodeproj ABSENT (gitignored; produced by 'xcodegen generate' from apps/apple/project.yml)
+
+=== PREFLIGHT SUMMARY ===
+  Capability gaps that block the gate (any one => STATUS=BLOCKED per Covenant rule 3 + prompt Capability clause):
+   [B1] Code-signing identities: 0 valid  -> iOS/macOS archive+sign cannot be produced.
+   [B2] apps/parity/apple-macos-ledger.json: MISSING -> macOS ledger 100% cannot be verified.
+   [B3] apps/parity/apple-ios-ledger.json: MISSING   -> iOS ledger 100% cannot be verified.
+   [B4] apps/tools/check-parity-ledger.ps1: MISSING  -> ledger-check gate command cannot execute.
+   [B5] Predecessor apple-page-system-DBHealthPage.log: no STATUS=DONE (self-admits build/test skipped).
+   [B6] Predecessor canonical p4-p9-0002-xcuitest-ui.log: MISSING.
+   [B7] Shared.xcframework: ABSENT -> app targets cannot compile (build/test/archive).
+
+=== SURVEY ===
+
+Inspected (read-only):
+  - Prompt: .github/prompts/monorepo/p4-apple/P99-0001-apple-acceptance-gate.prompt.md
+  - Methodology: .github/prompts/monorepo/0000-methodology.prompt.md (10-Rule Covenant, BLOCKED rules)
+  - apps/apple/project.yml — schemes TeslaSync (iOS) + TeslaSync-macOS present; targets depend on
+    a 'Shared' framework (Shared.xcframework) and several widget/activity/watch targets.
+  - apps/parity/ — contains apple-ledger.json (combined macos+ios rows), shared-ledger.json,
+    parity-manifest.json; does NOT contain apple-macos-ledger.json or apple-ios-ledger.json.
+  - apps/tools/ — contains check-placeholders.ps1, gen-parity-manifest.ps1; does NOT contain
+    check-parity-ledger.ps1 (the script the Gate invokes for ledger verification).
+  - apps/apple/Frameworks/ — only .gitkeep; Shared.xcframework not built/staged.
+  - .github/prompts/monorepo/logs/ — predecessor logs for P4/P0..P9 and 105 apple-page-* P7 logs.
+
+=== REASONING ===
+
+This is a NON-NEGOTIABLE acceptance gate. Per Spec + Out-of-Scope, the gate MUST NOT fix code,
+create missing pages/components, modify parity definitions, or change signing configuration, and
+MUST NOT launch agents. The only permitted outcome-affecting action is running the gate and
+recording evidence; on any failed command / incomplete predecessor / incomplete ledger the result
+is EXIT=<nonzero> / STATUS=BLOCKED (Covenant rules 1, 3, 7; methodology "cannot run its gate => BLOCKED").
+
+PREFLIGHT already establishes the gate CANNOT pass and in several places CANNOT run, for 7
+independent reasons (B1..B7 above). None are fixable within this prompt's scope:
+  - B1 signing identities, B5/B6 predecessor logs are explicitly Out of Scope to change.
+  - B2/B3/B4 missing ledger artifacts/tool are "modifying parity definitions"/tooling — Out of Scope.
+  - B7 Shared.xcframework requires the KMP toolchain build — "fixing code"/build infra — Out of Scope.
+
+Decision: do NOT remediate. Run every Gate command faithfully (no scope narrowing, Covenant rule 2)
+and record the real exit codes as evidence, then conclude STATUS=BLOCKED. A gitignored Xcode project
+is generated from project.yml purely as a build PREREQUISITE (standard P0 scaffold step; the
+*.xcodeproj is gitignored so it creates no tracked drift) so the xcodebuild commands produce genuine
+compiler/dependency evidence rather than a trivial "no project found" error.
+
+=== GATE ===
+
+--- [G1] iOS Simulator build+test ---
+$ (cd apps/apple) xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+(full output captured to /tmp/p99_ios_buildtest.txt; excerpt below)
+Command run from apps/apple (auto-discovers generated TeslaSync.xcodeproj).
+[head] xcodebuild context:
+    Command line invocation:
+        /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme TeslaSync -destination "platform=iOS Simulator,name=iPhone 16" build test
+    
+    Run pre-actions
+    
+    SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-sy3Ouz.sh
+        cd /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/
+        export ACTION=build
+[key diagnostics]:
+    6:SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-sy3Ouz.sh
+    888:    export LEGACY_DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer/PlugIns/Xcode3Core.ideplugin/Contents/SharedSupport/Developer
+    1209:    export SCHEME_ACTION_NAME="Stage Shared.xcframework"
+    1212:    export SDKDB_TO_SYMGRAPH_EXEC=/Applications/Xcode.app/Contents/Developer/../SharedFrameworks/CoreDocumentation.framework/Resources/sdkdb_to_symgraph
+    1243:    export SHARED_FRAMEWORKS_FOLDER_PATH=TeslaSync.app/SharedFrameworks
+    1245:    export SHARED_SUPPORT_FOLDER_PATH=TeslaSync.app/SharedSupport
+    1657:▸ Assembling Shared.xcframework via Gradle…
+    1678:> Task :core:assembleDebugIosFatFrameworkForSharedXCFramework SKIPPED
+    1681:> Task :core:assembleDebugIosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+    1684:> Task :core:assembleDebugMacosFatFrameworkForSharedXCFramework SKIPPED
+    1685:> Task :core:assembleDebugTvosFatFrameworkForSharedXCFramework SKIPPED
+    1686:> Task :core:assembleDebugTvosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+    1687:> Task :core:assembleDebugWatchosFatFrameworkForSharedXCFramework SKIPPED
+    1688:> Task :core:assembleDebugWatchosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+    1690:> Task :core:assembleSharedDebugXCFramework
+    1697:xcframework successfully written out to: /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/shared/core/build/XCFrameworks/debug/Shared.xcframework
+    1700:> Task :core:assembleReleaseIosFatFrameworkForSharedXCFramework SKIPPED
+    1702:> Task :core:assembleReleaseIosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+    1704:> Task :core:assembleReleaseMacosFatFrameworkForSharedXCFramework SKIPPED
+    1705:> Task :core:assembleReleaseTvosFatFrameworkForSharedXCFramework SKIPPED
+    1706:> Task :core:assembleReleaseTvosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+    1707:> Task :core:assembleReleaseWatchosFatFrameworkForSharedXCFramework SKIPPED
+    1708:> Task :core:assembleReleaseWatchosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+    1710:> Task :core:assembleSharedReleaseXCFramework
+    1717:xcframework successfully written out to: /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+    1719:> Task :core:assembleSharedXCFramework
+    1731:▸ Staging /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/shared/core/build/XCFrameworks/release/Shared.xcframework → /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Frameworks/Shared.xcframework
+    1732:✓ Shared.xcframework staged
+    1947:ProcessXCFramework /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Frameworks/Shared.xcframework /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-crhealncixcpcdernbndxnfwkkjd/Build/Products/Debug-iphonesimulator/Shared.framework ios simulator
+    1949:    builtin-process-xcframework --xcframework /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Frameworks/Shared.xcframework --platform ios --environment simulator --target-path /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-crhealncixcpcdernbndxnfwkkjd/Build/Products/Debug-iphonesimulator
+IOS_EXIT=65
+(full 4476-line build/test transcript: /tmp/p99_ios_buildtest.txt)
+
+--- [G2] macOS build+test ---
+$ (cd apps/apple) xcodebuild -scheme TeslaSync-macOS build test
+[key diagnostics]:
+    1742:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+    1744:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+    1749:The following build commands failed:
+    3494:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+    3496:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+    3502:Testing failed:
+    3503:	"TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+    3504:	"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+    3505:	"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+    3506:	"TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+    3509:** TEST FAILED **
+    3512:The following build commands failed:
+MAC_EXIT=65
+(full 3514-line build/test transcript: /tmp/p99_mac_buildtest.txt)
+
+--- [G3] SwiftLint strict ---
+$ (cd apps/apple) swiftlint --strict
+    Linting 'WidgetAccessory.swift' (6336/6359)
+    Linting 'AlertCountWidget.swift' (6337/6359)
+    Linting 'VehicleStatusWidget.swift' (6338/6359)
+    Linting 'ChargingProgressWidget.swift' (6339/6359)
+    Linting 'RecentDriveWidget.swift' (6340/6359)
+    Linting 'EnergySnapshotWidget.swift' (6341/6359)
+    Linting 'TeslaSyncWatchApp.swift' (6342/6359)
+    Linting 'WatchRootView.swift' (6343/6359)
+    Linting 'WatchFormat.swift' (6344/6359)
+    Linting 'WatchGlanceData.swift' (6345/6359)
+    Linting 'WatchModel.swift' (6346/6359)
+    Linting 'WatchCacheStore.swift' (6347/6359)
+    Linting 'WatchActionsView.swift' (6348/6359)
+    Linting 'WatchSettingsView.swift' (6349/6359)
+    Linting 'WatchGlanceView.swift' (6350/6359)
+    Linting 'WatchBatteryRing.swift' (6351/6359)
+    Linting 'WatchStatusRow.swift' (6352/6359)
+    Linting 'WatchStateViews.swift' (6353/6359)
+    Linting 'TeslaSyncWatchWidgetsBundle.swift' (6354/6359)
+    Linting 'WatchComplications.swift' (6355/6359)
+    Linting 'TeslaSyncWidgets/Widgets/SystemHealthWidget.swift' (6356/6359)
+    Linting 'WatchComplicationProvider.swift' (6357/6359)
+    Linting 'WatchComplicationViews.swift' (6358/6359)
+    Linting 'WatchDesignTokens.swift' (6359/6359)
+    Done linting! Found 1 violation, 1 serious in 6359 files.
+LINT_EXIT=2
+
+    [SwiftLint serious violation]:
+      411:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Sources/Features/System/MyActivityPageModel.swift:217:1: error: Trailing Whitespace Violation: Lines should not have trailing whitespace (trailing_whitespace)
+    (full SwiftLint output: /tmp/p99_swiftlint.txt — 'Found 1 violation, 1 serious in 6359 files')
+
+--- [G4] SwiftFormat lint ---
+$ swiftformat --lint apps/apple
+    [tail]:
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:123:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:124:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:125:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:135:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:136:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:142:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:154:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:160:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Tests/Unit/Features/Charging/ChargingListPageModelTests.swift:161:1: error: (numberFormatting) Use consistent grouping for numeric literals. Groups will be separated by _ delimiters to improve readability. For each numeric type you can specify a group size (the number of digits in each group) and a threshold (the minimum number of digits in a number before grouping is applied).
+      SwiftFormat completed in 34.02s.
+      Source input did not pass lint check.
+      147/6745 files require formatting, 2 files skipped.
+    [files requiring formatting (sample)]:
+FORMAT_EXIT=1
+
+--- [G5] Placeholder scanner ---
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift
+    [output]:
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Views.swift:70: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Views.swift:72: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Views.swift:88: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/ScheduledExportsPanelForm.swift:22: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/ScheduledExportsPanelForm.swift:23: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:19: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:143: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:151: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:159: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:167: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:287: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:298: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:300: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:304: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:316: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/Features/System/TeslaAccountPage.swift:317: Placeholder
+      /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync/feature-views/TelemetryGrid.Tests.swift:142: TODO
+      PLACEHOLDER_ALLOWED=288
+      PLACEHOLDER_COUNT=79
+      EXIT=1
+PLACEHOLDER_EXIT=1
+
+--- [G6] macOS parity ledger check ---
+$ pwsh ./apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-macos-ledger.json -RequiredPercent 100
+    [output]:
+      [31;1m&: [31;1mThe term './apps/tools/check-parity-ledger.ps1' is not recognized as a name of a cmdlet, function, script file, or executable program.[0m
+      [31;1m[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.[0m
+MAC_LEDGER_EXIT=1
+
+--- [G7] iOS parity ledger check ---
+$ pwsh ./apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-ios-ledger.json -RequiredPercent 100
+    [output]:
+      [31;1m&: [31;1mThe term './apps/tools/check-parity-ledger.ps1' is not recognized as a name of a cmdlet, function, script file, or executable program.[0m
+      [31;1m[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.[0m
+IOS_LEDGER_EXIT=1
+
+--- [G8] iOS/iPadOS archive (sign) ---
+$ (cd apps/apple) xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS' archive -archivePath /tmp/TeslaSync-iOS.xcarchive
+    [key diagnostics]:
+      1752:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSyncActivities" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSyncActivities' from project 'TeslaSync')
+      1753:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSyncWidgets" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+      1754:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSync" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSync' from project 'TeslaSync')
+      1755:** ARCHIVE FAILED **
+      1758:The following build commands failed:
+IOS_ARCHIVE_EXIT=65
+    (no .xcarchive produced; full transcript: /tmp/p99_ios_archive.txt)
+
+--- [G9] macOS archive (sign) ---
+$ (cd apps/apple) xcodebuild -scheme TeslaSync-macOS archive -archivePath /tmp/TeslaSync-macOS.xcarchive
+    [key diagnostics]:
+      1747:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+      1748:note: '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+      1749:note: '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+      1750:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+      1751:** ARCHIVE FAILED **
+      1754:The following build commands failed:
+MAC_ARCHIVE_EXIT=65
+    (no .xcarchive produced; full transcript: /tmp/p99_mac_archive.txt)
+
+=== PARITY ===
+
+Gate requires BOTH apps/parity/apple-macos-ledger.json AND apps/parity/apple-ios-ledger.json at 100%.
+Result: BOTH gate-required ledger files are ABSENT (see PF.7). The ledger-verification tool
+apps/tools/check-parity-ledger.ps1 is ALSO absent, so G6/G7 could not execute (EXIT=1 each).
+
+For completeness only (NOT a substitute for the required files), the closest existing artifact,
+the COMBINED apps/parity/apple-ledger.json, was inspected read-only:
+  TOTAL_ROWS=201  (apple-ios=100, apple-macos=101)
+  status apple-ios   done=99  blocked=1
+  status apple-macos done=100 blocked=1
+  ROWS_FULLY_COVERED_AND_DONE=199   ROWS_BLOCKED/INCOMPLETE=2
+  BLOCKED: page:system/TeslaAccount [apple-macos] status=blocked (covered 16/16)
+  BLOCKED: page:system/TeslaAccount [apple-ios]   status=blocked (covered 16/16)
+=> Even the combined ledger is NOT 100% green (2 blocked rows). The per-idiom 100% ledgers
+   the gate demands do not exist. PARITY verification: FAILED / NOT VERIFIABLE.
+
+=== GATE SUMMARY ===
+
+Every Gate command was run faithfully (no scope narrowing). Recorded exit codes:
+  G1 IOS_EXIT=65          (build/test FAILED — duplicate filename ScheduledExportsPanel.swift in
+                           TeslaSync/feature-views/ and TeslaSync/Features/System/)
+  G2 MAC_EXIT=65          (build/test FAILED — targets require signing with a development certificate)
+  G3 LINT_EXIT=2          (SwiftLint --strict: 1 serious violation — trailing_whitespace in
+                           Sources/Features/System/MyActivityPageModel.swift:217)
+  G4 FORMAT_EXIT=1        (SwiftFormat --lint: 147/6745 files require formatting)
+  G5 PLACEHOLDER_EXIT=1   (placeholder scanner: Placeholder/TODO hits, e.g.
+                           TeslaSync/Features/System/TeslaAccountPage.swift, TelemetryGrid.Tests.swift:142)
+  G6 MAC_LEDGER_EXIT=1    (apps/tools/check-parity-ledger.ps1 not found; apple-macos-ledger.json absent)
+  G7 IOS_LEDGER_EXIT=1    (apps/tools/check-parity-ledger.ps1 not found; apple-ios-ledger.json absent)
+  G8 IOS_ARCHIVE_EXIT=65  (archive FAILED — Signing requires a development team; no .xcarchive produced)
+  G9 MAC_ARCHIVE_EXIT=65  (archive FAILED — entitlements require a development certificate; none present)
+
+Gate rule: EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER/MAC_LEDGER/IOS_LEDGER/IOS_ARCHIVE/MAC_ARCHIVE
+are ALL 0. Observed: 0 of 9 are 0. Gate is RED.
+
+=== PREDECESSOR / CAPABILITY GAPS (non-remediable within this prompt's scope) ===
+  B1 Code-signing identities: 0 valid (confirmed live by G2/G8/G9 signing errors).
+  B2 apps/parity/apple-macos-ledger.json: MISSING.
+  B3 apps/parity/apple-ios-ledger.json: MISSING.
+  B4 apps/tools/check-parity-ledger.ps1: MISSING.
+  B5 Predecessor apple-page-system-DBHealthPage.log: no STATUS=DONE (self-admits build/test skipped).
+  B6 Predecessor canonical p4-p9-0002-xcuitest-ui.log: MISSING.
+  B7 Code defect: duplicate Swift filename breaks the iOS module build (G1).
+  B8 Combined ledger reports 2 BLOCKED rows (page:system/TeslaAccount); per-idiom 100% ledgers absent.
+
+Out of Scope (per prompt): fixing code, creating missing pages/components/ledgers/tools, or
+changing signing configuration. Therefore NONE of B1..B8 may be remediated here. The honest and
+covenant-compliant outcome is BLOCKED (rules 1,2,3,5,7; methodology "cannot run its gate => BLOCKED").
+
+=== NO CODE CHANGED ===
+git status (tracked) is clean; only this acceptance log is new. The generated TeslaSync.xcodeproj,
+DerivedData, and run-phase-built Frameworks/Shared.xcframework are all .gitignored build artifacts
+(no tracked drift; Covenant rule 9 satisfied).
+
+=== COMMIT ===
+Per Honesty Covenant rule 8 (No commit on red) + methodology Commit discipline:
+BLOCKED => stage ONLY this log, commit message "chore(monorepo): BLOCKED <prompt> — <reason>".
+Staged: .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log (only)
+No source/code/ledger/signing files staged. COMMIT_EXIT=0
+(This COMMIT section was finalized via `git commit --amend` of the same single-file BLOCKED commit.)
+
+EXIT=65
+STATUS=BLOCKED

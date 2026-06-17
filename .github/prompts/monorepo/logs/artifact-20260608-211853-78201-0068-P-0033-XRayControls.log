@@ -1,0 +1,174 @@
+=== P4 Feature view 0033 XRayControls (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/XRayControls.*
+Web spec: web/src/features/admin/components/ingest-xray/XRayControls.tsx
+Data    : useTranslation (P1/S10) + a P1/S8 state-holder seam (XRayControlsSource) feeding the
+          vehicle list + the controlled vehicle/window/bucket selection (web controlled props).
+Runner  : Darwin macOS 26.5.1 (25F80) · Swift 6.3.2 · Xcode 26.5 (17F42) · swiftlint 0.63.3 ·
+          swiftformat 0.61.1 · PowerShell 7.6.2 · xcodegen 2.x · Java 17 (KMP) · iPhone 16 sim present
+          xcodebuild: AVAILABLE (full Xcode). Shared.xcframework (KMP) builds + stages on this host.
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: XRayControls.* + this log) — 9 files
+--------------------------------------------------------------------------------
+  XRayControls.swift           — SwiftUI surface: FadeIn wrapper + the phase switch
+                                 (loading skeleton / error+retry / empty+content), onAppear/
+                                 onDisappear lifecycle, stale→auto-refresh, VoiceOver group label,
+                                 surfaceSlug "XRayControls". No networking in the view.
+  XRayControls.Views.swift     — content orchestrator (web flex-wrap row), the reusable bordered
+                                 Menu select field (web <Select>), and the vehicle / window /
+                                 bucket pickers (checkmark on the selected option; bucket options
+                                 disabled when width >= window — web <option disabled>).
+  XRayControls.States.swift    — freshness chip (Live/Stale/Offline/Updating), stale/offline
+                                 connectivity banner, friendly empty hint, loading skeleton row,
+                                 QueryError-equivalent error state with retry.
+  XRayControls.Model.swift     — P1/S8 state-holder seam (XRayControlsSource + InMemory source),
+                                 @Observable @MainActor XRayControlsModel (resolvePhase,
+                                 setVehicle/setWindow/setBucket intents, the "bucket >= window"
+                                 guard, stale auto-refresh), P1/S11 telemetry seam, change sink
+                                 (web onChange), XRayControlsStrings (P1/S10).
+  XRayControls.Adapter.swift   — pure projection: IngestXRayBucket enum + BUCKET_SECS, the
+                                 IngestXRayWindow controls extension (WINDOW_SECS + option labels),
+                                 XRayVehicleOption (display_name||vin||"Vehicle id" fallback),
+                                 XRayBucketOption + bucketOptions disable rule, selectedVehicleLabel,
+                                 accessibility value builders. Foundation only.
+  XRayControls.Previews.swift  — #if DEBUG previews for every state (content wide + compact /
+                                 loading / empty / error / stale / offline).
+  XRayControls.Tests.swift     — XCTest: bucket enum + window extension + vehicle-option fallback +
+                                 projection disable rule + accessibility value builders.
+  XRayControls.ModelTests.swift— XCTest: model phase resolution + control intents (vehicle/window/
+                                 bucket) + the disabled-bucket guard + the web "window change never
+                                 auto-corrects bucket" parity + stale auto-refresh + telemetry +
+                                 source wiring.
+  XRayControls.strings         — per-surface i18n table (every web t() key + native chrome); folds
+                                 into Localizable.xcstrings at integration.
+
+--------------------------------------------------------------------------------
+PARITY reproduced exactly from the web source (cross-platform behavior parity)
+--------------------------------------------------------------------------------
+  vehicle label = v.display_name || v.vin || `Vehicle ${v.id}`        (null-safe fallback chain)
+  window opts   = ALL_WINDOWS.map → label = t(`admin.xray.windowOption.${w}`, w) [token fallback]
+  bucket opts   = ALL_BUCKETS.map → label = t(`admin.xray.bucketOption.${b}`, b) [token fallback]
+  bucket disable= tooBig = BUCKET_SECS[b] >= WINDOW_SECS[windowSel]   (avoids server 400)
+                  WINDOW_SECS {5m:300,15m:900,1h:3600,6h:21600,24h:86400}
+                  BUCKET_SECS {30s:30,1m:60,5m:300,15m:900,1h:3600}
+  controlled    = onVehicleChange / onWindowChange / onBucketChange forwarded via a change sink;
+                  setWindow does NOT auto-correct the bucket (faithful to the web component).
+  i18n keys     = admin.xray.controls.selectVehicle/vehicleAria/windowAria/bucketAria +
+                  admin.xray.windowOption.{5m,15m,1h,6h,24h} + admin.xray.bucketOption.{30s,1m,5m,15m,1h}
+                  (the 4 prompt-listed strings + the full ALL_WINDOWS/ALL_BUCKETS option keys).
+
+States reproduced (every one renders — no hidden surfaces), each with a #if DEBUG preview:
+  loading (skeleton row) · content (3 pickers) · empty (hint + still-usable window/bucket) ·
+  error (retry) · stale (chip + banner + one auto-refresh) · offline (cached + chip + banner).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[pre] Scripts/build-shared-xcframework.sh  (KMP :core:assembleSharedXCFramework, release)
+      → "BUILD SUCCESSFUL in 11m 16s" ; "✓ Shared.xcframework staged"
+        (ios-arm64 + ios-arm64-simulator + macos-arm64 slices). KMP capability CONFIRMED.
+      XCFRAMEWORK_EXIT=0
+
+[gen] xcodegen generate  → "Created project at …/TeslaSync.xcodeproj"
+      XCODEGEN_EXIT=0
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      → ** BUILD FAILED ** — 113 Swift compile errors, ALL in PRE-EXISTING, OUT-OF-SCOPE
+        dashboard-widget files (6 widget groups), ZERO in XRayControls.* or any feature-view:
+          ChargeSessionChartWidget.* ChargeStatusLiveWidget.* ChargeStatusWidget.*
+          FleetStatsBarWidget.* SafetyFeaturesWidget.* SafetyHistoryWidget.*
+        (e.g. "cannot infer contextual base in reference to member 'live'/'loaded'").
+      PROOF it is not mine: with the 9 XRayControls.* files MOVED OUT and the project
+        regenerated, the baseline build produced the IDENTICAL 113 errors in the IDENTICAL 17
+        files (zero in feature-views). git status confirms I never touched dashboard-widgets;
+        they are committed at 1ce15b48b ("fix 7 pre-existing unit-test failures (P4 baseline)").
+        These files are outside this prompt's allowed scope (XRayControls.* only) and may not be
+        edited here (covenant #6 no delegation / #7 no predecessor bypass).
+      IOS_EXIT=65
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+      → ** TEST FAILED ** — code-signing capability gap (NOT a code issue): "TeslaSync-macOS /
+        TeslaSyncWidgets-macOS have entitlements that require signing with a development
+        certificate. Enable development signing…". project.yml ships DEVELOPMENT_TEAM="" and this
+        runner has no provisioning profile / dev certificate, so the macOS test host can't be
+        signed. Build never reached a code error attributable to XRayControls.*.
+      MAC_EXIT=65
+
+[3] swiftlint --strict        (whole tree, gate-exact, 2140 files)
+      → 1 violation, PRE-EXISTING + OUT-OF-SCOPE: dashboard-widgets/LiveSignalSparklinesWidget.
+        Builder.swift:158 opening_brace on a wrapped multi-line `if` (swiftlint and swiftformat
+        genuinely disagree on this construct; swiftformat --lint considers the file correct).
+        Not introduced here; not in allowed scope.
+      LINT_EXIT=2
+      swiftlint --strict (SCOPED to the 8 shipped XRayControls Swift files) → 0 violations.
+      SURFACE_LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple   (whole tree, gate-exact)
+      → "0/2144 files require formatting"
+      FORMAT_EXIT=0
+
+[5] apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/XRayControls
+      → PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+
+Supplementary in-scope verification (proves the surface itself is complete + green):
+  [a] swiftc -typecheck -D DEBUG -swift-version 6 -sdk iphonesimulator26.5 -target arm64-ios18.0-sim
+      — the 6 non-test XRayControls SwiftUI files vs the REAL design tokens
+      (apps/design/generated/apple/Tokens.swift) + the REAL IngestXRayWindow + faithful shims of
+      the two leaf components used (TSFadeIn, TSSkeleton): error count = 0
+      UI_TYPECHECK_EXIT=0
+  [b] swiftc (macOS 15) — REAL XRayControls.Adapter + XRayControls.Model + XRayHeader.Adapter
+      compiled into an executable that runs the behavioral assertions from the two test files
+      against the REAL types → "CHECKS=62 FAILURES=0"
+      LOGIC_HARNESS_EXIT=0
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the two xcodebuild steps + the whole-tree swiftlint are reported RED
+                           with their real exit codes (65/65/2); NOT painted green.
+  2  No scope narrowing  : all 4 prompt-listed strings AND the full ALL_WINDOWS/ALL_BUCKETS option
+                           keys + the bucket-disable rule + every state are implemented.
+  3  No skip-and-assume  : the baseline-without-my-files rebuild was actually run to PROVE the iOS
+                           errors are pre-existing; the macOS signing failure was read from the log.
+  4  No stubs as final   : production view + states + adapter + model + previews + XCTest + i18n;
+                           check-placeholders COUNT=0.
+  5  No parity shortcuts : value parity verbatim (WINDOW_SECS/BUCKET_SECS, tooBig `>=`, vehicle
+                           fallback, no bucket auto-correct on window change).
+  6  No delegation       : authored directly; no sub-agent.
+  7  No predecessor bypass: followed the XRayHeader/XRayFieldsTable 7-file pattern; reused (did not
+                           redefine) IngestXRayWindow; shipped strings as a per-surface table; did
+                           NOT edit out-of-scope dashboard-widget files to "fix" the gate.
+  8  No commit on red    : the surface is in-scope GREEN (typecheck 0, harness 62/62, scoped lint 0,
+                           format 0, placeholder 0); the gate reds are pre-existing/out-of-scope
+                           (iOS widgets, the one lint) + an environment signing gap (macOS). The
+                           surface + this log are committed (matching the committed predecessors
+                           XRayHeader.*/XRayFieldsTable.*); no out-of-scope file is committed.
+  9  No silent drift     : changes confined to the allowed XRayControls.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native XRayControls shipped at parity with the web source: a SwiftUI controls
+  bar (vehicle picker + window + bucket selectors) over a P1/S8 state-holder seam (no view HTTP),
+  P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every i18n key, every interactive a11y
+  label, and the exact "bucket >= window" disable rule. The surface type-checks GREEN (iphonesimulator
+  SDK, Swift 6) against the real design system and its adapter/model logic executes GREEN (62/62) with
+  exact web behavior parity. The KMP Shared.xcframework builds + stages here.
+
+  The canonical full-app gate CANNOT reach EXIT=0 on this runner for reasons OUTSIDE this surface's
+  allowed scope and control:
+    • iOS build/test — blocked by 113 PRE-EXISTING compile errors in out-of-scope dashboard-widget
+      files (proven identical with my files removed); editing them is forbidden by the allowed-files
+      scope + covenant #7.
+    • macOS build/test — blocked by a code-signing capability gap (no development certificate /
+      DEVELOPMENT_TEAM="" on this runner), a platform/runner limitation.
+    • whole-tree swiftlint — 1 pre-existing out-of-scope violation in another widget file.
+  Re-run the gate on a baseline where the dashboard-widget surfaces compile and with a macOS signing
+  identity to close the gate; no change to XRayControls.* is required.
+
+EXIT=1
+STATUS=BLOCKED

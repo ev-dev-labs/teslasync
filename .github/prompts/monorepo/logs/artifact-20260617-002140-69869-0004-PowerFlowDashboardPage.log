@@ -1,0 +1,221 @@
+=== P4-APPLE · P7 · page:battery/PowerFlowDashboard (SwiftUI / HIG) ===
+started: 2026-06-17T00:22:00-0700
+host: macOS (Darwin); Xcode/xcodebuild + swift 6 (SWIFT_VERSION 6.0, SWIFT_STRICT_CONCURRENCY=complete);
+      swiftlint + xcodegen + pwsh present; KMP Shared.xcframework built via Gradle + staged
+      (apps/apple/Frameworks/Shared.xcframework: macos-arm64 + ios-arm64 + ios-arm64-simulator + Info.plist).
+      Toolchain note: the available SDK is the macOS 26.5 *beta* (MacOSX26.5.sdk) — see the BUILD GATE
+      section for the pre-existing, out-of-scope breakage this surfaces in unrelated files.
+web source: web/src/features/battery/pages/PowerFlowDashboardPage.tsx   (route /power-flow)
+parity unit: page:battery/PowerFlowDashboard
+             (manifest PARITY_REQUIRED=48 = 8 panels + 4 charts + 3 states + 33 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH (literal prompt path used — no drift, covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Battery/**`. Unlike the
+earlier EnergyFlow note, that path IS now a real, compiled project.yml source group: `project.yml`
+lists `TeslaSync/Features` as a source path for both the iOS (`TeslaSync`) and macOS
+(`TeslaSync-macOS`) app targets (createIntermediateGroups: true), and landed sibling P7 pages already
+ship under it (TeslaSync/Features/VehicleSystems/TirePressurePage.swift,
+TeslaSync/Features/Trips/TripsReplayPage.swift, …). So the page is written at the literal prompt path
+and compiles into the `TeslaSync` module alongside the shared P2/P3 library in `Sources/`.
+
+The web route `/power-flow` had NO `AppRoute` case (only the sidebar/breadcrumb string referenced it);
+this prompt adds `.powerFlowDashboard` (pathSegment `power-flow`, group `.energy`, systemImage
+`bolt.horizontal.fill`) to `Sources/App/AppRoute.swift` so `AppRouteParser` resolves `/power-flow`
++ the deep link automatically, and wires the host in `Sources/TeslaSyncApp.swift`
+(`PowerFlowDashboardRouteRegistration.registry`). ("navigation registration" is an allowed file class.)
+
+SYMBOL-COLLISION NOTE (covenant #1): the dashboard-widget namespace already ships `PowerFlowStrings`
+(PowerFlowHistoryWidget.Model.swift) and `PowerFlowFormat` (LivePowerFlowWidget.Model.swift), plus a
+`FlowArrow` struct and a crowded set of `PowerFlow*` widget types. Every type this unit introduces is
+therefore prefixed `PowerFlowDashboard*` (or the unique domain names `TeslaEnergyLiveStatus[Sample]`);
+a full-module declaration scan confirms zero redeclarations against the existing widget symbols.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes)
+--------------------------------------------------------------------------------
+?? TeslaSync/Features/Battery/PowerFlowDashboardModels.swift
+       SI value types (TeslaEnergyLiveStatus, TeslaEnergyLiveStatusSample — W / Wh / percent),
+       the PowerFlowDashboardRange RangePicker presets (today/yesterday/7d/30d/90d/mtd/ytd → [since,
+       until] windows), and the PowerFlowDashboardDataSource seam keeping the web hook names
+       (useTeslaEnergyLiveStatus / useTeslaEnergyLiveStatusHistory / refreshTeslaEnergyLiveStatus).
+?? TeslaSync/Features/Battery/PowerFlowDashboardFormat.swift
+       Display-boundary formatters mirroring web fmtWatts / fmtWh / fmtNumber + formatDateTime /
+       formatDateShort (SI in → W↔kW / Wh↔kWh magnitude out), and PowerFlowDashboardStrings (every
+       visible string as a LocalizedStringKey under the web `translation.powerFlow.*` keys; computed
+       accessors via a private key() helper, Swift-6-concurrency-safe).
+?? TeslaSync/Features/Battery/PowerFlowDashboardPageModel.swift
+       @Observable model (ADR-004): phase (loading/error/ready), live snapshot + windowed history,
+       load()/refresh()/refreshFromTesla()/refreshLive()/selectRange(), and the web useMemo
+       derivations (chartData, solarW/batteryW/loadW/gridW/soc, battery+grid status keys, >2-min
+       staleness ADR-013).
+?? TeslaSync/Features/Battery/PowerFlowDashboardPageModel.Sample.swift
+       Deterministic fixtures: a healthy snapshot (solar producing, battery charging, exporting,
+       storm + grid-services active, backup-capable) + a dense windowed history; plus Empty + Failing
+       sources for the empty / error states.
+?? TeslaSync/Features/Battery/PowerFlowDashboardPage.Charts.swift
+       Power-Over-Time (TSChartContainer + TSAreaChart, 4 series) and Battery-SoC (TSChartContainer +
+       TSLineChart) with legend, date-span caption, reload skeletons, per-chart empty states, and the
+       web aria labels.
+?? TeslaSync/Features/Battery/PowerFlowDashboardPage.Sections.swift
+       Status badges (grid / storm / backup / last-update + staleness chip), the four live-power stat
+       cards, the Battery-State panel (SoC value + bar + energy/capacity, empty state), and the
+       Power-Flow-Diagram panel (directional flow arrows, empty state).
+?? TeslaSync/Features/Battery/PowerFlowDashboardPage.swift
+       The screen: PageContainer-style header (title + subtitle + refresh button), the phase switch
+       (loading skeleton / error+Retry / ready), the history RangePicker, live polling .task loop,
+       and the four-state previews.
+?? TeslaSync/Features/Battery/PowerFlowDashboardRouteRegistration.swift
+       registry(.powerFlowDashboard) — hosts the page at the route; deep-linkable via AppRouteParser.
+ M Sources/App/AppRoute.swift              + .powerFlowDashboard (pathSegment/systemImage/group .energy)
+ M Sources/TeslaSyncApp.swift              + PowerFlowDashboardRouteRegistration.registry(base:)
+ M Localization/Localizable.xcstrings      + 2 web aria keys + 7 range labels + loadError + route title
+                                             (the other 31 translation.powerFlow.* keys already shipped)
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=48
+--------------------------------------------------------------------------------
+[x] panel  — Solar-Production            PowerFlowDashboardStatGrid (Page.Sections.swift, solarPower card)
+[x] panel  — Battery                     PowerFlowDashboardStatGrid (Page.Sections.swift, batteryPower card)
+[x] panel  — Home-Consumption            PowerFlowDashboardStatGrid (Page.Sections.swift, homeConsumption card)
+[x] panel  — Grid                        PowerFlowDashboardStatGrid (Page.Sections.swift, gridPower card)
+[x] panel  — GlassPanel5 (Battery State) PowerFlowDashboardBatteryStatePanel (Page.Sections.swift)
+[x] panel  — GlassPanel6 (Power Flow)    PowerFlowDashboardFlowDiagramPanel (Page.Sections.swift)
+[x] panel  — Power-Over-Time             PowerFlowDashboardPowerChart (Page.Charts.swift)
+[x] panel  — Battery-State-of-Charge     PowerFlowDashboardSOCChart (Page.Charts.swift)
+[x] chart  — ChartContainer (power)      TSChartContainer in PowerFlowDashboardPowerChart (Page.Charts.swift)
+[x] chart  — AreaChart                   TSAreaChart in PowerFlowDashboardPowerChart (Page.Charts.swift)
+[x] chart  — ChartContainer (soc)        TSChartContainer in PowerFlowDashboardSOCChart (Page.Charts.swift)
+[x] chart  — LineChart                   TSLineChart in PowerFlowDashboardSOCChart (Page.Charts.swift)
+[x] state  — loading                     PowerFlowDashboardPage.loadingView + StatCard redaction + chart skeleton
+[x] state  — empty                       Battery/Flow TSEmptyState + chart empty states (Sections/Charts.swift)
+[x] state  — success                     PowerFlowDashboardPage.readyView (+ .error/Retry errorView, bonus)
+[x] string — powerFlow.backupCapable     PowerFlowDashboardStrings.backupCapable → Sections (backupBadge)
+[x] string — powerFlow.batteryLabel      PowerFlowDashboardStrings.batteryLabel → Sections (arrow) + Charts (series)
+[x] string — powerFlow.batteryPower      PowerFlowDashboardStrings.batteryPower → Sections (stat card)
+[x] string — powerFlow.batteryState      PowerFlowDashboardStrings.batteryState → Sections (battery panel header)
+[x] string — powerFlow.charging          PowerFlowDashboardStrings.charging → PageModel (batteryStatusKey)
+[x] string — powerFlow.discharging       PowerFlowDashboardStrings.discharging → PageModel (batteryStatusKey)
+[x] string — powerFlow.energyLeft        PowerFlowDashboardStrings.energyLeft → Sections (battery panel)
+[x] string — powerFlow.exporting         PowerFlowDashboardStrings.exporting → PageModel (gridStatusKey)
+[x] string — powerFlow.flowDiagram       PowerFlowDashboardStrings.flowDiagram → Sections (flow panel header)
+[x] string — powerFlow.grid              PowerFlowDashboardStrings.grid → Sections (badge/arrow) + Charts (series)
+[x] string — powerFlow.gridPower         PowerFlowDashboardStrings.gridPower → Sections (stat card)
+[x] string — powerFlow.gridServices      PowerFlowDashboardStrings.gridServices → Sections (grid-services arrow)
+[x] string — powerFlow.history           PowerFlowDashboardStrings.history → Page (history header + picker a11y)
+[x] string — powerFlow.home              PowerFlowDashboardStrings.home → Sections (arrow) + Charts (series)
+[x] string — powerFlow.homeConsumption   PowerFlowDashboardStrings.homeConsumption → Sections (stat card)
+[x] string — powerFlow.importing         PowerFlowDashboardStrings.importing → PageModel (gridStatusKey)
+[x] string — powerFlow.lastUpdate        PowerFlowDashboardStrings.lastUpdate → Sections (lastUpdateBadge)
+[x] string — powerFlow.noBatteryData     PowerFlowDashboardStrings.noBatteryData → Sections (battery) + Charts (soc)
+[x] string — powerFlow.noFlowData        PowerFlowDashboardStrings.noFlowData → Sections (flow) + Charts (power)
+[x] string — powerFlow.powerOverTime     PowerFlowDashboardStrings.powerOverTime → Charts (container title)
+[x] string — powerFlow.powerOverTime.aria PowerFlowDashboardStrings.powerOverTimeAria → Charts (area accessibilityLabel)
+[x] string — powerFlow.powerOverTimeDesc PowerFlowDashboardStrings.powerOverTimeDesc → Charts (container summary)
+[x] string — powerFlow.refresh           PowerFlowDashboardStrings.refresh → Page (refresh button)
+[x] string — powerFlow.socOverTime       PowerFlowDashboardStrings.socOverTime → Charts (container title)
+[x] string — powerFlow.socOverTime.aria  PowerFlowDashboardStrings.socOverTimeAria → Charts (line accessibilityLabel)
+[x] string — powerFlow.socOverTimeDesc   PowerFlowDashboardStrings.socOverTimeDesc → Charts (container summary)
+[x] string — powerFlow.solar             PowerFlowDashboardStrings.solar → Sections (arrow) + Charts (series)
+[x] string — powerFlow.solarPower        PowerFlowDashboardStrings.solarPower → Sections (stat card)
+[x] string — powerFlow.stateOfCharge     PowerFlowDashboardStrings.stateOfCharge → Sections (SoC row/bar) + Charts
+[x] string — powerFlow.stormMode         PowerFlowDashboardStrings.stormMode → Sections (stormBadge)
+[x] string — powerFlow.subtitle          PowerFlowDashboardStrings.subtitle → Page (titleBlock)
+[x] string — powerFlow.title             PowerFlowDashboardStrings.title → Page (title + navigationTitle)
+[x] string — powerFlow.totalCapacity     PowerFlowDashboardStrings.totalCapacity → Sections (battery panel)
+
+PARITY_COVERED=48
+PARITY_REQUIRED=48
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+PLACEHOLDER_EXIT=0
+    ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Battery -Language swift
+    → PLACEHOLDER_ALLOWED=3 (three native .redacted(.placeholder) shimmers, each // parity:allow),
+      PLACEHOLDER_COUNT=0, EXIT=0.   GREEN.
+
+LINT_EXIT=0
+    swiftlint --strict apps/apple/TeslaSync/Features/Battery
+    → Done linting! Found 0 violations, 0 serious in 8 files.   GREEN.
+    (The repo-wide config also lints clean for these 8 files; the single repo-wide violation is a
+     pre-existing trailing-whitespace nit in the untouched Sources/Features/System/MyActivityPageModel.swift.)
+
+BUILD_EXIT=65   (BLOCKED by pre-existing, out-of-scope repository breakage — NOT this unit)
+    xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync(-macOS) build
+    The repo baseline does NOT compile at this worktree HEAD, independently of this change. A fresh
+    `xcodegen generate` + `xcodebuild` surfaces, in files OUTSIDE this unit's scope:
+      1. Duplicate filename: TeslaSync/feature-views/ScheduledExportsPanel.swift AND
+         TeslaSync/Features/System/ScheduledExportsPanel.swift (Swift requires unique filenames per
+         module). Both are committed at HEAD, unmodified by me.
+      2. Duplicate module-level types: TeslaSync/Features/System/StatusApiDocsPage.swift redeclares
+         `enum TSSpacing` / `enum TSRadius` (internal), colliding with the canonical public tokens in
+         the generated DesignTokens — this poisons `TSSpacing.lg/md/sm/…` module-wide (~8000 cascade
+         errors). Also duplicate `TirePressureUnit` / `HeroStatus` in the surface dirs.
+      3. Beta macOS 26.5 SDK: `ambiguous use of 'Preview'` + `failed to produce diagnostic; please
+         submit a bug report` (compiler crashes) across ~534 DEBUG-only *.Previews.swift in
+         TeslaSync/shared-surfaces and TeslaSync/feature-views.
+    NONE of (1)(2)(3) is in this unit's files, and none is caused by this change.
+
+    VERIFICATION that THIS unit compiles clean (covenant #9 — method recorded, change reverted after):
+    With the single highest-impact pre-existing poison neutralized for the run only (StatusApiDocsPage's
+    duplicate TSSpacing/TSRadius scoped private; the duplicate ScheduledExportsPanel filename renamed),
+    `xcodebuild -scheme TeslaSync-macOS build` was run 3× and reported, every time:
+        errors in TeslaSync/Features/Battery/PowerFlowDashboard*.swift = 0
+        errors in Sources/App/AppRoute.swift + Sources/TeslaSyncApp.swift = 0
+        errors anywhere under Sources/ = 0
+        the only residual errors (25–48) were ALL in the pre-existing TeslaSync/shared-surfaces,
+        TeslaSync/dashboard-widgets and TeslaSync/feature-views files described in (1)(2)(3) above.
+    Both temporary neutralizations were then REVERTED — `git status` shows them pristine — so this
+    unit's committed diff is exactly the in-scope files listed under NATIVE OUTPUT. One genuine
+    concurrency error in this unit was caught by that build and fixed: `static let` of the
+    non-Sendable LocalizedStringKey is not Swift-6-concurrency-safe → converted to computed accessors.
+
+    TEST_EXIT — not reached: `xcodebuild test` runs the Debug app host, which is blocked by the same
+    pre-existing (1)(2)(3); the unit ships no new XCTest target (allowed files are Features/Battery/**,
+    nav registration, the string catalog, this log — not Tests/).
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI PowerFlowDashboardPage shipped at full parity with the web source: a
+pure @Observable PowerFlowDashboardPageModel (ADR-004 — no networking in the view) exposing
+loading / error / ready over an injectable PowerFlowDashboardDataSource seam whose three methods keep
+the web hook names (useTeslaEnergyLiveStatus / useTeslaEnergyLiveStatusHistory /
+refreshTeslaEnergyLiveStatus → the /tesla/energy-sites/{siteId}/live-status[/history|/refresh]
+endpoints). The page reproduces the web chrome (title + subtitle + refresh-from-Tesla button), the
+status badges (grid / storm / backup / last-update) with a >2-minute staleness chip (ADR-013), the
+four live-power StatCards (Solar / Battery / Home / Grid with Charging/Discharging/Importing/Exporting
+units), the Battery-State panel (SoC value + gradient bar + energy-remaining + total-capacity) and the
+Power-Flow-Diagram panel (directional flow arrows incl. the conditional grid-services arrow) — each
+with its own honest empty state — and the two history charts (Power-Over-Time TSAreaChart +
+Battery-SoC TSLineChart) framed by TSChartContainer and the history RangePicker, polled in real time
+via a lifecycle .task loop. All from the P2 design tokens + P3 shared components (no hand-rolled
+glass, no direct Charts/recharts, no WKWebView). Every data source implements loading/empty/error/
+success; all 33 visible strings resolve from Localizable.xcstrings with the web key names (zero
+hardcoded copy). SI watts/watt-hours format at the render boundary (the endpoint serves SI; nothing
+stored or computed non-SI). Adaptive across macOS (regular) and iPhone (compact) via ViewThatFits +
+horizontalSizeClass.
+
+Verified GREEN: placeholder gate (0), swiftlint --strict (0 in 8 files), and — with the pre-existing
+out-of-scope module poison temporarily neutralized — the macOS app-target whole-module compile with
+ZERO diagnostics in every PowerFlowDashboard file and in the two navigation-registration edits. The
+ONLY thing standing between this and a green `xcodebuild build`/`test` is pre-existing, out-of-scope
+repository breakage (duplicate symbols/filenames in StatusApiDocsPage / ScheduledExportsPanel /
+TirePressureUnit / HeroStatus) plus a beta macOS 26.5 SDK that crashes on the repo's DEBUG #Preview
+code — none of it caused by, coupled to, or within the allowed scope of this parity unit. Per the
+honesty covenant the full build/test gate is therefore reported BLOCKED rather than claimed green.
+
+--------------------------------------------------------------------------------
+COMMIT
+--------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/Features/Battery apps/apple/Sources/App/AppRoute.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-battery-PowerFlowDashboardPage.log
+  git commit -m "feat(apps/apple): PowerFlowDashboardPage at web parity (P7 battery)"
+
+EXIT=1
+STATUS=BLOCKED

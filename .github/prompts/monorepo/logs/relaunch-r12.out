@@ -1,0 +1,94 @@
+
+================================================================
+  TeslaSync — monorepo Native Apps Master Runner
+================================================================
+  Prompts root  : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo
+  Programs      : 1 (p4-apple)
+  Total prompts : 879
+  Already done  : 829
+  Pending       : 50
+  Starting from : #1
+  Single        : (all)
+  Model         : (default)
+  Timeout       : 600 min per prompt
+  Dry run       : False
+  Log-gate      : EXIT!=0 / STATUS=BLOCKED / [FAIL] / UNEXPECTED_COUNT -> RED
+  Run log       : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/run-2026-06-17_00-21-37.log
+================================================================
+
+
+================================================================
+  PARALLEL MODE
+================================================================
+  Jobs            : 6 concurrent
+  Pending prompts : 50
+  Launch branch   : feature/apps-ios (a52455f9ef)
+  Integration     : parallel/20260617-002140-69869
+  Worktrees       : /Users/atulgupta/Documents/repos/.teslasync-parallel/20260617-002140-69869
+  State           : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/parallel/20260617-002140-69869
+  Agent binary    : copilot
+  Note: parallel mode does not enforce strict prompt ordering.
+================================================================
+
+Interrupted — stopping workers and cleaning up...
+
+================================================================
+  PARALLEL RUN FINISHED
+================================================================
+  Merged   : 33
+  Not green: 17
+  Launch branch 'feature/apps-ios' fast-forwarded onto parallel/20260617-002140-69869.
+  State    : /Users/atulgupta/Documents/repos/teslasync/.github/prompts/monorepo/logs/parallel/20260617-002140-69869
+================================================================
+
+  Prompt outcomes:
+  p4-apple/P9-0002-xcuitest-ui.prompt.md                  RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/P99-0001-apple-acceptance-gate.prompt.md       RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/analytics/WeeklyDigestPage.prompt.md     merged
+  p4-apple/pages/battery/PowerFlowDashboardPage.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/pages/charging/ChargingCurvePage.prompt.md     RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/pages/charging/CostAnalysisPage.prompt.md      RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/charging/SmartChargePage.prompt.md       merged
+  p4-apple/pages/charging/TeslaChargingHistoryPage.prompt.md RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/pages/charging/TeslaChargingSessionsPage.prompt.md merged
+  p4-apple/pages/driving/DrivesListPage.prompt.md         RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/driving/DrivetrainHealthPage.prompt.md   merged
+  p4-apple/pages/driving/DrivingDynamicsPage.prompt.md    merged
+  p4-apple/pages/driving/RegenEfficiencyPage.prompt.md    RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/driving/SpeedProfilePage.prompt.md       merged
+  p4-apple/pages/maps/GeofencesPage.prompt.md             merged
+  p4-apple/pages/maps/TemperatureImpactPage.prompt.md     RED: artifact: final EXIT=65, final STATUS=BLOCKED
+  p4-apple/pages/notifications/AlertRulesPage.prompt.md   merged
+  p4-apple/pages/notifications/AlertStudioPage.prompt.md  CONFLICT: merge conflict into integration branch
+  p4-apple/pages/notifications/AlertsListPage.prompt.md   NOCOMMIT: green log but no commit on top of base
+  p4-apple/pages/notifications/ArchivedPage.prompt.md     merged
+  p4-apple/pages/notifications/BrowserNotificationsPage.prompt.md merged
+  p4-apple/pages/notifications/ChannelsPage.prompt.md     merged
+  p4-apple/pages/notifications/InboxPage.prompt.md        merged
+  p4-apple/pages/notifications/QuietHoursPage.prompt.md   merged
+  p4-apple/pages/power-user/DashboardsPage.prompt.md      merged
+  p4-apple/pages/power-user/GrafanaPanelPage.prompt.md    CONFLICT: merge conflict into integration branch
+  p4-apple/pages/settings/HelixPage.prompt.md             CONFLICT: merge conflict into integration branch
+  p4-apple/pages/settings/PrivacyPage.prompt.md           merged
+  p4-apple/pages/settings/SafetyPage.prompt.md            merged
+  p4-apple/pages/settings/SettingsPage.prompt.md          merged
+  p4-apple/pages/settings/TwoFactorAuthPage.prompt.md     RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/pages/sharing/SharingTripsPage.prompt.md       merged
+  p4-apple/pages/system/ChatbotPage.prompt.md             merged
+  p4-apple/pages/system/CommandHistoryPage.prompt.md      merged
+  p4-apple/pages/system/CommandsPage.prompt.md            RED: artifact: final EXIT=1, final STATUS=BLOCKED
+  p4-apple/pages/system/DataExportPage.prompt.md          merged
+  p4-apple/pages/system/IncidentTimelinePage.prompt.md    merged
+  p4-apple/pages/system/StateMachineDebuggerPage.prompt.md merged
+  p4-apple/pages/telemetry/LiveSignalMonitorPage.prompt.md merged
+  p4-apple/pages/telemetry/MQTTInspectorPage.prompt.md    NOCOMMIT: green log but no commit on top of base
+  p4-apple/pages/telemetry/SignalExplorerPage.prompt.md   merged
+  p4-apple/pages/telemetry/SignalLogViewerPage.prompt.md  merged
+  p4-apple/pages/trips/TripDetailPage.prompt.md           merged
+  p4-apple/pages/trips/TripListPage.prompt.md             merged
+  p4-apple/pages/vehicle-systems/MediaPlayerPage.prompt.md merged
+  p4-apple/pages/vehicle-systems/SafetySettingsPage.prompt.md merged
+  p4-apple/pages/vehicles/DigitalTwinPage.prompt.md       merged
+  p4-apple/pages/vehicles/VehicleAccessPage.prompt.md     merged
+  p4-apple/pages/vehicles/VehicleListPage.prompt.md       merged
+  p4-apple/pages/watch/WatchFacePage.prompt.md            CRASH: worker exited without verdict

@@ -1,0 +1,148 @@
+================================================================================
+p4-apple · P7 · page:telemetry/SignalLogViewer — SwiftUI / Apple HIG
+Native SwiftUI parity of web/src/features/telemetry/pages/SignalLogViewerPage.tsx
+Web route: /signal-log   Target: apple (macOS 15 + iOS 18, adaptive — ADR-002/006)
+================================================================================
+
+SCOPE
+  Implemented a native SwiftUI + Apple HIG SignalLogViewer page that queries signal
+  history from Postgres. The refactored web page composes the shared SignalSelector +
+  SignalHistoryTable components; this native page REUSES the existing P3 Apple ports of
+  those components (apps/apple/TeslaSync/feature-views/SignalSelector*.swift and
+  SignalHistoryTable*.swift) driven through their P1/S8 source seams, and adds the page
+  orchestrator + the page-level surfaces (no-vehicle, pre-query idle, error banner).
+
+FILES (allowed scope only)
+  + apps/apple/TeslaSync/Features/Telemetry/SignalLogViewerPage.swift        (main View)
+  + apps/apple/TeslaSync/Features/Telemetry/SignalLogViewerPageModel.swift   (@Observable model + sources + SI data-source seam)
+  + apps/apple/TeslaSync/Features/Telemetry/SignalLogViewerPageViews.swift   (GlassPanel1 controls + idle/no-vehicle/error views + sample source)
+  ~ apps/apple/Localization/Localizable.xcstrings                            (+17 keys: 11 page parity strings + 6 date.preset.* labels; purely additive, 187 insertions/0 deletions)
+  ~ apps/parity/apple-ledger.json                                           (rows for page:telemetry/SignalLogViewer)
+  ~ .github/prompts/monorepo/logs/apple-page-telemetry-SignalLogViewerPage.log (this log)
+
+ARCHITECTURE (P3 reuse — no re-implementation, no collisions)
+  - SignalSelector(model: SignalSelectorModel)  — reused; fed available signals via
+    PageBackedSignalSelectorSource from `GET /signals/{vehicleId}/available` (useSignals).
+  - SignalHistoryTable(model: SignalHistoryModel) — reused; fed result snapshots via
+    PageBackedSignalHistorySource (loading / empty / error / data render branches).
+  - Value/format/timestamp/raw-payload use the reused SignalLogInput + SignalValueFormat +
+    SignalHistoryFormat helpers (no duplicate SignalLogEntry / SignalHistoryRow / SignalTypeBadge).
+  - Units stay SI on the wire; LiveSignalLogDataSource is the KMP-core integration boundary
+    (ADR-004), SampleSignalLogDataSource backs previews + the success state.
+
+=== PARITY ===
+PARITY_REQUIRED=17
+[x] panel  — GlassPanel1
+       SignalLogControlsPanel (SignalLogViewerPageViews.swift) wraps TSGlassPanel and hosts the
+       reused SignalSelector + Time Range + Per Page + Query + records-count, mirroring the web
+       page's single <GlassPanel className="p-4 sm:p-5 space-y-4"> (GlassPanel1).
+[x] state  — loading data state
+       SignalLogViewerPageModel.runQuery() sets queryState=.loading and pushes
+       SignalHistoryInput(isLoading: true) → SignalHistoryModel.phase == .loading → SHLoadingView
+       (skeleton, .redacted). isQuerying drives the Query button ProgressView.
+[x] state  — empty data state
+       runQuery() sets queryState=.empty when merged rows are empty and pushes empty rows →
+       SignalHistoryModel.phase == .empty → SHEmptyView ("No data"). The pre-query idle empty
+       (SignalLogIdleView) is rendered while !hasQueried.
+[x] state  — error data state
+       runQuery() catch sets queryState=.error(message), pushes SignalHistoryInput(errorMessage:)
+       → SHErrorView (retry), and the page renders SignalLogErrorBanner at the top (web AlertBanner).
+[x] state  — success data state
+       runQuery() sets queryState=.success and pushHistorySnapshot() pushes the page slice →
+       SignalHistoryModel.phase == .data → SHDataView (Timestamp/Signal/Value/Type + pagination).
+[x] string — "Choose one or more signals, set a date range, then hit Query to browse signal history."
+       SignalLogIdleView description (SignalLogViewerPageViews.swift). Catalog key present.
+[x] string — "Per Page"
+       SignalLogControlsPanel.perPageAndQuery field label + Picker. Catalog key present.
+[x] string — "Query"
+       SignalLogControlsPanel.queryButton label. Catalog key present.
+[x] string — "Query signal history from Postgres"
+       SignalLogViewerPage.header subtitle. Catalog key present.
+[x] string — "Select signals and click Query"
+       SignalLogIdleView title. Catalog key present.
+[x] string — "Signal Log"
+       SignalLogViewerPage .navigationTitle (web usePageTitle('Signal Log')). Catalog key present.
+[x] string — "Signal Log Viewer"
+       SignalLogViewerPage.header title. Catalog key present.
+[x] string — "Time Range"
+       SignalLogControlsPanel.timeRangeField label + Picker a11y. Catalog key present.
+[x] string — "error.loadFailed"
+       SignalLogErrorBanner ("error.loadFailed: <msg>") (pre-existing catalog key, reused).
+[x] string — "records"
+       SignalLogControlsPanel.recordsCount ("<total> records"). Catalog key present.
+[x] string — "signalLog.noVehicle"
+       SignalLogNoVehicleView title (web vehicleId === 0 EmptyState). Catalog key present.
+[x] string — "signalLog.noVehicleDesc"
+       SignalLogNoVehicleView description. Catalog key present.
+PARITY_COVERED=17
+
+HIG / a11y / units
+  - Adaptive: ViewThatFits switches the controls row between HStack (macOS/regular) and VStack
+    (iOS compact); ScrollView + navigationTitle scaffold; .refreshable; .task loads available signals.
+  - Dynamic Type via Font.TS tokens; light/dark/high-contrast via Color.TS dynamic tokens (P2).
+  - .accessibilityElement/.accessibilityLabel/.isHeader on header, panel, banner, rows; ≥44pt controls.
+  - SI at the display boundary only (SignalValueFormat); LiveSignalLogDataSource is the KMP-core seam.
+
+================================ GATE CHECKS ===================================
+Toolchain: Xcode 26.5 (17F42), swiftlint 0.63.3, xcodegen, pwsh 7.
+
+1) Placeholder scan (ADR-011) — scoped to the deliverable
+   $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Telemetry -Language swift
+   PLACEHOLDER_ALLOWED=0
+   PLACEHOLDER_COUNT=0
+   PLACEHOLDER_EXIT=0                                   ✅ PASS (no stubs/placeholders)
+
+2) SwiftLint --strict
+   2a) Deliverable (apps/apple/TeslaSync/Features/Telemetry, scoped config):
+       Done linting! Found 0 violations, 0 serious in 3 files.
+       LINT_EXIT=0                                      ✅ PASS (my files clean)
+   2b) Literal whole-project gate (`swiftlint --strict … Telemetry` resolves the repo
+       .swiftlint.yml `included:` set and lints the whole app): 3 violations, ALL PRE-EXISTING,
+       none in Features/Telemetry:
+         apps/apple/Sources/Features/System/MyActivityPageModel.swift:217 (trailing_whitespace)
+         apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Previews.swift:37 (line_length)
+         apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Previews.swift:89 (line_length)
+       LINT_EXIT=2  (BLOCKED by pre-existing violations, out of scope — not my files)
+
+3) Compilation
+   3a) ISOLATED TYPECHECK (genuine, unmasked verification of THIS deliverable):
+       swiftc -typecheck -swift-version 6 against a signature-accurate stub of the external
+       TeslaSync-module symbols (tokens, TSGlassPanel, SignalSelector/Model/Source/Update,
+       SignalHistoryTable/Model/Source/Input, SignalLogInput, SignalHistoryFormat — copied from
+       the real sources), my 3 files:
+         iOS    (-target arm64-apple-ios18.0-simulator): TYPECHECK_EXIT=0   ✅
+         macOS  (-target arm64-apple-macos15.0):          TYPECHECK_EXIT=0   ✅  (adaptive, ADR-002)
+       NOTE — this caught a real bug that the broken aggregate build had MASKED: a
+       `String(localized: .init(runtimeKey), …)` (StaticString-key) misuse in the time-range
+       Picker. Fixed by switching SignalLogRangePreset to a `label` computed over static-literal
+       String(localized:) keys; both typechecks pass after the fix. (Honesty covenant #3: not
+       skip-and-assumed — independently compiled.)
+   3b) Whole-app xcodebuild (scheme TeslaSync, iOS Simulator, Debug): my 3 files are in the target
+       compile set (verified in TeslaSync.SwiftFileList for arm64 iOS + macOS). The AGGREGATE build
+       FAILS on PRE-EXISTING, OUT-OF-SCOPE breakage only:
+         (a) Duplicate file/type collision `ScheduledExportsPanel.swift` exists twice and BOTH
+             declare `struct ScheduledExportsPanel` —
+               apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.swift
+               apps/apple/TeslaSync/Features/System/ScheduledExportsPanel.swift  (in-flight salvage collision)
+         (b) Under Xcode 26.5, `#Preview` is ambiguous between SwiftUI.Preview and UIKit.Preview in
+             ~40 pre-existing *.Previews.swift files (221 diagnostics) — none authored here.
+       With (a) temporarily bypassed locally, the module type-checked end-to-end and the ONLY
+       remaining errors were (b); zero were attributed to Features/Telemetry. The repo was restored
+       to a clean tree afterward (no out-of-scope files modified).
+   BUILD_EXIT=65  (aggregate BLOCKED by pre-existing repo breakage — see "Out of Scope: Other pages")
+
+4) Tests
+   TEST_EXIT=blocked  (cannot run — the app build is blocked by the pre-existing errors above;
+   not reported green — see covenant #1 "No red-as-green")
+
+================================ SUMMARY =======================================
+PARITY_COVERED=17 / PARITY_REQUIRED=17   — every panel/state/string implemented + bound + rendered.
+Placeholder ✅ 0   SwiftLint(my files) ✅ 0   Isolated typecheck(my files) ✅ 0 (iOS + macOS, Swift 6).
+Aggregate build/test ❌ BLOCKED by PRE-EXISTING, OUT-OF-SCOPE errors (ScheduledExportsPanel dual
+declaration + Xcode-26.5 SwiftUI/UIKit #Preview macro ambiguity). The prompt's "Out of Scope"
+clause forbids touching other pages, so these are reported honestly rather than worked around.
+Ledger row recorded as "blocked" (17/17), matching the sibling rows that share this exact blocker
+(page:system/TeslaAccount, page:system/ScheduledExports).
+
+EXIT=65
+STATUS=BLOCKED

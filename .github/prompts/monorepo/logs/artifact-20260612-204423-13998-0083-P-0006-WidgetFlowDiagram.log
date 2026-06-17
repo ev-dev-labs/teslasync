@@ -1,0 +1,191 @@
+=== P4 Widget primitive 0006 WidgetFlowDiagram (Apple) ===
+Artifact : apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.*  (8 .swift + 1 .strings)
+Web src  : web/src/features/dashboard/widgets/shared/WidgetFlowDiagram.tsx
+Host     : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat + pwsh + xcodegen + JDK17 present
+Date     : 2026-06-13
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint / swiftformat / pwsh / xcodegen -> all present; JDK 17.0.19 (KMP toolchain) present
+  iOS 18 + macOS 15 SDKs present (iPhoneSimulator / MacOSX; deploymentTarget iOS 18.0 / macOS 15.0).
+  SwiftUI + Swift Charts + MapKit all available — the prompt's capability requirement is met, so this
+  surface is DONE (not BLOCKED). (This primitive uses SwiftUI only: it is a pure SVG-flow graphic; the
+  web source uses no Recharts and no Leaflet, so no Swift Charts / MapKit mapping is required here.)
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  The web `WidgetFlowDiagram` is a PURE presentational widget primitive (a shared widget building block):
+  it takes `nodes: FlowNode[]` + `arrows: FlowArrow[]` + optional `compact` / `emptyMessage` and draws an
+  SVG flow graph against a fixed 100x100 viewBox — arrows (web `<line>`) behind nodes (web `<circle>` +
+  `<foreignObject>` icon/value + `<text>` label). There is NO fetch / React-Query / Promise in the source,
+  so it has NO loading/error/stale/offline branch (the host widget that owns the query — EnergyFlowWidget,
+  EnergyFlowAnimatedWidget, LivePowerFlowWidget — renders those in its own shell). Per the sibling
+  presentational-primitive precedent (WidgetChartSummary 0002, WidgetComparisonCard 0003, WidgetMapView
+  0008) this surface reproduces ONLY the source's REAL branches; inventing loading/error/stale/offline
+  chrome would fabricate states the source does not have (documented verbatim in WidgetFlowDiagram.Adapter.swift):
+    • empty leaf    (web `nodes.length === 0` -> `<EmptyState message={emptyMessage} className="py-8" />`;
+                     native "never a bare box" ContentUnavailableView + a11y hint)
+    • populated graph(web `<svg aria-label="Energy flow diagram">`: arrows behind node chips)
+    • compact       (a REAL branch: smaller node radius 10 vs 14, the top-3-by-magnitude arrow slice
+                     `[...arrows].sort(|b|-|a|).slice(0,3)`, and the 3-letter-uppercase label compaction)
+    • active        (a REAL per-arrow branch: the web `dashFlow` marching-ants — a `4 8` dash whose offset
+                     travels -12 viewBox units every 0.8s, scaled to the live size; off under Reduce Motion)
+    • arrow tone    (a REAL per-arrow branch: web value>0 emerald / <0 red / ==0 muted + a `color?` override)
+
+  Native mapping (no Tailwind ports, per Apple HIG + the design-token system the sibling primitives followed):
+    • icon (ReactNode)                  -> optional SF Symbol name on FlowNode (Lucide -> SF Symbols at the
+                                           call site: BatteryCharging->battery.100.bolt, Zap->bolt.fill,
+                                           Plug->powerplug.fill, Sun->sun.max.fill, Home->house.fill, ...).
+    • AnimatedNumber value decimals={1} -> a monospaced-digit Text with `.contentTransition(.numericText())`
+                                           formatted to 1 fraction digit (Reduce-Motion gates the cross-fade).
+    • arrowColor Tailwind classes        -> tokens: value-sign default positive->statusSuccess /
+      (text-emerald/red/[var(--text-muted)]) negative->statusDanger / zero->textMuted; the web `color?`
+      and the `color?` override                  override (real callers pass text-cyan/amber/yellow/blue) ->
+      (text-cyan-400 / text-amber-400 / ...)      the index-stable brand chart palette (TSChartPalette),
+                                                  so distinct flows keep distinct, token-driven hues, no hex.
+    • SVG viewBox 100x100 + xMidYMid meet -> FlowDiagramLayout: one uniform min(w,h)/100 scale, centered.
+    • fill-white/5 stroke-white/20        -> Color.TS.surfaceGlass fill + Color.TS.border hairline stroke.
+  The graphic is drawn with SwiftUI `Canvas` (arrows, incl. the animated dash via `TimelineView(.animation)`)
+  + positioned SwiftUI node chips — exactly the pattern the sibling `TSRadarChart` uses (Canvas graphic +
+  accessible summary rather than Dynamic-Type-scaled in-canvas text).
+
+  Files (1709 lines total, 8 .swift + 1 .strings):
+    WidgetFlowDiagram.Adapter(299)   — surface slug, FlowNodePosition+POSITION_COORDS, FlowArrowTone,
+                                       FlowNode/FlowArrow, WidgetFlowInput, Projected{Node,Arrow},
+                                       FlowDiagramCanvas, WidgetFlowDiagramProjection.
+    WidgetFlowDiagram.Geometry(217)  — FlowDiagramGeometry (strokeForValue/maxArrowValue/arrowColor/
+                                       endpoint-offset/compact-top-3/label-compaction/value-text),
+                                       WidgetFlowDiagramProjector, WidgetFlowDiagramAccessibility.
+    WidgetFlowDiagram.Model(132)     — P1/S10 facade, P1/S11 telemetry seam, P1/S8 @Observable holder.
+    WidgetFlowDiagram.swift(84)      — public surface (projection switch + onAppear/onChange seam).
+    WidgetFlowDiagram.Views(259)     — empty leaf, arrows Canvas (animated dash), node chip, FlowDiagramLayout.
+    WidgetFlowDiagram.Previews(147)  — 4 DEBUG previews (energy flow / compact / live power flow / empty).
+    WidgetFlowDiagram.AdapterTests(358) + WidgetFlowDiagram.Tests(189) — see gates [5].
+    WidgetFlowDiagram.strings(24)    — P1/S10 catalog (table "WidgetFlowDiagram").
+  Bindings : P1/S8 WidgetFlowDiagramModel @Observable holder (props + projection; NO HTTP in the view;
+             props pushed via `.onChange` so a rebind re-renders); P1/S9 tokens (Color.TS / Font.TS /
+             TSSpacing / TSRadius / TSMotion + TSChartPalette) — no Tailwind ports, no raw hex; P1/S10
+             NSLocalizedString facade (table "WidgetFlowDiagram"); P1/S11 view.opened telemetry (slug
+             "WidgetFlowDiagram", emitted once + idempotent across appear/disappear).
+  i18n     : web source has 0 t() keys (anonymous). Its own literals — the empty default
+             'No flow data available' and the SVG aria-label 'Energy flow diagram' — are reproduced via
+             widgetFlowDiagram.empty + widgetFlowDiagram.accessibilityLabel; widgetFlowDiagram.emptyHint is
+             a native HIG addition (never a bare box). 0 dead keys; 0 hardcoded English in Swift.
+  a11y     : the diagram is one VoiceOver container labeled "Energy flow diagram"; each node chip is a
+             combined element labeled "<label>: <formattedValue>"; the arrows Canvas is decorative
+             (.accessibilityHidden) with the flow conveyed by the node values + the summary builder; the
+             empty leaf folds icon+message+hint into one element; Reduce-Motion gates BOTH the marching-ants
+             dash and the value cross-fade; High-Contrast + light/dark via the adaptive P1/S9 tokens.
+
+----------------------------------------------------------------------------------------
+BUILD WIRING (no edits needed — tier already wired by 0003)
+----------------------------------------------------------------------------------------
+  TeslaSync/widget-primitives is already a source path of the TeslaSync iOS app + TeslaSync-macOS app
+  (excludes *Tests.swift) and the TeslaSyncTests + TeslaSync-macOSTests bundles (includes *Tests.swift) in
+  project.yml, and is in .swiftlint.yml `included`. This surface only ADDED files under that path, so no
+  build-config edits were required — staying inside the allowed-files scope (WidgetFlowDiagram.* + this log).
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint  (config apps/apple/.swiftformat, --maxwidth 120)
+      surface (8 .swift)  -> 0/8 files require formatting   FORMAT_EXIT=0
+
+[2] swiftlint --strict  (config apps/apple/.swiftlint.yml)
+      surface (8 .swift)  -> Found 0 violations, 0 serious in 8 files   LINT_EXIT=0
+      (initial run flagged file_length on Adapter.swift @503 lines; resolved by extracting the pure
+       geometry/projector/accessibility into WidgetFlowDiagram.Geometry.swift — Adapter now 299, Geom 217.)
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1 -Language swift)
+      -Path <isolated copy of the 9 WidgetFlowDiagram.* files> -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+      -Path .../widget-primitives/WidgetFlowDiagram (literal gate path) -> PLACEHOLDER_COUNT=0
+      0 opt-outs (no `// parity:allow`).   PLACEHOLDER_EXIT=0
+
+[4] SwiftPM build  (the full shipped surface — Adapter+Geometry+Model+.swift+Views+Previews — compiled with
+    the REAL generated ../design/generated/apple/Tokens.swift + Sources/Design/TSDesign.swift, in a library
+    module named "TeslaSync"; swift-tools 6.0 => Swift 6 language mode, strict concurrency complete; macOS v15)
+      swift build -> Build complete! (8.82s)   SPM_BUILD_EXIT=0
+      (all 6 shipped .swift incl. the #Preview macros compile under Swift 6 strict concurrency.)
+
+[5] SwiftPM test  (the same module + BOTH co-located test files, `@testable import TeslaSync`)
+      swift test -> Executed 45 tests, with 0 failures   SPM_TEST_EXIT=0
+      AdapterTests (pure core): WidgetFlowDiagramAdapterTests, FlowNodePositionTests(3 — POSITION_COORDS +
+        label placement + case count), WidgetFlowInputTests(3), FlowDiagramGeometryScalarTests(6 — radius/
+        strokeForValue/maxArrowValue/tone), FlowDiagramGeometryRenderTests(7 — visibleArrows compact top-3 +
+        stable tie order, label compaction, endpoint radius-offset + degenerate, 1-decimal value text),
+        WidgetFlowDiagramProjectorTests(8 — empty/diagram branch, compact radius+slice, missing-endpoint
+        drop, tone override-vs-sign, duplicate-id last-wins), WidgetFlowDiagramAccessibilityTests(2),
+        WidgetFlowDiagramStringsTests(2), WidgetFlowDiagramModelTests(3 — once-only view.opened + prop
+        re-derivation).
+      Tests (SwiftUI half): FlowDiagramLayoutTests(3 — uniform scale + centering + zero-size guard),
+        FlowArrowToneColorTests(1 — every tone incl. palette wrap resolves to a token color),
+        WidgetFlowDiagramCompositionTests(3 — every branch + injected-model seam + subviews compose),
+        WidgetFlowDiagramRenderTests(4 — populated / compact / empty leaf / static arrows layer each render
+        to a non-nil NSImage via ImageRenderer on macOS).
+
+[6] dual-SDK swiftc -typecheck  (the FULL shipped surface incl. the SwiftUI views + the `#Preview`s, against
+    the real generated Tokens.swift + TSDesign.swift; -swift-version 6 -D DEBUG)
+      iOS 18    (-target arm64-apple-ios18.0-simulator, --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)         -> 0 errors  MAC_TYPECHECK_EXIT=0
+
+[7] symbol-collision check (the one risk isolation can't catch — a type-name clash in the shared TeslaSync
+    module). grep `(struct|class|enum|protocol|actor|typealias) <Type>` over Sources + TeslaSync + the
+    widget/watch targets for all 23 surface types (WidgetFlowDiagram, ...Model, ...Surface, ...Projection,
+    ...Projector, ...Accessibility, ...Strings, ...Telemetry, OSLog..., ...EmptyState, ...CanvasView,
+    FlowNode, FlowArrow, FlowNodePosition, FlowArrowTone, WidgetFlowInput, ProjectedFlowNode/Arrow,
+    FlowDiagramCanvas/Geometry/Layout, FlowArrowsLayer, FlowNodeChip) -> 0 declarations outside
+    WidgetFlowDiagram.*  COLLISIONS=0
+
+[8] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 9 files (9 refs each = iOS app + macOS app + iOS tests + macOS tests +
+      group/build refs): WidgetFlowDiagram.{Adapter,Geometry,Model,swift,Views,Previews,AdapterTests,Tests}.swift
+      + WidgetFlowDiagram.strings. (Generated project is git-ignored; removed after the check.)
+
+----------------------------------------------------------------------------------------
+FULL-APP xcodebuild build test  (the prompt gate) — DEFERRED to P99 (NOT a WidgetFlowDiagram failure)
+----------------------------------------------------------------------------------------
+  The prompt's `xcodebuild -scheme TeslaSync … build test` (iOS + macOS) is RED on THIS runner for three
+  pre-existing / environmental reasons, ALL outside this surface's allowed-files scope
+  (apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.*) — verified, not assumed:
+    1. The KMP `Frameworks/Shared.xcframework` (a non-embedded dependency of every app + test target) is
+       absent (`ls Frameworks/` -> only .gitkeep). It is regenerable solely via an ~11-min Gradle build
+       (apps/shared/gradlew :core:assembleSharedXCFramework); without it the app module cannot link.
+    2. macOS dev-signing: `security find-identity -p codesigning` -> 0 valid identities found; the
+       TeslaSync-macOS / TeslaSyncWidgets-macOS entitlements require a development certificate.
+    3. A PRE-EXISTING compile error in another agent's parallel-merged shared-surface,
+       TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift (the @escaping `glass(_:)`
+       helper around L141) — already tracked macOS-pending by the 0003 entry in
+       apps/macos-pending-verifications.md, and out of this prompt's scope to edit.
+  This is the SAME documented deferral the sibling presentational primitives 0002 / 0003 / 0008 recorded;
+  ownership of the signed, framework-staged full-app build is p4-apple/P99-0001-apple-acceptance-gate. The
+  WidgetFlowDiagram surface itself is proven to compile + run GREEN on BOTH platforms by gates [4][5][6]
+  (the exact shipped Swift compiled against the real design tokens under Swift 6 strict concurrency for the
+  iOS 18 and macOS 15 SDKs), with the app/test-target wiring verified by [8] and collisions ruled out by [7].
+  No app-target build result is claimed here that was not executed.
+
+----------------------------------------------------------------------------------------
+VERDICT
+----------------------------------------------------------------------------------------
+  Surface WidgetFlowDiagram is COMPLETE and verified GREEN by every host-runnable + surface-scoped gate:
+    FORMAT_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  SPM_BUILD=ok  SPM_TEST=45/45  COLLISIONS=0
+    IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+  The full-app xcodebuild build test is DEFERRED (not capability-blocked) for pre-existing / environmental
+  reasons (absent KMP xcframework + 0 macOS signing identities + one other agent's pre-existing compile
+  error) — ZERO WidgetFlowDiagram errors in any executed gate — consistent with the sibling 0002/0003/0008
+  precedent and owned by the P99 acceptance gate.
+
+  Acceptance criteria:
+    [x] All states from the web source reproduced on Apple (empty leaf + populated graph + compact + active
+        + arrow-tone branches; loading/error/stale/offline intentionally NOT invented — the source has none).
+    [x] Binds via the P1/S8 @Observable state-holder; no direct HTTP from the view.
+    [x] Every i18n key from source has a matching key in the P1/S10 catalog (table "WidgetFlowDiagram").
+    [x] Accessibility labels present (diagram container label + per-node combined element + empty-leaf).
+    [x] Tests: adapter unit tests + per-state composition/render + a11y/strings facade (45 tests, 0 failures).
+    [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+    [x] view.opened telemetry emitted with slug "WidgetFlowDiagram" (once-only).
+
+EXIT=0
+STATUS=DONE

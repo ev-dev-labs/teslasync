@@ -1,0 +1,169 @@
+=== P4 Feature view 0155 HealthOverview (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · PowerShell 7.x · Java 17
+  Destinations       : iOS Simulator "iPhone 16" present + booted (83717DEE-…) · iPhone 17 family present · macOS 26.5 SDK present
+  Deployment targets : iOS 18.0 / iPadOS 18.0 / macOS 15.0 (project.yml) — supported as deployment targets by the Xcode 26.5
+                       SDKs (iOS/macOS 26.5); HIG baseline iOS 18 / iPadOS 18 / macOS 15 honoured.
+  Shared.xcframework : assembled + staged. Gradle ":core:assembleSharedXCFramework" built debug + release Kotlin/Native
+                       frameworks (iosArm64 / iosSimulatorArm64 / macosArm64) and the release slice was staged to
+                       apps/apple/Frameworks/Shared.xcframework for the full-app compile.
+  Capability         : SwiftUI present; the web source uses NO Swift Charts and NO MapKit ("Charts/maps used: (none)")
+                       so neither is required here → NOT capability-BLOCKED. The full-app Xcode gate is RED only on
+                       pre-existing, unrelated surfaces (see GATES / WHY DEFERRED), per apps/macos-pending-verifications.md.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drivetrain-health/HealthOverview.tsx — a presentational leaf fed
+  { overallHealth: 'good'|'warning'|'critical', healthScore: number, motorStatus: string } by the Drivetrain Health page.
+  Data hooks: useTranslation only (the parent owns the query lifecycle). It renders a React fragment:
+    (a) when overallHealth !== 'good' → <AlertBanner variant={getAlertVariant(overallHealth)} icon={<AlertTriangle/>}
+        title={critical ? 'Critical Temperature Warning' : 'Elevated Temperatures Detected'}>
+        {critical ? criticalMsg : warningMsg}</AlertBanner>   (getAlertVariant: warning→'warning', critical→'danger')
+    (b) <GlassPanel glow={HEALTH_GLOW[overallHealth]} p-6> with
+          left  : good ? <CheckCircle/> : <AlertTriangle/>  (h-10 w-10, tinted by healthTextClass)
+                  <h2> good ? 'Drivetrain Healthy' : warning ? 'Drivetrain Running Warm' : 'Drivetrain Overheating'
+                  <p>  '{t("drivetrain.motorState","Motor State")}: {motorStatus}'
+          right : <Badge variant={healthBadgeVariant(overallHealth)} size="lg" dot>
+                    {t(`drivetrain.health.${overallHealth}`, overallHealth.toUpperCase())}   ('GOOD'/'WARNING'/'CRITICAL')
+                  <span text-2xl font-bold {healthTextClass}><AnimatedNumber value={healthScore} suffix="%"/></span>
+  healthTextClass / HEALTH_COLOR : good #10b981 (emerald) · warning #f59e0b (amber) · critical #ef4444 (red).
+  healthBadgeVariant : good→success · warning→warning · critical→danger.   HEALTH_GLOW : good→green · warning→cyan · critical→purple.
+  AnimatedNumber renders fmtNumber(value, 0) + suffix (its default decimals is 0).
+
+ARTIFACTS SHIPPED (co-located, current sibling convention — HealthGaugeGrid/DetailCards/TemperatureSection)
+  apps/apple/TeslaSync/feature-views/HealthOverview.Model.swift     — P1/S8 Source seam + @Observable model (loading/empty/
+                                                                       error/content phases, stale one-shot auto-refresh),
+                                                                       P1/S11 telemetry seam (OSLog view.opened), P1/S10
+                                                                       facade, health-status enum (headline/badge/alert),
+                                                                       InMemory source (Foundation/Observation/OSLog only)
+  apps/apple/TeslaSync/feature-views/HealthOverview.Adapter.swift   — pure web-parity projector: fmtNumber formatting,
+                                                                       status banner + headline + "Motor State:" line +
+                                                                       uppercased badge + score% projection, a11y summaries
+                                                                       (Foundation-only, host-testable)
+  apps/apple/TeslaSync/feature-views/HealthOverview.swift          — the surface: TSFadeIn shell, freshness header,
+                                                                       connectivity banner, phase switch, start/stop
+  apps/apple/TeslaSync/feature-views/HealthOverview.Views.swift    — status banner (web AlertBanner), summary card (web
+                                                                       GlassPanel) responsive via ViewThatFits, status badge
+                                                                       (web Badge lg+dot), colored animated score, tone+icon map
+  apps/apple/TeslaSync/feature-views/HealthOverview.States.swift   — freshness chip, stale/offline banner, loading skeleton
+                                                                       card, empty state, error/retry state
+  apps/apple/TeslaSync/feature-views/HealthOverview.Previews.swift — #if DEBUG previews for every state (good/warning/critical
+                                                                       /empty/loading/error/stale/offline)
+  apps/apple/TeslaSync/feature-views/HealthOverview.strings        — P1/S10 catalog (21 keys: 11 verbatim web keys — 2 alert
+                                                                       titles + 2 alert messages, 3 headlines, motorState, 3
+                                                                       badge names — + 10 freshness/banner/state chrome keys)
+  apps/apple/TeslaSync/feature-views/HealthOverview.Tests.swift    — 20 logic tests (format/projector/model/a11y)
+  apps/apple/TeslaSync/feature-views/HealthOverview.ViewTests.swift— 8 per-state ImageRenderer render tests
+  No shared wiring touched: feature-views/ is already globbed by both app targets (project.yml) and already in
+  .swiftlint.yml; the per-surface .strings table avoids editing Localizable.xcstrings. Allowed files == HealthOverview.*
+  + this log only; nothing else changed (git status: 9 untracked HealthOverview.* files, purely additive).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  AlertBanner(variant,icon,title,msg)→ TSAlertBanner (Sources/Components/Feedback/Banners.swift), tone warning→.warning /
+                             critical→.danger, SF Symbol "exclamationmark.triangle.fill", title+message via P1/S10 facade
+  GlassPanel(glow,p-6)    → .tsGlassPanel() (Sources/Design/TSMaterial.swift) + a status-tinted hairline ring echoing the
+                             web per-status glow (good→success / warning→warning / critical→danger).
+  flex-col sm:flex-row    → ViewThatFits(.horizontal): identity+trailing in one row on a wide iPad/Mac surface, stacked on
+                             a narrow phone panel.
+  CheckCircle/AlertTriangle→ SF Symbols "checkmark.circle.fill" (good) / "exclamationmark.triangle.fill" (warn/crit), tinted.
+  Badge(size=lg,dot)      → HealthOverviewStatusBadge: state dot + uppercased status label in a tinted capsule (web Badge).
+  AnimatedNumber(suffix%) → HealthOverviewScoreText: fmtNumber(score,0)+"%", status-tinted, .contentTransition(.numericText())
+                             honouring Reduce Motion (parity with shared TSAnimatedNumber, recoloured by health).
+  FadeIn                  → TSFadeIn · Skeleton → TSSkeleton · EmptyState → TSEmptyState (all Reduce-Motion aware).
+  numeric parity          : score = fmtNumber(healthScore, 0) + "%" (e.g. 95→"95%", 87.5→"88%"); banner copy + headline +
+                             "Motor State: {motorStatus}" reproduced verbatim; badge = overallHealth.toUpperCase().
+  states                  : loading skeleton card · empty (friendly gauge glyph) · error (QueryError + retry) ·
+                             stale/offline (freshness chip + cached banner + one-shot auto-refresh on stale).
+  i18n                    : every string via HealthOverviewStrings facade (21 keys, web English fallbacks); no English literal
+                             in code. a11y: banner + card combined elements with spoken summaries; decorative glyphs hidden;
+                             Dynamic Type via tokens; Reduce Motion respected. telemetry: view.opened surface="HealthOverview".
+
+GATES (raw results on THIS runner)
+  [GREEN]    swiftformat --lint (HealthOverview.* — 8 swift files)         : 0/8 require formatting          (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole-app, FYI)                : 0/2267 require formatting        (EXIT=0)
+  [GREEN]    swiftlint --strict (HealthOverview.* — 8 files)               : 0 violations, 0 serious           (LINT_EXIT=0)
+             swiftlint --strict apps/apple (whole-app, FYI)                : 1 PRE-EXISTING violation —
+                                                                             dashboard-widgets/LiveSignalSparklinesWidget.
+                                                                             Builder.swift:158 (opening_brace); 0 HealthOverview
+                                                                             hits, not introduced here, not in allowed files.
+  [GREEN]    check-placeholders.ps1 (real scan of the 8 shipped files)     : PLACEHOLDER_COUNT=0, ALLOWED=0   (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/HealthOverview   : PLACEHOLDER_COUNT=0               (PLACEHOLDER_EXIT=0)
+             grep TODO|FIXME|stub|mock|placeholder|Lorem|NotImplemented|unimpl over the 8 files: 0 hits.
+  [GREEN]    HealthOverview build + test — ISOLATED SwiftPM harness, swift-tools 6.0, .swiftLanguageMode(.v6)
+             (strict-concurrency complete, same as the app), compiling the EXACT shipped HealthOverview.* sources
+             (symlinked, not copied) against the REAL repo design system (Sources/Components + Sources/Design + the
+             generated DesignTokens; the one excluded file, Components/DataDisplay/UnitFormatters.swift, depends on an
+             app-Platform \.tsUnits env key this surface never uses):
+                 Build complete!  ·  Executed 28 tests, with 0 failures (0 unexpected)                  (SWIFT_TEST_EXIT=0)
+             (3 format + 6 projector + 9 model + 2 a11y logic tests, plus 8 per-state ImageRenderer render tests covering
+             content good / content warning / content critical / empty / loading / error / stale / offline.)
+  [GREEN]    Extra evidence (host-runnable):
+             · swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0 HealthOverview.Model.swift
+               HealthOverview.Adapter.swift (Foundation/Observation core)                                 : EXIT=0
+             · runtime harness compiling the real Model+Adapter into an executable and asserting 44 web-parity
+               values at RUNTIME (fmtNumber 1234→"1,234" / 94.5→"95"; good has no banner; warning/critical banner
+               title+message verbatim; badge GOOD/WARNING/CRITICAL; score 87.5→"88%"; phase matrix; view.opened once;
+               stale auto-refresh once then guarded; offline no refresh; a11y summaries)                   : PASS (44/44)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build [test] : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build [test]                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO HealthOverview errors; all blockers pre-exist this change):
+    Shared.xcframework staged successfully, so the gate proceeded to the app compile, where it fails on architecture-wide,
+    pre-existing, committed surfaces (NOT touched by this change):
+      • Duplicate top-level type declarations across TeslaSync/dashboard-widgets/* surfaces — e.g. ChargeUnitPrefs,
+        ChargeStateDTO, ChargeSessionDTO, ChargeLoadStatus, ChargeConnection, ChargeStatusProjection, SafetyModel,
+        SafetyUpdate, SafetyLoadStatus, SafetyConnection, FleetStatsBarModel each defined in 2+ widget files →
+        "ambiguous for type lookup" + cascading "cannot infer contextual base in reference to member 'loaded'/'live'/…"
+        (the same parallel-merge collision class — `DashboardWidgetSize` redefined 15× — recorded by ToolCard /
+        AlertMessageEditor / FSMTimelineChart in apps/macos-pending-verifications.md).
+      • The app target also globs the co-located *.Tests.swift files (every feature-view + widget surface ships its tests
+        this way) which `import XCTest` + `@testable import TeslaSync` into the app target — a project.yml test-target
+        restructuring, outside this prompt's allowed files.
+      • macOS additionally needs a development signing certificate this runner does not provision.
+    Identical raw evidence on both platforms: 113 `error:` lines, 0 in any HealthOverview/feature-views file (first failing
+    file: dashboard-widgets/ChargeSessionChartWidget.Previews.swift). `grep "feature-views/HealthOverview.*: error:"` = 0
+    hits (iOS and macOS). These are exactly the artifacts apps/macos-pending-verifications.md defers to the
+    p4-apple/P99-0001 macos-latest acceptance gate (signing + dashboard-widget de-duplication / test-target pass), NOT a
+    single feature-view prompt (task rule: do not fix pre-existing unrelated breakage; allowed files == HealthOverview.* +
+    this log).
+
+HONESTY COVENANT (binding — verbatim numbering)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and explicitly
+                           DEFERRED with raw evidence — never reported as passing. The whole-app swiftlint pre-existing
+                           violation (another surface) is disclosed, not hidden.
+  2  No scope narrowing  : every web region + branch reproduced — the non-good AlertBanner (warning vs critical title+message
+                           +tone), the summary card (status icon, headline ternary, "Motor State:" line, badge with the
+                           uppercased status name, the colored AnimatedNumber score%), plus loading/empty/error/stale/offline.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the iOS/macOS app-compile
+                           failures were CONFIRMED from the build logs (113 errors, 0 HealthOverview), not assumed.
+  4  No stubs as final   : complete production surface + 28 real passing tests; placeholder scanner = 0 over the 8 files.
+  5  No parity shortcut  : numbers/strings/tone/icons/a11y/telemetry mapped to platform tokens and pinned by web-parity
+                           assertions (score 87.5→"88%"; badge "GOOD/WARNING/CRITICAL"; banner copy verbatim; a11y
+                           "Drivetrain Healthy. Motor State: Optimal. GOOD 95%").
+  6  No delegation       : implemented directly; no sub-agents used.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P4 core shared
+                           components (tsGlassPanel/TSFadeIn/TSSkeleton/TSEmptyState/TSAlertBanner/TSTone) all present + consumed.
+  8  No commit on red    : the COMMITTED artifact (HealthOverview.* + this log) is GREEN on every host gate AND on a real
+                           isolated Swift-6 build+test against the real design system; the deferred full-app gate is RED only
+                           on pre-existing, unrelated surfaces this commit neither introduces nor touches (purely additive).
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/feature-views/HealthOverview.* and this log. The
+                           generated .xcodeproj + DerivedData + Gradle output + staged xcframework are git-ignored and were
+                           removed after verification; no other tracked file is modified by me.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic HealthOverview shipped at parity with the web source and INDEPENDENTLY VERIFIED: it
+  compiles and its 28 tests pass under the app's own Swift 6 strict-concurrency rules, against the real design system, with
+  swiftlint/swiftformat/placeholder all green on the shipped files (plus a real macOS-15 typecheck and a 44-assertion runtime
+  parity harness). The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is
+  blocked by the architecture-wide co-located-XCTest-in-app-target condition, pre-existing dashboard-widget duplicate-type
+  collisions, and macOS development-signing — all owned by the p4-apple/P99-0001 acceptance gate on a signed macos-latest
+  runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (ToolCard, AlertMessageEditor, FSMTimelineChart, DriveEfficiencyChartWidget,
+  HealthGaugeGrid).
+
+EXIT=0
+STATUS=DONE

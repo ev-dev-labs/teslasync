@@ -1,0 +1,141 @@
+=== P4 Shared surface 0183 VehiclePicker (Apple) ===
+Date: 2026-06-11
+Runner: Darwin (Apple Silicon), Xcode 26.5 (17F42), Swift 6.3.2, xcodegen 2.45.4,
+        swiftlint + swiftformat (Homebrew), pwsh, JDK 17 (KMP toolchain present).
+
+Web source : web/src/components/layout/VehiclePicker.tsx
+Native out : apps/apple/TeslaSync/shared-surfaces/VehiclePicker.{swift,Adapter,Seams,Model,
+             Views,Previews,Tests,AdapterTests}.swift + VehiclePicker.strings  (9 files)
+
+----------------------------------------------------------------------------------------
+SUMMARY
+----------------------------------------------------------------------------------------
+The VehiclePicker surface is COMPLETE and was verified to the maximum extent the runner
+allows. Every surface-scoped check is GREEN:
+
+  swiftlint --strict (repo-wide, gate)          LINT_EXIT=0   (0 violations / 4533 files)
+  swiftformat --lint apps/apple (repo-wide,gate) FORMAT_EXIT=0 (0/4831 require formatting)
+  check-placeholders.ps1 (gate + genuine scan)  PLACEHOLDER_EXIT=0  (COUNT=0, ALLOWED=0)
+  KMP Shared.xcframework (Gradle/Kotlin-Native) BUILD SUCCESSFUL
+  VehiclePicker files compiled into iOS app     0 errors
+  VehiclePicker files compiled into macOS app   0 errors
+  Standalone pure-core (Adapter) assertions     20/20 PASS
+  Standalone state-holder (Model+Seams) tests   24/24 PASS
+
+The full-app `xcodebuild build test` gate steps are RED, but NOT because of this surface:
+the iOS/macOS app target does not compile due to PRE-EXISTING compile errors in unrelated
+AI* shared surfaces that are OUTSIDE this prompt's allowed file set
+(apps/apple/TeslaSync/shared-surfaces/VehiclePicker.* + this log) and which I am forbidden
+to modify. Evidence below. Per Honesty Covenant #1 (no red-as-green) the literal gate is
+therefore reported BLOCKED, with the surface deliverable complete + verified.
+
+----------------------------------------------------------------------------------------
+GATE STEP RESULTS (as specified)
+----------------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> compilation aborts in the TeslaSync app module; my files emit 0 errors.
+    IOS_EXIT=65
+    First failure (pre-existing, NOT VehiclePicker):
+      TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+        error: escaping closure captures non-escaping parameter 'content'
+      TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+        error: escaping closure captures non-escaping parameter 'content'
+    A scoped re-run (the two files above moved aside, -only-testing:VehiclePicker*) advanced
+    further and then hit the SAME pre-existing bug in another surface:
+      TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+        error: escaping closure captures non-escaping parameter 'content'
+    -> test bundle cannot link; VehiclePicker XCTest classes verified via standalone run (below).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    -> compilation aborts at the same pre-existing error; my files emit 0 errors.
+    MAC_EXIT=65
+      TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+        error: escaping closure captures non-escaping parameter 'content'
+    (the `test` action is unreachable because `build` fails at compile)
+
+[3] swiftlint --strict
+    LINT_EXIT=0   -> "Done linting! Found 0 violations, 0 serious in 4533 files."
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=0 -> "0/4831 files require formatting, 3 files skipped."
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/VehiclePicker
+    PLACEHOLDER_EXIT=0  (literal gate path)
+    Genuine scoped scan of the 8 shipped .swift files: PLACEHOLDER_COUNT=0, ALLOWED=0, EXIT=0
+    (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/fatalError-unimpl)
+
+----------------------------------------------------------------------------------------
+BLOCKER ANALYSIS (pre-existing, out-of-scope, untouched by this prompt)
+----------------------------------------------------------------------------------------
+* The recurring error "escaping closure captures non-escaping parameter 'content'" comes
+  from a `glass(@ViewBuilder _ content: () -> some View)` helper that passes the
+  non-escaping `content` into an escaping panel-builder closure. The same defect is present
+  in ~16 AI* surfaces (e.g. *.Chrome.swift of AICrossRuleConflictDetection, AIFeatureCard,
+  AIGeofenceAwareAutomationSuggestions, AIInboxAutoCategorization, AILifetimeStatsQA,
+  AINLAlertBuilder, AINLAutomationBuilder, AINLDriveSearch, AINLSearch, AINLSqlPlayground,
+  AIPiiRedactionSharedExports, AIQuietHoursSuggestion, AIRAGHelp, AISuggestNewGeofences,
+  AIWatchFaceNLResponse, plus AISignalExplorerNlFilter / AIAutoNameUnnamedLocations).
+  NOTE: VehiclePicker.Previews.swift uses the same helper SIGNATURE but in a non-escaping
+  VStack builder, so it compiles cleanly (0 VehiclePicker errors on both platforms).
+* These files are git-tracked at HEAD and were NOT modified by this prompt. `git status`
+  shows only the 9 new VehiclePicker.* files added:
+      ?? apps/apple/TeslaSync/shared-surfaces/VehiclePicker.Adapter.swift
+      ?? .../VehiclePicker.AdapterTests.swift   ?? .../VehiclePicker.Model.swift
+      ?? .../VehiclePicker.Previews.swift       ?? .../VehiclePicker.Seams.swift
+      ?? .../VehiclePicker.Tests.swift          ?? .../VehiclePicker.Views.swift
+      ?? .../VehiclePicker.strings              ?? .../VehiclePicker.swift
+* Routing around the breakage is infeasible: AIFeatureCard is a shared atomic referenced by
+  many other AI surfaces, so excluding the broken set cascades. Fixing the AI* files is
+  outside the allowed file set for prompt 0183.
+
+----------------------------------------------------------------------------------------
+SURFACE-SCOPED VERIFICATION DETAIL
+----------------------------------------------------------------------------------------
+Pure core (VehiclePicker.Adapter.swift) — compiled standalone with `swiftc` and executed:
+  PASS no-pins keeps fleet order
+  PASS pinned float to top by position, then unpinned in fleet order
+  PASS equal pin positions tie-break to original fleet order (web comparator returns 0)
+  PASS pin for a vehicle not in the fleet is ignored
+  PASS label fallback chain display_name || vin || "Vehicle {id}" (empty string falsy)
+  PASS pinned option gets the "📌 " prefix; baseLabel stays un-prefixed; value == String(id)
+  PASS options apply pin-aware order + markers
+  PASS parseSelection: positive / trims ws / blank / zero / negative / non-numeric / overflow
+  PASS projection isEmpty / isSingle+soleOption / multi + selectedValue
+  PASS surface slug == "VehiclePicker"
+  => 20/20 PASS, exit 0
+
+State-holder (Adapter+Seams+Model, SwiftUI-free) — compiled standalone with `swiftc`, run:
+  PASS view.opened fires once + idempotent; not re-emitted after stop/start
+  PASS ingest: loading -> .loading ; >=2 -> .content (+projection,+selectedName) ;
+       ==1 -> .single (+soleVehicleName) ; 0 -> .empty ; errorMessage -> .error(msg)
+  PASS pin-aware projection floats pinned (#3 first) and selectedName shows "📌 Car 3"
+  PASS select(value:) routes parsed id ; blank/zero clears (nil) ; select(id:) passthrough
+  PASS stale auto-refreshes ONCE, resets after live, re-triggers on a fresh stale episode
+  PASS offline does not refetch ; refresh() + stop() delegate to source
+  PASS ariaLabel default == "Select vehicle"
+  PASS strings facade: aria, fallbackName(42)=="Vehicle 42", pinnedLabel/pinnedA11y,
+       singleHint, staleA11y, offlineA11y (all resolve to the web English fallback)
+  => 24/24 PASS, exit 0
+
+SwiftUI layer (Views/swift) — proven to compile cleanly into both the iOS and macOS app
+targets (0 VehiclePicker errors); view-instantiation tests live in VehiclePicker.Tests.swift.
+
+----------------------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+----------------------------------------------------------------------------------------
+* Data: useSelectedVehicle (vehicles + vehicleId + setVehicleId) + usePinned('vehicle')
+  bound through the P1/S8 VehiclePickerSource snapshot; commits route via onSelect.
+* Pin-aware ordering + "📌 " prefix + display_name||vin||`Vehicle ${id}` reproduced verbatim.
+* onChange parser Number(value); isFinite && >0 ? n : null reproduced (incl. clear-to-nil).
+* Web hides for vehicles.length<=1; P4 "no hidden surfaces" splits that into native leaf
+  states: empty (0) -> labelled indicator, single (1) -> labelled identity indicator.
+* Added P4 always-render states web lacks: loading skeleton, error+retry tile, and the
+  freshness chip (live/stale/offline) — never a blank box.
+* i18n: sole web key vehiclePicker.aria mirrored; all other strings via the P1/S10 facade
+  (VehiclePicker table); zero hardcoded English literals in Swift.
+* a11y: control aria label + selected-vehicle value; every interactive element labelled;
+  reduce-motion-aware skeleton; Dynamic Type via tokenized fonts.
+* Telemetry: view.opened emitted once with surface slug "VehiclePicker" (P1/S11).
+
+EXIT=65
+STATUS=BLOCKED

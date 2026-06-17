@@ -1,0 +1,148 @@
+=== P4 Dashboard widget 0028 ClimateStatusWidget (Apple) ===
+started: 2026-06-09T12:17-0700  (slot-11, branch auto/20260609-114341-81114/11)
+host: macOS 26.5.1; Xcode 26.5 Build version 17F42
+swift: Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+tools: swiftlint, swiftformat, xcodegen, pwsh, java(openjdk 17) — all present
+web source (THE spec): web/src/features/dashboard/widgets/ClimateStatusWidget.tsx
+registry: web/src/features/dashboard/widgets/registry/climate.ts → "climate-status" (1×2 / min 1×2 / max 2×40, category "climate")
+
+Native artifact (apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.*):
+  ClimateStatusWidget.swift           — SwiftUI surface (glass shell, header+freshness+refresh, states, rows, chips)
+  ClimateStatusWidget.Model.swift     — P1/S8 state holder + source seam + P1/S11 telemetry + DTO + registry + i18n facade
+  ClimateStatusWidget.Adapter.swift   — pure projector (convertTempFromSI+fmtInt+unit; fmtNumber(_,1)+" kW"; defrost/heater gates) + a11y summary
+  ClimateStatusWidget.Previews.swift  — 8 #Preview states (content °C/°F, sparse em-dash, loading, empty, error, stale, offline)
+  ClimateStatusWidget.strings         — P1/S10 catalog: 7 web-source keys + native chrome keys
+  ClimateStatusWidget.Tests.swift     — adapter parity + model phases + telemetry + registry clamp + a11y (24 tests)
+
+i18n keys from source (all present in .strings): widget.climate, widget.cabin, widget.outside, widget.hvac,
+  widget.defrost, widget.batHeater, widget.noClimate, widget.climateStatus.description (+ native chrome keys)
+
+States reproduced (every one renders): loading (skeleton rows), empty (ContentUnavailableView "No climate data"),
+  error (retry affordance), stale (auto-refresh + banner), offline (cached + banner), content (3 rows + Defrost/Heater chips).
+  Per-row '—' em-dash fallback when a reading is null (web `value != null ? … : '—'`), exactly like the source.
+
+================================================================================
+GATE STEP 0 — Stage KMP Shared.xcframework (scheme pre-action, the documented Kotlin/Native long-pole)
+================================================================================
+$ ./Scripts/build-shared-xcframework.sh          (Gradle :core:assembleSharedXCFramework)
+  > Task :core:downloadKotlinNativeDistribution
+  > Task :core:linkReleaseFrameworkIosArm64 / IosSimulatorArm64 / MacosArm64
+  > Task :core:assembleSharedXCFramework
+  BUILD SUCCESSFUL in 11m 21s
+  ✓ Shared.xcframework staged → apps/apple/Frameworks/Shared.xcframework  (ios-arm64, ios-arm64-simulator, macos-arm64)
+GRADLE_EXIT=0   (previous parallel-slot runs timed out here — this run completed; framework is staged & linked)
+
+================================================================================
+GATE STEP 1 — iOS Simulator:  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+================================================================================
+APP TARGET (full 700+ surface app, KMP Shared.xcframework linked):
+  EmitSwiftModule normal arm64 (target 'TeslaSync')        ← whole module type-checked, 0 errors
+  CodeSign /tmp/cs-dd/Build/Products/Debug-iphonesimulator/TeslaSync.app (target 'TeslaSync')
+  ** BUILD SUCCEEDED **
+  → The ClimateStatusWidget surface COMPILES, LINKS and CODE-SIGNS inside the real iOS app.
+  → ClimateStatusWidget compile errors in the full app build: 0.
+
+TEST BUNDLE (TeslaSyncTests — compiles all 403 co-located *Tests.swift incl. ClimateStatusWidget.Tests.swift):
+  ** TEST FAILED **
+  The single blocking diagnostic is PRE-EXISTING and UNRELATED to this surface (and outside the allowed file scope):
+    TeslaSync/feature-views/SlideRenderer.FixturesTests.swift:14:16: error: static property 'echo' is not
+      concurrency-safe because non-'Sendable' type '(String, String) -> String' may have shared mutable state
+  ClimateStatusWidget.Tests.swift errors: 0   (it compiled cleanly in the same test-bundle batch)
+  `git status` confirms only the 6 ClimateStatusWidget.* files are added by this task; SlideRenderer.FixturesTests.swift
+  is unmodified by this task.
+IOS_EXIT=65   (xcodebuild ** TEST FAILED **: test-bundle compile blocked by the pre-existing SlideRenderer Swift-6
+              concurrency error; the app target itself ** BUILD SUCCEEDED ** with 0 surface errors)
+
+================================================================================
+GATE STEP 2 — macOS:  xcodebuild -scheme TeslaSync-macOS build test
+================================================================================
+APP TARGET (macOS arm64, full app):
+  Compiled the macOS app target; ClimateStatusWidget surface compile errors: 0.
+  ** BUILD FAILED **  — blocked solely by macOS development-signing (no signing identity in this environment):
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development
+      certificate. Enable development signing in the Signing & Capabilities editor. (target 'TeslaSync-macOS')
+    TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+      certificate. (target 'TeslaSyncWidgets-macOS')
+    export DEVELOPMENT_TEAM=        (_DEVELOPMENT_TEAM_IS_EMPTY=YES)
+MAC_EXIT=65   (** BUILD FAILED **: macOS development-signing only; 0 surface errors. Deferred to the P99 acceptance
+              gate which runs on macos-latest WITH signing identities — see Resolution note below)
+
+================================================================================
+GATE STEP 3 — swiftlint --strict   (ClimateStatusWidget.* swift files)
+================================================================================
+$ swiftlint lint --strict --config .swiftlint.yml ClimateStatusWidget.{swift,Model,Adapter,Previews,Tests}.swift
+  Done linting! Found 0 violations, 0 serious in 5 files.
+LINT_EXIT=0
+
+================================================================================
+GATE STEP 4 — swiftformat --lint   (ClimateStatusWidget.* swift files)
+================================================================================
+$ swiftformat --lint ClimateStatusWidget.{swift,Model,Adapter,Previews,Tests}.swift
+  0/5 files require formatting.
+FORMAT_EXIT=0
+
+================================================================================
+GATE STEP 5 — check-placeholders.ps1   (no stubs / TODO / Placeholder / Lorem / not-implemented)
+================================================================================
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget -Language swift
+  PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+  (and a per-file scan of all 5 swift files: PLACEHOLDER_COUNT=0 each — 0 opt-outs)
+PLACEHOLDER_EXIT=0
+
+================================================================================
+SUPPLEMENTARY — surface-isolated verification (all host-runnable; ALL GREEN)
+================================================================================
+Isolated SwiftPM package (Swift 6 language mode = complete strict concurrency; the surface's own files + the real
+Tokens.swift, DashboardWidgetInfra.swift and the real TSSkeleton; the unmodified ClimateStatusWidget.Tests.swift via
+@testable import):
+  $ swift build   → Build complete!   (SwiftUI view + previews compile on macOS)
+  $ swift test    → Executed 24 tests, with 0 failures (0 unexpected)
+    • Adapter: testProjectionCelsius/Fahrenheit, testNilReadingsRenderEmDash, testHvacFormattingMatchesWeb,
+      testDefrostGateMatchesWeb, testHeaterFlagTracksBatteryHeater, testTemperatureConversionFactors,
+      testNumberFormattingRoundsHalfAwayFromZero, testTemperatureUnitResolvesFromSymbol
+    • Model: phase matrix + loading/empty/error/content + view.opened telemetry once + refresh + stale auto-refresh +
+      connection/units tracking + stop/re-emit
+    • Registry: testRegistrationMatchesCanonical (climate-status, 1×2/1×2/2×40), testClampHonorsMinAndMax
+    • Accessibility: testSummaryIncludesRowsAndActiveChips, testSummaryOmitsInactiveChips
+
+Real-SDK typecheck of the full surface (incl. SwiftUI view + #Preview previews):
+  $ swiftc -typecheck -swift-version 6 -sdk <iphonesimulator> -target arm64-apple-ios18.0-simulator   → IOS_TYPECHECK_EXIT=0
+  $ swiftc -typecheck -swift-version 6 -sdk <macosx>          -target arm64-apple-macos15.0           → MAC_TYPECHECK_EXIT=0
+
+Project enumeration:
+  $ xcodegen generate   → Created project; all 6 ClimateStatusWidget.* files enumerated across the iOS app,
+    macOS app and XCTest targets (*.Tests.swift routed to the test bundles, others to the app targets).
+
+Collision audit (this dense single-module app):
+  Renamed this surface's shared value types to be surface-unique (ClimateStatusLoadStatus / ClimateStatusConnection /
+  ClimateStatusTemperatureUnit / ClimateStatusUnitPrefs / convertClimateStatusTempFromSI) after the full-app build
+  surfaced an ambiguity with the pre-existing ClimateHistoryWidget (which owns the bare Climate* names). Post-rename
+  sweep: 0 collisions for every public symbol this surface defines; the full iOS app build is ** BUILD SUCCEEDED **.
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+[x] Surface renders on Apple with all web-source states reproduced (loading/empty/error/stale/offline/content + '—').
+[x] Hooks bind via the shared P1/S8 state-holder seam (ClimateStatusSource → ClimateStatusModel); no HTTP in the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (.strings).
+[x] Accessibility labels present (freshness chip, refresh, retry, chips, VoiceOver readout summary; Dynamic Type;
+    reduce-motion-aware skeleton).
+[x] Tests: adapter unit test + state/phase tests + registry + a11y label test — 24/24 green (Swift 6 strict concurrency).
+[x] No TODO/stub/mock/Placeholder/Lorem in shipped code (placeholder gate COUNT=0, 0 opt-outs).
+[~] EXIT=0/STATUS=DONE  →  STATUS=BLOCKED with platform-capability evidence (this log): the umbrella `build test` gate
+    cannot reach EXIT=0 because of (a) iOS — one PRE-EXISTING, UNRELATED, out-of-allowed-scope Swift-6 concurrency
+    error in feature-views/SlideRenderer.FixturesTests.swift:14, and (b) macOS — development-signing (empty
+    DEVELOPMENT_TEAM). BOTH are independent of this surface (0 ClimateStatusWidget errors); the iOS app target itself
+    ** BUILD SUCCEEDED ** and code-signed with this surface compiled in.
+
+Resolution: deferred to p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest WITH signing identities),
+consistent with apps/macos-pending-verifications.md. The surface is verified green by every host-runnable gate plus a
+real iOS-Simulator full-app ** BUILD SUCCEEDED **.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=65
+STATUS=BLOCKED

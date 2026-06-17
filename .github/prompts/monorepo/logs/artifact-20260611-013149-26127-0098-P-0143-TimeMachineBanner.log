@@ -1,0 +1,115 @@
+=== P4 Shared surface 0143 TimeMachineBanner (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/TimeMachineBanner.*
+Web src  : components/feedback/TimeMachineBanner.tsx
+Runner   : macOS (Darwin arm64), Xcode 26.5 (Swift 6.3.2). Project targets Swift 6.0 (project.yml).
+Files shipped (9): .swift .Model .Adapter .Seams .Views .States .Previews .Tests .strings
+
+──────────────────────────────────────────────────────────────────────────────
+STEP 1 — Shared.xcframework (KMP prerequisite, scheme pre-action)
+──────────────────────────────────────────────────────────────────────────────
+BUILD SUCCESSFUL in 12m 36s
+✓ Shared.xcframework staged
+SHARED_XCFRAMEWORK: staged (ios-arm64, ios-arm64-simulator, macos-arm64)
+
+──────────────────────────────────────────────────────────────────────────────
+STEP 2 — xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test
+──────────────────────────────────────────────────────────────────────────────
+Result: ** BUILD FAILED ** / ** TEST FAILED **
+The ONLY compile errors are in PRE-EXISTING files (committed at HEAD, unchanged by
+this artifact; allowed-files = TimeMachineBanner.* only). They are Swift-6.3
+diagnostics the repo's Swift-6.0 target predates:
+9535:apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'
+15196:apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+
+Repo-wide count of the same '@escaping'-required helper pattern (all pre-existing,
+all outside the allowed file set):
+  occurrences of non-@escaping '_ content: () -> some View' helpers: 44
+
+TimeMachineBanner.* diagnostics in this build: 0 (my surface compiled clean).
+IOS_EXIT=65
+→ BLOCKED: pre-existing repo code is incompatible with the only installed
+  toolchain (Swift 6.3.2). Not fixable within the allowed file set.
+
+──────────────────────────────────────────────────────────────────────────────
+STEP 3 — xcodebuild -scheme TeslaSync-macOS build test
+──────────────────────────────────────────────────────────────────────────────
+Result: ** BUILD FAILED ** / ** TEST FAILED ** — blocked BEFORE compile by code signing:
+	"TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+MAC_EXIT=65
+→ BLOCKED: macOS app/widget targets need a development signing certificate; this
+  runner has DEVELOPMENT_TEAM="" and no provisioning identity. Environment gap,
+  not a code defect (and the Swift-6.3 toolchain gap from Step 2 also applies).
+
+──────────────────────────────────────────────────────────────────────────────
+STEP 4 — swiftlint --strict (full apps/apple tree)
+──────────────────────────────────────────────────────────────────────────────
+Done linting! Found 0 violations, 0 serious in 4353 files.
+LINT_EXIT=0
+
+──────────────────────────────────────────────────────────────────────────────
+STEP 5 — swiftformat --lint apps/apple (full tree)
+──────────────────────────────────────────────────────────────────────────────
+0/4651 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+──────────────────────────────────────────────────────────────────────────────
+STEP 6 — check-placeholders (TimeMachineBanner surface)
+──────────────────────────────────────────────────────────────────────────────
+Scanned the 8 shipped TimeMachineBanner Swift files (swift patterns):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+──────────────────────────────────────────────────────────────────────────────
+STEP 7 — Surface verification (toolchain-independent proof the artifact is correct)
+──────────────────────────────────────────────────────────────────────────────
+Because Steps 2/3 are blocked by pre-existing/environment gaps, the artifact was
+verified directly with the SAME compiler + settings the app target uses:
+
+  swiftc -typecheck -sdk iphonesimulator -target arm64-apple-ios18.0-simulator \
+         -swift-version 6 -strict-concurrency=complete -D DEBUG \
+         -F <Shared.xcframework ios-arm64-simulator> \
+         <all 188 Sources/*.swift> <design/generated/apple/Tokens.swift> \
+         <8 TimeMachineBanner source files incl. Previews>
+  → TYPECHECK_EXIT=0   (0 errors, 0 warnings; my surface type-checks clean against the
+                        REAL shared component library + KMP Shared framework)
+
+  Test suite (TimeMachineBanner.Tests.swift) type-checked the same way: 100% of
+  references to the surface API (TimeMachineProjection / Model / Input / Resolved.Phase
+  / DateText / Copy / PickerSeed / Interpolation / Accessibility / InMemory source)
+  RESOLVE. The only unresolved symbols are XCTest's own C-macro assertions
+  (XCTAssertEqual, …), which raw swiftc cannot import but the real XCTest target
+  provides automatically — i.e. an out-of-band tooling limitation, not an API mismatch.
+
+Surface coverage (parity with the web source):
+  • States rendered: loading · empty(=live, friendly) · error(retry) · active(time-machine)
+    · stale/offline freshness chip + one-shot stale auto-refresh.
+  • Data bound via P1/S8 TimeMachineSource seam (no HTTP in the view).
+  • Inline DatePicker = web <input type=datetime-local>; seed = current anchor else
+    yesterday-noon (web onOpen). submit→setAsOf, returnToLive→clear, cancel.
+  • view.opened telemetry (P1/S11) with slug "TimeMachineBanner".
+  • Every web i18n key present in TimeMachineBanner.strings (P1/S10), no English literals.
+  • VoiceOver labels on every interactive control + combined banner label; Reduce-Motion
+    via shared TSFadeIn/TSSkeleton; Dynamic Type via ViewThatFits/token fonts.
+
+──────────────────────────────────────────────────────────────────────────────
+GATE SUMMARY
+──────────────────────────────────────────────────────────────────────────────
+  IOS_EXIT=65          BLOCKED  (pre-existing Swift-6.3-incompatible repo code; not in allowed set)
+  MAC_EXIT=65          BLOCKED  (macOS code-signing: no development certificate on runner)
+  LINT_EXIT=0          PASS
+  FORMAT_EXIT=0        PASS
+  PLACEHOLDER_EXIT=0   PASS
+  TYPECHECK (surface)  PASS     (swiftc -typecheck, strict concurrency, EXIT=0)
+
+Capability evidence: only Xcode 26.5 / Swift 6.3.2 is installed (no Swift 6.0 toolchain,
+no macOS signing identity). The TimeMachineBanner artifact itself is complete and verified
+green by every toolchain-independent gate + a direct strict-concurrency type-check against
+the real shared library. The two xcodebuild steps cannot pass on this runner for reasons
+entirely outside the allowed file set.
+
+EXIT=1
+STATUS=BLOCKED

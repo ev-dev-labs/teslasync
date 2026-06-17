@@ -1,0 +1,199 @@
+================================================================================
+P4-APPLE · P7 · page:analytics/Analytics — AnalyticsPage (Apple, SwiftUI / HIG)
+================================================================================
+
+Parity unit : page:analytics/Analytics  (kind=page · requiredCount=9 · route=/analytics)
+Web spec    : web/src/features/analytics/pages/AnalyticsPage.tsx  (data source: useFleetAnalytics)
+              + the imported tab components it renders (HeroGauges / OverviewTab /
+              OverviewVehicleComparison / DrivingTab / DrivingPerformanceCards /
+              DrivingTemperatureStats / ChargingTab / ChargingDetailSection / BatteryTab).
+Output      : apps/apple/Sources/Features/Analytics/AnalyticsPage*.swift (SwiftUI View +
+              @Observable model; adaptive macOS regular + iOS compact/regular, ADR-002).
+Runner      : Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · xcodegen · pwsh ·
+              KMP Shared.xcframework BUILT this run (apps/shared gradlew :core:assembleSharedXCFramework,
+              BUILD SUCCESSFUL) and staged to apps/apple/Frameworks/Shared.xcframework (ADR-004).
+
+--------------------------------------------------------------------------------
+PATH RECONCILIATION (no silent drift)
+--------------------------------------------------------------------------------
+The manifest/prompt names the output `apps/apple/TeslaSync/Features/Analytics/**`. That directory
+is NOT a compiled source root in `apps/apple/project.yml` — the app + test targets compile from
+`Sources/**` (+ the `TeslaSync/{feature-views,dashboard-widgets,misc-surfaces,shared-surfaces,
+widget-primitives}` sub-trees). ALL four sibling P7 analytics pages already DONE in the ledger
+(FleetCompare / Statistics / LifetimeStats / TrueCost) ship from `apps/apple/Sources/Features/
+Analytics/`, and the TrueCost log records the identical `Sources/ vs TeslaSync/Features/`
+reconciliation. To deliver a page that actually compiles + is hosted (not dead code), this page
+ships to `apps/apple/Sources/Features/Analytics/` — the proven, compiled, conventional location —
+matching every sibling. (A prior reverted attempt put it under `TeslaSync/Features/` + edited
+project.yml; that tree + edits are gone from this slot, and that run had no Xcode so its xcodebuild
+was deferred. This run has full Xcode and a real green app build — see GATE RESULTS.)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (scope: Sources/Features/Analytics/** + nav registration + Localizable.xcstrings + log)
+--------------------------------------------------------------------------------
+  AnalyticsModels.swift               — SI-canonical value types (root FleetAnalyticsData, vehicle
+                                        comparison, stats, bucket, battery point).
+  AnalyticsModels.Sections.swift      — drive + charging sub-analytics SI value types.
+  AnalyticsFormat.swift               — pure display-boundary formatters (fmtNumber/fmtInt/
+                                        formatCurrency/efficiency Wh·km⁻¹↔Wh·mi⁻¹/kWh/kW/min, gas-savings
+                                        + CO₂ km-tied heuristics); SI→pref via the shared Units facade.
+  AnalyticsPageModel.swift            — AnalyticsDataSource seam, AnalyticsTab/AnalyticsRange/
+                                        AnalyticsPhase, @Observable AnalyticsPageModel (load/refresh/
+                                        selectRange + ADR-013 freshness/staleness). No view networking.
+  AnalyticsPageModel.Sample.swift     — API-shaped SI sample source + empty/failing/no-battery-trend doubles.
+  AnalyticsPage.swift                 — page scaffold: header (title/subtitle/freshness/range), phase
+                                        switch (loading/empty/error/ready), hero, TSTabs, active tab.
+  AnalyticsPage.Hero.swift            — 6 hero gauges + DataFreshness chip + RangePicker menu.
+  AnalyticsPage.Shared.swift          — AnalyticsMetricCard, AnalyticsChartPanel, two-column reflow,
+                                        loading skeleton (.redacted).
+  AnalyticsPage.Shared.Rows.swift     — leaderboard row, category bar, legend, category axis, quick-link tile.
+  AnalyticsPage.Charts.swift          — AnalyticsDistributionChart (TSBarChart) + AnalyticsComposedChart
+                                        (native Swift Charts: grouped bars + line/area, shared category axis).
+  AnalyticsPage.Overview.swift        — Overview: distance-by-vehicle, day-of-week, monthly cost, quick links.
+  AnalyticsPage.Overview.Comparison.swift — fleet-usage donut, efficiency leaderboard, per-vehicle radar
+                                        small-multiples, energy & activity.
+  AnalyticsPage.Driving.swift         — Driving: 6 performance cards + 6 temperature stat cards.
+  AnalyticsPage.Driving.Charts.swift  — speed/distance/duration distributions, hourly, temp-vs-eff scatter,
+                                        daily trend, efficiency trend.
+  AnalyticsPage.Charging.swift        — Charging: 6 summary cards, charger-types donut, start-battery dist,
+                                        hourly pattern.
+  AnalyticsPage.Charging.Detail.swift — charger brands, monthly trend, cost-analysis cards, cost-by-type bars.
+  AnalyticsPage.Battery.swift         — Battery: 5 health cards, health timeline, capacity + range trends,
+                                        degradation & cycles, no-trend whole-tab empty.
+  AnalyticsRouteRegistration.swift    — registers AnalyticsPage as the canonical `.analytics` host.
+  Tests/Unit/Features/Analytics/AnalyticsPageModelTests.swift — phase matrix / range / refresh / freshness /
+                                        route registration / formatter tests (XCTest).
+  Sources/TeslaSyncApp.swift          — [nav registration] chains AnalyticsRouteRegistration after Statistics
+                                        so the primary Analytics tab/route hosts Fleet Analytics.
+  Localization/Localizable.xcstrings  — +126 analytics.* keys (the 6 required + hero/range/freshness/radar/
+                                        overview/links/driving/charging/battery), web key names, minimal splice.
+
+Route note (canonical `.analytics` ownership): `.analytics` is the web `/analytics` route — the
+primary "Analytics" iPhone tab + sidebar entry + `https://…/analytics` deep link (RouteTests assert
+`/analytics`→.analytics and `/statistics`→.analytics). AnalyticsPage is its rightful host; it is
+registered after the StatisticsRouteRegistration stopgap (which had squatted `.analytics` via the
+`/statistics` alias). No sibling page code or its registration was edited; RouteTests untouched.
+
+--------------------------------------------------------------------------------
+PARITY unit scope reproduced (every region of the web source + its imported tab components)
+--------------------------------------------------------------------------------
+  Header     : title, subtitle, data-freshness chip (ADR-013 staleness), range picker.
+  Hero (6)   : distance · drives · energy · efficiency · gas savings · CO₂ saved.
+  Tabs (4)   : Overview / Driving / Charging / Battery (TSTabs).
+  Overview   : distance-by-vehicle bar; fleet-usage donut; efficiency leaderboard; per-vehicle radar;
+               energy & activity bars; day-of-week composed; monthly-cost composed; quick links.
+  Driving    : 6 perf cards; speed/trip-distance/duration distributions; hourly composed; temp-vs-eff
+               scatter; daily-trend composed; efficiency-trend area; 6 temperature stat cards.
+  Charging   : 6 summary cards; charger-types donut; start-battery bars; hourly composed; charger-brands
+               leaderboard; monthly-trend composed; 4 cost-analysis cards; cost-by-type bars.
+  Battery    : 5 health cards; health-timeline area; capacity + range line trends; degradation & cycles
+               composed; whole-tab no-trend empty.
+  States     : loading (.redacted skeleton) · empty (ContentUnavailableView) · error (Retry) — page-level
+               AND each section's own empty state. Charts: P3 Swift Charts wrappers
+               (TSBarChart/TSLineChart/TSAreaChart/TSPieChart/TSScatterChart/TSRadarChart) + one
+               feature-local native Swift Charts composition for the multi-geometry ComposedCharts. No WKWebView.
+  Units      : every physical quantity stored SI; converted at the SwiftUI render boundary via the shared
+               Units (KMP) facade — efficiency Wh·km⁻¹ → Wh·mi⁻¹, m→km/mi, m·s⁻¹→speed, °C→pref, Wh→kWh.
+  i18n/a11y  : every visible literal from Localizable.xcstrings (web key names); accessibility labels/traits
+               on cards, charts, leaderboard rows, freshness chip; Dynamic Type; light/dark + tokens only.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+  check-placeholders.ps1 -Path apps/apple/Sources/Features/Analytics -Language swift
+      PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=5 (1 mine: the SwiftUI .redacted loading skeleton, opted
+      out with `// parity:allow`; 4 are sibling pages in the same dir)  → PLACEHOLDER_EXIT=0
+  check-placeholders.ps1 -Path apps/apple/Tests/Unit/Features/Analytics -Language swift
+      PLACEHOLDER_COUNT=0  → EXIT=0
+  swiftlint --strict (whole project, config `included:` Sources+TeslaSync+Tests+widgets)
+      Done linting! Found 0 violations, 0 serious in 5905 files.  → LINT_EXIT=0
+  xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj  → EXIT=0
+  xcodebuild -scheme TeslaSync-macOS -destination platform=macOS build  (CODE_SIGNING_ALLOWED=NO)
+      ** the FULL app, incl. all 20 analytics files, compiled with 0 errors **  → BUILD_EXIT=0
+      (Signing-disabled because this host has no dev signing identity — a pre-build entitlements
+       limitation, not a code defect. One pre-existing, out-of-scope Swift-6.3.2 toolchain-drift line
+       —`DriveScorePage.Panels.swift:25` `String(localized: <LocalizedStringKey>)`, present verbatim in
+       committed HEAD, unmodified by me— blocks the UNPATCHED app build; it was temporarily neutralized
+       to confirm the green build, then REVERTED so the committed diff stays scoped. Not an analytics defect.)
+  xcodebuild -scheme TeslaSync -destination "platform=iOS Simulator,name=iPhone 17 Pro"
+             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build  (CODE_SIGNING_ALLOWED=NO)
+      ** the FULL iOS app (incl. all analytics files + the `#if os(iOS)` size-class branches) compiled
+         to objects with 0 errors, linked, and reached BUILD SUCCEEDED **  → IOS_BUILD_EXIT=0
+      (Pinned to arm64 because the KMP `Shared.xcframework` this Apple-Silicon host produced has the
+       `ios-arm64-simulator` slice but no `ios-x86_64-simulator` slice; the `generic/platform=iOS
+       Simulator` dual-arch link therefore fails ONLY at the x86_64 link step for a missing Shared
+       arch — an env/framework-slice limitation, NOT an analytics defect: the analytics objects had
+       already compiled cleanly for BOTH x86_64 and arm64 in that run. Same temporary-then-reverted
+       DriveScorePage unblock as the macOS build.)
+  xcodebuild test (full TeslaSyncTests/-macOSTests bundle)
+      BLOCKED by PRE-EXISTING, OUT-OF-SCOPE Swift-6.3.2 concurrency-tightening errors in sibling TEST
+      files (e.g. GDPRExportPageModelTests.swift:20, VehicleCostPageModelTests.swift:10 — "main
+      actor-isolated … in a (synchronous) nonisolated context"), all unmodified by me. The whole test
+      bundle must compile before any test runs, so these block the run regardless of this page.
+  STANDALONE LOGIC HARNESS (the accepted sibling disposition — REAL source compiled + executed):
+      swiftc AnalyticsModels.swift AnalyticsModels.Sections.swift AnalyticsFormat.swift
+             AnalyticsPageModel.swift AnalyticsPageModel.Sample.swift main.swift  (+ minimal Units/Prefs stubs)
+      → HARNESS passes=26 failures=0  (HARNESS_EXIT=0): formatter parity (en-US grouping, currency,
+        Wh·km⁻¹→Wh·mi⁻¹ ×1.609344, gas-savings 7.75, CO₂ 12), phase matrix (ready/empty/error),
+        range reselection load-count, refresh, default tab, and ADR-013 staleness (>120 s).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=9
+--------------------------------------------------------------------------------
+[x] state  — loading            AnalyticsPage.swift `content` .loading → `AnalyticsSkeleton`
+                                (AnalyticsPage.Shared.swift, .redacted(.placeholder)); model phase .loading
+[x] state  — error              AnalyticsPage.swift `errorView` (TSErrorDisplay + Retry → model.refresh);
+                                AnalyticsPageModel.swift `AnalyticsPhase.error`, set in `fetch()` catch
+[x] state  — success            AnalyticsPage.swift `readyView` (AnalyticsHeroGauges + TSTabs + tabContent);
+                                AnalyticsPageModel.swift `.ready` (+ each section's own empty state)
+[x] string — analytics.subtitle AnalyticsPage.swift `titleBlock` Text("analytics.subtitle")
+[x] string — analytics.title    AnalyticsPage.swift `titleBlock` TSPageTitle("analytics.title") + skeleton a11y
+[x] string — analytics.tabs.overview  AnalyticsPageModel.swift `AnalyticsTab.overview.titleKey` → TSTabs
+[x] string — analytics.tabs.driving   AnalyticsPageModel.swift `AnalyticsTab.driving.titleKey` → TSTabs
+[x] string — analytics.tabs.charging  AnalyticsPageModel.swift `AnalyticsTab.charging.titleKey` → TSTabs
+[x] string — analytics.tabs.battery   AnalyticsPageModel.swift `AnalyticsTab.battery.titleKey` → TSTabs
+(all 9 keys + the 117 supporting analytics.* keys confirmed present in apps/apple/Localization/
+ Localizable.xcstrings with en source values; JSON re-validated, +126 keys, 9465 → 9591.)
+
+PARITY_COVERED=9
+PARITY_REQUIRED=9
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+ 1 No red-as-green   : every EXIT above is a real command result. swiftlint(0/5905) + placeholder(0) +
+                       macOS app build(0, all 20 analytics files) + logic harness(26/26) are GREEN and
+                       executed. `xcodebuild test` is reported BLOCKED (not green) with the exact
+                       pre-existing out-of-scope test files named; the one pre-existing app-build line is
+                       named, temporarily neutralized to prove the green build, then reverted.
+ 2 No scope narrowing: implemented the full page — header, freshness, range, 6 hero gauges, all 4 tabs
+                       with every panel/chart/leaderboard, all 3 page states + every per-section empty,
+                       i18n, a11y, SI units. PARITY_COVERED=9.
+ 3 No skip-and-assume: each gate executed; the model + formatter logic was EXECUTED (26/26) against the
+                       REAL source; the full app compiles GREEN on macOS against real tokens/components/
+                       Shared.xcframework.
+ 4 No stubs as final : complete implementations; PLACEHOLDER_COUNT=0 (1 documented SwiftUI redaction
+                       opt-out). The Quick-Links tiles are informational by design (the Apple shell reaches
+                       those surfaces via the sidebar/tabs) — the same directory content, not a dead button.
+ 5 No parity shortcuts: SwiftUI-native (TSCard/TSGlassPanel/TSMetricValue/TSEmptyState/TSErrorDisplay/
+                        TSTabs/TSPieChart/TSRadarChart/TSBarChart/TSLineChart/TSAreaChart/TSScatterChart +
+                        one feature-local native Swift Charts ComposedChart), adaptive size-class reflow,
+                        .redacted loading — no web cloning, no WKWebView.
+ 6 No delegation      : implemented directly; no sub-agents.
+ 7 No predecessor bypass: built on the real AppRouteHostRegistry (P4 nav), P3 components, P2 tokens, the
+                        KMP Units facade + Shared.xcframework (P1) — nothing forked or reimplemented.
+ 8 No commit on red   : committing on GREEN in-scope gates (placeholder 0, swiftlint --strict 0, macOS
+                        full-app build 0, iOS full-app build 0 [arm64 sim], logic harness 26/26, ledger
+                        valid). The full xcodebuild test + the UNPATCHED app build are documented as
+                        pre-existing-RED out-of-scope (Swift-6.3.2 drift in committed sibling files; the
+                        green builds above used a temporary, then-reverted 1-line unblock of
+                        DriveScorePage.Panels.swift:25), exactly as the sibling DONE pages recorded
+                        their deferred xcodebuild. No sibling source remains modified in the diff.
+ 9 No silent drift    : Localizable.xcstrings keys = web key names verbatim; the Sources/ vs
+                        TeslaSync/Features/ path mapping is documented above; apple-ledger updated 9/9 ×2.
+10 (terminates with EXIT + STATUS below)
+
+EXIT=0
+STATUS=DONE

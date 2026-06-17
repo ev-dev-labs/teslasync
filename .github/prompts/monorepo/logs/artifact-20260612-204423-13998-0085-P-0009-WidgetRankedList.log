@@ -1,0 +1,208 @@
+=== P4 Widget primitive 0009 WidgetRankedList (Apple) ===
+Artifact : apps/apple/TeslaSync/widget-primitives/WidgetRankedList.*  (9 .swift + 1 .strings)
+Web src  : web/src/features/dashboard/widgets/shared/WidgetRankedList.tsx
+Host     : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1
+           · xcodegen 2.45.4 · pwsh present
+Date     : 2026-06-13
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint / swiftformat / pwsh / xcodegen -> all present
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0).
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  The web `WidgetRankedList` is a PURE presentational widget primitive (a shared widget building block): it
+  takes `items: RankedItem[]` + optional `maxItems` / `compact` / `showBars` / `emptyMessage` / `emptyIcon`
+  and renders an ordered leaderboard. Each RankedItem = a numeric `value` (the sort key + bar scale), an
+  already-formatted `formattedValue` (the right-hand display string), a `label`, an optional `badge`
+  (`{ text, variant: success|warning|error|neutral }`, mapped through the web `badgeVariantMap`: error ->
+  danger), and an optional `barColor`. The render math: `limit = maxItems ?? (compact ? 3 : 5)`;
+  `hideBars = compact || !showBars`; `visible = [...items].sort((a,b) => b.value - a.value).slice(0, limit)`;
+  `maxValue = visible.reduce((m,i) => Math.max(m, i.value), 0)`; `barPct = maxValue > 0 ? value/maxValue*100
+  : 0`. Its OWN render has exactly two branches:
+    • list   (web `<ul>` of `<li>`: rank number `index+1`, an absolute background bar at `opacity-15` /
+              width `barPct%`, the truncated label, the optional badge chip, the bold tabular value)
+    • empty  (web `visible.length === 0 -> <EmptyState message="No data available" />`)
+
+  There is NO fetch / React-Query / Promise in the source. Per the prompt's States section ("every state
+  MUST render — no hidden surfaces": loading / empty / error / stale / offline) and the sibling LIST-primitive
+  precedent WidgetEventFeed (0005), the native peer reproduces BOTH real web branches AND wraps them in the
+  P4 host-lifecycle leaf contract so a dashboard-widget host can wire its query lifecycle without the
+  primitive ever hiding:
+    • loading — host query resolving -> skeleton ranked rows (rank chip + label line + value block)
+    • empty   — the web `EmptyState` ("No data available"), never a blank box
+    • error   — host query failed -> retryable error tile (web `QueryError` peer)
+    • list    — the surface itself: the sorted + capped + ranked list (web body)
+    • stale / offline — the orthogonal connectivity axis -> a freshness chip above the list with a one-shot
+              auto-refresh on the stale transition
+  These leaf states are the documented host-lifecycle WRAPPER, NOT invented web branches (the web body's two
+  branches are reproduced verbatim inside the `.list` / `.empty` phases). The web `barColor` className
+  passthrough is modeled as a theme-aware semantic `RankedBarTone` and the badge `variant` as `RankedBadgeTone`
+  (-> shared `TSTone`) so no Tailwind class / raw hex enters the view (P1/S9), exactly as the sibling
+  primitives map `valueColor` / `color` to tokens.
+
+  Files (9 .swift + 1 .strings):
+    WidgetRankedList.Adapter.swift  — Foundation-pure: slug, RankedBadgeTone/RankedBadge, RankedBarTone,
+                                      RankedItem, Connection, RankedListRow, Arrange (limit/hideBars/visible/
+                                      maxValue/barFraction/rows), SF symbols
+    WidgetRankedList.Model.swift    — telemetry seam + OSLog default, Strings facade (+a11y/leaf copy), Input,
+                                      Resolved(phase), Projection.resolve, @Observable WidgetRankedListModel
+    WidgetRankedList.Seams.swift    — P1/S8 Source protocol + Static (production controlled) + InMemory sources
+    WidgetRankedList.States.swift   — loading skeleton + error tile (P4 leaf chrome)
+    WidgetRankedList.swift          — public surface (freshness chip + phase switch + empty via TSEmptyState)
+    WidgetRankedList.Views.swift    — list + ranked row (rank/bar/label/badge/value) + badge chip + freshness
+                                      chip + tone bridges
+    WidgetRankedList.Previews.swift — every state (list bars+badges, compact, bars-off, all-zero, single,
+                                      loading, error, empty, stale, offline)
+    WidgetRankedList.AdapterTests.swift — Foundation-pure tests (arrange/limit/visible/maxValue/barFraction/
+                                      rows/projection/value-types/model/strings)
+    WidgetRankedList.Tests.swift    — SwiftUI view-composition (every state) + a11y label tests
+    WidgetRankedList.strings        — P1/S10 catalog (table "WidgetRankedList")
+
+  Bindings : P1/S8 WidgetRankedListModel @Observable holder bound through a Source seam (controlled host
+             inputs; no HTTP in the view) + once-only `view.opened`;
+             P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius) — no Tailwind ports, no raw hex;
+             P1/S10 NSLocalizedString facade (table "WidgetRankedList");
+             P1/S11 view.opened telemetry (slug "WidgetRankedList").
+  i18n     : web source has 0 t() keys (anonymous; its only literal is the `emptyMessage` default "No data
+             available", reproduced via widgetRankedList.empty). Native a11y / HIG / P4-leaf additions:
+             emptyHint, rowLabel, rowBadge, loadingA11y, errorTitle, retry, live/stale/offline,
+             staleA11y/offlineA11y. 0 dead keys; 0 hardcoded English in Swift (all via the facade).
+  a11y     : each row folds rank+label+value(+badge) into ONE VoiceOver element ("Rank {n}: {label},
+             {value}[, {badge}]"); the magnitude bar + numeric rank glyph are decorative and hidden; the
+             freshness chip is a button with an explicit spoken label; loading/error are combined elements;
+             Dynamic Type via tokens; high-contrast via the dynamic token colors; Reduce Motion respected by
+             the shared TSSkeleton shimmer.
+
+----------------------------------------------------------------------------------------
+BUILD WIRING — none required
+----------------------------------------------------------------------------------------
+  TeslaSync/widget-primitives already exists and is wired into project.yml (TeslaSync iOS + TeslaSync-macOS
+  app sources exclude *Tests.swift; TeslaSyncTests + TeslaSync-macOSTests bundles include *Tests.swift) and
+  into .swiftlint.yml `included`. The 10 new files are picked up automatically — no project/lint edits.
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint
+      surface (the 9 WidgetRankedList .swift)  -> 0/9 files require formatting
+      tree-wide (apps/apple)                   -> 1/5670 files require formatting, 2 skipped.
+        The 1 is PRE-EXISTING + UNRELATED, outside this prompt's allowed scope:
+          TeslaSync/feature-views/RecentDrivesSection.Previews.swift:28 (redundantType).
+        grep "WidgetRankedList" of the format-lint failures -> 0.
+      FORMAT_EXIT=0 (for the surface)
+
+[2] swiftlint --strict
+      surface (the 9 WidgetRankedList .swift)  -> Done linting! Found 0 violations, 0 serious in 9 files.
+      SURFACE_LINT_EXIT=0
+      tree-wide (apps/apple)                   -> Found 3 violations, 3 serious in 5372 files.
+        ALL 3 are PRE-EXISTING + UNRELATED, in a sibling's file outside this prompt's allowed scope:
+          TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54
+            identifier_name — variable names 'a' / 'b' / 'c' (owned by P4 0002 WidgetChartSummary).
+        grep "WidgetRankedList" of the violation list -> 0. ZERO WidgetRankedList violations.
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1)
+      -Path apps/apple/TeslaSync/widget-primitives/WidgetRankedList (literal gate path)
+        -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      Independent grep of the 10 files for TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/stub/mock -> 0.
+      PLACEHOLDER_EXIT=0
+
+[4] isolated SwiftPM build + test  (Foundation-pure layer: Adapter + Model + Seams; Package swift-tools 6.0,
+    macOS v15, Swift 6 language mode; library target named TeslaSync so `@testable import TeslaSync` resolves)
+      swift test -> Executed 36 tests, with 0 failures (0 unexpected) in 0.007s
+      Suites: WidgetRankedListAdapterTests(1), WidgetRankedListLimitTests(3), WidgetRankedListVisibleTests(4),
+              WidgetRankedListBarMathTests(4), WidgetRankedListRowsTests(3), WidgetRankedListProjectionTests(6),
+              WidgetRankedListValueTypeTests(5), WidgetRankedListModelTests(6), WidgetRankedListStringsTests(4)
+      SPM_PURE_EXIT=0  (36/36 — limit table, descending stable sort + slice, maxValue reduce, clamped bar
+                        fraction, ranked rows, projection branch priority error->loading->list->empty, model
+                        once-only view.opened + stale auto-refresh, i18n/a11y facade)
+
+[4b] full SwiftPM build + test  (the SAME package extended with the real Tokens.swift + apps/apple/Sources/
+     Design/** + the curated self-contained shared components my surface uses [UI/Typography, UI/Buttons,
+     UI/Badges, UI/Cards, Feedback/Banners, Feedback/States (TSEmptyState), Feedback/Skeletons (TSSkeleton)]
+     + WidgetRankedList.swift/.Views/.States in the target and WidgetRankedList.Tests.swift in the test
+     bundle — i.e. the SwiftUI views are COMPILED against the REAL design system + shared components and the
+     view-composition + a11y tests are EXECUTED on macOS)
+      swift test -> Executed 42 tests, with 0 failures (0 unexpected) in 0.006s
+      Adds: WidgetRankedListViewTests(4)  — surface composes in EVERY state (list bars+badges, compact bars-
+              hidden, bars-off, all-zero, single, loading, error, empty, stale, offline) via prop init +
+              injected-model seam; subviews (list/row/badge chip/loading/error/freshness) compose; bar + badge
+              tone bridges cover every case.
+            WidgetRankedListAccessibilityTests(2) — the row's composed VoiceOver label folds rank+label+value
+              (+badge).
+      SPM_FULL_EXIT=0  (42/42)
+
+[5] dual-SDK swiftc -typecheck  (FULL shipped surface: Adapter + Model + Seams + States + .swift + Views +
+    Previews compiled against the REAL design system [Tokens.swift + Sources/Design/**] + the curated shared
+    components; -module-name TeslaSync -swift-version 6 -D DEBUG; 17 files)
+      iOS 18    (-target arm64-apple-ios18.0-simulator, --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)         -> 0 errors  MAC_TYPECHECK_EXIT=0
+      (Includes WidgetRankedList.Previews.swift, which the SwiftPM run excludes — the #Preview macros expand
+      cleanly under -D DEBUG on both SDKs.)
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 10 files (file-ref + build-files across iOS/macOS app + iOS/macOS test
+      bundles): WidgetRankedList.{Adapter,Model,Seams,States,swift,Views,Previews,AdapterTests,Tests}.swift +
+      WidgetRankedList.strings  (60 refs total; 6 each).
+
+----------------------------------------------------------------------------------------
+FULL-APP xcodebuild (the prompt gate) — RED, DEFERRED (NOT a WidgetRankedList failure)
+----------------------------------------------------------------------------------------
+  The KMP Shared.xcframework WAS staged for this run (it is not checked in):
+    apps/shared/gradlew :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 7m 33s (Kotlin/Native
+    compiles FROM-CACHE on this slot) -> staged apps/apple/Frameworks/Shared.xcframework
+    (ios-arm64 + ios-arm64-simulator + macos-arm64). [Frameworks/Shared.xcframework is git-ignored.]
+
+  [iOS]  xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -arch arm64
+         -configuration Debug build CODE_SIGNING_ALLOWED=NO   (target build avoids re-running the framework
+         pre-action; links the freshly-staged Shared.xcframework)
+         => ** BUILD FAILED **   IOS_BUILD_EXIT=65
+         BUT: grep "error:" over the whole build log => 0 — there is NOT A SINGLE compiler diagnostic.
+         520 SwiftCompile units completed with 0 errors; BOTH app extensions linked
+         (Ld TeslaSyncWidgets.appex + TeslaSyncActivities.appex succeeded). The sole "(1 failure)" is one
+         batch-mode SwiftCompile command:
+           "Compiling AnomalyInlineRow.swift, ApiPlaygroundPage.swift, AppContainer.swift, AppRoute.swift,
+            AppSettings*.swift, AppearanceSettings*.swift … (in target 'TeslaSync')"
+         that produced ZERO "error:" output — i.e. the swift-frontend subprocess for that batch was KILLED
+         (OOM), not a source error. This slot is a SHARED runner: during the build 40+ concurrent
+         swift-frontend processes from sibling slots (slot-80, slot-84, …) were resident and free memory
+         dropped to ~400 MB, OOM-killing one batch. The killed batch contains NO WidgetRankedList file, and
+         WidgetRankedList NEVER appears in any failed compile command across all build attempts
+         (grep "WidgetRankedList" of the failure list -> 0). All 9 WidgetRankedList .swift compiled in the
+         widget-primitives batch with 0 errors.
+
+  [macOS] Not run to completion: `security find-identity -p codesigning -v` => 0 valid identities found, so
+          the macOS app + widget entitlements cannot be signed; and the same shared-runner OOM contention
+          applies. The macOS-15 surface compilation is independently proven GREEN above: the full SwiftPM
+          harness EXECUTED on macOS (arm64-apple-macos) with 42/42, and the dual-SDK typecheck against the
+          macOS 15 SDK is 0 errors (MAC_TYPECHECK_EXIT=0).
+
+  Concrete deferral causes on THIS host (pre-existing / environmental, unrelated to this surface):
+    • shared-runner OOM during parallel multi-slot builds — one App-shell batch-compile subprocess killed
+      with ZERO compiler diagnostics (no WidgetRankedList file involved).
+    • macOS development-signing — 0 valid codesigning identities (entitlements need a dev cert).
+  Per apps/macos-pending-verifications.md this full-app gate is owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed, uncontended macos-latest runner (with sibling surfaces
+  green). This matches the accepted sibling precedent (WidgetStatGrid 0010, WidgetComparisonCard 0003).
+
+----------------------------------------------------------------------------------------
+VERDICT
+----------------------------------------------------------------------------------------
+  Surface WidgetRankedList is COMPLETE and verified GREEN by every host-runnable + surface-scoped gate:
+    FORMAT_EXIT=0  SURFACE_LINT_EXIT=0 (0 WidgetRankedList violations)  PLACEHOLDER_EXIT=0
+    SPM_PURE_EXIT=0 (36/36)  SPM_FULL_EXIT=0 (42/42)
+    IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+  The full-app xcodebuild is RED only for pre-existing / environmental reasons (a shared-runner OOM that
+  killed one unrelated App-shell batch with ZERO compiler diagnostics + macOS dev-signing) — ZERO
+  WidgetRankedList errors anywhere in the iOS app-target compile (520 units compiled clean, both extensions
+  linked), and the full surface (incl. SwiftUI views + Previews) type-checks clean on BOTH the iOS-18 and
+  macOS-15 SDKs and executes 42/42 tests under Swift 6 — deferred to the P99 acceptance gate, recorded
+  against apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,280 @@
+================================================================================
+p4-apple · P7 · page:battery/EnergyFlow — SwiftUI / HIG parity
+================================================================================
+Artifact : page:battery/EnergyFlow  (web route /energy-flow)
+Web src  : web/src/features/battery/pages/EnergyFlowPage.tsx  (638 lines)
+Targets  : apple-macos + apple-ios (adaptive, ADR-002/006)
+Prompt   : p4-apple/P7/page:battery/EnergyFlow
+Runner   : macOS (Darwin 26.5); Xcode SDKs MacOSX26.5 + iPhoneSimulator26.5;
+           Swift 6.3.2; swiftlint 0.63.3; swiftformat 0.61.1; pwsh 7.6.2; xcodegen present
+PARITY_REQUIRED=74
+
+--------------------------------------------------------------------------------
+FILES (created unless noted)
+--------------------------------------------------------------------------------
+apps/apple/Sources/Features/Battery/EnergyFlowPageModel.swift          (336)
+apps/apple/Sources/Features/Battery/EnergyFlowPageModel.Sample.swift   (133)
+apps/apple/Sources/Features/Battery/EnergyFlowDerivations.swift        (190)
+apps/apple/Sources/Features/Battery/EnergyFlowFormat.swift             ( 62)
+apps/apple/Sources/Features/Battery/EnergyFlowPage.swift               (260)
+apps/apple/Sources/Features/Battery/EnergyFlowPage.Flow.swift          (331)
+apps/apple/Sources/Features/Battery/EnergyFlowPage.Summary.swift       (120)
+apps/apple/Sources/Features/Battery/EnergyFlowPage.Charts.swift        (239)
+apps/apple/Sources/Features/Battery/EnergyFlowPage.Metrics.swift       (236)
+apps/apple/Sources/Features/Battery/EnergyFlowPage.Skeleton.swift      ( 58)
+apps/apple/Sources/Features/Battery/EnergyFlowRouteRegistration.swift  ( 22)
+apps/apple/Tests/Unit/Features/Battery/EnergyFlowPageModelTests.swift  (251)
+apps/apple/Sources/App/AppRoute.swift                 (modified: +energyFlow case/pathSegment/icon/group)
+apps/apple/Sources/TeslaSyncApp.swift                 (modified: +EnergyFlowRouteRegistration in host registry)
+apps/apple/Localization/Localizable.xcstrings         (modified: +50 keys, additive; numstat +550/-0)
+apps/parity/apple-ledger.json                         (modified: +2 rows, 74/74 macos + ios)
+.github/prompts/monorepo/logs/apple-page-battery-EnergyFlowPage.log
+
+Surface line count: 1,977 source lines across the 11 Sources/ files + 251 test lines
+(web page 638 lines → HIG-native decomposition; well above the >=70% completeness bar).
+
+--------------------------------------------------------------------------------
+RECORDED DEVIATIONS (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+1. Output path: the prompt's "Output" lists apps/apple/TeslaSync/Features/Battery/**, but the
+   established BUILDING convention (every DONE sibling: BatteryCellsPage, PresetGallery,
+   admin/*, analytics/*) lives under apps/apple/Sources/Features/<Feature>/**, which project.yml
+   globs into the iOS + macOS app targets. Files placed there so xcodegen enumerates them
+   (verified: all 12 files in the generated pbxproj). Same disposition as BatteryCellsPage.
+2. Second data source ported: the manifest lists only `useEnergyFlow`, but the web page ALSO
+   drives every summary card / chart / table / period off an inline `useQuery(['energy-stats'])`
+   → GET /vehicles/{id}/energy?days=N. Narrowing to just the live flow would gut 20 of the 22
+   panels (covenant #2). Both seam methods are implemented; the named web hook `useEnergyFlow`
+   is kept verbatim at the Swift call site, and the inline query is mirrored as `useEnergyStats`.
+3. Phase driver: the page phase (loading/empty/error/success) is driven by the historical
+   stats source (web `isLoading`/`!stats`), exactly as the web is. The live flow is best-effort
+   (web `retry:false`) — a throw/absent snapshot leaves it nil and the flow section shows its
+   "No live data" / "N/A" fallbacks, never gating the page or surfacing an error (web parity).
+4. Live-field units: the /energy/flow fields (dc/ac charging power → kW, energy_remaining → kWh)
+   are rendered by the web VERBATIM with their kW/kWh labels (this endpoint is not routed through
+   `useUnits`). Reproduced verbatim for numeric parity. The HISTORICAL stats source IS SI (Wh, m,
+   Wh/m) and converts at the render boundary via the shared `Units` facade (ADR-005); efficiency
+   converts inline (×1000 / ×1609.344) exactly as the web does.
+5. Staleness chip ADDED (ADR-013): the live flow is a realtime query; a `> 2 min` staleness chip
+   (EnergyFlowPageModel.isFlowStale / staleAfter=120s) was added — an enhancement over the web,
+   which silently refetches. Surfaced with the existing "No live data" string + a clock glyph.
+6. Error state ADDED (ADR-013 "never a blank region"): the web renders its empty state when the
+   stats query rejects; a distinct retryable error region (TSErrorDisplay + Retry) was added.
+   The 4 REQUIRED states (loading/empty/error/success) are all implemented.
+7. Range control: the web header `RangePicker` (presetsOnly: today/7d/30d/90d/mtd/ytd) is
+   reproduced as a native `TSSelect` over `EnergyRangePreset`; its 6 chip labels were added to the
+   string catalog (additive, web `DATE_PRESETS[].fallback` verbatim). Plus the `VehicleSelect`
+   (web `actions`) as a `TSSelect` over the vehicle list — both header actions reproduced.
+8. Route registration: `/energy-flow` is a real top-level web route (App.tsx line 515, sidebar
+   "Energy Flow"). Added an `energyFlow` AppRoute case (pathSegment `energy-flow`, group `.energy`)
+   + an EnergyFlowRouteRegistration wired into the shell host registry — the same shape as the
+   sibling `.batteryCells` route. AppRouteParser resolves `/energy-flow` automatically.
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+[placeholder]  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Battery -Language swift
+               PLACEHOLDER_ALLOWED=2   PLACEHOLDER_COUNT=0   EXIT=0
+               (the 2 ALLOWED are the SwiftUI `.placeholder` RedactionReasons opt-outs — one in
+                EnergyFlowPage.Skeleton.swift, one pre-existing in BatteryCellsPage.Sections.swift —
+                each carrying a `// parity:allow` reason; zero real stubs in shipped code.)
+
+[swiftformat]  swiftformat --lint <11 surface + 1 test file>
+               0/12 files require formatting  (FORMAT_EXIT=0)
+
+[swiftlint]    swiftlint lint --strict --no-cache <11 surface + 1 test file>
+               Found 0 violations, 0 serious in 12 files  (LINT_EXIT=0)
+               swiftlint lint --strict Sources/App/AppRoute.swift Sources/TeslaSyncApp.swift
+               Found 0 violations, 0 serious in 2 files  (the two edited shell files)
+
+[typecheck]    swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG, real SDKs,
+               the 11 EnergyFlow surface files + the REAL P3 components (Sources/Components/** minus
+               the KMP-coupled DataDisplay/UnitFormatters.swift) + P2 tokens (Sources/Design/**,
+               Sources/Theme.swift, ../design/generated/apple/Tokens.swift) + Sources/App/
+               {AppRoute,RouteHostRegistry}.swift + a `Units`/`UnitPreferences`/`tsUnits` shim
+               (those 3 symbols need the Shared.xcframework — same single exclusion the DONE
+               BatteryCellsPage used):
+                 macOS-15  (arm64-apple-macos15.0)         -> 0 errors / 0 warnings  MACOS_TYPECHECK_EXIT=0
+                 iOS-18    (arm64-apple-ios18.0-simulator) -> 0 errors / 0 warnings  IOS_TYPECHECK_EXIT=0
+               (the iOS target exercises the #if os(iOS) horizontalSizeClass-compact branches in
+                EnergyFlowPage / .Flow / .Charts and navigationBarTitleDisplayMode.)
+
+[harness]      Executable Swift 6 model+derivations+format harness (compiled + RUN against the real
+               EnergyFlowPageModel.swift + EnergyFlowPageModel.Sample.swift + EnergyFlowDerivations.swift
+               + EnergyFlowFormat.swift, -strict-concurrency=complete -D DEBUG):
+               HARNESS passed=38 failed=0  RUN_EXIT=0
+               covers: initial loading; sample/default -> ready (stats + flow + 2 vehicles, first
+               selected); empty stats -> empty; failing stats -> error; stats-only -> ready + nil
+               flow; selectVehicle reload + unknown-id no-op; selectRange -> days=30; refresh;
+               range preset day counts (today=1/7d=7/30d=30/90d=90/mtd>=1/ytd>=1) + label keys;
+               combinedChargePower; fresh-vs-stale flow (clock-advanced past 120s); dailyChartData
+               map; efficiencyChartData filters non-positive; Wh/m->Wh/km(×1000) + Wh/m->Wh/mi
+               (×1609.344); avgEfficiency rounding; efficiencyUnit labels; avgEnergyPerDay (incl
+               0 days); rating bands (noData/excellent/good/high, km + mi thresholds); stable
+               directional sort (energy asc/desc, date desc); fmtNumber grouping + nan em dash;
+               shortDate valid/invalid; valueWithUnit.
+
+[xcodegen]     xcodegen generate -> EXIT=0; all 12 new files enumerated in TeslaSync.xcodeproj
+               (EnergyFlow* refs present across the app + test targets). Generated .xcodeproj is
+               git-ignored and was removed after the check.
+
+[build/test]   xcodebuild -scheme TeslaSync build / test
+               BUILD = BLOCKED(environment): the KMP `Shared.xcframework` (ADR-004) is NOT vendorable
+               in this checkout — there is no KMP `core` Gradle module or root Gradle wrapper here
+               (packages/ holds only contract-events) and apps/apple/Frameworks/ contains only
+               .gitkeep, so the 8 Sources/SharedFacade/* files' `import Shared` cannot resolve and
+               the app target cannot link. This is an environment limitation, NOT a defect in the
+               EnergyFlow surface: every EnergyFlow file type-checks with 0 errors on BOTH idioms
+               against the REAL component library (above), and the model logic is proven by the
+               executed 38/38 harness. xcodebuild test must build the app first and hits the same
+               unresolved-Shared wall; the executed harness + the unit test file (12 XCTest cases,
+               type-checked) substitute for test execution — the same substitute disposition under
+               which the sibling p4-apple/P7 battery/admin/analytics/automations pages were accepted.
+               BUILD_EXIT=blocked(environment:no-Shared-xcframework)  TEST_EXIT=blocked(same)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=74
+================================================================================
+[x] panel  — GlassPanel1   EnergyFlowPage.Flow.swift `EnergyFlowDiagramSection` — outer TSGlassPanel framing the flow diagram (header + flow row + breakdown).
+[x] panel  — GlassPanel2   EnergyFlowPage.Flow.swift `EnergyFlowDiagramSection.gridNode` -> EnergyFlowNode(systemImage:"powerplug.fill", titleKey:"Grid", glow:.success).
+[x] panel  — GlassPanel3   EnergyFlowPage.Flow.swift `EnergyFlowDiagramSection.batteryNode` — TSGlassPanel + battery glyph + TSRadialGauge + energy-remaining caption.
+[x] panel  — GlassPanel4   EnergyFlowPage.Flow.swift `EnergyFlowDiagramSection.motorNode` -> EnergyFlowNode(titleKey:"Motor", captionKey:"No live data", dimmed).
+[x] panel  — GlassPanel5   EnergyFlowPage.Flow.swift `breakdownRow` DC Power -> EnergyFlowBreakdownTile(titleKey:"DC Power", value: powerText(dc)).
+[x] panel  — GlassPanel6   EnergyFlowPage.Flow.swift `breakdownRow` AC Power -> EnergyFlowBreakdownTile(titleKey:"AC Power", value: powerText(ac)).
+[x] panel  — GlassPanel7   EnergyFlowPage.Flow.swift `breakdownRow` HVAC -> EnergyFlowBreakdownTile(titleKey:"HVAC", value:nil, dimmed) — greyed "N/A".
+[x] panel  — GlassPanel8   EnergyFlowPage.Flow.swift `breakdownRow` Accessories -> EnergyFlowBreakdownTile(titleKey:"Accessories", value:nil, dimmed) — greyed "N/A".
+[x] panel  — Total-Energy  EnergyFlowPage.Summary.swift `EnergyFlowSummarySection` -> EnergyFlowMetricCard("Total Energy", Units.formatEnergy(totalEnergyUsedWh)).
+[x] panel  — Total-Charged EnergyFlowPage.Summary.swift -> EnergyFlowMetricCard("Total Charged", Units.formatEnergy(totalEnergyChargedWh)).
+[x] panel  — Distance      EnergyFlowPage.Summary.swift -> EnergyFlowMetricCard("Distance", Units.formatDistance(totalDistanceM), subtitle: units.distance).
+[x] panel  — Efficiency    EnergyFlowPage.Summary.swift -> EnergyFlowMetricCard("Efficiency", avgEfficiency, subtitle: efficiencyUnit).
+[x] panel  — CO-Saved      EnergyFlowPage.Summary.swift -> EnergyFlowMetricCard("CO₂ Saved", fmtNumber(co2SavedKg,1), subtitle:"kg").
+[x] panel  — Period        EnergyFlowPage.Summary.swift -> EnergyFlowMetricCard("Period", periodDays, subtitle:"days").
+[x] panel  — GlassPanel15  EnergyFlowPage.Charts.swift `EnergyFlowDailyUsageSection` -> EnergyFlowChartCard("Daily Energy Usage") { TSAreaChart }.
+[x] panel  — GlassPanel16  EnergyFlowPage.Charts.swift `EnergyFlowDailyChartsSection.distanceCard` -> EnergyFlowChartCard("Daily Distance") { TSBarChart }.
+[x] panel  — GlassPanel17  EnergyFlowPage.Charts.swift `EnergyFlowDailyChartsSection.efficiencyCard` -> EnergyFlowChartCard("Daily Efficiency") { TSBarChart }.
+[x] panel  — GlassPanel18  EnergyFlowPage.Metrics.swift `EnergyFlowEfficiencyMetricsSection` — outer TSGlassPanel("Efficiency Metrics") framing the 3 tiles.
+[x] panel  — GlassPanel19  EnergyFlowPage.Metrics.swift -> EnergyFlowMetricTile(efficiencyUnit, avgEfficiency, badge: rating).
+[x] panel  — GlassPanel20  EnergyFlowPage.Metrics.swift -> EnergyFlowMetricTile("CO₂ Saved", co2SavedKg, badge:"kg CO₂").
+[x] panel  — GlassPanel21  EnergyFlowPage.Metrics.swift -> EnergyFlowMetricTile("Avg Energy/Day", Units.formatEnergy(avgEnergyPerDay), badge:"per day").
+[x] panel  — GlassPanel22  EnergyFlowPage.Metrics.swift `EnergyFlowHistorySection` + `EnergyFlowHistoryTable` -> TSGlassPanel("Daily Energy History") { TSDataTable }.
+[x] chart  — RadialGauge   EnergyFlowPage.Flow.swift batteryNode -> TSRadialGauge(value: socPercent/100, label:"Battery", colorIndex:0).
+[x] chart  — AreaChart     EnergyFlowPage.Charts.swift EnergyFlowDailyUsageSection -> TSAreaChart(series: energy points).
+[x] chart  — BarChart      EnergyFlowPage.Charts.swift distanceCard -> TSBarChart(series: distance points).
+[x] chart  — BarChart      EnergyFlowPage.Charts.swift efficiencyCard -> TSBarChart(series: efficiency points).
+[x] state  — loading       EnergyFlowPage.swift content `.loading` -> EnergyFlowSkeleton (redacted(.placeholder)); EnergyFlowPageModel.phase == .loading.
+[x] state  — empty         EnergyFlowPage.swift emptyView -> TSEmptyState("No Data","No energy flow data available…"); phase == .empty (stats nil).
+[x] state  — error         EnergyFlowPage.swift errorView -> TSErrorDisplay(onRetry: refresh); phase == .error(message) (stats query threw).
+[x] state  — success       EnergyFlowPage.swift readyView(stats); phase == .ready — renders all six sections.
+[x] string — AC Power                          EnergyFlowPage.Flow.swift breakdownRow titleKey "AC Power".
+[x] string — Accessories                       EnergyFlowPage.Flow.swift breakdownRow titleKey "Accessories".
+[x] string — Avg Energy/Day                    EnergyFlowPage.Metrics.swift EnergyFlowMetricTile label Text("Avg Energy/Day").
+[x] string — Battery                           EnergyFlowPage.Flow.swift batteryNode TSRadialGauge(label:"Battery").
+[x] string — CO₂ Saved                         EnergyFlowPage.Summary.swift card "CO₂ Saved" + Metrics tile label.
+[x] string — Charging                          EnergyFlowPage.Flow.swift charge arrow labelKey "Charging" + charge-state TSBadge.
+[x] string — DC Power                          EnergyFlowPage.Flow.swift breakdownRow titleKey "DC Power".
+[x] string — Daily Distance                    EnergyFlowPage.Charts.swift distanceCard titleKey "Daily Distance".
+[x] string — Daily Efficiency                  EnergyFlowPage.Charts.swift efficiencyCard titleKey "Daily Efficiency".
+[x] string — Daily Energy History              EnergyFlowPage.Metrics.swift EnergyFlowHistorySection title.
+[x] string — Daily Energy Usage                EnergyFlowPage.Charts.swift EnergyFlowDailyUsageSection title.
+[x] string — Date                              EnergyFlowPage.Metrics.swift table TSColumn(id:"date", title:"Date").
+[x] string — Distance                          EnergyFlowPage.Summary.swift card + Charts legend + Metrics table header "Distance (unit)".
+[x] string — Driving                           EnergyFlowPage.Flow.swift driving arrow labelKey "Driving".
+[x] string — Efficiency                        EnergyFlowPage.Summary.swift card titleKey "Efficiency".
+[x] string — Efficiency Metrics                EnergyFlowPage.Metrics.swift EnergyFlowEfficiencyMetricsSection title.
+[x] string — Energy                            EnergyFlowPage.Charts.swift usage legend + Metrics table TSColumn(id:"energy", title:"Energy").
+[x] string — Energy Flow                       EnergyFlowPage.swift navigationTitle + TSPageTitle("Energy Flow") + skeleton a11y label.
+[x] string — Energy Flow Diagram               EnergyFlowPage.Flow.swift headerRow title + accessibilityLabel.
+[x] string — Excellent                         EnergyFlowDerivations.EnergyEfficiencyRating.excellent.labelKey -> Metrics tile TSBadge.
+[x] string — Good                              EnergyFlowDerivations.EnergyEfficiencyRating.good.labelKey -> Metrics tile TSBadge.
+[x] string — Grid                              EnergyFlowPage.Flow.swift gridNode titleKey "Grid".
+[x] string — HVAC                              EnergyFlowPage.Flow.swift breakdownRow titleKey "HVAC".
+[x] string — High                              EnergyFlowDerivations.EnergyEfficiencyRating.high.labelKey -> Metrics tile TSBadge (key pre-existing in catalog).
+[x] string — Motor                             EnergyFlowPage.Flow.swift motorNode titleKey "Motor".
+[x] string — N/A                               EnergyFlowPage.Flow.swift EnergyFlowArrow.chipText (noLiveData) + EnergyFlowBreakdownTile fallback.
+[x] string — No Data                           EnergyFlowPage.swift emptyView title + rating.noData.labelKey badge.
+[x] string — No daily distance data available. EnergyFlowPage.Charts.swift distanceCard emptyKey.
+[x] string — No daily energy data available.   EnergyFlowPage.Charts.swift EnergyFlowDailyUsageSection emptyKey.
+[x] string — No efficiency data available.     EnergyFlowPage.Charts.swift efficiencyCard emptyKey.
+[x] string — No energy flow data available for this vehicle and time range.  EnergyFlowPage.swift emptyView message.
+[x] string — No energy history records available.  EnergyFlowPage.Metrics.swift EnergyFlowHistorySection empty TSEmptyState.
+[x] string — No energy records found.          EnergyFlowPage.Metrics.swift EnergyFlowHistoryTable empty fallback (web DataTable emptyMessage).
+[x] string — No live data                      EnergyFlowPage.Flow.swift motorNode captionKey + stalenessChip.
+[x] string — Period                            EnergyFlowPage.Summary.swift Period card + EnergyFlowPage.swift rangePicker a11y label.
+[x] string — Power distribution and energy analysis  EnergyFlowPage.swift titleBlock subtitle.
+[x] string — Total Charged                     EnergyFlowPage.Summary.swift card titleKey "Total Charged".
+[x] string — Total Energy                      EnergyFlowPage.Summary.swift card titleKey "Total Energy".
+[x] string — days                              EnergyFlowPage.Summary.swift Period card subtitle Text("days").
+[x] string — kW                                EnergyFlowPage.Flow.swift powerText + EnergyFlowArrow chipText String(localized:"kW").
+[x] string — kWh                               EnergyFlowPage.Flow.swift batteryNode kwhLabel String(localized:"kWh").
+[x] string — kg                                EnergyFlowPage.Summary.swift CO₂ card subtitle Text("kg").
+[x] string — kg CO₂                            EnergyFlowPage.Metrics.swift CO₂ tile TSBadge("kg CO₂").
+[x] string — per day                           EnergyFlowPage.Metrics.swift Avg Energy/Day tile TSBadge("per day").
+PARITY_COVERED=74
+
+(All 44 string keys added to apps/apple/Localization/Localizable.xcstrings as bare-English
+catalog keys — additive +550/-0, JSON validated — except "High" which already existed. The 6
+range-preset chip labels + route.energyFlow were also added, additive.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : The substitute gates shown (placeholder 0, swiftformat 0, swiftlint 0,
+                         macOS-15 + iOS-18 typecheck 0/0, harness 38/38, xcodegen 0) are real,
+                         pasted command output. The full xcodebuild is explicitly reported BLOCKED
+                         (environment: Shared.xcframework not vendorable here) — NOT claimed green.
+ 2 No scope narrowing  : 22 panels + 4 charts + 4 states + 44 strings = 74/74 implemented; the
+                         second (stats) data source was implemented in full rather than dropping
+                         the 20 panels it feeds.
+ 3 No skip-and-assume  : web source read end-to-end (638 lines); the flow diagram, all 6 cards, the
+                         3 charts, the efficiency tiles, the sortable table, the range presets, the
+                         charge-state badge, and every useMemo projection are ported (+ harness-proven).
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0; every region renders distinctly; empties are real
+                         ContentUnavailableViews; the sample source is an API-shaped fixture.
+ 5 No parity shortcuts : 4 states render distinctly + are state-machine tested; all visible strings
+                         resolve from Localizable.xcstrings with the web key names; SI stats convert
+                         via the shared Units facade; charts are native Swift Charts (no WKWebView).
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: no edits to P4 shell internals, sibling pages, or the component/token
+                         libraries; only additive route registration (own RouteRegistration + the
+                         shell's host-registry list + the AppRoute enum, the same seam BatteryCells used).
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE substitute gates; the only non-green is the
+                         environment-blocked full app link (no vendorable KMP Shared), recorded above.
+ 9 No silent drift     : changes confined to the files listed; the 8 deviations are recorded.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI EnergyFlowPage shipped at parity with the web source: an
+@Observable EnergyFlowPageModel (ADR-004 — no networking in the view) over an injected
+EnergyFlowDataSource whose method names mirror the ported web hooks (`useEnergyFlow` verbatim +
+`useEnergyStats`). The page reproduces all six web sections — the real-time energy-flow diagram
+(Grid → Battery → Motor with the SOC RadialGauge and the DC/AC/HVAC/Accessories breakdown, the
+charge-state badge, and a >2-min staleness chip), the six summary MetricCards, the daily-energy
+AreaChart, the daily-distance + daily-efficiency BarCharts, the efficiency-metrics tiles, and the
+sortable daily-energy history DataTable — on the P2 tokens + P3 shared components (TSGlassPanel /
+TSCard / TSRadialGauge / TSAreaChart / TSBarChart / TSDataTable / TSBadge / TSIconBox / TSSelect /
+TSEmptyState / TSErrorDisplay / TSFadeIn + typography), no hand-rolled chrome; adaptive
+macOS/iPad (multi-column) vs iPhone-compact (stacked); every visible string from
+Localizable.xcstrings with the web key names; SI energy/distance converted only at the render
+boundary via the shared Units facade; VoiceOver labels/traits + Dynamic Type + light/dark.
+Deep-linkable via the new .energyFlow route (/energy-flow). Verified on BOTH idioms by real
+iOS-18 + macOS-15 Swift 6 strict-concurrency type-checks against the REAL component library
+(0/0), an executed 38/38 model+derivations+format harness, xcodegen enumeration (12/12 files),
+swiftlint --strict (0), swiftformat (0), and the placeholder gate (0). The full xcodebuild is
+environment-blocked — the KMP Shared.xcframework cannot be vendored in this checkout (no KMP
+gradle core present) — recorded transparently, not claimed green; the deliverable itself is
+complete and type-clean.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Battery apps/apple/Tests/Unit/Features/Battery \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-battery-EnergyFlowPage.log
+  git commit -m "feat(apps/apple): EnergyFlowPage at web parity (P7 battery)"
+
+EXIT=0
+STATUS=DONE

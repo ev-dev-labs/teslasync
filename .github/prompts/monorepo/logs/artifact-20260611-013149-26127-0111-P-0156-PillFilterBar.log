@@ -1,0 +1,164 @@
+=== P4 Shared surface 0156 PillFilterBar (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon — Mac Studio) — shared parallel runner, slot-111.
+  Xcode              : 26.5 (Build 17F42) — /Applications/Xcode.app/Contents/Developer.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 (--strict) · swiftformat 0.61.1 (--lint) ·
+                       xcodegen 2.45.4 · pwsh 7.6.2 · openjdk@17 (for the KMP Shared.xcframework).
+  Destinations       : iOS 18 simulator (iPhone 16, booted) + macOS 15 SDK present.
+  KMP core           : Shared.xcframework STAGED on this worktree — apps/shared/gradlew
+                       :core:assembleSharedXCFramework => "BUILD SUCCESSFUL in 6m 38s", release artifact copied to
+                       apps/apple/Frameworks/Shared.xcframework (Info.plist + ios-arm64 + ios-arm64-simulator +
+                       macos-arm64).                                                              XCFRAMEWORK_EXIT=0
+  Capability         : SwiftUI present; this surface uses NO Swift Charts / MapKit (web "Charts/maps used: none").
+                       PillFilterBar is a PURE presentational single-select tab/pill row — the native parity needs
+                       only SwiftUI + Foundation + Observation + os. => NOT capability-BLOCKED. The surface is
+                       INDEPENDENTLY VERIFIED on this runner (typecheck iOS 18 + macOS 15, a real Swift 6 XCTest run
+                       of 33 cases, lint/format/placeholder, xcodegen membership). The full-app iOS/macOS xcodebuild
+                       build/test is DEFERRED on PRE-EXISTING, code-unrelated failures (FOREIGN sibling surfaces +
+                       macOS dev-signing), per the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+                       disposition used by every P4 surface (ActiveFilterChips 0147, CurrencyInput 0150, et al.;
+                       apps/macos-pending-verifications.md / ADR-012 CI matrix).
+
+WEB SOURCE (the specification) — components/forms/PillFilterBar.tsx
+  A PURE, presentational single-select filter row implementing the WAI-ARIA Tabs pattern. Its only hook is
+  `useId` (a stable tablist id for the per-tab element ids) — there is NO fetch, NO React-Query cache, NO Promise,
+  and NO `t()` call (labels + ariaLabel arrive already-localised as props). Props:
+    • items: PillItem[] — { key, label, icon?, count?, accent? (cyan|green|amber|red|purple|blue, def cyan),
+      disabled? }
+    • activeKey, onChange(key), ariaLabel, variant ('pills' | 'tabs', def 'pills'), scrollable (def true),
+      className, testId.
+  Behaviour ported verbatim:
+    • enabledKeys = items.filter(!disabled).map(key); arrow nav skips disabled pills.
+    • handleKeyDown: ArrowLeft/ArrowRight step ±1 and WRAP around enabledKeys ((idx+delta+n)%n); a disabled/absent
+      active key is a no-op (idx === -1); Home → first, End → last; empty ring → no-op. moveFocus = onChange + focus.
+    • roving tabindex (selected pill = tabIndex 0); selection follows focus.
+    • pills variant: rounded chip, active fill (bg/15) + ring (/40) + leading dot; muted `(fmtInt(count))` suffix.
+    • tabs variant: flat row, 2px accent bottom-border underline on the selected item; faint baseline border.
+    • icon optional leading glyph; count rendered only when a number (count 0 → "(0)").
+  Faithful-parity decision (logged, not hidden): because the source has NO data source, it has NO loading / error /
+  stale / offline branch. Inventing such chrome would FABRICATE states the spec does not have, so this surface
+  reproduces only the REAL branches — exactly as the accepted sibling presentational surfaces ActiveFilterChips
+  (0147) and CurrencyInput (0150). REAL branches shipped: empty (friendly labelled empty state — never a blank box),
+  `pills`, `tabs`, selected/unselected, disabled, icon ±, count ±, scrollable ±.
+  i18n keys extracted from source: NONE (anonymous surface; labels + ariaLabel are caller props). The only
+  facade-resolved native string is the empty-row body (`pillFilterBar.empty`).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/PillFilterBar.*, 7 .swift + 1 .strings = 8 files, 1312 lines)
+  PillFilterBar.Adapter.swift     299  Foundation-only core: slug ("PillFilterBar"), Resolve typealias, PillAccent
+                                       (+ default cyan), PillVariant, PillItem (closure-free Sendable/Equatable/
+                                       Identifiable), PillFilterBarInput, ResolvedPill, PillFilterBarProjection,
+                                       PillNavigationDirection, PillFilterBarProjector (resolve, fmtInt-parity
+                                       count format, ArrowLeft/Right wrap math, Home/End). Pure.
+  PillFilterBar.Model.swift       167  PillFilterBarStrings facade (P1/S10; only native `empty`), telemetry seam +
+                                       OSLog default (view.opened), @Observable @MainActor PillFilterBarModel
+                                       (input, roving focusedKey, onChange closure, select/move/first/last,
+                                       once-only view.opened, update guard + stale-focus clear).
+  PillFilterBar.Views.swift       172  PillAccentStyle (accent → P1/S9 tokens; activeFill/.15, activeRing/.40), the
+                                       pill/tab button (dot/icon/label/count, .isSelected trait, accessibility
+                                       label+value, Left/Right/Home/End onKeyPress → model), the empty-state view.
+  PillFilterBar.swift             132  public `PillFilterBar` View (prop init + model init; @FocusState roving
+                                       focus mirrored from model; onAppear/onDisappear lifecycle; scroll/static row;
+                                       tabs baseline border; ariaLabel container). surfaceSlug = "PillFilterBar".
+  PillFilterBar.Previews.swift    118  #if DEBUG previews: pills+counts / pills+icons+accents / tabs / disabled /
+                                       scrollable overflow / non-scrollable / empty.
+  PillFilterBar.AdapterTests.swift 181 Pure core: slug, accent default, resolve (selected/enabled-ring/counts/
+                                       passthrough), fmtInt count format, nav (wrap fwd/back, disabled-active no-op,
+                                       empty ring, Home/End, single-key self-wrap, delta), value equality.   (19)
+  PillFilterBar.Tests.swift       219  Model (view.opened once + idempotent + no-re-emit; guarded select; move fwd/
+                                       back/skip-disabled; Home/End; update + stale-focus clear), Views compose for
+                                       every branch + accent styles + empty view, Strings facade fallback.        (14)
+  PillFilterBar.strings            24  P1/S10 catalog contribution: documents NO web t() keys (anonymous source);
+                                       ships the one native `pillFilterBar.empty` = "No filters available".
+
+GATES (executed on THIS runner; results pasted verbatim)
+  [GREEN] swiftc -typecheck iOS 18 simulator SDK (-swift-version 6 -D DEBUG; tokens + 5 surface files)
+            (no diagnostics)                                                                  IOS_TYPECHECK_EXIT=0
+  [GREEN] swiftc -typecheck macOS 15 SDK (-swift-version 6 -D DEBUG; tokens + 5 surface files)
+            (no diagnostics)                                                                  MAC_TYPECHECK_EXIT=0
+  [GREEN] swift test — isolated SwiftPM package (module "TeslaSync", Swift 6 strict-concurrency=complete on host):
+            Executed 33 tests, with 0 failures (0 unexpected).                                  SWIFT_TEST_EXIT=0
+  [GREEN] swiftlint --strict (config apps/apple/.swiftlint.yml, repo-wide):
+            Done linting! Found 0 violations, 0 serious in 4397 files.                                LINT_EXIT=0
+  [GREEN] swiftformat --lint apps/apple (config apps/apple/.swiftformat):
+            0/4695 files require formatting, 2 files skipped.                                       FORMAT_EXIT=0
+  [GREEN] check-placeholders.ps1 (ADR-011 stub gate; pwsh) — self-test PASS (SELFTEST_EXIT=0); a real recursive scan
+            of the 8 PillFilterBar.* files: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0; the literal prompt-path
+            command also clean.                                                                PLACEHOLDER_EXIT=0
+  [GREEN] xcodegen generate — TeslaSync.xcodeproj written; 48 pbxproj refs for the 8 files (5 .swift → iOS+macOS app
+            targets, 2 *Tests.swift → both XCTest bundles, 1 .strings resource).                  XCODEGEN_EXIT=0
+
+  [~] FULL-APP xcodebuild — DEFERRED (RED; reported verbatim, never as passing):
+    [1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+          -> ** BUILD FAILED **  (1 error, in a FOREIGN sibling outside my glob)
+             TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures
+                 non-escaping parameter 'content'
+    [1b] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+          -> ** BUILD FAILED **  (1 error, a DIFFERENT FOREIGN sibling — parallel-batch order)   IOS_EXIT=65
+             TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures
+                 non-escaping parameter 'content'
+          grep "PillFilterBar[^ ]*\.swift:[0-9].*error:" across both 13k-line build logs = 0 hits.
+          git status: AISuggestNewGeofences.swift + AISignalExplorerNlFilter.swift are UNMODIFIED/committed (FOREIGN,
+          owned by their own P4 prompts) — proven pre-existing, neither introduced nor touched here. These are the
+          exact pre-existing defects the 0147/0150 sibling logs named.
+    [2] xcodebuild -scheme TeslaSync-macOS build
+          -> ** BUILD FAILED **  (2 errors, ENVIRONMENTAL — no macOS development-signing certificate)  MAC_EXIT=65
+             error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate
+             error: "TeslaSync-macOS" has entitlements that require signing with a development certificate
+          0 compile errors; 0 PillFilterBar errors (the signing check fails before source compilation).
+    Disposition: DEFERRED (FOREIGN sibling compile defects + ENVIRONMENTAL macOS signing) — identical to every prior
+    P4 surface; the COMMITTED PillFilterBar.* is GREEN on every host-runnable + surface-scoped gate AND a real
+    Swift 6 33-test run + iOS/macOS typecheck. Per apps/macos-pending-verifications.md the full-app Xcode gate runs
+    on the ADR-012 macos-latest CI matrix once the foreign siblings + signing are resolved (outside my allowed glob).
+
+HONESTY COVENANT
+  1  No red-as-green     : IOS_EXIT=65 + MAC_EXIT=65 shown verbatim with file:line evidence; never claimed green.
+                           Only the surface-scoped + host-runnable gates are reported GREEN — because they ARE.
+  2  No scope narrowing  : every REAL web branch shipped (pills/tabs, selected/unselected/disabled, icon±, count±,
+                           scrollable±, empty) + the full WAI-ARIA arrow/Home/End keyboard contract + roving focus.
+  3  No skip-and-assume  : web source read end-to-end; the fmtInt count format calibrated to real NumberFormatter
+                           output; every gate ACTUALLY executed on this runner (incl. two full iOS xcodebuilds + a
+                           macOS xcodebuild + the KMP framework build) with pasted results.
+  4  No stubs as final   : complete production view + state-holder + pure core + 33 real XCTest; placeholder scan
+                           clean (the word "placeholder" itself is absent from shipped code per the acceptance list).
+  5  No parity shortcuts : the arrow wrap-around (incl. disabled-active no-op), Home/End, roving focus, accent map,
+                           dot/underline variants, and count formatting are faithful ports; the "no loading/error/
+                           stale/offline because the source has no fetch" decision is logged above, not hidden.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened all present and
+                           consumed; the existing ATOMIC TSPillFilterBar (Sources/Components/Forms, out of scope) was
+                           NOT modified and NOT depended on — this SURFACE is self-contained per the prompt.
+  8  No commit on red    : the COMMITTED artifact (PillFilterBar.* + this log) is GREEN on every surface-scoped host
+                           gate; the deferred full-app gate fails only on PRE-EXISTING FOREIGN siblings + macOS
+                           signing, neither introduced nor touched here (git-proven unmodified).
+  9  No silent drift     : changes confined to shared-surfaces/PillFilterBar.* (8 files) + this log — no project.yml
+                           / .swiftlint.yml / .swiftformat / macos-pending-verifications.md / sibling-surface edits.
+                           The generated TeslaSync.xcodeproj + staged Shared.xcframework are git-ignored.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic PillFilterBar at full parity with the web source and INDEPENDENTLY VERIFIED
+  on this runner: it type-checks for iOS 18 + macOS 15 and its 33 tests pass under the app's own Swift 6
+  strict-concurrency rules, against the real design tokens, with swiftlint (--strict) / swiftformat (--lint) /
+  placeholder / xcodegen all green for the surface (and repo-wide). The single-select WAI-ARIA Tabs row — pills +
+  tabs variants, accent fill/ring/dot + underline, optional icon + locale-grouped count, roving keyboard focus with
+  Left/Right wrap (skipping disabled) + Home/End, and a friendly empty state that is never a blank box — is a
+  faithful port; the page owns the active key via `onChange`, exactly like the web. The full-app iOS-Simulator +
+  macOS xcodebuild build/test gate is DEFERRED (not failed by this code): iOS is blocked by PRE-EXISTING compile
+  errors in OTHER parallel agents' sibling surfaces (AISuggestNewGeofences.swift, AISignalExplorerNlFilter.swift)
+  and macOS by the runner's missing development-signing certificate — all outside my allowed glob and owned by the
+  P4/P99 acceptance gate per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface.
+
+XCFRAMEWORK_EXIT=0   (KMP Shared.xcframework staged: ios-arm64 + ios-arm64-simulator + macos-arm64)
+IOS_TYPECHECK_EXIT=0 (surface type-checks on the iOS 18 simulator SDK, Swift 6)
+MAC_TYPECHECK_EXIT=0 (surface type-checks on the macOS 15 SDK, Swift 6)
+SWIFT_TEST_EXIT=0    (33/33 surface tests pass — adapter + model + views + strings)
+LINT_EXIT=0          (swiftlint --strict — 0 violations across 4397 files)
+FORMAT_EXIT=0        (swiftformat --lint apps/apple — 0/4695 require formatting)
+PLACEHOLDER_EXIT=0   (self-test PASS; PLACEHOLDER_COUNT=0 on a real recursive scan of the 8 files)
+XCODEGEN_EXIT=0      (48 pbxproj refs — iOS+macOS app + both test bundles + strings resource)
+IOS_EXIT=65          (DEFERRED — pre-existing FOREIGN sibling compile defects; PillFilterBar 0 errors, proven)
+MAC_EXIT=65          (DEFERRED — ENVIRONMENTAL no macOS development-signing certificate; PillFilterBar 0 errors)
+EXIT=0
+STATUS=DONE

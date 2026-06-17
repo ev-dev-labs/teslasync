@@ -1,0 +1,119 @@
+=== P4 Shared surface 0079 DataFreshness (Apple) ===
+# Thu Jun 11 08:25:29 PDT 2026
+# Toolchain: Xcode 26.5 Build version 17F42  | swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+### STEP 1/5 — iOS build test (scheme TeslaSync, iPhone 16)
+** BUILD FAILED **
+** TEST FAILED **
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-50/apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-50/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures non-escaping parameter 'content'
+IOS_EXIT=65
+
+### STEP 2/5 — macOS build test (scheme TeslaSync-macOS)
+** BUILD FAILED **
+** TEST FAILED **
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-50/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-50/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+MAC_EXIT=65
+
+### STEP 3/5 — swiftlint --strict (full included tree)
+Linting 'WatchComplicationViews.swift' (4073/4074)
+Linting 'WatchDesignTokens.swift' (4074/4074)
+Done linting! Found 0 violations, 0 serious in 4074 files.
+LINT_EXIT=0
+
+### STEP 4/5 — swiftformat --lint (apps/apple)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-50/apps/apple/.swiftformat
+SwiftFormat completed in 47.62s.
+0/4372 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+### STEP 5/5 — check-placeholders (DataFreshness surface)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== GATE STEP SUMMARY ===
+IOS_EXIT=65  MAC_EXIT=65  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+
+================================================================================
+SURFACE VERIFICATION (DataFreshness — isolated, this prompt's scope)
+================================================================================
+The full-app build/test steps above are RED due to PRE-EXISTING, OUT-OF-SCOPE
+breakage (analysis below), so the DataFreshness surface was verified against the
+real design-system closure in an isolated, throwaway framework target
+(module name `TeslaSync`, so `@testable import TeslaSync` is unchanged), which
+excludes ONLY the pre-existing broken sibling surfaces. No tracked files were
+modified for this; the throwaway project + spec were deleted afterward.
+
+  • Surface SOURCES compile clean (0 errors/warnings) on Xcode 26.5 / Swift 6.3
+    strict concurrency: DataFreshness.{Adapter,Projection,Model,Views,Previews}.swift
+    + DataFreshness.swift.
+  • Surface UNIT TESTS — all green:
+        Test Suite 'All tests' passed.
+        Executed 54 tests, with 0 failures (0 unexpected).
+    Suites: AdapterTests(Age/StatusResolver/RelativeTime/Glyph/Accessibility/Meta),
+    ProjectionTests(14: loading/fresh/fetching/stale/forceStale/error±cache/offline/
+    empty/bg-refetch/a11y/title), ModelTests(11: telemetry-once/stale→auto-refresh/
+    re-arm/offline-no-arm/tick/refresh/stop-start), LiveSourceTests, QueryMappingTests,
+    ViewTests(compose every state + glyph SF Symbols + slug).
+  • swiftlint --strict (9 surface files): 0 violations, 0 serious.
+  • swiftformat --lint (9 surface files): 0 require formatting.
+  • check-placeholders (swift): PLACEHOLDER_COUNT=0.
+  • Zero DataFreshness errors in the FULL-app compile (`grep -c DataFreshness.*error:`
+    against the iOS gate log = 0).
+
+States reproduced (parity with components/data-display/DataFreshness.tsx):
+  loading (initial fetch → skeleton chip), fresh (emerald/wifi/relative time),
+  fetching (sky/ping+pulse/spinning refresh/"updating…"), stale (amber + one-shot
+  auto-refresh), error (red/wifi.slash; cached age when present — web ternary order),
+  offline (red/wifi.slash + cached age — P4 leaf connectivity axis), empty
+  ("Never updated", muted — never a blank box). i18n via the P1/S10 facade
+  (DataFreshness.strings: justNow/minutes/hours/days/weeks/updating/error/
+  neverUpdated/lastUpdated/refresh/a11y.dataFreshness/status words). Telemetry:
+  view.opened slug "DataFreshness" (P1/S11), emitted once on first ready.
+
+================================================================================
+PRE-EXISTING BLOCKER ANALYSIS (out of scope — Allowed files: DataFreshness.* only)
+================================================================================
+IOS_EXIT=65 / MAC_EXIT=65 are caused entirely by code this prompt is forbidden to
+touch, NOT by the DataFreshness surface:
+
+1) Sibling-surface compile errors (Xcode 26.5 / Swift 6.3 tightened escaping
+   analysis). ~24 sibling surfaces define a helper
+       func glass(@ViewBuilder _ content: () -> some View) -> some View
+   and pass the NON-escaping `content` into `TSGlassPanel` whose initializer is
+       init(@ViewBuilder content: @escaping () -> Content)
+   → "error: escaping closure captures non-escaping parameter 'content'".
+   Observed across build batches in e.g. AIGeofenceAwareAutomationSuggestions.swift:141,
+   AIAutoNameUnnamedLocations.swift:123, AISignalExplorerNlFilter.swift:142, …
+   (grep '@ViewBuilder _ content: () -> some View' → 24 sibling bases). Each is
+   owned by its own P4 prompt. The DataFreshness surface deliberately does NOT use
+   this broken helper shape (it uses a `@ViewBuilder private var content` property),
+   so it is robust to the stricter toolchain.
+
+2) macOS-only: pre-existing code-signing config — targets TeslaSync-macOS /
+   TeslaSyncWidgets-macOS "have entitlements that require signing with a development
+   certificate" (DEVELOPMENT_TEAM is empty in project.yml). Unrelated to any surface.
+
+3) apps/apple/TeslaSync.xcodeproj is gitignored (.gitignore: apps/apple/**/*.xcodeproj/),
+   so every build first runs `xcodegen generate`, which globs ALL shared-surfaces.
+   Therefore the baseline at HEAD is already RED on this runner independent of this
+   change; this prompt added only DataFreshness.* (10 untracked files).
+
+LINT_EXIT=0 and FORMAT_EXIT=0 across the full 4074/4372-file tree confirm the
+surface (and siblings) are lint/format clean; the only red is the shared whole-app
+compile, blocked by the out-of-scope items above.
+
+Raw evidence: /tmp/gate_ios.log, /tmp/gate_mac.log, /tmp/gate_lint.log,
+/tmp/gate_fmt.log, /tmp/gate_pl.log, /tmp/df_verify_test.log.
+
+================================================================================
+The DataFreshness surface (this prompt's deliverable) is COMPLETE and independently
+verified GREEN (compile + 54 unit tests + lint + format + placeholder). The shared
+full-app build/test gate is BLOCKED by pre-existing, out-of-scope sibling compile
+errors + macOS signing config that this prompt's Allowed-files scope forbids editing.
+
+EXIT=65
+STATUS=BLOCKED

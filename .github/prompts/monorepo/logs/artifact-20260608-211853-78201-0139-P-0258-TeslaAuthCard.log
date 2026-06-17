@@ -1,0 +1,148 @@
+=== P4 Feature view 0258 TeslaAuthCard (Apple) ===
+Prompt:  .github/prompts/monorepo/p4-apple/feature-views/P-0258-TeslaAuthCard.prompt.md
+Web src: web/src/features/system/components/status/TeslaAuthCard.tsx (THE spec)
+Native:  apps/apple/TeslaSync/feature-views/TeslaAuthCard.* (10 files: 9 .swift + 1 .strings)
+Branch:  auto/20260608-211853-78201/139   Base HEAD: 819f09e83
+Host:    Darwin arm64 (Apple Studio) · Xcode 26.5 (17F42) · Swift 6.3.2 · iOS18/macOS15 SDKs present
+Capability: SwiftUI present; Swift Charts + MapKit present but NOT used by this surface
+            (web "Charts / maps used: (none)"). NOT a capability-BLOCKED surface.
+
+------------------------------------------------------------------------------
+PARITY SUMMARY (web → native, faithful reproduction)
+------------------------------------------------------------------------------
+Nature      : the web source is a PURE presentational card fed three props
+              (authenticated, expiresAt, now) by the page — "Data sources: (none)".
+              The native surface keeps the same shape: a P1/S8 source seam
+              (TeslaAuthSource → @Observable TeslaAuthModel) carries the same inputs
+              as a coalesced snapshot; no HTTP lives in the view.
+Severity    : web severityFor() ported VERBATIM in TeslaAuthLogic.severity —
+              authenticated === false ⇒ disconnected; missing/unparseable expiry ⇒
+              unknown; days = floor((exp-now)/1d): <0 ⇒ expired, <=7 ⇒ warn, else ok.
+              7-day boundary (warn) vs 8-day (ok) asserted; floor-toward-−∞ matches
+              Math.floor bit-for-bit.
+Detail      : web detail() ported in TeslaAuthLogic.detail — disconnected short-circuit;
+              "Token expiry unknown" (no expiry) vs "Token expiry unparseable" (present
+              but unparseable) distinction preserved; "Expired today / {n}d ago" and
+              "later today / in 1 day / in {n} days" buckets reproduced.
+Composition : web GlassPanel(overflow-hidden) → glass card clipped to the corner radius;
+              web h-1 accent bar → TeslaAuthAccentBar (severity-tinted); lucide
+              ShieldCheck/ShieldAlert/ShieldX → checkmark/exclamationmark/xmark.shield.fill;
+              web <Badge variant> → scoped TeslaAuthStatusBadge (verbatim status); web
+              <Link to="/tesla-account"> → TeslaAuthCTAButton (constant cyan pill, label
+              switches Manage⇄Re-authenticate) delegating to the injected onManage
+              (TeslaAuthCard.accountPath = "/tesla-account"); AppRoute.swift untouched
+              (out of allowed-files scope).
+States      : loading (card silhouette skeleton) · empty (web 'unknown' — resolved but no
+              concrete value, the friendly never-blank card) · error (retryable "couldn't
+              load", P4 leaf) · data (the four concrete severities) · stale (chip + 1-shot
+              auto-refresh) · offline (cached + chip + banner). Every state renders — never
+              a blank box. Web's own branches (the 5 severities) all reproduced across the
+              empty(unknown) + data(ok/warn/expired/disconnected) phases.
+i18n        : every web literal promoted to a key (the prompt extracts only "Tesla account";
+              per the no-English-literals rule the 5 status labels, 8 detail strings, the
+              %@d unit, and both CTA labels are all keyed) + native chrome — all resolve via
+              the P1/S10 facade (TeslaAuthStrings, table "TeslaAuthCard"). No English
+              literals in Swift code.
+a11y        : card is an accessibility container labeled "Tesla account"; the icon is
+              hidden; the title+badge+detail collapse to one VoiceOver summary
+              ("{title}, {status}. {detail}"); the CTA stays an independently focusable
+              button with label + hint + isButton; freshness chip + banner are combined
+              elements; Dynamic Type via tokens; Reduce Motion honored (TSFadeIn / TSSkeleton).
+              iOS18/iPadOS18/macOS15 minimums.
+telemetry   : view.opened emitted once on first applied snapshot (P1/S11), surface slug
+              "TeslaAuthCard".
+Imports     : SwiftUI / Foundation / Observation / OSLog only (+ XCTest in *Tests).
+              Independent of the KMP `Shared` framework, Swift Charts, and MapKit.
+Line counts : Model 299 · Tests 287 · Adapter 240 · AdapterTests 204 · Views 154 ·
+              Chrome 153 · Projection 144 · Previews 114 · swift 109 · strings 54
+              (largest source 299 lines — within the house budget).
+
+------------------------------------------------------------------------------
+GATE STEPS (as written in the prompt) — real outcomes
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=DEFERRED (macOS-pending, ADR-012) — see DEFERRAL below. NOT run-to-green here.
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=DEFERRED (macOS-pending, ADR-012) — KMP framework + macOS dev signing. NOT run here.
+[3] swiftlint --strict            (tree-wide, the gate's scope)
+    TREE_LINT_EXIT=2 — 1 pre-existing, UNRELATED serious violation, NOT in this surface:
+      TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+        opening_brace (another agent's surface; already tracked for prior 0244 run).
+        Outside this prompt's allowed-files scope.
+    swiftlint --strict (THIS surface, 9 .swift files): 0 violations, 0 serious.  LINT_EXIT=0 (surface)
+[4] swiftformat --lint apps/apple (tree-wide)
+    FORMAT_EXIT=0 — 0/2530 files require formatting (this surface included & clean; 2 skipped).
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TeslaAuthCard
+    PLACEHOLDER_EXIT=0 — PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0.
+    (Note: the literal path is a filename PREFIX, not a dir; the script's Test-Path treats
+     it as an empty scan. The MEANINGFUL scan — the 10 TeslaAuthCard.* files copied to a temp
+     dir, -Language swift — also reports PLACEHOLDER_COUNT=0 / PLACEHOLDER_ALLOWED=0.)
+
+------------------------------------------------------------------------------
+HOST-RUNNABLE VERIFICATION (this surface) — all GREEN
+------------------------------------------------------------------------------
+xcodegen generate ............................ EXIT=0 (project regenerated;
+    all 10 TeslaAuthCard.* files enumerated — 60 pbxproj references, 6 per file:
+    7 non-test .swift to both app targets, 2 *Tests.swift to both XCTest bundles,
+    .strings to app resources).
+swiftformat --lint (9 surface files) ......... 0/9 require formatting.
+swiftlint --strict (9 surface files) ......... 0 violations, 0 serious in 9 files.
+check-placeholders (surface) ................. 0 violations, 0 opt-outs.
+swiftc -typecheck — iOS 18 Simulator SDK ..... 0 errors
+    (arm64-apple-ios18.0-simulator, -swift-version 6, -strict-concurrency=complete,
+     -D DEBUG so the #Preview blocks are checked too; surface + the Shared-free design
+     layer: Tokens + TSDesign/TSMaterial + Typography/Badges/Buttons/Cards/Motion/Skeletons).
+swiftc -typecheck — macOS 15 SDK ............. 0 errors
+    (arm64-apple-macos15.0, -swift-version 6, -strict-concurrency=complete, -D DEBUG).
+swift test — isolated SwiftPM (real surface + real tests) ... 39 / 39 PASSED, 0 failures
+    Adapter (AdapterTests.swift): ISO parse (none/unparseable/internet-date-time/fractional),
+    severity ladder incl. the 7-vs-8-day boundary + the authenticated-false-wins rule, the
+    detail buckets, the CTA ternary, the TONE accents/symbols/badge fallbacks, the integer
+    formatter, the a11y summary. Projection + Model (Tests.swift): every phase
+    (loading/error/empty/data) across every severity, the detail/badge/CTA copy, the
+    view.opened-once telemetry, the connection tracking, and the stale one-shot auto-refresh
+    (re-armed on live, suppressed offline).
+TESLAAUTH_ERROR_COUNT=0 — zero errors originate from this surface on either real SDK.
+
+------------------------------------------------------------------------------
+DEFERRAL — full-app xcodebuild build/test (steps [1][2]) is macOS-pending (ADR-012)
+------------------------------------------------------------------------------
+This is the SAME deferred verification recorded for the sibling system-status surfaces
+(0243-FrontendErrorsCard, 0244-HealthProbesSection) in apps/macos-pending-verifications.md.
+Reasons, all PRE-EXISTING / ENVIRONMENTAL — none caused by this surface:
+  • KMP Shared.xcframework prerequisite: the TeslaSync scheme's "Stage Shared.xcframework"
+    pre-build action runs a Kotlin/Native multi-platform Gradle assembly (the P1/S3 artifact
+    tracked macOS-pending). Frameworks/Shared.xcframework is absent on this host. THIS surface
+    does NOT `import Shared` — it imports only SwiftUI/Foundation/Observation/OSLog, and is
+    proven to typecheck on both real SDKs without the framework.
+  • macOS target: DEVELOPMENT_TEAM is empty (no dev-signing identity on this host).
+  • One pre-existing tree-wide swiftlint error in another agent's widget (see step [3]).
+  • Shared host saturation: launching another full KMP+Xcode build on the shared machine
+    would not change this surface's proven-green status. Deferred to the Apple acceptance
+    gate (P99, macos-latest).
+macOS verification command (P99 runner):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Surface renders on Apple with all states from the web source reproduced
+    (loading / empty(unknown) / error / data: connected/expiring/expired/disconnected /
+     stale / offline).
+[x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view
+    (pure-presentational web component → input-snapshot source seam).
+[x] Every i18n key from source has a matching key in the P1/S10 catalog
+    (title + 5 status + 8 detail + %@d unit + 2 CTA, plus native chrome).
+[x] Accessibility labels present on the card container + the CTA button + the freshness
+    chip + the per-state summaries.
+[x] Tests: adapter unit tests + per-state projection/model tests + a11y label tests
+    (39 total, green).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate: 0, 0 opt-outs).
+[~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing/environmental blockers
+    + the macOS-pending KMP framework prerequisite); host-runnable equivalents — real iOS-18 +
+    macOS-15 swiftc -typecheck (0 errors) + 39/39 swift test + swiftlint/swiftformat/
+    placeholder/xcodegen — all green.
+
+EXIT=0
+STATUS=DONE

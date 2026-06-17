@@ -1,0 +1,161 @@
+=== P4 Shared surface 0135 ReleaseNotes (Apple) ===
+Date: 2026-06-11
+Web source (spec): web/src/components/feedback/ReleaseNotes.tsx
+Native output:     apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.*
+
+--------------------------------------------------------------------------------
+CAPABILITY CHECK (ADR-002 / prompt capability gate) — PRESENT
+--------------------------------------------------------------------------------
+xcodebuild   : Xcode 26.5 (Build 17F42)
+swift        : Apple Swift version 6.3.2 (target arm64-apple-macosx26.0)
+swiftlint    : /opt/homebrew/bin/swiftlint
+swiftformat  : /opt/homebrew/bin/swiftformat
+pwsh         : /opt/homebrew/bin/pwsh
+simulators   : iPhone 16 (booted), iOS 26.5 runtime available
+App target SWIFT_VERSION = 6.0 ; SWIFT_STRICT_CONCURRENCY = complete (verified in project.yml + pbxproj)
+
+SwiftUI + Swift Charts + MapKit toolchain is available. This surface uses none
+of Charts/Maps (web source has none); it is a pure SwiftUI accordion.
+
+--------------------------------------------------------------------------------
+SURFACE INVENTORY (delivered — self-contained; see note on architecture below)
+--------------------------------------------------------------------------------
+ReleaseNotes.Adapter.swift     185  domain types (surface slug, change kind, badge kind, change, entry, load/connection/phase)
+ReleaseNotes.Catalog.swift     267  ported generated CHANGELOG (6 releases, newest-first; parity with web @/generated/changelog)
+ReleaseNotes.Projection.swift   59  pure logic: slice(0,limit) cap, first-release default expansion, phase, inline-failure
+ReleaseNotes.Seams.swift       198  P1/S11 telemetry (view.opened), P1/S8 source protocol + update + in-memory source, P1/S10 i18n facade, a11y builders
+ReleaseNotes.Model.swift       171  @MainActor @Observable state holder (single-open accordion, stale auto-refresh, telemetry)
+ReleaseNotes.States.swift      198  loading / empty / error states + freshness chip + connectivity & inline-error banners
+ReleaseNotes.Views.swift       210  populated list + collapsible entry row + flat change list + badge + dot/icon palette
+ReleaseNotes.swift              74  public ReleaseNotes view (phase switch + freshness chip; view.opened on appear)
+ReleaseNotes.Previews.swift     77  #Preview for every state (populated/full/loading/empty/error/stale/offline)
+ReleaseNotes.strings            50  25 i18n keys (web-parity changelog.* keys + native chrome + a11y)
+ReleaseNotes.Tests.swift       292  30 XCTest cases (catalog/adapter/projection/model/accessibility)
+TOTAL                         1781
+
+States rendered (every one, no hidden surface): loading, empty, error, populated, + stale & offline freshness.
+i18n keys (P1/S10): web-parity changelog.releaseNotes.heading + changelog.badges.{latest,stable,beta}
+  (+ changelog.sections.* VoiceOver prefixes), plus native releaseNotes.* chrome/a11y. No English literals in Swift.
+Telemetry (P1/S11): view.opened emitted once with surface slug "ReleaseNotes".
+Accessibility: per-row VoiceOver label (version+badge+date), expand/collapse hint, per-change category prefix
+  (so the dot color is not the only signal); Reduce-Motion respected in the loading pulse; Dynamic Type via system fonts.
+
+ARCHITECTURE NOTE — why self-contained: the web ReleaseNotes and ChangelogModal both import the one shared
+@/generated/changelog module. On Apple, TeslaSync/modals-dialogs (where ChangelogModal lives) is NOT a member of
+any build target (project.yml app/test targets include only Sources, dashboard-widgets, feature-views,
+misc-surfaces, shared-surfaces). Per the allowed-files constraint (ReleaseNotes.* only) and the established
+per-surface ownership pattern, ReleaseNotes ports its own copy of the changelog data + types rather than
+depending on a non-compiled sibling. Data is a faithful 1:1 port of web/src/generated/changelog.ts.
+
+--------------------------------------------------------------------------------
+GATE — official commands (verbatim), executed against the full real tree
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=65        <-- RED, but NOT caused by ReleaseNotes (see BLOCKER #1)
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=65        <-- RED, but NOT caused by ReleaseNotes (see BLOCKER #2)
+
+$ swiftlint --strict
+LINT_EXIT=0        <-- GREEN (whole tree, including all 10 ReleaseNotes Swift files)
+
+$ swiftformat --lint apps/apple
+FORMAT_EXIT=0      <-- GREEN (whole tree, including all 10 ReleaseNotes Swift files)
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/ReleaseNotes
+PLACEHOLDER_EXIT=0 <-- GREEN
+  (note: surfaces are flat files, so the verbatim -Path .../ReleaseNotes resolves to a
+   non-existent directory and scans nothing. An HONEST scan of the actual files was also run —
+   see "ReleaseNotes own placeholder scan" below — and is also clean.)
+
+--------------------------------------------------------------------------------
+BLOCKERS (both pre-existing / environmental; both outside the allowed file set ReleaseNotes.*)
+--------------------------------------------------------------------------------
+BLOCKER #1 — pre-existing sibling COMPILE errors (iOS + macOS app target)
+  The shared TeslaSync app target fails to compile due to pre-existing bugs in OTHER surfaces.
+  First error the build aborts on (iOS gate):
+
+    apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+      error: escaping closure captures non-escaping parameter 'content'
+
+  This is a systemic pattern (a `glass(@ViewBuilder _ content: () -> some View)` helper passing the
+  non-escaping `content` into TSGlassPanel's @escaping closure). Confirmed in at least these sibling
+  surfaces (none in my allowed scope):
+      shared-surfaces/AISuggestNewGeofences.swift
+      shared-surfaces/AISignalExplorerNlFilter.swift
+      shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift
+      shared-surfaces/AIAutoNameUnnamedLocations.swift
+  Plus a separate pre-existing type-check timeout in:
+      feature-views/RecentDrivesSection.Previews.swift:24:20:
+      error: the compiler is unable to type-check this expression in reasonable time
+  The allowed-files rule for this prompt is `apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.*` only,
+  so these sibling files cannot be modified here (delegation/predecessor-bypass forbidden by the covenant).
+
+BLOCKER #2 — macOS runner signing (TeslaSync-macOS build, environmental)
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+      development certificate. Enable development signing in the Signing & Capabilities editor.
+    TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+  The macOS scheme fails before compilation due to missing development signing on the runner — an
+  environmental capability gap, unrelated to any source change.
+
+GREP PROOF — zero ReleaseNotes errors in either build:
+  $ grep "error:" gate_ios.log | grep -i ReleaseNotes  -> NONE
+  $ grep "error:" gate_mac.log | grep -i ReleaseNotes  -> NONE
+
+--------------------------------------------------------------------------------
+ISOLATED VERIFICATION OF THIS SURFACE (because the shared scheme cannot link)
+--------------------------------------------------------------------------------
+Because the full scheme is blocked by the pre-existing sibling errors above, this surface was verified
+in isolation by compiling + testing it as a standalone Swift package containing ONLY its real
+dependency closure (the 9 ReleaseNotes source files + the design Tokens.swift + the shared TSButton),
+built in the SAME language mode as the app target (swift-tools 6.0 => Swift 6, strict concurrency).
+
+$ swift test    (Target Platform: arm64e-apple-macos14.0; Swift 6 / strict-concurrency = complete)
+  Compiling RNKit (ReleaseNotes source) ............ SUCCEEDED, 0 errors, 0 warnings
+  Test Suite 'All tests' passed
+  Executed 30 tests, with 0 failures (0 unexpected)
+
+  Suites: ReleaseNotesCatalogTests, ReleaseNotesAdapterTests, ReleaseNotesProjectionTests,
+          ReleaseNotesModelTests, ReleaseNotesAccessibilityTests  (30 tests, 0 failures)
+
+  This proves the ReleaseNotes surface compiles cleanly under the exact Swift 6 + strict-concurrency
+  configuration of the real target, and that its adapter/projection/model/accessibility tests pass.
+  (The isolation also surfaced — and this surface fixed — a Swift-6 concurrency issue in the test file's
+   global test localizers, now marked @Sendable, that the real gate would otherwise have flagged.)
+
+--------------------------------------------------------------------------------
+ReleaseNotes own swiftlint / swiftformat / placeholder (scoped, authoritative for this surface)
+--------------------------------------------------------------------------------
+$ swiftlint lint --strict <10 ReleaseNotes .swift files>          -> 0 violations (exit 0)
+$ swiftformat --lint      <10 ReleaseNotes .swift files>          -> 0/10 require formatting (exit 0)
+$ check-placeholders.ps1 -Path <copy of ReleaseNotes.* in a dir> -> PLACEHOLDER_ALLOWED=1 PLACEHOLDER_COUNT=0 (exit 0)
+  (the single allowed item is the ported product line "...uses `changeme` placeholders" carrying a
+   required `// parity:allow ported web changelog release-note copy (CHANGELOG.md 0.3.0)` marker)
+No TODO / FIXME / stub / mock / Placeholder / Lorem in shipped code.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all web states (loading/empty/error/populated + stale/offline) — implemented + previewed + unit-tested.
+[x] Hooks bind through the shared P1/S8 state-holder layer (ReleaseNotesSource); no direct HTTP in the view.
+[x] Every web i18n key has a matching key in the P1/S10 catalog (changelog.releaseNotes.heading, changelog.badges.*).
+[x] Accessibility labels on every interactive element (disclosure rows) + per-change category VoiceOver prefix.
+[x] Tests: adapter + catalog + projection + model + a11y (30 cases) — all pass in isolation.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+[~] EXIT=0 / STATUS=DONE  -> NOT achievable here: the full-scheme gate is RED due to pre-existing sibling
+    compile errors + a macOS runner signing gap, both outside the allowed file set. Per the Honesty
+    Covenant (#1 no red-as-green, #7 no predecessor bypass, #8 no commit on red) this is reported as
+    BLOCKED with the evidence above, rather than falsely marked green or worked around by editing
+    out-of-scope files.
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+ReleaseNotes (Apple) is implemented to production parity with the web source and is independently
+verified: compiles under Swift 6 strict concurrency and passes 30/30 unit tests; swiftlint/swiftformat
+green; placeholder-clean. The official iOS/macOS build+test gate cannot pass on this shared checkout
+because of pre-existing compile errors in unrelated sibling surfaces and a macOS signing gap on the
+runner — neither within this prompt's allowed file set (ReleaseNotes.* only).
+
+EXIT=65
+STATUS=BLOCKED

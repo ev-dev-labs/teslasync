@@ -1,0 +1,161 @@
+=== P4 Shared surface 0051 AISuggestNewGeofences (Apple) ===
+Date: 2026-06-10
+Branch: auto/20260609-194659-46608/137
+Web source (spec): web/src/components/ai/AISuggestNewGeofences.tsx
+Native output:      apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.*
+
+------------------------------------------------------------------------------
+CAPABILITY (required: SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG)
+------------------------------------------------------------------------------
+xcodebuild   : Xcode 26.5 (Build 17F42)            -> AVAILABLE
+swift        : Apple Swift 6.3.2                    -> AVAILABLE
+swiftlint    : /opt/homebrew/bin/swiftlint          -> AVAILABLE
+swiftformat  : /opt/homebrew/bin/swiftformat        -> AVAILABLE
+pwsh         : /opt/homebrew/bin/pwsh               -> AVAILABLE
+xcodegen     : 2.45.4                               -> AVAILABLE
+iPhone 16 sim: 83717DEE-... (Booted)               -> AVAILABLE
+Charts/MapKit: web source declares NONE for this surface (no chart/map needed).
+=> Platform capability is PRESENT. The build-gate failure below is NOT a
+   capability gap; it is a pre-existing, out-of-scope duplicate-symbol break in
+   sibling surfaces plus a macOS code-signing limitation of this runner.
+
+------------------------------------------------------------------------------
+PREP
+------------------------------------------------------------------------------
+[Shared.xcframework] apps/apple/Scripts/build-shared-xcframework.sh
+  BUILD SUCCESSFUL in 6m 34s ; "Shared.xcframework staged"        -> OK
+[xcodegen generate]
+  Created project at apps/apple/TeslaSync.xcodeproj                -> OK
+
+------------------------------------------------------------------------------
+STEP 1 — iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS
+         Simulator,name=iPhone 16' build test
+------------------------------------------------------------------------------
+Result: ** TEST FAILED ** (build failed; testing cancelled)
+IOS_EXIT=65
+
+ROOT CAUSE (pre-existing, NOT this surface): duplicate public type names are
+declared by two *sibling* surfaces that both compile into the TeslaSync module,
+so the names are ambiguous at use sites. Representative compiler errors:
+
+  'StateTimelineModel'      is ambiguous for type lookup in this context
+  'StateTimelineUpdate'     is ambiguous for type lookup in this context
+  'StateTimelineConnection' is ambiguous for type lookup in this context
+  'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+  'RecentDrivesModel'       is ambiguous for type lookup in this context
+  'RecentDrivesUpdate'      is ambiguous for type lookup in this context
+  'RecentDrivesConnection'  is ambiguous for type lookup in this context
+  'RecentDrivesLoadStatus'  is ambiguous for type lookup in this context
+
+Owning (sibling) files — OUTSIDE this prompt's allowed-files set:
+  TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift   (commit 57117c5cd era)
+  TeslaSync/feature-views/StateTimeline.Adapter.swift / .Model.swift / .Source.swift
+  TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+  TeslaSync/feature-views/RecentDrivesSection.Model.swift / .Adapter.swift
+
+PROOF THIS SURFACE IS NOT THE CAUSE:
+  - Lines in the iOS log mentioning AISuggestNewGeofences: 3 (batch listings only)
+  - Compiler errors referencing AISuggestNewGeofences / SuggestGeofence*: 0
+  - git status: only the 9 new AISuggestNewGeofences.* files are added; no other
+    file in the repo was modified by this prompt.
+  - This prompt's allowed files are AISuggestNewGeofences.* + this log ONLY, so the
+    sibling collisions cannot be fixed here without violating scope (and would break
+    the sibling surfaces' own gates).
+
+------------------------------------------------------------------------------
+STEP 2 — macOS: xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------------------
+Result: ** TEST FAILED ** (build failed; testing cancelled)
+MAC_EXIT=65
+
+Primary blocker (runner environment, not code):
+  error: "TeslaSync-macOS" has entitlements that require signing with a
+         development certificate. Enable development signing ...
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+  => No development signing identity is provisioned on this runner.
+
+Diagnostic (signing disabled to reach compilation):
+  xcodebuild -scheme TeslaSync-macOS CODE_SIGNING_ALLOWED=NO build
+  => ** BUILD FAILED ** with the SAME pre-existing duplicate-symbol collisions
+     as Step 1 (StateTimeline*, RecentDrives* ambiguous). Confirms the macOS
+     compile blocker is identical/external, again not this surface.
+  MAC_NOSIGN_EXIT=65
+
+------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict   (gate runs over all of apps/apple)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 3520 files.
+LINT_EXIT=0                                                        -> PASS
+(scoped re-run over the 8 new AISuggestNewGeofences*.swift files: 0 violations)
+
+------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple
+------------------------------------------------------------------------------
+0/3750 files require formatting, 2 files skipped.
+FORMAT_EXIT=0                                                      -> PASS
+(the 9 new files are already canonical: swiftformat in-place reported 0/8 changed)
+
+------------------------------------------------------------------------------
+STEP 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0                                                 -> PASS
+(honest per-file re-scan of all 8 new .swift files: PLACEHOLDER_COUNT=0 each;
+ no TODO/FIXME/stub/mock/placeholder/Lorem in shipped code)
+
+------------------------------------------------------------------------------
+STEP 6 — Isolated verification of THIS surface (SwiftPM harness)
+------------------------------------------------------------------------------
+Because the full-module build is blocked by the sibling collisions above, the
+surface was compiled + tested in isolation against the REAL P1/S9 design tokens
+(apps/design/generated/apple/Tokens.swift), the real TSMaterial/TSButton/
+TSGlassPanel/TSSkeleton primitives, and the surface's own 6 sources + 2 test
+files (swift-tools 6.0, Swift 6 language mode, macOS 15):
+
+  swift test
+  Test Suite 'All tests' passed.
+  Executed 44 tests, with 0 failures (0 unexpected).
+  SWIFT_TEST_EXIT=0                                                -> PASS
+
+  Coverage: nested tool_result -> SuggestedGeofenceDraft decode (all guard
+  branches incl. missing draft wrapper / missing inner fields / type mismatches /
+  non-string validation_error / Math.round radius / applied centroid+radius),
+  stream-lifecycle button logic (isBusy/canStart/buttonDisabled/output/thinking),
+  VoiceOver summary, JSON value accessors, the i18n facade, and full model wiring
+  (view.opened telemetry once, suggest double-submit guard, ok-only apply payload,
+  location-change cancel+reset, first-snapshot no-cancel, stale one-shot refresh,
+  offline guard, delta accumulation, cancel/refresh/stop/re-arm, surface slug/id).
+
+  Note: this harness build ALSO surfaced (and this surface FIXED) a real
+  `@escaping` capture error in the panel-shell helper of the view — a defect the
+  cancelled full build never reached. The fix is contained to this surface's
+  AISuggestNewGeofences.swift and keeps swiftlint/swiftformat green.
+
+------------------------------------------------------------------------------
+SCOPE & ACCEPTANCE
+------------------------------------------------------------------------------
+Acceptance criteria status:
+  [x] All web-source states reproduced (gateLoading/idle/streaming/draft[ok]/
+      draft[rejected]/stream-error/gateError/stale/offline/gatedOff) — #Preview
+      per state + per-state model behaviour asserted.
+  [x] Hooks bind via the shared P1/S8 state-holder (SuggestGeofenceSource); the
+      view performs NO direct HTTP.
+  [x] Every web i18n key has a matching key in the P1/S10 catalog
+      (AISuggestNewGeofences.strings) resolved through the facade.
+  [x] Accessibility labels on every interactive element; testable a11y summary.
+  [x] Tests: adapter unit test + per-state behaviour + a11y label test (44 pass).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+  [ ] EXIT=0 — BLOCKED: the two xcodebuild build+test steps cannot reach 0 due to
+      pre-existing duplicate-symbol collisions in sibling surfaces (StateTimeline*,
+      RecentDrives*) that are OUTSIDE this prompt's allowed files, plus a macOS
+      code-signing limitation of this runner.
+
+Honesty covenant: no red is reported as green. Steps 3/4/5/6 are independently
+green; steps 1/2 are red for reasons external to this surface and outside its
+allowed-files scope, documented above with evidence.
+
+------------------------------------------------------------------------------
+EXIT=1
+STATUS=BLOCKED
+------------------------------------------------------------------------------

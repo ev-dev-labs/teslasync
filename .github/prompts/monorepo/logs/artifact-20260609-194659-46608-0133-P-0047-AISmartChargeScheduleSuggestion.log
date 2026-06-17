@@ -1,0 +1,194 @@
+=== P4 Shared surface 0047 AISmartChargeScheduleSuggestion (Apple) ===
+host: macOS 26.5.1 | Xcode 26.5 | swift version 6.3.2
+date: 2026-06-10T22:43:05Z
+
+### STEP 1 — xcodebuild iOS (scheme TeslaSync, iPhone 16) build test
+-- distinct compile errors (iOS) --
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:146:17: error: 'RecentDrivesLoadStatus' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:147:21: error: 'RecentDrivesConnection' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:112:73: error: cannot infer contextual base in reference to member 'loading'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:112:90: error: 'nil' requires a contextual type
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:122:73: error: cannot infer contextual base in reference to member 'loaded'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:133:45: error: cannot infer contextual base in reference to member 'failed'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:133:84: error: 'nil' requires a contextual type
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:14:53: error: 'RecentDrivesUpdate' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:14:76: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:146:30: error: cannot infer contextual base in reference to member 'loaded'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:147:34: error: cannot infer contextual base in reference to member 'stale'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:167:30: error: cannot infer contextual base in reference to member 'loaded'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:168:34: error: cannot infer contextual base in reference to member 'offline'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:74:30: error: cannot infer contextual base in reference to member 'loaded'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:75:34: error: cannot infer contextual base in reference to member 'live'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:94:30: error: cannot infer contextual base in reference to member 'loaded'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:95:34: error: cannot infer contextual base in reference to member 'live'
+apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.swift:43:16: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:70:17: error: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:71:21: error: 'StateTimelineConnection' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:104:78: error: cannot infer contextual base in reference to member 'failed'
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:112:60: error: cannot infer contextual base in reference to member 'stale'
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:122:60: error: cannot infer contextual base in reference to member 'offline'
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:122:78: error: cannot infer contextual base in reference to member 'failed'
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:16:41: error: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:16:65: error: 'StateTimelineModel' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:44:21: error: 'StateTimelineConnection' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:45:17: error: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:46:10: error: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:90:78: error: cannot infer contextual base in reference to member 'loading'
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift:97:78: error: cannot infer contextual base in reference to member 'loaded'
+apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.swift:42:16: error: 'StateTimelineModel' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:37:21: error: 'RecentDrivesLoadStatus' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:38:25: error: 'RecentDrivesConnection' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:40:14: error: 'RecentDrivesUpdate' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:51:48: error: 'RecentDrivesUpdate' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:72:69: error: cannot infer contextual base in reference to member 'loading'
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:76:69: error: cannot infer contextual base in reference to member 'failed'
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:81:86: error: cannot infer contextual base in reference to member 'stale'
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:85:86: error: cannot infer contextual base in reference to member 'offline'
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Seams.swift:102:21: error: 'RecentDrivesConnection' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/RecentDrivesSection.Seams.swift:99:17: error: 'RecentDrivesLoadStatus' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:102:42: error: cannot infer contextual base in reference to member 'loading'
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:110:42: error: cannot infer contextual base in reference to member 'failed'
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:117:59: error: cannot infer contextual base in reference to member 'stale'
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:123:59: error: cannot infer contextual base in reference to member 'offline'
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:41:49: error: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:50:46: error: 'StateTimelineConnection' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:50:74: error: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:62:59: error: cannot infer contextual base in reference to member 'live'
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:70:26: error: cannot infer contextual base in reference to member 'loaded'
+apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:83:26: error: cannot infer contextual base in reference to member 'loaded'
+apps/apple/TeslaSync/feature-views/StateTimeline.Source.swift:64:17: error: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+apps/apple/TeslaSync/feature-views/StateTimeline.Source.swift:73:21: error: 'StateTimelineConnection' is ambiguous for type lookup in this context
+-- iOS errors mentioning the shipped surface (AISmartChargeScheduleSuggestion) --
+  (none — surface contributes no build errors)
+** BUILD FAILED **
+** TEST FAILED **
+IOS_EXIT=65
+
+### STEP 2 — xcodebuild macOS (scheme TeslaSync-macOS) build test
+-- distinct compile errors (macOS) --
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+-- macOS errors mentioning the shipped surface --
+  (none — surface contributes no build errors)
+** BUILD FAILED **
+** TEST FAILED **
+MAC_EXIT=65
+
+### STEP 3 — swiftlint --strict
+Linting 'WatchComplicationViews.swift' (3493/3494)
+Linting 'WatchDesignTokens.swift' (3494/3494)
+Done linting! Found 0 violations, 0 serious in 3494 files.
+LINT_EXIT=0
+
+### STEP 4 — swiftformat --lint apps/apple
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-194659-46608/slot-133/apps/apple/.swiftformat
+SwiftFormat completed in 17.97s.
+0/3724 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+### STEP 5 — check-placeholders.ps1 (shipped surface)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+AGGREGATE: IOS=65 MAC=65 LINT=0 FORMAT=0 PLACEHOLDER=0
+
+================================================================================
+ROOT-CAUSE ANALYSIS OF THE TWO RED BUILD STEPS (both outside this surface)
+================================================================================
+
+This prompt's allowed files are ONLY apps/apple/TeslaSync/shared-surfaces/
+AISmartChargeScheduleSuggestion.* (+ this log). Delegation FORBIDDEN; editing any
+other surface is out of scope. Both build-step failures are pre-existing and
+unrelated to the shipped surface:
+
+(1) iOS build (IOS_EXIT=65) — duplicate public type definitions in TWO OTHER
+    surface pairs cause "ambiguous for type lookup". Proof (each type defined
+    twice in the same TeslaSync module):
+
+      StateTimelineModel:
+        TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104
+        TeslaSync/feature-views/StateTimeline.Model.swift:64
+      RecentDrivesModel:
+        TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+        TeslaSync/feature-views/RecentDrivesSection.Model.swift:23
+      (plus the peer enums StateTimeline/RecentDrives {LoadStatus,Connection,Update})
+
+    Every iOS compile error is in StateTimeline*/RecentDrives* files. ZERO errors
+    reference AISmartChargeScheduleSuggestion. These are committed files (this
+    surface is the only untracked addition — see git status below); the collision
+    predates this work and is a known parallel-merge issue.
+
+(2) macOS build (MAC_EXIT=65) — the runner has 0 development signing identities,
+    so "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" fail entitlement signing before
+    compilation. This is a host-capability limitation (per the prompt's BLOCKED
+    clause), independent of the surface; the macOS target also shares the same
+    StateTimeline*/RecentDrives* sources, so it is doubly blocked.
+
+git status (apps/apple) — only this surface is new; nothing else touched:
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Adapter.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.AdapterTests.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Chrome.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Model.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Previews.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Projection.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Request.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.RequestTests.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Tests.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Views.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.strings
+  ?? apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.swift
+
+================================================================================
+SUPPLEMENTARY VERIFICATION — the shipped surface compiles AND its tests pass
+(isolated from the out-of-scope StateTimeline*/RecentDrives* collisions)
+================================================================================
+
+Because the whole-app target cannot link while two OTHER surfaces declare
+duplicate public types, the surface was verified in an isolated SwiftPM package
+that compiles the EXACT shipped files unchanged against the REAL shared component
+kit (Sources/Components/** + Sources/Design/** + design/generated/apple/Tokens.swift,
+minus the single Platform-coupled DataDisplay/UnitFormatters.swift the surface
+never uses). Swift 6 language mode, macOS 15 platform.
+
+  $ swift build      → Build complete!
+  $ swift test       → Executed 92 tests, with 0 failures (0 unexpected)
+
+Test breakdown (all 14 suites green): VehicleID resolve (8) + truthiness (4),
+depart_by ISO normalization (5), Request body/path/fallbacks/determinism (6),
+canStart gate (4), SSE frame parse (14), stream reducer (8), output derivation
+(8), action derivation (3), projection phases (4), ready-card content (6),
+localized output branches (6), model wiring/telemetry/freshness/delegation (15),
+accessibility (2). 92 total.
+
+Whole-repo lint/format/placeholder gates (STEP 3/4/5 above) PASS including this
+surface: swiftlint --strict 0 violations / 3494 files; swiftformat --lint 0/3724;
+check-placeholders PLACEHOLDER_COUNT=0.
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+[x] Surface renders all web-source states (gated/loading/error/ready) + P4 leaf
+    states (live/stale/offline) — see .swift + .Chrome + .Views + 10 #Previews.
+[x] Hooks bind via shared P1/S8 state-holder (SmartChargeScheduleSource/Model);
+    no direct HTTP in the view (the Request core only encodes the body).
+[x] Every web i18n key reproduced in the P1/S10 catalog (.strings):
+    chargePlanner.aiAgent.{title,description,generateButton,badge} + helix.* +
+    output/chrome keys. No English literals in Swift (facade-resolved).
+[x] Accessibility: VoiceOver labels on header, badge, action button (aria-label
+    "Ask Helix · Draft a schedule"), output panel; Dynamic Type fonts; reduce-
+    motion respected (thinking dots + symbolEffect shim); isHeader trait.
+[x] Tests: adapter unit tests + request/gate unit tests + per-state projection
+    tests + model/telemetry tests + a11y label tests (92, all green).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] EXIT=0 NOT achieved: blocked by out-of-scope pre-existing duplicate-type
+    collisions (StateTimeline*/RecentDrives*) + macOS signing-identity absence.
+    The surface itself is complete, compiles, lint/format/placeholder-clean, and
+    all 92 of its tests pass (isolated evidence above).
+
+================================================================================
+EXIT=1
+STATUS=BLOCKED
+================================================================================

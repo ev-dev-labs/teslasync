@@ -1,0 +1,176 @@
+================================================================================
+p4-apple · P7 · page:admin/FeedbackQueue — SwiftUI / HIG
+Native parity of web/src/features/admin/pages/FeedbackQueuePage.tsx (/admin/feedback)
+Targets: apple-macos + apple-ios (one adaptive SwiftUI layer, ADR-002/006)
+================================================================================
+
+ARTIFACT FILES (all under the allowed scope apps/apple/.../Features/Admin + nav + catalog)
+  Sources/Features/Admin/FeedbackQueueModels.swift        wire types, enums, seam, format
+  Sources/Features/Admin/FeedbackQueueSampleData.swift    SampleFeedbackDataSource (actor)
+  Sources/Features/Admin/FeedbackQueuePageModel.swift     @Observable model + filters/paging/mutations
+  Sources/Features/Admin/FeedbackQueueChrome.swift        enum i18n/tone + Category/Status badges
+  Sources/Features/Admin/FeedbackQueuePage.swift          View: header + GlassPanel1 + filter bar + states
+  Sources/Features/Admin/FeedbackQueuePage.Table.swift    adaptive DataTable + pager + cells
+  Sources/Features/Admin/FeedbackQueuePage.Expansion.swift expandable row detail + inline actions
+  Sources/Features/Admin/AdminSection.swift               admin sub-router hub + AdminRouteRegistration
+  Tests/Unit/Features/Admin/FeedbackQueuePageModelTests.swift
+  Localization/Localizable.xcstrings                      +40 keys (38 required + 2 helpers)
+  Sources/TeslaSyncApp.swift                              wire AdminRouteRegistration (keeps DiskForecast reachable)
+
+NAVIGATION NOTE
+  The shell route host (.admin) is a single slot previously held directly by DiskForecast.
+  To add a second admin page WITHOUT regressing DiskForecast reachability, this introduces the
+  "admin sub-router" that DiskForecast/ApiPlayground registrations explicitly anticipated:
+  AdminSectionView lists the implemented admin pages and pushes each via a value-based
+  .navigationDestination(for: AdminDestination.self). DiskForecastPage source is unchanged.
+
+================================================================================
+GATE RESULTS
+================================================================================
+# Always-runnable gates (executed locally, raw results):
+
+PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path Sources/Features/Admin -Language swift
+             PLACEHOLDER_ALLOWED=0
+             PLACEHOLDER_COUNT=0
+             PLACEHOLDER_EXIT=0                                   ✅
+
+SWIFTFORMAT  swiftformat --lint Sources/Features/Admin Tests/Unit/Features/Admin
+             0/19 files require formatting
+             FORMAT_LINT_EXIT=0                                   ✅
+
+SWIFTLINT    swiftlint --strict Sources/Features/Admin (+ Tests/Unit/Features/Admin)
+             my Admin/FeedbackQueue/* violations = 0
+             LINT_EXIT(my files)=0                                ✅
+             (note: 3 PRE-EXISTING --strict identifier_name errors exist in
+              TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift — NOT my files,
+              never touched by this unit; out of scope per engineering guidelines.)
+
+TYPECHECK    swiftc -typecheck -swift-version 6 -strict-concurrency=complete (whole Sources/ tree)
+   iOS       -sdk iphonesimulator -target arm64-apple-ios18.0-simulator -F .../ios-arm64-simulator
+             total errors = 0   (my Admin files errors = 0)
+             IOS_TYPECHECK_EXIT=0                                 ✅
+   macOS     -sdk macosx -target arm64-apple-macos15.0 -F .../macos-arm64
+             total errors = 0   (my Admin files errors = 0)
+             MACOS_TYPECHECK_EXIT=0                               ✅
+             => every Sources/ file, INCLUDING all five FeedbackQueue View files +
+                AdminSection, type-checks under Swift 6 strict concurrency on BOTH idioms.
+
+MODELTESTS   Standalone runtime harness (Models + SampleData + PageModel compiled with
+             swiftc -swift-version 6 -strict-concurrency=complete and EXECUTED):
+             30/30 assertions PASS → ALL_MODEL_TESTS_PASS, RUN_EXIT=0  ✅
+             Covers: loading/empty/error/loaded states; total/bridge propagation; pagination
+             (totalPages 0→1,25→1,26→2,50→2,51→3; advance/clamp/prev); filter-resets-page;
+             updateStatus/saveIssueURL/forwardToGitHub call update + reload; wire folds;
+             filter→wire mapping; dateTime/orDash formatters; SampleFeedbackDataSource list/filter/update.
+
+# Full xcodebuild gate — BLOCKED by PRE-EXISTING, non-Admin compiler breakage:
+
+BUILD        xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+             BUILD_EXIT=65   ❌ BLOCKED (NOT caused by this unit — see analysis below)
+TEST         xcodebuild -scheme TeslaSync ... test
+             TEST_EXIT=n/a   ❌ BLOCKED (test bundle depends on the app target building)
+
+--------------------------------------------------------------------------------
+BLOCKER ANALYSIS (honest, evidenced — Honesty Covenant #1 "no red-as-green")
+--------------------------------------------------------------------------------
+The whole-app build does not compile in THIS checkout because of two PRE-EXISTING
+defects in files this unit never touches. Proven by building the UNMODIFIED tree
+(my 9 new files moved aside, TeslaSyncApp.swift + Localizable.xcstrings reverted to
+HEAD, xcodegen regenerated): the baseline build ALSO fails, BASELINE_BUILD_EXIT=65.
+
+  1) Hard compile error (pre-existing, non-Admin):
+     TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+       error: escaping closure captures non-escaping parameter 'content'
+
+  2) Swift compiler IRGen crash (pre-existing toolchain bug, non-Admin):
+     While evaluating IRGenRequest for TeslaSync/feature-views/AppearanceSettings.Controls.swift
+     While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+       = reabstraction thunk helper from
+         @escaping @isolated(any) @Sendable (Bool, Actor?) -> ()  to  (Bool) -> ()
+       llvm::report_fatal_error(...)  → swift-frontend crash
+     Trigger: AppearanceSettings.Controls.swift:107  `let onChange: @MainActor (Bool) -> Void`
+     (Swift 6.3.2 / Xcode 26.5 toolchain crash on this @isolated(any) thunk; the project's
+      verified runners differ — see apps/macos-pending-verifications.md.)
+
+Both defects are in TeslaSync/{shared-surfaces,feature-views}; `git status` confirms this
+unit modified only Localizable.xcstrings + TeslaSyncApp.swift and added 9 Admin/test files.
+Per engineering guidelines ("Don't fix pre-existing issues unrelated to your task") these are
+NOT modified here. The FeedbackQueue parity unit itself is COMPLETE and verified by every gate
+that can run independently of the broken files (lint, format, placeholder, iOS+macOS typecheck,
+executed model tests). The Shared.xcframework (KMP core) was built+staged successfully so the
+blocker is purely the two source defects above, not a missing dependency / missing runner.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=43
+Each item: [x] kind — name  <evidence: file:line / symbol>
+================================================================================
+[x] panel  — GlassPanel1                         FeedbackQueuePage.swift `panel` (TSGlassPanel { filterBar + stateContent })
+
+[x] state  — loading data state                  FeedbackQueuePage.swift `loadingState` (TSSpinner) ← model .loading
+[x] state  — empty data state                    FeedbackQueuePage.swift `emptyState` (TSEmptyState) ← model .empty
+[x] state  — error data state                    FeedbackQueuePage.swift `errorState(_:)` (TSQueryError+retry) ← model .error
+[x] state  — success data state                  FeedbackQueuePage.swift `stateContent` .loaded → FeedbackQueueTable ← model .loaded
+
+[x] string — common.next                         FeedbackQueuePage.Table.swift:130 (pager Next button)
+[x] string — common.previous                     FeedbackQueuePage.Table.swift:126 (pager Previous button)
+[x] string — common.refresh                      FeedbackQueuePage.swift:121 (refreshButton label + a11y)
+[x] string — feedback.category.bug               FeedbackQueueChrome.swift:9  (FeedbackCategory.labelKey .bug)
+[x] string — feedback.category.feature           FeedbackQueueChrome.swift:10 (FeedbackCategory.labelKey .feature)
+[x] string — feedback.category.other             FeedbackQueueChrome.swift:11 (FeedbackCategory.labelKey .other)
+[x] string — feedback.queue.action.changeStatus  FeedbackQueuePage.Expansion.swift:148 (statusChangeSelect label)
+[x] string — feedback.queue.action.forward       FeedbackQueuePage.Expansion.swift:181 (forwardButton label)
+[x] string — feedback.queue.action.githubUrl     FeedbackQueuePage.Expansion.swift:166 (githubURLField label)
+[x] string — feedback.queue.action.saveUrl       FeedbackQueuePage.Expansion.swift:171 (saveURLButton)
+[x] string — feedback.queue.bridgeDisabled       FeedbackQueuePage.swift:128 (bridgeNote)
+[x] string — feedback.queue.col.category         FeedbackQueuePage.Table.swift:43 (categoryColumn)
+[x] string — feedback.queue.col.created          FeedbackQueuePage.Table.swift:31 (createdColumn)
+[x] string — feedback.queue.col.github           FeedbackQueuePage.Table.swift:87 (githubColumn)
+[x] string — feedback.queue.col.pageRoute        FeedbackQueuePage.Table.swift:64 (routeColumn)
+[x] string — feedback.queue.col.reporter         FeedbackQueuePage.Table.swift:70 (reporterColumn)
+[x] string — feedback.queue.col.status           FeedbackQueuePage.Table.swift:78 (statusColumn)
+[x] string — feedback.queue.col.title            FeedbackQueuePage.Table.swift:54 (titleColumn)
+[x] string — feedback.queue.empty                FeedbackQueuePage.swift:179 (emptyState title)
+[x] string — feedback.queue.emptyMessage         FeedbackQueuePage.swift:180 (emptyState message)
+[x] string — feedback.queue.expand.appVersion    FeedbackQueuePage.Expansion.swift:57 (metadataGrid)
+[x] string — feedback.queue.expand.body          FeedbackQueuePage.Expansion.swift:44 (bodySection)
+[x] string — feedback.queue.expand.consoleTail   FeedbackQueuePage.Expansion.swift:33 (TSAccordion consoleTail)
+[x] string — feedback.queue.expand.recentErrors  FeedbackQueuePage.Expansion.swift:30 (TSAccordion recentErrors)
+[x] string — feedback.queue.expand.submitter     FeedbackQueuePage.Expansion.swift:59 (metadataGrid)
+[x] string — feedback.queue.expand.userAgent     FeedbackQueuePage.Expansion.swift:58 (metadataGrid)
+[x] string — feedback.queue.expand.userEmail     FeedbackQueuePage.Expansion.swift:60 (metadataGrid)
+[x] string — feedback.queue.filter.allCategories FeedbackQueueChrome.swift:65 (FeedbackCategoryFilter.labelKey .all)
+[x] string — feedback.queue.filter.allStatuses   FeedbackQueueChrome.swift:53 (FeedbackStatusFilter.labelKey .all)
+[x] string — feedback.queue.filter.category      FeedbackQueuePage.swift:111 (categorySelect label)
+[x] string — feedback.queue.filter.status        FeedbackQueuePage.swift:103 (statusSelect label)
+[x] string — feedback.queue.maskedEmail          FeedbackQueuePage.Expansion.swift:92 (emailValue a11y label, TSMaskedValue)
+[x] string — feedback.queue.openIssue            FeedbackQueuePage.Table.swift:108 (githubCell Link)
+[x] string — feedback.queue.pageOf               FeedbackQueuePage.Table.swift:142 (pageOfText, %1$lld/%2$lld/%3$lld)
+[x] string — feedback.queue.status.closed        FeedbackQueueChrome.swift:33 (FeedbackStatus.labelKey .closed)
+[x] string — feedback.queue.status.new           FeedbackQueueChrome.swift:31 (FeedbackStatus.labelKey .new)
+[x] string — feedback.queue.status.triaged       FeedbackQueueChrome.swift:32 (FeedbackStatus.labelKey .triaged)
+[x] string — feedback.queue.title                FeedbackQueuePage.swift `header` (TSPageTitle) + AdminSection.swift:25
+
+PARITY_COVERED=43
+PARITY_REQUIRED=43
+PARITY_RESULT=PARITY_COVERED==PARITY_REQUIRED (43==43)  ✅
+
+(All 38 required string keys added to Localization/Localizable.xcstrings with the web default
+ values verbatim; presence re-verified with the JSON loader. Data states all bound to the
+ @Observable FeedbackQueuePageModel. SI units N/A — admin control-plane carries no SI quantities;
+ dates formatted at the display boundary via Date.FormatStyle.)
+
+================================================================================
+SUMMARY
+  Parity unit implemented in full (1 panel + 4 states + 38 strings = 43/43 covered, evidenced).
+  Lint (--strict), format (--lint), placeholder scan, iOS + macOS Swift-6 strict-concurrency
+  typecheck, and executed model tests are ALL GREEN for this unit.
+  The repo-wide `xcodebuild build/test` cannot reach green in this checkout: it is BLOCKED by two
+  PRE-EXISTING defects in unrelated TeslaSync/ surfaces (AISuggestNewGeofences.swift hard error;
+  AppearanceSettings.Controls.swift IRGen compiler crash), reproduced on the unmodified baseline
+  (BASELINE_BUILD_EXIT=65). Those are out of scope for this parity unit and are left unmodified.
+  Honesty Covenant honored: the build gate is red for reasons outside this unit, so STATUS=BLOCKED
+  rather than a false DONE.
+================================================================================
+EXIT=65
+STATUS=BLOCKED

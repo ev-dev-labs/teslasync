@@ -1,0 +1,184 @@
+=== P4-APPLE · P7 · page:admin/APIKeys — SwiftUI / HIG parity (Apple) ===
+
+Surface: APIKeysPage  (web route /api-keys; registered for AppRoute.admin + deep-link alias)
+Web source: web/src/features/admin/pages/APIKeysPage.tsx (reproduced end-to-end)
+Output:   apps/apple/TeslaSync/Features/Admin/APIKeysPage*.swift  (+ APIKeysPage.strings)
+Date: 2026-06-12
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app  ->  Xcode 26.5 (Build 17F42)
+  (xcode-select -p already points at Xcode; builds driven with
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+- SDKs: iphonesimulator26.5 / macosx26.5 (project deploys iOS 18.0 / macOS 15.0).
+- Toolchain: xcodegen 2.45.4, swiftlint, swiftformat, pwsh, node, java17 all present.
+- KMP shared core: Shared.xcframework built fresh via Scripts/build-shared-xcframework.sh
+  (Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL in 10m47s) and staged at
+  apps/apple/Frameworks/Shared.xcframework.
+  => Native Apple capability is AVAILABLE on this runner.
+
+------------------------------------------------------------
+PATH MAPPING (documented — no silent drift)
+------------------------------------------------------------
+The prompt's native-output path apps/apple/TeslaSync/Features/Admin/APIKeysPage.swift is
+honored verbatim. To compile it into BOTH app targets (and run its co-located tests),
+the new source root TeslaSync/Features/Admin was wired into:
+  - apps/apple/project.yml  : added to TeslaSync (iOS app), TeslaSync-macOS (macOS app),
+    TeslaSyncTests, and TeslaSync-macOSTests (the *Tests.swift split exactly as the other
+    surfaces: implementation files excluded from app targets, *Tests.swift included only
+    in the test bundles).
+  - apps/apple/.swiftlint.yml : added TeslaSync/Features/Admin to `included`.
+  - apps/apple/Sources/App/AppRouteParser.swift : added "/api-keys": .admin deep-link alias.
+  - apps/apple/Sources/TeslaSyncApp.swift : chained APIKeysRouteRegistration.registry(base:)
+    into the routeHosts registry so AppRoute.admin renders APIKeysPage in the
+    NavigationSplitView (macOS/iPad) / TabView "More" (iPhone).
+These four edits are the sanctioned "navigation registration" scope of the prompt.
+
+Surface decomposition (12 files; each <= 400 lines, lint line<=120; one concern per file):
+  APIKeysPage.Model.swift        surface slug + telemetry seam + i18n facade (AKStrings/
+                                 AKText/AKLocalizer) + date facade + AKPermission + AKApiKey
+  APIKeysPage.Sources.swift      AKConnection/AKLoadError/AKLoadStatus/AKListSnapshot/
+                                 AKListPresentation + APIKeysSource seam + APIKeysMutator seam
+  APIKeysPage.Store.swift        AKKeysModel (@Observable read model)
+  APIKeysPage.Adapter.swift      pure helpers (canGenerate, createInput, permissionOptions,
+                                 canRevoke, isDimmed)
+  APIKeysPage.Copy.swift         AKCopy — every AKText descriptor (27 + chrome)
+  APIKeysPage.ViewModel.swift    APIKeysPageModel (@Observable orchestration + handlers)
+  APIKeysPage.Views.swift        i18n bridge, AKPermissionBadge, AKFreshnessChip, AKKeyRow
+  APIKeysPage.CreateModal.swift  AKCreateModalContent / AKCreateForm / AKGeneratedKeyPanel
+  APIKeysPage.swift              APIKeysPage View scaffold (header/actions/states/modal/dialog)
+  APIKeysPage.Registration.swift APIKeysRouteRegistration
+  APIKeysPage.Previews.swift     samples + previews for content/empty/loading/error/offline
+  APIKeysPage.Tests.swift        XCTest (adapter/model/presentation/store/view-model)
+  APIKeysPage.strings            "APIKeysPage" i18n table (folds into Localizable.xcstrings)
+
+------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------
+- Data sources (4) bound through the P1/S8 @Observable holder (AKKeysModel) + the
+  APIKeysMutator seam; no networking in the view:
+    useApiKeys      -> GET    /api-keys           (AKKeysModel / APIKeysSource)
+    useCreateApiKey -> POST   /api-keys           (APIKeysPageModel.generate / mutator.create)
+    useDeleteApiKey -> DELETE /api-keys/{id}      (APIKeysPageModel.confirmDelete / mutator.delete)
+    useRevokeApiKey -> POST   /api-keys/{id}/revoke (APIKeysPageModel.revoke / mutator.revoke)
+- Composition: page header (title+subtitle+Create Key) -> create Modal (new-key form
+  <-> generated-secret reveal) -> keys list (rows) -> delete ConfirmDialog. Permission
+  badge (read/read-write/admin) colour+icon ported from design tokens (status green /
+  amber / chartSeriesPower purple == web #a855f7). Expired rows dimmed; revoke hidden when
+  expired (Adapter.canRevoke / isDimmed). Adaptive macOS(regular) + iOS(compact/regular).
+- i18n: every visible literal resolves from the "APIKeysPage" table via String(localized:)
+  bridge (AKLocalizer.key -> LocalizedStringKey); zero hardcoded UI strings; web key
+  defaults preserved verbatim.
+- a11y: VoiceOver labels on badges/chips/row actions, reveal/copy labels, >=44pt targets,
+  Dynamic Type via Font.TS, light/dark + increased-contrast via dynamic Color.TS tokens.
+- Units: not applicable (no SI quantities on this surface).
+
+=== PARITY ===
+PARITY_REQUIRED=32
+
+[panel  1/2 ] GlassPanel1  -> AKGeneratedKeyPanel (APIKeysPage.CreateModal.swift) via TSGlassPanel { TSMaskedValue }
+[panel  2/2 ] GlassPanel2  -> AKKeyRow (APIKeysPage.Views.swift) via TSGlassPanel { key row }
+[state  1/3 ] loading      -> APIKeysPage.loadingState (TSSkeleton x3) + AKListPresentation.loading
+[state  2/3 ] empty        -> APIKeysPage.emptyState (TSEmptyState) + AKListPresentation.empty
+[state  3/3 ] success      -> APIKeysPage.content (ForEach AKKeyRow) + AKListPresentation.content
+[string 01/27] "API Key Created"                              -> AKCopy.createdTitle      (admin.apiKeys.created.title)
+[string 02/27] "API Keys"                                     -> AKCopy.title             (admin.apiKeys.title)
+[string 03/27] "API key, click to reveal"                     -> AKCopy.revealAria        (admin.apiKeys.revealAria)
+[string 04/27] "Admin"                                        -> AKCopy.permissionAdmin   (admin.apiKeys.permission.admin)
+[string 05/27] "Are you sure you want to permanently delete the key \"{{name}}\"?" -> AKCopy.deleteMessage (admin.apiKeys.delete.message)
+[string 06/27] "Cancel"                                       -> AKCopy.cancel            (admin.apiKeys.cancel)
+[string 07/27] "Copy"                                         -> AKCopy.copy              (admin.apiKeys.copy)
+[string 08/27] "Copy API key"                                 -> AKCopy.copyAria          (admin.apiKeys.copyAria)
+[string 09/27] "Copy this key now — it won't be shown again." -> AKCopy.createdWarning    (admin.apiKeys.created.warning)
+[string 10/27] "Create Key"                                   -> AKCopy.createKey         (admin.apiKeys.createKey)
+[string 11/27] "Create an API key to enable programmatic access to TeslaSync data and controls." -> AKCopy.emptyMessage (admin.apiKeys.empty.message)
+[string 12/27] "Created"                                      -> AKCopy.createdLabel      (admin.apiKeys.createdLabel)
+[string 13/27] "Delete"                                       -> AKCopy.delete            (admin.apiKeys.delete)
+[string 14/27] "Delete API Key"                               -> AKCopy.deleteTitle       (admin.apiKeys.delete.title)
+[string 15/27] "Done"                                         -> AKCopy.done              (admin.apiKeys.done)
+[string 16/27] "Expired"                                      -> AKCopy.expired           (admin.apiKeys.expired)
+[string 17/27] "Generate Key"                                 -> AKCopy.generate          (admin.apiKeys.generate)
+[string 18/27] "Last used"                                    -> AKCopy.lastUsed          (admin.apiKeys.lastUsed)
+[string 19/27] "Manage programmatic access to TeslaSync"      -> AKCopy.subtitle          (admin.apiKeys.subtitle)
+[string 20/27] "My Application"                               -> AKCopy.namePrompt        (admin.apiKeys.namePrompt)
+[string 21/27] "Name"                                         -> AKCopy.nameLabel         (admin.apiKeys.name)
+[string 22/27] "New API Key"                                  -> AKCopy.newTitle          (admin.apiKeys.new.title)
+[string 23/27] "No API keys"                                  -> AKCopy.emptyTitle        (admin.apiKeys.empty.title)
+[string 24/27] "Permissions"                                  -> AKCopy.permissionsLabel  (admin.apiKeys.permissions)
+[string 25/27] "Read"                                         -> AKCopy.permissionRead    (admin.apiKeys.permission.read)
+[string 26/27] "Read-Write"                                   -> AKCopy.permissionReadWrite (admin.apiKeys.permission.readWrite)
+[string 27/27] "Revoke"                                       -> AKCopy.revoke            (admin.apiKeys.revoke)
+PARITY_COVERED=32
+=== END PARITY ===
+
+------------------------------------------------------------
+GATE RESULTS (actual command output)
+------------------------------------------------------------
+[0] placeholder scan
+    pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0                                                   -> PLACEHOLDER_EXIT=0
+
+[1] swiftlint --strict apps/apple/TeslaSync/Features/Admin
+      Done linting! Found 0 violations, 0 serious in 12 files.  -> LINT_EXIT=0
+
+[1b] swiftformat --lint TeslaSync/Features/Admin
+      0/12 files require formatting.                            -> FORMAT_EXIT=0
+
+[2] xcodebuild build  (iOS Simulator, name=iPhone 16) and (macOS)
+    RESULT: BLOCKED — pre-existing, unrelated whole-app compile breakage outside this
+    surface's allowed scope. THIS SURFACE IS CLEAN: all 11 implementation files appear in
+    the compiler's "Compiling …" jobs with ZERO diagnostics, and type-check + IR-emit
+    successfully in-context (verified by temporarily patching the pre-existing blockers,
+    building, then reverting those out-of-scope files — git status after revert shows only
+    Features/ + the 4 sanctioned wiring files).
+    Pre-existing baseline blockers (NOT touched by this surface, NOT in allowed scope):
+      a) DEFINITIVE / reproducible in the clean unpatched build: non-escaping @ViewBuilder
+         content helpers fed into TSGlassPanel's @escaping init across dozens of
+         TeslaSync/shared-surfaces/AI*.swift files, e.g.:
+           TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+             error: escaping closure captures non-escaping parameter 'content'
+           TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+             error: escaping closure captures non-escaping parameter 'content'
+         These abort the clean baseline build before it finishes — independent of this
+         surface (git status confirms these files are unmodified here).
+      b) Observed only during the temporary @escaping-patch build attempt (provenance
+         uncertain — pre-existing-masked or patch-induced; the patch was reverted): a
+         swift-frontend IR-emission crash (llvm::report_fatal_error) in the
+         AppearanceSettings/Auth compile batch. Not relied upon for the BLOCKED call.
+      c) macOS app/widget targets additionally require a development signing identity
+         (CODE_SIGN_ENTITLEMENTS) unavailable on this runner.
+    The BLOCKED determination rests on (a): the baseline app does not compile due to
+    pre-existing, unrelated, out-of-scope errors.
+    Per the engineering guidelines (do not fix pre-existing issues unrelated to the task)
+    and the prompt scope (allowed files = TeslaSync/Features/Admin + nav registration only),
+    these are NOT fixed here. The whole-app BUILD/TEST gate is therefore BLOCKED.
+                                                                 -> BUILD_EXIT=blocked
+
+[3] tests
+    The co-located TeslaSyncTests/-macOSTests bundles cannot execute because they require a
+    building app test-host (blocked by [2]). To verify this surface honestly, the logic +
+    state layer (APIKeysPage.{Model,Sources,Store,Adapter,Copy,ViewModel}.swift) and its
+    XCTest suite (APIKeysPage.Tests.swift) were compiled and run as an isolated SwiftPM
+    module (Swift 6 language mode, @testable import):
+      Test Suite 'All tests' passed — Executed 30 tests, with 0 failures (0 unexpected).
+    Covers: permission normalize, AKApiKey.isExpired, date parse/format, copy mapping,
+    telemetry view.opened slug, Adapter (canGenerate/createInput/permissionOptions/
+    canRevoke/isDimmed), AKListPresentation.resolve across all branches, AKKeysModel
+    lifecycle, and APIKeysPageModel open/cancel/generate(success+failure)/revoke/delete.
+                                                                 -> TEST_EXIT=0 (isolated; full bundle blocked by [2])
+
+------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------
+1 No red-as-green: the whole-app build is reported BLOCKED, not green. 2 No scope
+narrowing: all 32 parity items implemented + enumerated above. 3 No skip-and-assume.
+4 No stubs as final (placeholder gate = 0). 5 No parity shortcuts. 6 No delegation.
+7 No predecessor bypass. 8 No commit on red — NOT committed; changes left in the working
+tree for review. 9 No silent drift (path mapping documented). 10 Footer below.
+
+PARITY_COVERED=32 / PARITY_REQUIRED=32
+EXIT=1
+STATUS=BLOCKED

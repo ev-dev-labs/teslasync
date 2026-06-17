@@ -1,0 +1,138 @@
+=== P4 Feature view 0288 BatteryRangeCharts (Apple) ===
+Host: Darwin (Apple Silicon) · Xcode 26.5 (17F42) · Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+Toolchain capability: SwiftUI + Swift Charts + MapKit PRESENT; iOS 26.5 / macOS 15+ SDKs PRESENT;
+  iPhone 16 simulator PRESENT; swiftlint + swiftformat + xcodegen + pwsh PRESENT.
+Web source: web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx
+Native output: apps/apple/TeslaSync/feature-views/BatteryRangeCharts.{swift,Adapter,Math,Projection,
+  Model,Views,Charts,States,Previews,Tests,ProjectionTests}.swift + BatteryRangeCharts.strings  (12 files)
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+GATE STEPS (prompt Gate block)
+────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (RED — pre-existing, unrelated, out-of-scope)
+    Pre-build Run Script assembled + staged Shared.xcframework via Gradle
+      (cd apps/shared && ./gradlew :core:assembleSharedXCFramework → BUILD SUCCESSFUL in 8m 47s; staged ✓).
+    The build then aborted on a swift-frontend (Swift 6.3.2) IR-generation COMPILER CRASH — not a
+    type error — while compiling an OUT-OF-SCOPE file authored by another agent:
+        4.  While evaluating request IRGenRequest(IR Generation for file
+              ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+        5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+        Command SwiftCompile failed with a nonzero exit code
+    Root cause: AppearanceSettings.Controls.swift:122
+        Toggle("", isOn: Binding(get: { isOn }, set: onChange))     // onChange: @MainActor (Bool) -> Void
+    Passing a @MainActor-isolated closure into Binding(set:) makes the compiler emit an
+    isolation-erasure reabstraction thunk ((any Actor)? + Bool) whose IRGen crashes in Swift 6.3.2.
+    ZERO BatteryRangeCharts files appear in the crash; the surface is in separate compilation units.
+
+    MINIMAL STANDALONE REPRODUCTION (no TeslaSync/BatteryRangeCharts code at all):
+        // repro.swift
+        import SwiftUI
+        struct ReproToggleRow: View {
+            let isOn: Bool
+            let onChange: @MainActor (Bool) -> Void
+            var body: some View { Toggle("", isOn: Binding(get: { isOn }, set: onChange)) }
+        }
+        xcrun --sdk iphonesimulator swiftc -c -target arm64-apple-ios18.0-simulator -swift-version 6 repro.swift
+            → "fatal error encountered during compilation"
+            → While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"   (IDENTICAL thunk)
+            → REPRO_EXIT=134 (SIGABRT)
+        xcrun --sdk macosx        swiftc -c -target arm64-apple-macos15.0     -swift-version 6 repro.swift
+            → While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"   → MAC_REPRO_EXIT=134
+    => The full-app crash is a pre-existing Swift 6.3.2 compiler bug triggered solely by
+       AppearanceSettings.Controls.swift (an out-of-scope file this prompt forbids editing —
+       allowed files are BatteryRangeCharts.* + this log only). It is independent of, and unaffected
+       by, the BatteryRangeCharts surface.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (RED — pre-existing, unrelated, out-of-scope)
+    Fails at code-signing BEFORE any Swift source compiles (matches every prior P4 row in
+    apps/macos-pending-verifications.md):
+        error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+        error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+        ** BUILD FAILED **
+    security find-identity -p codesigning → "0 valid identities found" (no signing identity on this runner).
+
+[3] swiftlint --strict           (tree-wide, apps/apple)
+    LINT_EXIT=2   (RED — pre-existing, unrelated; 0 from this surface)
+    "Found 3 violations, 3 serious in 4933 files." — ALL 3 in another agent's surface:
+        TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54 — identifier_name (vars 'a','b','c').
+    BatteryRangeCharts contributes 0 violations (see surface-scoped run below).
+
+[4] swiftformat --lint apps/apple   (tree-wide)
+    FORMAT_EXIT=1   (RED — pre-existing, unrelated; 0 from this surface)
+    "1/5231 files require formatting" — the 1 file is another agent's surface:
+        TeslaSync/feature-views/RecentDrivesSection.Previews.swift:27/28 — redundantType.
+    BatteryRangeCharts contributes 0 (see surface-scoped run below).
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/BatteryRangeCharts
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   (GREEN)
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+SURFACE-SCOPED VERIFICATION — BatteryRangeCharts is independently GREEN (0 errors everywhere)
+────────────────────────────────────────────────────────────────────────────────────────────────
+
+A. Real iOS-18 swiftc -typecheck (arm64-apple-ios18.0-simulator, -swift-version 6, -D DEBUG)
+   Inputs: the 9 surface source files + the real generated apps/design/generated/apple/Tokens.swift
+           + Sources/Design/*.swift (2) + Sources/Components/**/*.swift (38, minus the
+           SharedFacade-coupled UnitFormatters.swift the surface does not use).
+   IOS_TYPECHECK_EXIT=0   → 0 errors, 0 warnings.
+
+B. Real macOS-15 swiftc -typecheck (arm64-apple-macos15.0, -swift-version 6, -D DEBUG; same inputs)
+   MAC_TYPECHECK_EXIT=0   → 0 errors, 0 warnings.
+
+C. Executed Foundation harness (compiled Adapter+Math+Projection+Model with a main harness; ran it)
+   HARNESS: 58 passed, 0 failed   → proves at RUNTIME: SI distance conversion (km/mi/ft), fmtNumber
+   grouping + NaN guard, Math.round chart values, batteryColor bands (>60/>25/else), gauge clamp +
+   integer/fractional precision, Battery/Range stat formatting, Current/Remaining bars, formatDate
+   labels, drive-trend reverse + re-index, empty-drives branch, resolvePhase (loading/empty/loaded/
+   failed × cached), view.opened telemetry once, freshness flag, and the stale one-shot auto-refresh.
+
+D. swiftlint --strict  (surface only, 11 .swift)   → 0 violations, 0 serious.
+E. swiftformat --lint  (surface only, 11 .swift)   → 0/11 require formatting.
+F. Placeholder gate    (surface)                   → PLACEHOLDER_COUNT=0, 0 opt-outs.
+G. i18n parity         → 9/9 web-source t() keys present in BatteryRangeCharts.strings
+     (common.current, common.remaining, common.battery, common.range, common.distance,
+      common.duration, vehicles.detail.batteryOverview, vehicles.detail.driveTrend,
+      vehicles.detail.noDriveData); 0 dead keys (every .strings key referenced in a .swift).
+H. xcodegen generate   → enumerates all 12 files (72 project.pbxproj references).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+PARITY NOTES (web BatteryRangeCharts.tsx → native)
+────────────────────────────────────────────────────────────────────────────────────────────────
+- Composition: responsive 2-up grid (web `grid grid-cols-1 lg:grid-cols-2`).
+  Panel 1 "Battery Overview": RadialGauge(battery_level, max 100, %, batteryColor band) + Battery%
+    + Range (convertDistanceFromSI(rated_range), 0 dp, unit suffix) stat cards + BarChart of
+    Current / Remaining (y-domain [0,100], CHART_COLORS[0]).
+  Panel 2 "Drive Distance Trend": Swift Charts AreaMark+LineMark of distance (CHART_COLORS[0]) and
+    duration-minutes (CHART_COLORS[1]) on one shared axis + legend, x mapped to formatDate(start_ts);
+    or the "No drive data for chart" EmptyState when drives are empty.
+- Data via shared P1/S8 state-holder seam (BatteryRangeChartsSource → Update → @Observable Model);
+  no HTTP in the view. useTranslation → P1/S10 facade; useUnits → SI-at-the-render-boundary converters.
+- States: loading skeleton / empty / error+retry / stale (chip + one-shot auto-refresh) / offline
+  (cached + chip) — every state renders. Charts: Recharts → Swift Charts. (No Leaflet in source.)
+- Accessibility: VoiceOver labels on gauge, every stat card, both charts; Dynamic Type; reduce-motion
+  honored on ring + chart animations. Telemetry: view.opened slug "BatteryRangeCharts" (P1/S11).
+- No TODO/stub/mock/placeholder/Lorem in shipped code (gate [5] = 0).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+DETERMINATION
+────────────────────────────────────────────────────────────────────────────────────────────────
+The BatteryRangeCharts surface is COMPLETE and independently verified GREEN on both Apple SDKs
+(typecheck 0/0 + executed harness 58/58 + lint/format/placeholder/i18n/enumeration all clean).
+The prompt's full-app gate cannot reach EXIT=0 because of THREE pre-existing, unrelated blockers,
+each in files OUTSIDE this prompt's allowed-files scope (BatteryRangeCharts.* + this log):
+  (1) a Swift 6.3.2 swift-frontend IRGen compiler crash on AppearanceSettings.Controls.swift:122
+      (proven SDK-independently by a 9-line standalone repro; REPRO_EXIT=134, identical thunk),
+  (2) macOS development-signing absent on this runner (0 valid identities; fails pre-compile),
+  (3) tree-wide swiftlint/swiftformat violations in other agents' WidgetChartSummary.Tests.swift
+      and RecentDrivesSection.Previews.swift.
+This is the same "pre-existing, unrelated" condition tracked for every prior P4 surface in
+apps/macos-pending-verifications.md, deferred to p4-apple/P99-0001-apple-acceptance-gate on a
+signed macos-latest runner after the cross-surface collisions/crash are resolved upstream.
+
+EXIT=65
+STATUS=BLOCKED

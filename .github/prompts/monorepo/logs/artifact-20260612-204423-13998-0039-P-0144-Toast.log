@@ -1,0 +1,161 @@
+=== P4 Shared surface 0144 Toast (Apple) ===
+host: macOS 26.5.1 | Xcode 26.5 | swift version 6.3.2
+date: 2026-06-13T15:02:09Z
+web source: web/src/components/feedback/Toast.tsx
+native output: apps/apple/TeslaSync/shared-surfaces/Toast.{Adapter,Seams,Model,Views,swift,States,Previews,Tests}.swift + Toast.strings
+
+NOTE ON METHODOLOGY (per apps/macos-pending-verifications.md): the prompt gate's full-app
+'xcodebuild -scheme TeslaSync ... build test' is blocked by PRE-EXISTING, UNRELATED parallel-merge
+conditions outside this prompt's allowed files (a swift-frontend compiler crash batch-compiling other
+agents' surfaces in the ~1798-surface merged app module, + macOS development-signing with 0 identities).
+Per the honesty covenant the red full-app build is reported RED below. The surface itself is verified
+GREEN in isolation across every host-runnable gate, and a live in-module app-target compile (with the
+KMP Shared.xcframework assembled this run) shows ZERO Toast errors.
+
+====================================================================
+[1] swiftformat --lint (Toast.*)
+====================================================================
+(lint mode - no files will be changed.)
+SwiftFormat completed in 11.62s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+====================================================================
+[2] swiftlint --strict (Toast.*)
+====================================================================
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+====================================================================
+[3] placeholder/stub gate (apps/tools/check-placeholders.ps1, per file)
+====================================================================
+  Toast.Adapter.swift                      COUNT=0 ALLOWED=0
+  Toast.Seams.swift                        COUNT=0 ALLOWED=0
+  Toast.Model.swift                        COUNT=0 ALLOWED=0
+  Toast.Views.swift                        COUNT=0 ALLOWED=0
+  Toast.swift                              COUNT=0 ALLOWED=0
+  Toast.States.swift                       COUNT=0 ALLOWED=0
+  Toast.Previews.swift                     COUNT=0 ALLOWED=0
+  Toast.Tests.swift                        COUNT=0 ALLOWED=0
+PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_EXIT=0
+
+====================================================================
+[4] swiftc -typecheck — iOS 18 (arm64-apple-ios18.0-simulator, Swift 6, -D DEBUG)
+    full Toast surface (7 non-test files) + real Tokens.swift + Sources/Design + Sources/Components
+    (40 design files; UnitFormatters.swift excluded — SharedFacade-coupled, unused by Toast)
+====================================================================
+iOS: errors=0 warnings=0  IOS_TYPECHECK_EXIT=0
+
+====================================================================
+[5] swiftc -typecheck — macOS 15 (arm64-apple-macos15.0, Swift 6, -D DEBUG)
+====================================================================
+macOS: errors=0 warnings=0  MAC_TYPECHECK_EXIT=0
+
+====================================================================
+[6] Isolated SwiftPM 'swift test' — Toast pure core (Adapter+Seams+Model) under Swift 6 strict concurrency
+    (Toast.Tests.swift verbatim, @testable import rebound to the harness module)
+====================================================================
+Test Suite 'All tests' started at 2026-06-13 08:03:47.854.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+	 Executed 37 tests, with 0 failures (0 unexpected) in 0.007 (0.010) seconds
+Test Suite 'All tests' passed at 2026-06-13 08:03:47.866.
+SPM_TEST_EXIT=0
+
+====================================================================
+[7] xcodegen generate — project enumerates the 9 Toast files (app targets + XCTest bundles)
+====================================================================
+xcodegen exit=0
+Toast.* pbxproj references:
+  18 Toast.Adapter.swift
+  18 Toast.Model.swift
+  18 Toast.Previews.swift
+  18 Toast.Seams.swift
+  18 Toast.States.swift
+  18 Toast.strings
+  18 Toast.swift
+  18 Toast.Tests.swift
+  18 Toast.Views.swift
+total Toast.* reference lines: 108
+XCODEGEN_EXIT=0
+
+====================================================================
+[8] i18n parity — Toast.strings catalog vs keys referenced in Swift (web Toast.tsx + _toastHelpers + native leaf)
+====================================================================
+code keys=25  catalog keys=25
+MISSING (code not in catalog): 
+DEAD   (catalog not in code):  
+I18N_EXIT=0
+
+====================================================================
+[9] FULL-APP in-module compile (real xcodebuild) — the prompt gate's build path
+    KMP Shared.xcframework assembled live this run: 'BUILD SUCCESSFUL in 9m 27s' (ios-arm64 +
+    ios-arm64-simulator + macos-arm64) and staged into apps/apple/Frameworks/.
+    cmd: xcodebuild -scheme TeslaSync -sdk iphonesimulator -configuration Debug ARCHS=arm64 \
+         ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO build
+====================================================================
+Swift compiled in-module (proves the surface is in the real TeslaSync app module): 2538 SwiftCompile actions
+Toast surface files compiled in-module (all 7 non-test files, ZERO errors):
+    - Toast.Adapter.swift
+    - Toast.Model.swift
+    - Toast.Previews.swift
+    - Toast.Seams.swift
+    - Toast.States.swift
+    - Toast.swift
+    - Toast.Views.swift
+Source-level 'error:' diagnostics in entire build log: 0
+  ...of which reference a Toast file: 0
+
+The build is RED (IOS_EXIT=65) for a PRE-EXISTING, UNRELATED reason: a swift-frontend COMPILER CRASH
+(not a source error) while batch-compiling OTHER agents' surfaces. Raw crash signature from the log:
+    14414:Stack dump:
+    14416:1.	Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+    18509:7  swift-frontend           0x0000000108c74b44 llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+    primary-file batch that crashed (non-Toast): AnomalyInlineRow.{Model,Previews,Seams,States,Views}.swift,
+      ApiPlaygroundPage*.swift, App{Commands,Container,Route,Shell,Settings*}.swift, AppearanceSettings.*.swift
+    18531:Command SwiftCompile failed with a nonzero exit code
+    19779:** BUILD FAILED **
+    19785:(2 failures)
+IOS_EXIT=65   (zero Toast errors; the 2 failed batches are other surfaces; no source diagnostics — a compiler abort)
+
+====================================================================
+[10] macOS full-app build — additionally blocked by development-signing
+====================================================================
+security find-identity -p codesigning:
+         0 valid identities found
+macOS surface correctness already proven by [5] (swiftc -typecheck macOS15 = 0 errors / 0 warnings).
+MAC_EXIT=65   (0 codesigning identities + same pre-existing merged-module compiler crash)
+
+====================================================================
+SUMMARY
+====================================================================
+Per-surface (host-runnable) gates — ALL GREEN:
+  FORMAT_EXIT=0          swiftformat --lint 0/8
+  LINT_EXIT=0            swiftlint --strict 0 violations / 8 files
+  PLACEHOLDER_EXIT=0     PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=0
+  IOS_TYPECHECK_EXIT=0   swiftc -typecheck arm64-apple-ios18.0-simulator  0 errors / 0 warnings
+  MAC_TYPECHECK_EXIT=0   swiftc -typecheck arm64-apple-macos15.0          0 errors / 0 warnings
+  SPM_TEST_EXIT=0        swift test 37/37 under Swift 6 -strict-concurrency=complete
+  XCODEGEN_EXIT=0        9 Toast files enumerated (108 pbxproj refs)
+  I18N_EXIT=0            25 code keys == 25 catalog keys, 0 missing / 0 dead
+  COLLISION_SCAN=0       all canonical Toast* public type names free in the app target
+  IN_MODULE_TOAST=0      all 7 Toast files compiled inside the real app module, ZERO Toast errors
+
+Full-app prompt gate ('xcodebuild -scheme TeslaSync ... build test') — RED, BLOCKED by
+PRE-EXISTING, UNRELATED conditions outside this prompt's allowed files (Toast.* + this log):
+  IOS_EXIT=65            swift-frontend compiler crash batch-compiling other agents' surfaces
+                         (AnomalyInlineRow / ApiPlayground / App* / AppearanceSettings); 0 Toast errors
+  MAC_EXIT=65            macOS development-signing: 0 valid identities + same merged-module crash
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+
+Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signing identities, after the
+merged-module compiler crash is resolved). The Toast surface introduces ZERO of these failures.
+
+EXIT=65
+STATUS=BLOCKED

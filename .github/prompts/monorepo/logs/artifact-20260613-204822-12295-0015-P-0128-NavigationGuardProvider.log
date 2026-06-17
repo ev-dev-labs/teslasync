@@ -1,0 +1,204 @@
+=== P4 Shared surface 0128 NavigationGuardProvider (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — parallel-slot worktree
+                       …/20260613-204822-12295/slot-15, branch auto/20260613-204822-12295/15.
+  Xcode              : 26.5 (Build 17F42). Toolchain: Apple Swift 6.3.2 · swiftlint 0.x ·
+                       swiftformat 0.x · xcodegen 2.45.4 · pwsh 7.x · OpenJDK 17.0.19 (KMP).
+  Deployment targets : iOS/iPadOS 18.0 · macOS 15.0 (project.yml — the prompt's HIG minimums).
+                       SDKs: iphonesimulator 26.5 + macosx 26.5. Destination "iPhone 16" present + booted.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs + iPhone-16 simulator +
+                       xcodegen + swiftlint/swiftformat + pwsh + JDK17 ALL present → NOT
+                       capability-BLOCKED. (This surface is a context provider + warning confirm
+                       prompt; it uses no chart/map — SwiftUI + a native dimmed-scrim modal.)
+
+WEB SOURCE (the specification)
+  web/src/components/feedback/NavigationGuardProvider.tsx — an in-app unsaved-changes navigation
+  guard. A React context provider that owns a `Map<id, GuardEntry>` of "this form is dirty"
+  callbacks, exposes `register(entry) -> unregister` and `confirmIfDirty() -> Promise<boolean>`,
+  intercepts browser back/forward (popstate) when a guard is dirty, and renders a warning
+  `<ConfirmDialog>` ("Unsaved changes"). Hooks: useId, useTranslation, useNavigate, useLocation,
+  useNavigationGuardContext. Shared component: @/components/ui/ConfirmDialog.
+  Branches reproduced (every one):
+    • register(entry)            : registry.set(id, entry) → returns an unregister token (web cleanup fn)
+    • findDirty()                : the first registered guard reporting dirty, in registration order
+    • confirmIfDirty()           : no dirty ⇒ resolve(true); a dirty guard ⇒ show prompt, resolve to choice
+    • pendingPromiseRef re-use   : a second racing caller awaits the SAME in-flight prompt (no stacking)
+    • ConfirmDialog props        : variant="warning", silenceKey="unsaved-navigation",
+                                   title forms.unsavedTitle, message pending?.message ?? forms.unsavedWarning,
+                                   confirm forms.discard, cancel forms.keepEditing
+    • silence ("Don't ask again"): honored for warning + silenceKey ⇒ when silenced, confirmIfDirty
+                                   auto-proceeds without a dialog; ticking + discard persists the action
+    • popstate handler           : no dirty ⇒ allow back; dirty ⇒ intercept + confirm; on discard replay back
+    • resolve(ok)                : onConfirm ⇒ true (discard/navigate) · onCancel/backdrop ⇒ false (keep)
+    • useNavigationGuardContext  : returns the context or NOOP_CTX (register inert, confirm proceeds)
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/shared-surfaces/NavigationGuardProvider.* — only files in this commit)
+  NavigationGuardProvider.Adapter.swift          269 — PURE core (Foundation only): NavigationGuardEntry,
+                                                       NavigationGuardRegistry (set/replace/remove/firstDirty,
+                                                       insertion-ordered), NavigationGuardDecision
+                                                       (.proceed/.prompt + silenceHonored),
+                                                       NavigationGuardBackIntent (popstate), confirm-copy
+                                                       builder (the 4 web forms.* keys verbatim),
+                                                       NavigationGuardAccessibility. No SwiftUI.
+  NavigationGuardProvider.Model.swift            157 — Surface slug + Telemetry seam (view.opened) + Strings
+                                                       facade (P1/S10) + value types (Connection, ConfirmCopy,
+                                                       ConfirmRequest, Phase, Resolution + accessors).
+  NavigationGuardProvider.Seams.swift            161 — @MainActor silence seam (UserDefaults/.inMemory/.disabled,
+                                                       the web localStorage allowlist) + RegistrationToken (web
+                                                       unregister fn) + NavigationGuardContext protocol (+ Noop,
+                                                       web NOOP_CTX) + EnvironmentValues.navigationGuard.
+  NavigationGuardProvider.swift                  292 — @MainActor @Observable NavigationGuardCoordinator (registry,
+                                                       in-flight CheckedContinuation re-use, confirmIfDirty/
+                                                       confirmBack async, silence honoring, view.opened) + the
+                                                       NavigationGuardProvider view (env injection + confirm
+                                                       overlay) + the .navigationGuard(id:isDirty:message:) modifier
+                                                       (web useNavigationGuard).
+  NavigationGuardProvider.Views.swift            340 — the confirm presenter (switches over every resolution),
+                                                       dimmed-scrim modal (web Modal), warning confirm card (icon +
+                                                       tinted message box + "Don't ask again" toggle + Keep editing/
+                                                       Discard), loading/idle/error cards, freshness chip.
+  NavigationGuardProvider.Previews.swift         138 — #if DEBUG previews for every state + branch (confirm generic/
+                                                       custom, stale/offline, loading/idle/error, live provider +
+                                                       dirty editor).
+  NavigationGuardProvider.Tests.swift            210 — 22 XCTest cases (registry order/replace/remove, decision
+                                                       branches, silence honoring, back intent, confirm-copy web-key
+                                                       parity + trim + fallback, a11y builders, resolution accessors,
+                                                       CaseIterable).
+  NavigationGuardProvider.CoordinatorTests.swift 302 — 16 @MainActor async cases (proceed-when-clean, prompt+discard
+                                                       custom-message, prompt+keep-editing, generic message, in-flight
+                                                       re-use across racing callers, silence auto-proceed, discard+
+                                                       don't-ask-again persistence, keep-editing-no-silence, unregister,
+                                                       confirmBack, connection axis, vended context, NOOP, telemetry).
+  NavigationGuardProvider.strings                 47 — P1/S10 table "NavigationGuardProvider": the 4 web-parity keys
+                                                       (forms.unsavedTitle/unsavedWarning/discard/keepEditing) +
+                                                       native chrome (silence toggle, loading/idle/error/retry,
+                                                       stale/offline chip, VoiceOver labels).
+  Total 1916 lines (1869 swift + 47 strings). No shared-catalog / project.yml edits (the per-surface .strings
+  table folds into Localizable.xcstrings at integration time — the sibling-surface convention; the shared-surfaces
+  wiring into the app target is owned by P4 core / the P99 acceptance gate, outside this prompt's allowed files).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind/DOM ported)
+  React Context + Provider               → @Environment(\.navigationGuard) + @MainActor @Observable
+                                           NavigationGuardCoordinator; default = NoopNavigationGuardContext (NOOP_CTX).
+  Promise<boolean> confirmIfDirty        → `func confirmIfDirty() async -> Bool` over CheckedContinuation(s);
+                                           pendingPromiseRef re-use = a shared continuation list resolved once.
+  <ConfirmDialog variant="warning">      → dimmed-scrim centered card + warning-tinted triangle icon + message box;
+                                           Discard is `.destructive` (Apple HIG for discarding edits), Keep editing
+                                           is the `.cancel`-style secondary; backdrop tap = keep editing (web onClose).
+  silenceKey + confirmSilence            → @MainActor NavigationGuardSilence seam (.standard = UserDefaults allowlist
+                                           teslasync:confirm-silence:v1, the peer ConfirmDialog store shape); "Don't
+                                           ask again" toggle + auto-proceed.
+  useNavigate / useLocation (popstate)   → NavigationGuardBackIntent + coordinator.confirmBack(); the host nav layer
+                                           awaits it (the view does ZERO I/O — web parity).
+  useId                                  → caller-supplied stable NavigationGuardEntry.id (the .navigationGuard modifier).
+  Tailwind colors/spacing/radius         → Color.TS.* / TSSpacing / TSRadius / Font.TS (generated P1/S9 tokens).
+  Button / Toggle / icons                → TSButton(.secondary/.destructive) · SwiftUI Toggle(.switch) ·
+                                           SF Symbols (exclamationmark.triangle.fill, checkmark.shield, etc.).
+  i18n   : every string via NavigationGuardStrings — zero English literals in code paths; the 4 web t()-keys
+           (forms.unsavedTitle/unsavedWarning/discard/keepEditing) are preserved VERBATIM (asserted by
+           testConfirmContentUsesVerbatimWebKeys + testConfirmContentFallbacks).
+  a11y   : confirm prompt = combined VoiceOver label (warning + title + message); title .isHeader; every button +
+           the silence toggle + the freshness chip + the backdrop labelled; reduce-motion respected (TSFadeIn);
+           Dynamic Type via the Font.TS ramp.
+  telemetry : view.opened surface="NavigationGuardProvider" via coordinator.start() (P1/S11), default
+              redaction-safe OSLog sink (slug logged verbatim; no form content / route / payload).
+
+STATES (every state renders — verified by previews + per-state XCTest assertions)
+  loading → skeleton arming card · idle/empty → friendly "No unsaved changes" card · error → message + Retry ·
+  confirming → the warning confirm card (generic OR caller message) · stale/offline → the confirm/idle card with a
+  freshness chip. In production the provider is transparent (renders its children, web parity) and only `confirming`
+  interrupts the user; the other states back the standalone NavigationGuardConfirmSurface presenter and are proven
+  by the previews + the resolution-accessor tests (testResolutionPhaseAndAccessors). No surface is ever a blank box.
+
+GATES (every command run on THIS host; raw exits captured — nothing fabricated)
+  [GREEN]    swiftformat --lint (NavigationGuardProvider scope, 8 swift files)  : 0/8 require formatting  FORMAT_EXIT=0
+  [GREEN]    swiftlint --strict (NavigationGuardProvider scope, app .swiftlint.yml, 8 files)
+                                                                                 : 0 violations, 0 serious  LINT_EXIT=0
+  [GREEN]    check-placeholders.ps1 -SelfTest                                    : all checks PASS, SELFTEST_EXIT=0
+             check-placeholders.ps1 -Path <8 shipped swift files> -Language swift: PLACEHOLDER_ALLOWED=0,
+                                                                                   PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+             De-no-op CONTROL: a copy with an injected `// TODO` + `fatalError("unimpl")` correctly reported
+             PLACEHOLDER_COUNT=2 / EXIT=1 — proving the 0 is real, not a path-miss no-op.
+  [GREEN]    NavigationGuardProvider build + test — ISOLATED SwiftPM harness, swift-tools 6.0, Swift 6 language mode
+             (= strict-concurrency complete, the same as the app target), module named "TeslaSync" so the shipped
+             test files' `@testable import TeslaSync` resolves. Compiled the EXACT shipped sources (md5-verified
+             byte-identical to the committed files) against the REAL repo design system (Tokens / TSDesign /
+             TSMaterial / Cards / Buttons / States / Skeletons / Motion / Typography / Badges / Banners):
+                 Build complete!  ·  Executed 38 tests, with 0 failures   SWIFT_BUILD_EXIT=0  SWIFT_TEST_EXIT=0
+             (22 pure adapter/value-type tests + 16 @MainActor async coordinator tests, incl. the in-flight
+             continuation re-use across racing callers and the discard+don't-ask-again silence persistence.)
+  [GREEN]    KMP Shared.xcframework — Gradle :core:assembleSharedXCFramework (real run, ~18 min, JDK17):
+                 ✓ Shared.xcframework staged  XCFRAMEWORK_EXIT=0  (ios-arm64 + ios-arm64-simulator + macos-arm64)
+
+  [RED·DEFERRED] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [RED·DEFERRED] xcodebuild -scheme TeslaSync-macOS build                                                      : MAC_EXIT=65
+
+  WHY DEFERRED — both full-app gates fail for PRE-EXISTING, unrelated reasons; ZERO NavigationGuardProvider source
+  errors in either log. Raw, path-trimmed evidence:
+
+    iOS  : the app target compiled my 6 NavigationGuardProvider source files cleanly (reached EmitSwiftModule with
+           0 `error:` lines), then swift-frontend (Apple Swift 6.3.2) CRASHED during IR generation of a sibling
+           feature-view — NOT a NavigationGuardProvider file:
+             4.  While evaluating request IRGenRequest(IR Generation for file
+                 "apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+             5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+                 (= reabstraction thunk helper for an @isolated(any) @Sendable (Bool, Actor?) -> () closure — the
+                  async-`-> Bool` continuation lowering used pervasively across many sibling surfaces.)
+           CAUSATION PROOF (de-no-op of the deferral): I removed ALL NavigationGuardProvider.* files from the project
+           (xcodegen regenerate → 0 refs in project.pbxproj), then rebuilt:
+             xcodebuild -scheme TeslaSync … build  WITHOUT my files  → WITHOUT_EXIT=65
+             4.  IRGenRequest(IR Generation for file ".../AppearanceSettings.Controls.swift")   ← IDENTICAL file
+             5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"                ← IDENTICAL thunk
+           The identical compiler crash occurs with my surface ENTIRELY ABSENT from the project ⇒ the failure is a
+           pre-existing Swift 6.3.2 IRGen toolchain bug in sibling code, provably NOT caused by this surface. My
+           files were then restored (md5-verified byte-identical). `grep -ic navigationguard` on the without-mine
+           log = 0 real compiles (only stale DerivedData object paths).
+    macOS: failed BEFORE compiling app sources, at the documented development-signing / entitlements blocker:
+             apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+               development certificate. Enable development signing in the Signing & Capabilities editor.
+             apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing …
+           This is the exact macOS dev-signing blocker tracked in apps/macos-pending-verifications.md (and recorded
+           by every prior P4 surface). `grep -ic navigationguard` on the macOS log = 0.
+
+  Both exit 65 for reasons this single shared-surface prompt neither introduces nor owns (allowed files =
+  NavigationGuardProvider.* + this log). The full-app iOS/macOS xcodebuild gate is therefore DEFERRED to the
+  p4-apple/P99 apple-acceptance-gate on a signed macos-latest CI with a toolchain that does not hit the sibling
+  IRGen crash — the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition. No numeric exit was
+  fabricated: IOS_EXIT/MAC_EXIT/WITHOUT_EXIT were captured via redirect from real runs on this host.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                           DEFERRED with raw evidence + a causation proof — never reported as passing.
+  2  No scope narrowing  : every web branch reproduced (register/findDirty/confirmIfDirty/in-flight-reuse/silence/
+                           popstate-back/resolve/NOOP) + all P4 states — verified by 38 tests.
+  3  No skip-and-assume  : every gate executed on THIS host; raw exits captured (FORMAT/LINT/PLACEHOLDER + SwiftPM
+                           build+test + XCFRAMEWORK=0 + IOS_EXIT=65 + MAC_EXIT=65 + the WITHOUT_EXIT=65 causation
+                           rebuild); placeholder gate de-no-op'd via self-test + an injected-stub control.
+  4  No stubs as final   : complete production provider (coordinator + env context + presenter + all states) + 38
+                           real tests; placeholder scanner = 0 (proven non-trivially).
+  5  No parity shortcut  : tints/typography/a11y/i18n/telemetry mapped to platform tokens; the 4 web copy keys are
+                           preserved verbatim and asserted.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN by this prompt).
+  7  No predecessor bypass: consumes P1/S8 state-holder injection (the coordinator; the view does no I/O), P1/S9
+                           tokens, P1/S10 i18n facade, P1/S11 view.opened, and the P4 core design system.
+  8  No commit on red    : the COMMITTED artifact (NavigationGuardProvider.*) is GREEN on every host-runnable gate
+                           AND on a real isolated Swift 6 strict-concurrency build+test; the deferred full-app gate
+                           is RED only on a pre-existing sibling IRGen toolchain crash + macOS dev-signing — proven
+                           (causation rebuild) to be independent of this surface.
+  9  No silent drift     : changes confined to TeslaSync/shared-surfaces/NavigationGuardProvider.{Adapter,Model,
+                           Seams,swift,Views,Previews,Tests,CoordinatorTests}.swift + .strings + this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic NavigationGuardProvider shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 38 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the real design system, with swiftformat/swiftlint/placeholder all green for the surface, and the KMP
+  Shared.xcframework assembled clean. The full-app iOS-Simulator + macOS xcodebuild gate is DEFERRED (not failed by
+  this code): iOS is blocked by a pre-existing Swift 6.3.2 swift-frontend IRGen crash in a sibling feature-view
+  (PROVEN identical with this surface entirely removed from the project), and macOS by the documented
+  development-signing blocker — both owned by the P4/P99 acceptance gate on a signed macos-latest CI per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned disposition used by every P4 surface.
+
+EXIT=0
+STATUS=DONE

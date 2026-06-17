@@ -1,0 +1,168 @@
+=== P4 Feature view 0277 RecentActivity (Apple) ===
+Artifact      : apps/apple/TeslaSync/feature-views/RecentActivity.* (vehicles variant)
+Web source    : web/src/features/vehicles/components/RecentActivity.tsx (THE spec)
+Prompt        : .github/prompts/monorepo/p4-apple/feature-views/...0277-RecentActivity
+Delegation    : FORBIDDEN — implemented directly, no agents.
+Host          : Darwin; Xcode 26.5 (17F42); Apple Swift 6.3.2; swiftlint 0.63.3; swiftformat 0.61.1; pwsh; xcodegen.
+Date          : 2026-06-11
+
+-----------------------------------------------------------------------------
+CAPABILITY
+-----------------------------------------------------------------------------
+SwiftUI + Swift Charts + MapKit + iOS 18 / iPadOS 18 / macOS 15 toolchain present (full Xcode 26.5,
+not CLT). This surface uses no charts/maps (web source has none). The full-app iOS/macOS xcodebuild
+build+test was EXECUTED on this runner (raw results below); it is BLOCKED by two non-mine causes —
+a pre-existing out-of-allowed-scope compile error and the macOS dev-signing requirement.
+
+-----------------------------------------------------------------------------
+SAME-NAME COLLISION (disclosed in full)
+-----------------------------------------------------------------------------
+Two distinct web components share the name `RecentActivity`:
+  • features/dashboard/components/RecentActivity.tsx  → P4/0130 (3 panels + battery chart).
+  • features/vehicles/components/RecentActivity.tsx   → P4/0277 (THIS prompt; 2 panels, no chart).
+The dashboard variant is already committed on disk as RecentActivity.* (11 files, types `RecentActivity*`),
+with its own gate log p4-apple-feature-views-0130-RecentActivity.log. The monorepo Swift module is flat,
+so top-level type names must be globally unique. Per the established precedent for these widget<->section
+name collisions (see HEAD `fix(apps/apple): dedupe 2nd collision recurrence`), this vehicles variant ships
+as `RecentActivity.Vehicles.*` files with a `VehiclesRecentActivity*` type namespace; the P-0130 dashboard
+predecessor is left BYTE-IDENTICAL (git status clean on all 11 of its files). Both file stems match the
+prompt's allowed glob `apps/apple/TeslaSync/feature-views/RecentActivity.*`.
+
+-----------------------------------------------------------------------------
+FILES SHIPPED (10 + this log) — all under the allowed glob
+-----------------------------------------------------------------------------
+RecentActivity.Vehicles.Types.swift     (179)  pure value types: Drive/Charge/Units DTOs, row VM, phase/status/connection
+RecentActivity.Vehicles.Adapter.swift   (320)  pure format + projection + a11y (cached → projection); Foundation-only
+RecentActivity.Vehicles.Model.swift     (256)  P1/S8 source seam, @Observable model, P1/S11 telemetry, P1/S10 facade, in-memory source
+RecentActivity.Vehicles.swift           (136)  VehiclesRecentActivity entry view (responsive 1-col/2-col; per-panel FadeIn 0.25/0.27)
+RecentActivity.Vehicles.Views.swift     (215)  panels + rows (TSIconBox/TSGlassPanel/animated value/inline duration) + per-list empties
+RecentActivity.Vehicles.States.swift    (173)  freshness chip, connectivity banner, loading skeleton, error+retry
+RecentActivity.Vehicles.Previews.swift  (148)  #Preview per state (content km/mi, empty, loading, error, stale, offline)
+RecentActivity.Vehicles.strings         ( 57)  i18n catalog (table RecentActivityVehicles) — web common.* keys + envelope
+RecentActivity.Vehicles.Tests.swift     (211)  adapter format/projection unit tests
+RecentActivity.Vehicles.ModelTests.swift(253)  model state-machine + per-state phase + a11y label tests
+Total: 1948 lines (the web source is 146 lines; the native surface adds the full P4 state envelope,
+a pure testable adapter, the P1/S8 seam, 36 tests, previews, and the i18n catalog, mirroring the
+multi-file structure of the P-0130 predecessor — no stubs, no skeleton-only).
+
+-----------------------------------------------------------------------------
+PARITY (web region → native), every branch reproduced
+-----------------------------------------------------------------------------
+• Two panels, responsive: web `grid-cols-1 lg:grid-cols-2` → compact VStack / regular HStack.
+• Recent Drives (cyan Route): up to 5 rows. Value = convertDistanceFromSI(distance_m ?? 0, unitPrefs.distance)
+  at 1dp + " {unit}" (web AnimatedNumber + leading-space suffix). Duration reads SECONDS
+  "{floor(s/3600)}h {fmtInt(floor((s%3600)/60))}m". SoC `{start}% → {end}%` only when BOTH bounds present.
+  "View all" → /drives. Empty → "No drives recorded yet".
+• Recent Charges (emerald BatteryCharging/Zap): up to 5 rows. Value = convertEnergyFromSI(total_energy_added_wh,'kWh')
+  at 1dp + " kWh". Duration reads MINUTES "{floor(min/60)}h {fmtInt(min%60)}m" (remainder NOT floored).
+  SoC `{start}% → {end}%` only when END present (start may interpolate empty, web parity).
+  "View all" → /charging. Empty → "No charging sessions recorded yet".
+• fmtNumber grouping + half-away rounding + non-finite→0; km vs mi conversion — each unit-asserted
+  (en-US golden values verified: "18.3 km", "11.4 mi", "52.9 kWh", "0h 25m", "1h 30m", "2h 2m",
+  "1h 22m", "2h 6m", "1h 23m" for 82.6min, "88% → 74%", "44% → 80%", "% → 80%").
+• TimeStamp → absolute "MMM d, h:mm a" (nil → "—") with relative ("2h ago") as the a11y alternate.
+
+STATES (all render — no hidden surfaces)
+  loading  → skeleton chrome (two redacted panels, reduce-motion safe)        [VehiclesRecentActivityLoading]
+  empty    → both panels render their friendly per-panel empties (web parity) [.empty → panels]
+  error    → QueryError-equivalent + Retry (only when no cached data)         [VehiclesRecentActivityErrorView]
+  stale    → freshness chip + banner over cached panels + ONE guarded auto-refresh (re-armed on live)
+  offline  → cached panels retained + offline chip/banner; no refetch
+  content  → both populated panels
+
+i18n   : every string via P1/S10 facade (table RecentActivityVehicles); no English literals in views.
+a11y   : every interactive element labelled (two "View all" buttons + Retry); each row a combined
+         VoiceOver element (arrow spoken as "to"); panels + surface carry container summaries;
+         reduce-motion honored on FadeIn / skeleton / the animated row value; Dynamic Type throughout.
+telemetry: `view.opened` emitted once on first appear with surface slug "RecentActivity" (P1/S11).
+
+=============================================================================
+GATE RESULTS (raw)
+=============================================================================
+[1] swiftformat --lint apps/apple .......... 0/4126 files require formatting (2 skipped).   FORMAT_EXIT=0
+    (my 9 files: 0/9 require formatting.)
+[2] swiftlint --strict (whole tree) ........ Found 0 violations, 0 serious in 3896 files.    LINT_EXIT=0
+    (my 9 files individually: 0 violations, 0 serious.)
+[3] check-placeholders.ps1 (my files) ...... PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0       PLACEHOLDER_EXIT=0
+    self-test control ...................... dirty COUNT=4 (PASS), clean COUNT=0 (PASS), SELFTEST_EXIT=0
+    (the literal gate path .../RecentActivity has no extension and scans nothing → trivially clean;
+     a genuine recursive scan of copies of the shipped files was run to actually verify COUNT=0.)
+[4] ISOLATED build+test (the surface's real proof on this runner):
+    A SwiftPM package compiled the EXACT shipped bytes of all 9 surface files against the REAL design
+    system (apps/design/generated/apple/Tokens.swift + Sources/Design + Sources/Components UI/Cards,
+    Badges, Buttons, Typography + Motion + Feedback/Skeletons) under Swift 6 language mode / strict
+    concurrency, then ran the co-located XCTest bundle via the Xcode 26.5 runtime:
+        swift build .... Build complete!                                        ISOLATED_BUILD_EXIT=0
+        swift test ..... Executed 36 tests, with 0 failures (0 unexpected)      ISOLATED_TEST_EXIT=0
+    The #Preview macro compiled (Previews.swift built clean).
+[5] xcodebuild -scheme TeslaSync -destination 'iOS Simulator,name=iPhone 16' build-for-testing:
+    • Shared.xcframework Gradle pre-action SUCCEEDED:
+        "xcframework successfully written out to: .../shared/core/build/XCFrameworks/release/Shared.xcframework"
+    • 1120 SwiftCompile actions ran; then ** TEST BUILD FAILED **                IOS_EXIT=65
+    • SOLE error — PRE-EXISTING, OUT-OF-ALLOWED-SCOPE (not this surface):
+        TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure
+        captures non-escaping parameter 'content'   (its `glass(@ViewBuilder _ content: () -> some View)`
+        passes a non-escaping closure into `TSGlassPanel { content() }`). Verified present at HEAD and
+        git-clean (unmodified by me). ZERO `RecentActivity.Vehicles.*` errors.
+[6] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build-for-testing:
+    • FAILED                                                                    MAC_EXIT=65
+    • Errors — PLATFORM-CAPABILITY (signing), not this surface:
+        "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a
+        development certificate (project.yml DEVELOPMENT_TEAM=""; no signing identity on this runner).
+        This is the documented "signed macos-latest runner" requirement. ZERO `RecentActivity.Vehicles.*` errors.
+
+EXIT SUMMARY
+  FORMAT_EXIT=0   LINT_EXIT=0   PLACEHOLDER_EXIT=0   ISOLATED_BUILD_EXIT=0   ISOLATED_TEST_EXIT=0
+  IOS_EXIT=65 (pre-existing, out-of-scope)   MAC_EXIT=65 (platform signing)
+
+=============================================================================
+HONESTY COVENANT (binding)
+=============================================================================
+1  No red-as-green     : the iOS/macOS full-app build/test are reported RED with their RAW exit 65 and
+                         exact errors pasted; they are NOT painted as passing. Every runnable gate's raw
+                         result is shown.
+2  No scope narrowing  : every web region + branch reproduced — both panels, the distance/energy values,
+                         the seconds-vs-minutes duration split, the per-panel SoC gating (drive needs both,
+                         charge needs end), the cap-5 slices, the timestamps, the two "View all" links,
+                         and both empty messages; all P4 states render.
+3  No skip-and-assume  : every gate was EXECUTED on this runner — incl. both full-app xcodebuild builds
+                         (the Gradle Shared.xcframework pre-action ran and SUCCEEDED) and 36 XCTest cases
+                         under the real Xcode runtime. No step assumed.
+4  No stubs as final   : complete production surface + 36 real tests; placeholder COUNT=0; no
+                         TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere.
+5  No parity shortcut  : the fmtNumber grouping, km/mi + kWh conversions, the FLOOR-minutes drive duration
+                         vs ROUND-remainder charge duration, and the SoC gating are each unit-asserted
+                         against the web expressions with en-US golden values.
+6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+7  No predecessor bypass: the P-0130 dashboard RecentActivity.* (11 files) is left BYTE-IDENTICAL
+                         (git status clean). The pre-existing AIAutoNameUnnamedLocations.swift defect is
+                         left untouched (out of allowed scope) — not bypassed, reported.
+8  No commit on red    : the committed artifact (10 RecentActivity.Vehicles.* files + this log) is GREEN on
+                         every gate SCOPED TO IT (format, lint, placeholder, isolated Swift 6 build + 36
+                         XCTest). The two RED steps are the umbrella app build, failing on a pre-existing
+                         out-of-allowed-scope compile error (iOS) and the macOS signing requirement (macOS) —
+                         neither attributable to or fixable within this surface's allowed files.
+9  No silent drift     : changes confined to the 10 new RecentActivity.Vehicles.* files + this log; the
+                         same-name collision with P-0130 and the `.Vehicles.*` / `VehiclesRecentActivity*`
+                         namespacing are disclosed in full above.
+10 EXIT/STATUS below.
+
+=============================================================================
+DISPOSITION
+=============================================================================
+Production-polished, Apple-idiomatic vehicles RecentActivity shipped at parity with
+features/vehicles/components/RecentActivity.tsx and INDEPENDENTLY VERIFIED on this runner: it compiles
+and its 36 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL design
+system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint(--strict, whole tree) /
+placeholder all green and the #Preview macro compiling. The P-0130 dashboard predecessor is untouched.
+
+The aggregate gate cannot reach EXIT=0 on this runner for two reasons EXTERNAL to this surface and its
+allowed files: (iOS) a PRE-EXISTING compile error in TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift
+(escaping-closure capture), outside the allowed `feature-views/RecentActivity.*` scope and forbidden to edit;
+(macOS) the app/widget targets require a development signing certificate that this runner lacks
+(DEVELOPMENT_TEAM=""). Both are owned by the P4 acceptance gate on a signed macos-latest runner and/or the
+predecessor surface's own prompt. Per the acceptance rule, this is reported as STATUS=BLOCKED with the
+platform-capability + pre-existing-blocker evidence above, NOT as a pass.
+
+EXIT=65
+STATUS=BLOCKED

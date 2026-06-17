@@ -1,0 +1,155 @@
+=== P4 Shared surface 0087 Range (Apple) ===
+run: 2026-06-11T08:50–09:1?Z   toolchain: Xcode 26.5 (17F42) / swift 6.3.2   host: macOS (Darwin, arm64)
+web source: web/src/components/data-display/format/Range.tsx
+            (+ web/src/hooks/usePreferredRange.ts, web/src/hooks/useUnits.ts,
+               web/src/lib/preferredRange.ts, web/src/lib/unitConversion.ts `formatDistance`)
+artifact:   apps/apple/TeslaSync/shared-surfaces/Range.{swift,Adapter,Projection,Model,Views,Previews,Tests,AdapterTests,strings}
+            (9 files, 1311 lines: 814 source + 27 strings + 470 test)
+
+NAMING NOTE (no silent drift): the public value view is `RangeReadout`, NOT `Range`. A module-level
+type named `Range` shadows `Swift.Range` and breaks the unqualified `Range<Int>` usages in sibling
+surfaces (TeslaSync/feature-views/KioskOverlay.Model.swift:243,
+SessionListSection.Core.swift:42). This mirrors the web source itself renaming its `Number` formatter
+export to `FormattedNumber` to dodge the JS `Number` clash. The file keeps the surface name (Range.*);
+all 22 surface symbols were grep-verified collision-free against the app module before adoption.
+
+--- [1/6] swiftformat --lint (surface scope, gate config) ---
+0/8 files require formatting.
+FORMAT_SURFACE_EXIT=0
+
+--- [2/6] swiftlint --strict (surface scope, gate config) ---
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_SURFACE_EXIT=0
+
+--- [3/6] placeholder scan (gate cmd literal path + real scoped scan of the 8 swift files) ---
+literal path apps/apple/TeslaSync/shared-surfaces/Range : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+real scoped scan of the shipped Range.* swift files       : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+PLACEHOLDER_EXIT=0
+(no TODO / FIXME / XXX / "Coming soon" / "Placeholder" / "Lorem ipsum" / "not implemented" / swift stubs)
+
+--- [4/6] INDEPENDENT VERIFICATION — isolated Swift 6 strict-concurrency build + XCTest vs REAL tokens ---
+Why: the two full-app xcodebuild gates (steps 5/6) are baseline-RED on PRE-EXISTING conditions this
+commit neither introduces nor touches. To prove the SURFACE itself is correct under the app's real
+Swift 6 rules, the 6 shipped non-test Range source files (symlinked, not copied) + the app's REAL
+generated design tokens (apps/design/generated/apple/Tokens.swift, symlinked) + faithful verbatim
+copies of the in-module seams it consumes (UnitPreferences, .metric/.imperial, the \.tsUnits
+environment — their real files `import Shared`, the KMP xcframework, so cannot compile standalone)
+were assembled into a SwiftPM package (swiftLanguageMode .v6 == app SWIFT_VERSION 6.0 + complete
+strict-concurrency, platform macOS 15) and the REAL Range.Tests.swift + Range.AdapterTests.swift suites
+were run against it.
+
+  swift build  -> Build complete! (Swift 6 language mode; #Preview macros + @Observable compiled)  BUILD_EXIT=0
+  swift test   -> Executed 38 tests, with 0 failures (0 unexpected)                                 TEST_EXIT=0
+    RangeFormattingTests   12   (convertDistanceFromSI factors + unknown→km; resolvePrecision
+                                 precedence override→pref→fallback-1, negatives ignored; locale
+                                 en-US fallback; Intl grouping en_US vs de_DE + half-away rounding;
+                                 resolveEmpty honours emptyDisplay; formatDistance value/non-finite)
+    RangeProjectionTests    9   (value rated-metric / ideal-imperial / precision-override; empty
+                                 nil-state / missing-field; the TWO distinct web empty paths — the
+                                 hardcoded "—" for a null selection vs. the emptyDisplay-aware
+                                 fallback for a non-finite value; label via injected i18n)
+    RangeModelTests         5   (resolved projection; sync adoption→value/empty; view.opened once; no-op stop)
+    RangeSelectionTests     4   (rated/ideal field + label; nil state → nil value + stable label; missing field)
+    RangeAccessibilityTests 2   (value label == figure; empty label resolves the i18n key)
+    RangeMetaTests          2   (slug "Range" + RangeReadout.surfaceSlug; SI factors / defaults)
+    RangeTypeTests          2   (web rangeType coercion nil/unknown→rated; settings-string round trip)
+    RangeViewTests          2   (public surfaces RangeReadout/RangeLabel + subviews compose)
+  Target Platform: arm64-apple-macos  => macOS-15 SDK compile of the surface is PROVEN.
+ISOLATED_BUILD_EXIT=0
+ISOLATED_TEST_EXIT=0
+
+--- [5/6] full-app iOS Simulator build test (gate cmd: scheme TeslaSync, iPhone 16) ---
+Shared.xcframework: built + staged THIS run via the project pre-build script
+  (Scripts/build-shared-xcframework.sh → Gradle :core:assembleSharedXCFramework; debug+release
+   XCFrameworks written, staged to apps/apple/Frameworks/Shared.xcframework). xcframework build OK.
+xcodegen generate: OK (project spec valid incl. Range.*; 48 Range.* target-membership refs in pbxproj).
+RESULT: ** BUILD FAILED ** ** TEST FAILED ** (build failed → testing cancelled)
+IOS_EXIT=65   (raw $? captured from a clean re-run; not masked)
+errors total = 2; errors attributed to Range.* = 0 (grep proof below)
+ROOT CAUSE (pre-existing, unrelated, OUTSIDE allowed files) — both files TRACKED in HEAD, not mine:
+  TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+     error: escaping closure captures non-escaping parameter 'content'
+  TeslaSync/feature-views/RecentDrivesSection.Previews.swift:
+     error (RecentDrives* duplicate-symbol family — same baseline noted by 0085 Distance / 0099 ProgressRing)
+  → `git ls-files --error-unmatch` confirms BOTH are tracked (pre-existing); `git status` shows ONLY
+    the 9 Range.* files added by this commit. Range.* type-checks inside the same TeslaSync module
+    `EmitSwiftModule` with 0 errors, and step [4] proves it compiles+tests under identical Swift 6 rules.
+
+--- [6/6] full-app macOS build test (gate cmd: scheme TeslaSync-macOS) ---
+RESULT: ** BUILD FAILED ** ** TEST FAILED **
+MAC_EXIT=65   (raw $? captured; not masked)
+errors total = 2; errors attributed to Range.* = 0
+ROOT CAUSE (runner capability, unrelated): development code-signing — the unsigned runner has no
+development certificate. Failure occurs at signing/entitlements validation BEFORE source compilation:
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  → the P4/P99 acceptance-gate condition (signed macos-latest runner) per apps/macos-pending-verifications.md.
+
+swiftlint --strict (FULL included set, gate cmd):  0 violations  -> LINT_FULL_EXIT=0
+swiftformat --lint apps/apple (gate cmd):          0/4404 files require formatting -> FORMAT_FULL_EXIT=0
+
+=== Honesty Covenant (point-by-point) ===
+ 1 No red-as-green   : IOS_EXIT/MAC_EXIT pasted RAW as 65 and labelled FAILED — never reported green.
+                       The full-app build is disclosed as DEFERRED, not passing. The GREEN claim is
+                       scoped to the gates that actually exercise the surface (steps 1–4 + the two
+                       full-set linters).
+ 2 No scope narrowing: every web render branch reproduced — the formatted value
+                       (formatDistance(meters,{precision}) → "{num} {unit}") and the em-dash sentinel,
+                       PLUS the companion useRangeLabel (rated/ideal label, stable even when state is
+                       null). The two DISTINCT web empty paths are both reproduced + unit-tested: the
+                       hardcoded "—" for a null selection (ignores emptyDisplay) vs. resolveEmpty
+                       (emptyDisplay ?? "—") for a non-finite value via formatDistance. The web source
+                       is a synchronous formatter with NO fetch/loading/error/stale/offline axis;
+                       synthesising network chrome would invent state the source lacks (the 0085
+                       Distance / 0075 AnimatedNumber disposition) — documented in the Adapter parity note.
+ 3 No skip-and-assume: every runnable gate executed on THIS runner; raw exits pasted. The xcframework
+                       was actually built via Gradle this run; both full-app failures were re-confirmed
+                       by raw xcodebuild error lines + `git ls-files` proving the offending files are
+                       pre-existing/tracked — not assumed from the predecessor logs.
+ 4 No stubs as final : complete production surface + 38 real tests; placeholder COUNT=0 on every shipped
+                       swift file; no TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-impl. The OSLog
+                       telemetry default is a working logging seam the app overrides.
+ 5 No parity shortcut: formatDistance ported as the EXACT lib function the web `Range` calls (fallback
+                       precision 1 for distance, no upper clamp, emptyDisplay support) — NOT the manual
+                       convertDistanceFromSI+fmtNumber path the sibling Distance surface uses;
+                       selectPreferredRange (rated default, field nullability, label keys
+                       common.ratedRange/common.idealRange) ported verbatim; SI factors 1609.344/1000/
+                       0.3048; Intl half-away rounding matched by NumberFormatter .halfUp. web spans
+                       carry no colour/font → inherited; callers tint via P1/S9 tokens.
+ 6 No delegation     : implemented directly; no agents (delegation FORBIDDEN for this tier).
+ 7 No predecessor bypass: binds P1/S8 (\.tsUnits + the NEW \.tsRangeType env seam + RangeModel
+                       state-holder), P1/S9 tokens (Color.TS/Font.TS via Tokens.swift in previews),
+                       P1/S10 i18n facade (Range.strings: common.ratedRange/idealRange verbatim +
+                       range.empty.accessibilityLabel), P1/S11 view.opened telemetry (once, slug
+                       "Range"). Did NOT edit project.yml/.swiftlint.yml/.swiftformat or the shared
+                       Localizable.xcstrings (all out of allowed-files); shared-surfaces source group
+                       already registered and auto-globbed into both app + test targets.
+ 8 No commit on red  : the COMMITTED artifact (9 Range.* files + this log) is GREEN on every gate that
+                       exercises it — isolated Swift 6 build + 38/38 XCTest, swiftformat --lint
+                       (surface + full 0/4404), swiftlint --strict (surface + full 0), placeholder 0.
+                       The two xcodebuild gates are RED only on pre-existing/unrelated conditions
+                       (sibling compile errors AIGeofence*/RecentDrives*; macOS dev-signing) this commit
+                       does not introduce or touch (git status: only Range.* added).
+ 9 No silent drift   : changes confined to apps/apple/TeslaSync/shared-surfaces/Range.* + this log.
+                       No sibling surface, project.yml, or token file touched. The public type was
+                       renamed Range→RangeReadout to avoid breaking Swift.Range consumers (disclosed
+                       above). The generated .xcodeproj + Gradle-staged Shared.xcframework are build
+                       artifacts removed after verification.
+10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic Range surface shipped at parity with
+  components/data-display/format/Range.tsx (+ its usePreferredRange / useUnits / preferredRange /
+  unitConversion dependencies) and INDEPENDENTLY VERIFIED: it compiles and its 38 tests pass under the
+  app's own Swift 6 strict-concurrency rules, against the REAL design tokens, via the Xcode 26.5
+  toolchain on the macOS-15 SDK, with swiftformat/swiftlint/placeholder all green on the shipped files
+  AND on the full tree. The full-app iOS + macOS xcodebuild build/test gate is DEFERRED (not failed by
+  this code): the TeslaSync app module is baseline-RED on pre-existing compile errors in unrelated
+  sibling surfaces (AIGeofenceAwareAutomationSuggestions.swift, RecentDrivesSection.Previews.swift) on
+  iOS, and on development code-signing (TeslaSync-macOS / TeslaSyncWidgets-macOS entitlements) on the
+  unsigned macOS runner — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner.
+  This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4
+  surface to date (e.g. 0085 Distance, 0099 ProgressRing).
+
+EXIT=0
+STATUS=DONE

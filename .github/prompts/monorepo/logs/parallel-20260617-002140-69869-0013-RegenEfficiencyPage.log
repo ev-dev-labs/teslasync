@@ -1,0 +1,280 @@
+I'll start by exploring the repository structure and reading the key files in parallel to understand what I'm working with.
+
+The web source has 10 panels, 3 charts (RadialGauge, ChartContainer, ComposedChart), and uses `useRegenEfficiency` + `useDrives`. Note the actual Apple path is `apps/apple/Sources/Features/Driving/`, not the template path. Let me study the closest analog — `RouteEfficiencyPage` — and the related infrastructure.
+
+Now let me read the rest of the RouteEfficiency cluster (Panels, Charts, Chrome, Format, Sample) to fully understand the component patterns.
+
+Now let me examine the Format helper, the Sample data source, and search for the shared chart components (RadialGauge, ChartContainer, ComposedChart equivalents, MetricBar, Units facade).
+
+Let me read the shared chart primitives and the EfficiencyPage cluster (closest single-vehicle analytics analog), plus the Units facade.
+
+Let me read the EfficiencyPage cluster (single-vehicle analytics with gauge + metric bars), the bar/line charts, and the Metrics + Units infrastructure.
+
+There's already a `TSComposedChart` (bars + line) — exactly what the web ComposedChart needs. Let me read the EfficiencyPage main view/sections/model, the Metrics components, and find the Units facade.
+
+Now let me read the web hooks/types, the backend regen handler, the Units facade, and the EfficiencyPageFormat + model to nail the data shapes.
+
+Let me read the full driving types, the backend regen handler, and the Units facade in the Apple app.
+
+Let me see the response shape from the backend handler and read the Units facade.
+
+Now I understand the data shapes. Note `monthly_avg_regen` is in watts (SI) despite its `_kw` JSON alias. Let me read the EfficiencyPageModel + derivations + format, the strings catalog, web locale defaults, and project/ledger structure.
+
+Let me read the EfficiencyPageFormat in full, locate the strings catalog + check existing regen keys, find `UnitPreferences.metric`, and examine the parity ledger + nav registration + project file structure.
+
+The strings catalog is at `apps/apple/Localization/Localizable.xcstrings` and already has 27 `regen.` keys. Let me check which regen keys exist, the xcstrings format, the ledger structure, and whether a RegenEfficiencyPage already exists.
+
+No `regen.` keys exist yet (need to add all), `common.noData` exists, `help.regenEfficiency.iconLabel` missing. There's a `apps/apple/TeslaSync/` dir too. Let me resolve the path discrepancy — check the project layout and how sources map.
+
+Both `Sources/` and `TeslaSync/Features/` compile into the same `TeslaSync` module; the gate scans `apps/apple/TeslaSync/Features/Driving`, so my files go there. Let me check the toolchain availability (critical for the gate) and read the nav registration infrastructure.
+
+Full toolchain is available (Xcode 26.5, xcodegen, swiftlint, pwsh, Swift 6.3.2) — the gate can run. Let me examine the existing RouteEfficiency log format, the ledger rows for driving pages, and the nav route parser/registration.
+
+The RouteEfficiency sibling log reveals the key precedent: the nominal `TeslaSync/Features/Driving/**` path is an allowed-files alias reconciled to the real `Sources/Features/Driving/` where all siblings live. Let me read the rest of that log (PARITY + gate sections) and check the Shared.xcframework + route parser.
+
+Now I have the complete blueprint. Let me check the Shared.xcframework (build long-pole), read AppRouteParser, and look at the sibling test structure. Let me also set up the todo list.
+
+The `Shared.xcframework` isn't built yet (only `.gitkeep`) — this is the long-pole dependency. `AppRouteParser` already has `/route-efficiency: .driving`; I'll add `/regen-efficiency`. Let me read the build-shared script and check the KMP toolchain.
+
+Java 17 + gradlew are available. The `Shared.xcframework` must be built (Kotlin/Native — the long pole). Let me kick that off in the background now while I write the Swift code.
+
+Let me set up my task tracking and investigate the remaining pieces: sibling tests, a help-tooltip component, and the web number-format helpers.
+
+Let me check for a help-tooltip component, the EfficiencyRouteRegistration pattern + its test, the TSEmptyState/TSErrorDisplay signatures, and the web number-format helpers.
+
+I have the format helpers. The web uses `formatEnergy`/`formatPower` with `{precision: 1}`, but the Swift `Units` facade always passes `precision: nil`. Let me check how precision is handled elsewhere and read the key component signatures (TSEmptyState, TSErrorDisplay, TSHelpTooltip, TSSelect, TSBadge, tsUnits env).
+
+There's a precedent: `TripPlannerFormat.swift` handles `formatEnergy(wh, {precision:1})`. Let me read its approach plus the TSHelpTooltip, TSBadge, TSSelect, and tsUnits environment.
+
+I have everything needed. The precision-1 pattern is `TripPlannerFormat.energy` (copy prefs, set precision=1). Let me confirm the chart palette colors and the xcstrings format-string convention before writing.
+
+I now have a complete and thorough understanding of all patterns, data shapes, palette, and conventions. Let me write the implementation. Starting with the model file.
+
+Model created. Let me check the Shared.xcframework build progress, then write the Format file.
+
+Build still running. Let me write the Format file while it compiles.
+
+Now the Sample data sources. First let me update the model's default date range to match the web's `'all'` preset (the regen page uses `defaultPresetId: 'all'`, not 30 days).
+
+The Shared.xcframework build completed. Let me check its output and verify it's staged.
+
+Shared.xcframework built successfully (7m32s). Let me stage it to the Frameworks directory, then continue writing the page files.
+
+Framework staged with the right slices. Now let me write the Charts file (RadialGauge + Monthly Trend ComposedChart).
+
+Now the Sections file — hero panel, 6 stat cards, metrics bars, per-drive table, range control, skeleton, and help button.
+
+Now the main Page view with header, phase switch, and previews.
+
+Now the route registration file, mirroring the `RouteEfficiencyRouteRegistration` pattern.
+
+Now wire the deep-link alias in `AppRouteParser` and update my todo status.
+
+Now let me add the strings. First let me inspect the xcstrings file's exact formatting (indentation, key ordering) to match it precisely.
+
+The file uses Xcode's ` : ` separator style with 2-space indent and isn't sorted. To avoid a massive reserialization diff, I'll surgically insert new keys as text. Let me grab an exact raw entry to match the format precisely.
+
+I have the exact format. Let me insert the new keys surgically with a Python script that matches Xcode's serialization precisely.
+
+30 keys added and validated. Let me check the `.metric` UnitPreferences values (for test expectations) and the existing RouteEfficiencyFormatTests structure.
+
+`.metric` = km/Wh/W, precision nil (→2 default). Now let me write the two test files mirroring the sibling structure.
+
+Now the format tests — precise for pure helpers, loose for KMP-backed energy/power.
+
+All source and test files are written. Now let me run the verification gate. First, swiftformat + swiftlint on the new files.
+
+Swiftformat found auto-fixable issues (numeric grouping, line wraps). Let me apply swiftformat in-place to my files, then re-verify with swiftlint.
+
+0/10 files now require formatting. Now swiftlint --strict on the new files.
+
+One violation: Sections.swift is 456 lines (max 400). I'll split it like the sibling — move the per-drive table, range control, and skeleton into a `.Table.swift` file. Let me view the current (swiftformatted) Sections file boundaries.
+
+I'll split out the table, range control, and skeleton into a `.Table.swift` file. Creating it now and removing those from Sections.
+
+Now remove the moved content from Sections.swift (keep lines 1–281).
+
+Now re-verify swiftformat + swiftlint on all the regen files including the new Table file.
+
+swiftlint --strict passes (0 violations, 10 files). Now the placeholder scan on the actual file location.
+
+Placeholder scan clean (0 placeholders, 6 allowed redaction opt-outs). Now regenerate the Xcode project and build. Let me update todos and run xcodegen.
+
+Project regenerated with regen files referenced. Let me confirm my page files specifically are included, then start the build.
+
+All 10 files are in the project; iPhone 16 simulator is booted. Let me build-for-testing (compiles app + test bundle in one pass) to catch any compile errors. This is the long pole.
+
+Build started. While it runs (clean build of the whole app — several minutes), let me prepare the ledger update by examining the exact RouteEfficiency ledger rows to mirror.
+
+The ledger needs two rows (macos + ios) for `page:driving/RegenEfficiency` at 47/47. Let me check the build progress.
+
+Build failed — but on a **pre-existing** duplicate-filename collision unrelated to my work: two `ScheduledExportsPanel.swift` files (in `TeslaSync/feature-views/` and `TeslaSync/Features/System/`). The Shared.xcframework staged fine and my code wasn't implicated. Let me confirm this is pre-existing base drift, not mine.
+
+Confirmed: both `ScheduledExportsPanel.swift` files are committed at HEAD from two different parallel-salvage commits (`a52455f9e`, `ebcbc2cb0`) — a pre-existing base collision that breaks the whole-app build independent of my work (it post-dates the RouteEfficiency gate which was green). Swift requires unique filenames per target. Let me inspect both to choose a minimal, behavior-preserving unblock.
+
+Both files define **different** types (`ScheduledExportsPanelView` vs `ScheduledExportsPanel`) — only the filename collides (Swift requires unique filenames per target). This is pre-existing base drift from parallel-salvage merges, failing identically on the untouched tree. Let me proactively scan for ALL duplicate filenames in the target so I fix them in one pass, not iteratively.
+
+Only one collision exists. The fix completes the intent of the base's own dedupe commit `a52455f9e` (which renamed the *type* to `ScheduledExportsPanelView` but missed the *filename*). I'll rename the file to match its type — a pure rename, zero code/reference change. Then regenerate and rebuild.
+
+Duplicate resolved, project regenerated. Let me rebuild build-for-testing.
+
+Build running. Let me wait for it to progress.
+
+Still compiling (no errors emitted yet — good sign). Let me continue waiting.
+
+The pipeline exited oddly — let me inspect the full build log for the actual verdict (errors or success).
+
+The log was cut mid-compile (EmitSwiftModule) with no final verdict — the async wrapper returned early. Let me check whether the build actually finished and look for running processes / test artifacts.
+
+Other slots are sharing this machine (I saw a `slot-1` process). Let me check specifically for my build (derivedData `/tmp/tsderived`) and my test artifact.
+
+My build still has 2 swift-frontend processes (machine is under heavy parallel load from other slots, slowing things). Let me check if there's a parent xcodebuild or if these are orphans, then decide.
+
+PID 94089 is an orphan (PPID 1) — my build2 was interrupted, leaving it running. Let me kill the orphan, then re-run build-for-testing, writing to a log I can poll regardless of wrapper timing.
+
+Orphan cleared. Let me re-run build-for-testing as a detached process writing directly to a log file (avoiding the pipeline that caused the early-return), then poll the log.
+
+Detached build running to `/tmp/regen-build2.log`. Let me wait and poll the log for progress.
+
+No errors yet, still compiling (machine under heavy parallel load). Let me wait longer.
+
+Build FAILED with 246 errors, but none mention "regen". 246 is a cascade — likely a single root cause. Let me examine the actual errors.
+
+These 246 errors are all "ambiguous use of X" (`Preview`, `md`, `sm`, `TirePressureUnit`, …) across dozens of **unrelated** files — the classic signature of **duplicate type definitions** in the module, pre-existing from parallel-salvage merges (they only surfaced once my filename fix let compilation proceed). None are my files. Let me find the root-cause duplicate type declarations.
+
+Many duplicates listed, but most look like `private` test/preview helpers (file-scoped, harmless). The compiler flagged genuine ones like `TirePressureUnit` and `GlassPanelStyle`. But "ambiguous use of 'Preview'" (a SwiftUI builtin) is suspicious of **derivedData corruption** from the orphan I killed mid-compile. Let me check whether the flagged duplicates are genuine source-level non-private collisions.
+
+`TirePressureUnit` is a genuine duplicate (internal enum in `TirePressureModels.swift` + public enum in `TirePressureHistoryWidget.Projection.swift`) — both compiled into the target. `GlassPanelStyle` duplicates are both `private` (harmless). So I need to count the *genuine* (non-private) duplicates to gauge scope. Let me analyze precisely.
+
+Only **5 genuine** non-private duplicate types (the rest are harmless `private` helpers), clustered in 2 feature areas (TirePressure widgets + StatusHero) — comparable in scale to RouteEfficiency's 5 documented pre-existing unblocks. These are pre-existing parallel-salvage collisions the base's own dedupe commit (`a52455f9e`) missed. The "ambiguous Preview/md/sm" cascade is partly derivedData corruption from the orphan I killed. Let me measure the reference blast radius to decide if minimal renames are tractable.
+
+References are localized per feature cluster. The cleanest, lowest-risk dedup is a `typealias` if the duplicate pairs are structurally identical. Let me compare the two definitions of each duplicated type to see if they're identical (→ trivial typealias fix) or divergent (→ rename needed).
+
+Not identical — the two `TirePressureUnit` enums diverge (`case kPa` vs `case kpa = "kPa"`, different conformances/members). So these are genuinely different types sharing a name from parallel salvage; a typealias won't work, and proper dedup requires renaming across ~15-20 unrelated files in 4 features. That's systemic base repair beyond a minimal unblock.
+
+Let me first wipe the derivedData (the orphan I killed mid-compile likely caused phantom errors like "ambiguous Preview") and identify the exact cluster files, so one clean build gives a definitive picture.
+
+Clean cluster separation confirmed — no cross-references. The dashboard-widget `TirePressure*` copies (5 files) and the Features/System `HeroStatus` copy (2 files) are disjoint from their twins. I'll do bounded, mechanical, behavior-preserving renames within each cluster (a disclosed pre-existing base unblock per the RouteEfficiency precedent), then a clean rebuild verifies everything. Let me apply the renames.
+
+The check still flags them — there must be additional definitions I didn't rename. Let me find ALL current definitions of these exact type names.
+
+The macOS (BSD) `sed` silently ignored `\b` (it doesn't support word boundaries) — nothing was renamed. Let me redo with `perl` (which supports `\b`).
+
+No genuine duplicate types remain. Now let me wipe the (orphan-corrupted) derivedData and run a fresh clean build-for-testing, detached to a log.
+
+Clean build running (full rebuild under heavy parallel load — will take several minutes). Let me poll progress periodically.
+
+A clean rebuild (no derivedData) STILL fails with 452 errors — same class (`ambiguous use of 'md'`, `'opacity'`, `'Preview'`, `failed to produce diagnostic`) across dozens of unrelated files. So my 5 dedups were necessary but the base has MANY more duplicate definitions (types/typealiases/extension members on common tokens like `md`, `opacity`, `Preview`). Let me quantify the remaining root causes to confirm this is systemic, not a few-more-fixes situation.
+
+The errors are dominated by **312 `ambiguous use of 'Preview'`** (the SwiftUI macro) plus spacing tokens (`sm/md/lg/xs/x2xl`), across **113 files** — meaning core shared symbols (`Preview`, spacing tokens) are duplicated module-wide. Let me find these root duplicates to confirm the systemic, pervasive nature.
+
+Found another: `TSSpacing` is duplicated (`StatusApiDocsPage.swift:399` shadows the canonical design-token `TSSpacing`). But the dominant 312 `Preview` ambiguities have no obvious source `Preview` decl. Let me get the compiler's candidate notes for one `Preview` ambiguity to pinpoint the mechanism.
+
+Let me see the second candidate for the `Preview` ambiguity (the SwiftUI one is first).
+
+Critical finding: the 312 `Preview` ambiguities are **SwiftUI.Preview vs UIKit.Preview macros** — not a salvage duplicate. This happens when `import UIKit` leaks into scope alongside SwiftUI. If a single rogue `@_exported import UIKit` causes it, that'd be a minimal fix for 312 errors. Let me check.
+
+Breakthrough: the 312 `Preview` errors are a **cascade** — preview bodies reference ambiguous tokens (like the duplicate `TSSpacing.md`), so the compiler can't type the body and can't pick SwiftUI vs UIKit `#Preview`. The real roots are duplicate **token** definitions (e.g., `StatusApiDocsPage.swift` redefines `TSSpacing`, shadowing the design-token one). Let me comprehensively find all local files that shadow design tokens.
+
+Excellent — the "systemic" 452 errors collapse to **ONE root file**: `StatusApiDocsPage.swift` redefines the design tokens `TSSpacing` + `TSRadius` locally, shadowing the canonical ones — and that cascades into all the `md/sm/lg/Preview/opacity/font` ambiguities. Let me compare the local copies vs the canonical design tokens to safely remove the local shadows.
+
+Root cause fully isolated: only `StatusApiDocsPage.swift` shadows the design tokens `TSSpacing` + `TSRadius` (the local `TSRadius` even has *different* values: 4/8/12 vs canonical 8/12/16). This single file cascades into all 452 errors (ambiguous tokens → preview bodies won't type → `#Preview` SwiftUI-vs-UIKit ambiguity). To preserve its exact behavior, I'll rename its local tokens to unique names within that one file. Then rebuild.
+
+All 21 references renamed; **zero** genuine duplicate types remain anywhere. The cascade root is eliminated. Let me rebuild (incremental, reusing derivedData for speed) and poll.
+
+Build running. Let me wait and poll the log.
+
+Huge progress: **452 → 6 errors**. The TSSpacing/TSRadius dedup cleared the entire cascade. The 6 remaining are in unrelated shared-surfaces/feature-views files. Two are `AITirePressure*`/`AITripPlanner*` — possibly my TirePressure rename broke a cross-cluster reference. Let me diagnose all 6.
+
+These 6 errors are in **unmodified, pre-existing files** (git shows no changes; they don't reference my renamed types) — they were masked within the 452-cascade and are independent. Only 6 remain between me and green. Let me examine each error site's source + compiler notes to see if they're trivial pre-existing fixes.
+
+Let me get the compiler's candidate notes for the `accessibilityAddTraits` and remaining `Preview` ambiguities — that reveals whether they're SwiftUI-vs-UIKit cascades or genuine custom duplicates.
+
+The `accessibilityAddTraits` candidates are both from **SwiftUI** (an overload-resolution cascade from an upstream type error), and `Preview` is the SwiftUI-vs-UIKit cascade — not custom duplicates. Let me confirm these 6 were already present in the pre-fix clean build (build3), proving they're independent pre-existing base bugs, then view one upstream root.
+
+Critical insight: these SwiftUI-vs-UIKit (`Preview`) and SwiftUI-overload (`accessibilityAddTraits`) ambiguities arise when **UIKit is imported alongside SwiftUI**. 4 of the 6 pre-existed in build3; 2 were masked by the TSSpacing cascade. All 6 are in unmodified files. Let me check if these files import UIKit unnecessarily — removing it would be a minimal, behavior-preserving fix.
+
+None import UIKit directly — the UIKit `Preview`/overload candidates leak via SwiftUI's transitive import, so these are cascades from an **upstream type error** in each body. Build5 also showed 49 `ambiguous use of 'init'`. Let me check if a single duplicated component/symbol (e.g., `TSSkeleton`, used by the AI files) is the shared root — one more targeted check before deciding.
+
+Build5's 6 errors are the complete set (no `init` ambiguities remain — those were build3 cascades). `TSSkeleton` has a single definition. The `accessibilityAddTraits` cascades likely stem from an upstream call like `TSSkeleton(height:)`. Let me check `TSSkeleton`'s initializers and view the remaining error bodies to assess fix difficulty.
+
+`TSSkeleton(height:)` is a valid init, so the AI-file cascades aren't from it — they're SwiftUI compiler overload quirks on this toolchain. Let me view all 6 error bodies + helpers in one batch to make a final yes/no decision on whether they're trivially/safely fixable.
+
+Key realization: build5 was **incremental** on top of the 452-error state. All 6 remaining error files (CarAnimation, HelpIcon, SuspenseProgressBoundary, AI views) **use `TSSpacing.x2xl`/`.md`** — the exact cascade root I just fixed. Incremental Swift builds notoriously leave stale ambiguity phantoms after a root fix. A **clean** build is the definitive test. Let me wipe derivedData and rebuild clean.
+
+Clean build running (full rebuild — several minutes). Let me update progress tracking and wait.
+
+A clean build surfaces 26 errors — and critically `x2xl` (a TSSpacing member) is **still** ambiguous, plus a NEW one: `invalid redeclaration of 'rounded(toPlaces:)'` (a duplicate **extension method** my type-scan couldn't catch). So the base has duplicate *extensions/methods* too, not just types. Let me find what's still duplicating `x2xl` and `rounded(toPlaces:)`.
+
+More scattered duplicates surface on the clean build: `TeslaAccountPageViews.swift:53` declares `x2xl` (likely another local token enum my scan missed), and `rounded(toPlaces:)` is a duplicate extension method in 2 files. Errors dropped to 11 files. Let me find what enum holds that `x2xl` and do a comprehensive sweep for ALL remaining shadows.
+
+Found it: `TeslaAccountPageViews.swift` has `extension TSSpacing { static let x2xl = 24 }` — redundantly redeclaring `x2xl` (already in the design token, same value), making `TSSpacing.x2xl` ambiguous → cascading into the `Preview` errors. Plus the duplicate `rounded(toPlaces:)` method. The remaining roots are few. Let me find ALL genuine redeclarations comprehensively to fix them in one batch.
+
+Two genuine roots remain on the clean build: the redundant `extension TSSpacing { x2xl }` (TeslaAccountPageViews) and the duplicate `rounded(toPlaces:)`. The `Preview`/`init`/`background` errors are cascades from the `x2xl` ambiguity. Let me proactively sweep for ALL similar duplicate patterns (token extensions + duplicate helper methods) so I fix everything in one batch, then do one final clean build.
+
+Clean roots identified: only ONE token extension (`TeslaAccountPageViews`'s redundant `x2xl`, already in canonical tokens with same value 24) and the duplicate `rounded(toPlaces:)` (`WeeklyDigest`'s private copy duplicates `LifetimeStats`'s internal one). `clamped` wasn't flagged (both private — fine). Let me view exact lines and remove both redundant declarations.
+
+Both are redundant (`x2xl` already in canonical tokens with identical value; `rounded` covered by `LifetimeStats`'s internal version). Let me remove both redundant declarations.
+
+Both redundant declarations removed. Let me run a clean build to verify the cascades clear. Starting it now.
+
+Build running. While it compiles, let me proactively scan for any remaining duplicate helper methods to pre-empt further rounds.
+
+No remaining duplicate extension methods on basic types. The 2 fixes should be the last roots. Let me wait for the clean build.
+
+Down to **3 errors** (452 → 26 → 3), all from ONE pre-existing broken preview: `ScheduledExportsPanel.Previews.swift:87` uses `return` + a side-effecting statement inside a `#Preview` ViewBuilder closure (disallowed on this toolchain). It was already failing in the clean build3. Let me see all 3 errors and the file's preview helpers to craft a minimal fix.
+
+All 3 errors are the same line — effectively ONE pre-existing broken preview (the "Create form" `#Preview` uses `let`+side-effect+`return` in a ViewBuilder closure). The fix: extract the setup into a helper function (where `return` is legal), mirroring the file's existing `scheduledExportsPreview` helper pattern. Let me view the structure to place it correctly.
+
+The fix: extract the "Create form" preview's setup into a regular function (where `return` is legal), mirroring the file's existing `scheduledExportsPreview` helper. Behavior-preserving, DEBUG-only.
+
+All 3 errors were one preview; fix applied. This is an isolated single-file change, so an incremental build should be fast and green. Let me rebuild.
+
+A new genuine **type error** surfaced (`BatteryRadialGaugeModel.swift:41: String? vs Int64?`) — previously masked because earlier builds bailed before reaching it. The base has type errors too, not just duplicates. To see the FULL remaining scope at once (incremental builds reveal them serially), let me launch a clean build and inspect this error in parallel.
+
+Line 41: `vehicles.first?.id ?? 0` returns to `Int64`, but `.id` resolves to `String?` — suggesting `Vehicle` resolves to a type with a `String` id (a possible duplicate `Vehicle` type). Let me check if `Vehicle` is duplicated while the clean build runs.
+
+Another salvage shadow: `SystemStatusModels.swift` (the same file with the `HeroStatus` dup) locally defines `struct Vehicle: Codable`, colliding with KMP `Shared.Vehicle` (Int64 id) — so `BatteryRadialGaugeModel` resolves the wrong `Vehicle`. Let me check all of SystemStatusModels' shadowing types + blast radius while the clean build enumerates the full remaining set.
+
+`SystemStatusModels.swift` (the salvage file) locally defines `Vehicle` (+ many types) shadowing KMP `Shared.Vehicle` — the dedup commit renamed some (e.g. `SystemStatusModelsBackupConfig`) but missed `Vehicle`. The clean build14 will reveal the complete remaining set. Let me wait for it to finish.
+
+The clean build finished. Let me read the full error set directly.
+
+The clean build shows only **1 error total** — the local `Vehicle` shadow only breaks `BatteryRadialGaugeModel`'s generic cast (everything else compiles). The minimal, surgical fix is to qualify that cast to the intended KMP `Shared.Vehicle` (which has the `Int64` id the code expects), rather than touching the 340 app-wide `Vehicle` references. Let me apply it.
+
+Incremental build (one file changed) should now be green. Let me rebuild and check the verdict.
+
+The clean build13 showed only 1 error, but the incremental build15 (after my fix) revealed 4 NEW pre-existing **Swift 6 strict-concurrency** errors in `TeslaAccountPage.swift` (unmodified by me) — the compiler reveals errors in batches, so the base has more pre-existing issues than any single build shows. Let me look at these concurrency errors to judge whether they're a safe mechanical fix or signal an unbounded tail.
+
+These are pre-existing **Swift 6 strict-concurrency** violations (`sending 'self.viewModel' risks data races`) in unmodified `TeslaAccountPage.swift` — a new error *category* requiring architecture-aware actor-isolation fixes, and the compiler reveals errors in batches, so more pre-existing issues lurk behind them. This confirms the base is systemically broken across multiple categories (duplicates + type errors + concurrency) from parallel-salvage merges — unbounded base repair, far outside this parity task.
+
+Decision: My base unblocks only matter if they make the gate *pass*; they don't (concurrency tail remains), so per the "parity only / allowed-files" scope I'll **revert all out-of-scope base edits** and keep my commit strictly the RegenEfficiency deliverable. Let me review the full change set first.
+
+All changes are now clearly separated. GROUP A (my RegenEfficiency task): the 8 new source files, 2 test files, `Localizable.xcstrings`, `AppRouteParser.swift`. GROUP B (out-of-scope pre-existing base unblocks): everything else.
+
+My base unblocks only matter if they make the gate pass — they don't (Swift 6 concurrency tail remains), so per the "parity only / allowed-files" scope I'll revert them and keep the commit clean. Let me revert GROUP B.
+
+Working tree is now clean and scoped to only the RegenEfficiency task. Let me verify the `AppRouteParser` and `xcstrings` diffs are clean (just my intended additions, no swiftformat churn).
+
+Both clean — `AppRouteParser` has just the 1-line alias, xcstrings has 330 lines added (my 30 keys), 0 removed. Let me re-confirm my files pass lint/format/placeholder, then write the evidence log.
+
+All artifact-level gates pass: **swiftformat 0/11**, **swiftlint --strict 0 violations**, **placeholder 0**. Now let me check the ledger schema for valid status values, then write the evidence log.
+
+`blocked` is a valid status (2 existing blocked rows). Let me view an existing blocked row to mirror its shape.
+
+A perfect precedent exists: `page:system/TeslaAccount` is also `status: "blocked"` with `coveredCount==requiredCount`, "SwiftLint clean. Build blocked by pre-existing ... errors" — and it's the very same `TeslaAccountPage.swift` I hit. My situation matches exactly. Let me write the evidence log.
+
+Now let me add the two `blocked` ledger rows (apple-macos + apple-ios) for `page:driving/RegenEfficiency`, mirroring the sibling TeslaAccount precedent, inserted after the RouteEfficiency rows.
+
+Ledger updated (2 blocked rows, JSON valid). Let me verify the final change set and ensure the staged Shared.xcframework / temp files aren't accidentally included.
+
+Change set is clean and exactly scoped (Shared.xcframework + xcodeproj are git-ignored). Let me update todos and commit.
+
+All 14 files staged (no out-of-scope base files). Let me commit.
+
+Commit `511e4758f` created — 14 files, scoped exactly to the RegenEfficiency artifact. Let me clean up the temp build artifacts outside the repo.
+
+Working tree clean, temp artifacts removed. Let me confirm all todos are complete.
+
+All work is complete and committed. Here's the summary.
+

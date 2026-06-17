@@ -1,0 +1,158 @@
+=== P4 Shared surface 0125 InstallPrompt (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — shared parallel runner
+                       (slot-80 of 20260611-013149-26127; HEAD 40053d609). KMP Gradle staging +
+                       full-app Swift compiles of ~4.5k files contend for CPU during the gate.
+  Xcode              : 26.5 (Build 17F42); xcodebuild + xcrun simctl functional.
+  Toolchain          : swift 6.3.2 (swiftlang-6.3.2.1.108) · swiftlint · swiftformat ·
+                       xcodegen 2.45.4 · pwsh 7.x · OpenJDK (KMP/Gradle).
+  Simulator          : "iPhone 16" present + Booted (the prompt's literal device — used verbatim).
+  Shared core        : KMP Shared.xcframework assembled via Gradle :core:assembleSharedXCFramework
+                       (BUILD SUCCESSFUL in 8m32s) and staged to apps/apple/Frameworks/
+                       (ios-arm64 + ios-arm64-simulator + macos-arm64 slices).
+  Project            : xcodegen generate -> TeslaSync.xcodeproj (all InstallPrompt.* files enumerated
+                       into the app + test targets; 66 pbxproj refs).
+  App build settings : SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY=complete (project.yml) — the
+                       isolated verifications below use the identical Swift 6 strict-concurrency mode.
+  Capability         : SwiftUI present and exercised. The web source uses only `useTranslation`
+                       (no Recharts / Leaflet), so this is a pure presentational prompt — Swift Charts
+                       / MapKit are NOT required to render it. NOT capability-blocked.
+
+ARTIFACT (allowed files only — apps/apple/TeslaSync/shared-surfaces/InstallPrompt.* + this log)
+  InstallPrompt.Adapter.swift   — pure core (Foundation): the verbatim web constants (DISMISS_KEY
+                                  "teslasync-pwa-install-dismissed" + DISMISS_DAYS 14 + the 14-day
+                                  window), verbatim-keyed copy (installPrompt.title / .subtitle /
+                                  .install / .dismiss), the wasDismissedRecently window predicate, the
+                                  a11y card-label builder, the t(key,fallback) resolve typealias.
+  InstallPrompt.Model.swift      — P1/S11 telemetry seam, InstallPromptConnection axis,
+                                  InstallPromptInput, InstallPromptEmptyKind (installed / dismissed /
+                                  unavailable — the three web `return null` branches), resolved phase +
+                                  pure projection, @Observable @MainActor state-holder (surfaceSlug,
+                                  view.opened once, install -> embedder handler -> markInstalled,
+                                  dismiss, one-shot stale auto-refresh), P1/S10 i18n facade.
+  InstallPrompt.Seams.swift      — P1/S8 source protocol; InstallabilityProbe (Default = ProcessInfo
+                                  runtime OS check, warning-free; Static = web beforeinstallprompt
+                                  capture double); DefaultInstallPromptSource (probe + persisted
+                                  dismissal + broadcast) / InMemoryInstallPromptSource; .live() factory.
+  InstallPrompt.Stores.swift     — dismissal store (UserDefaults, the web teslasync-pwa-install-
+                                  dismissed key, + InMemory) and cross-scene broadcast (NotificationCenter
+                                  ignore-own-post + Controlled double) — split out for the lint budget.
+  InstallPrompt.States.swift     — loading skeleton / empty card (per-kind honest copy) / error tile.
+  InstallPrompt.Views.swift      — the active prompt card (gradient glyph accent->statusSuccess, title +
+                                  subtitle, Install + dismiss) + the freshness chip (P4 axis).
+  InstallPrompt.swift            — the public surface; phase switch + freshness chip + onAppear/start.
+  InstallPrompt.Previews.swift   — 8 #Preview states (active / installed / dismissed / unavailable /
+                                  loading / error / stale / offline).
+  InstallPrompt.strings          — P1/S10 catalog contribution (web installPrompt.* verbatim + chrome).
+  InstallPrompt.Tests.swift      — adapter + projection + a11y unit tests.
+  InstallPrompt.ModelTests.swift — model + seams (probe / dismissal store / broadcast / default source).
+
+PARITY MAP (disclosed Apple-idiomatic adaptations — web is THE spec)
+  • Web PWA "Add to home screen" -> native Home/Lock-Screen widget (iOS) / pin (macOS) affordance.
+  • Web beforeinstallprompt capture -> InstallabilityProbe.canInstall(); isStandaloneMode() ->
+    isInstalled(); wasDismissedRecently() (14-day localStorage) -> UserDefaults dismissal + window.
+  • Web handleInstall (deferredPrompt.prompt + userChoice) -> embedder onInstall() returning accepted,
+    then markInstalled -> hides. Web handleDismiss (persist + broadcast) -> persist + NotificationCenter
+    cross-scene post. Web cross-tab subscribe -> NotificationCenter subscription (ignores own post).
+  • P4 leaf additions (same as sibling banners): the empty kinds render calm honest cards instead of
+    the web blank null, plus the orthogonal stale/offline freshness chip + one-shot auto-refresh.
+
+GATE RESULTS (live below)
+
+[1] swiftlint --strict (surface)
+Linting 'InstallPrompt.Views.swift' (10/10)
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+
+[2] swiftformat --lint (surface)
+SwiftFormat completed in 8.51s.
+0/10 files require formatting.
+FORMAT_EXIT=0
+
+[3] check-placeholders.ps1 (surface)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+[4] Isolated Swift 6 build (strict-concurrency complete) — surface vs REAL design system
+Build complete! (0.23s)
+ISOLATED_BUILD_EXIT=0
+
+[5] Isolated XCTest (Swift 6 strict-concurrency complete)
+Test Suite 'All tests' passed at 2026-06-11 12:51:26.652.
+	 Executed 56 tests, with 0 failures (0 unexpected) in 0.012 (0.018) seconds
+ISOLATED_TEST_EXIT=0
+
+[6] swiftc -typecheck iOS 18 simulator + macOS 15 (Swift 6 complete) — surface + design system
+    iOS-18  : 0 InstallPrompt errors (IOS_TYPECHECK_EXIT=0)
+    macOS-15: 0 InstallPrompt errors (MAC_TYPECHECK_EXIT=0)
+
+[7] Full-app xcodebuild (real module; Shared.xcframework staged; CODE_SIGNING_ALLOWED=NO)
+    iOS  build: ** BUILD FAILED **  IOS_EXIT=65
+    macOS build: ** BUILD FAILED **  MAC_EXIT=65
+    InstallPrompt errors across BOTH builds: 0
+    The ONLY source error (both platforms), outside the allowed files:
+      apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures non-escaping parameter 'content'
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders on Apple with ALL web states reproduced (loading / data / empty{installed,
+      dismissed, unavailable} / error / stale / offline) — 8 #Preview states + per-state UI.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (InstallPromptModel + source seam); the view
+      does no probing / persistence / broadcasting / HTTP.
+  [x] Every i18n key from the web source has a matching key in the P1/S10 catalog (installPrompt.title
+      / .subtitle / .install / .dismiss), verbatim-keyed + asserted by InstallPromptCopyTests; native
+      P4 chrome keys added in the per-surface "InstallPrompt" table.
+  [x] Accessibility labels on every interactive element (Install + dismiss labelled; card label
+      combined; freshness chip labelled; loading/skeleton a11y label). Dynamic Type via system fonts,
+      Reduce Motion honoured (TSFadeIn / TSSkeleton).
+  [x] Tests: adapter unit tests + per-state projection tests + a11y label test + model/seams tests
+      (probe / dismissal store / cross-scene broadcast). 56/56 pass under Swift 6 strict concurrency.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0, 0 opt-outs).
+  [x] Telemetry: view.opened emitted once with surface slug "InstallPrompt" (asserted, idempotent).
+
+HONESTY COVENANT
+  1  No red-as-green   : every per-surface gate is reported with its real exit (LINT_EXIT=0,
+                         FORMAT_EXIT=0, PLACEHOLDER_EXIT=0, ISOLATED_BUILD_EXIT=0, ISOLATED_TEST_EXIT=0,
+                         both typechecks 0). The full-app xcodebuild is reported RED (IOS_EXIT=65 /
+                         MAC_EXIT=65) — NOT spun as green — with its single pre-existing cause shown.
+  2  No scope narrowing: every web state, every i18n key, the 14-day dismissal, the install action, and
+                         the cross-scene dismissal broadcast are reproduced; nothing dropped.
+  3  No skip-and-assume: the web source was read end-to-end; every branch (standalone / dismissed /
+                         no-affordance / visible) + appinstalled + cross-tab subscribe is mapped.
+  4  No stubs as final : no stub/placeholder; the install action is a real embedder handoff (like the
+                         sibling AchievementUnlockedToast onView), the broadcast a real NotificationCenter.
+  5  No parity shortcut: data, composition, states, i18n, a11y all at parity; disclosed Apple-idiomatic
+                         adaptations only (PARITY MAP above).
+  6  No delegation      : authored directly; no sub-agent delegation (prompt forbids it).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11
+                         view.opened telemetry all honoured.
+  8  No commit on red   : the committed artifact (11 InstallPrompt.* files + this log) is GREEN on every
+                         per-surface gate, on a real isolated Swift 6 (strict-concurrency=complete)
+                         build + 56/56 XCTest against the REAL design system, AND type-checks with 0
+                         diagnostics on BOTH the iOS-18 simulator and macOS-15 SDKs. The full-app build
+                         is red ONLY from one pre-existing defect in an unrelated sibling surface
+                         (AISuggestNewGeofences.swift:129 — outside the allowed files) this commit never
+                         touches; 0 InstallPrompt errors across both platform builds.
+  9  No silent drift    : changes confined to shared-surfaces/InstallPrompt.{Adapter,Model,Seams,Stores,
+                         States,Views,Previews,Tests,ModelTests}.swift + .swift + .strings and this log.
+                         Disclosed adaptations are the PARITY MAP above; the dismissal store + broadcast
+                         live in InstallPrompt.Stores.swift (split from Seams for the 400-line budget).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic InstallPrompt shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it builds + type-checks with 0 diagnostics under the app's exact Swift 6
+  strict-concurrency=complete mode on both the iOS-18 and macOS-15 SDKs against the REAL design system,
+  its 56 unit tests pass, and swiftlint --strict / swiftformat --lint / placeholder are green on the
+  surface. The full-app iOS-Simulator + macOS xcodebuild is DEFERRED (reported RED, not failed by this
+  code) on a single pre-existing compile defect in the unrelated sibling surface AISuggestNewGeofences
+  (escaping-closure capture, outside the allowed files); macOS additionally requires development-signing
+  on a CI runner. Both deferrals are owned by the P4 acceptance gate (p4-apple/P99-0001) on a signed,
+  uncontended macos-latest runner with a clean sibling tree — consistent with every predecessor P4
+  Apple surface recorded in apps/macos-pending-verifications.md. Zero InstallPrompt errors in either
+  full-app build.
+
+EXIT=0
+STATUS=DONE

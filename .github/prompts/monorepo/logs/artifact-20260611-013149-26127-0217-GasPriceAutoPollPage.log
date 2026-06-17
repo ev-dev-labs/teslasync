@@ -1,0 +1,188 @@
+================================================================================
+ P4-APPLE · P7 · page:admin/GasPriceAutoPoll — SwiftUI / Apple HIG parity
+================================================================================
+ Prompt   : p4-apple/P7/page:admin/GasPriceAutoPoll
+ Targets  : apple-macos + apple-ios (one adaptive SwiftUI layer, ADR-002/006)
+ Web src  : web/src/features/admin/pages/GasPriceAutoPollPage.tsx  (route /gas-price)
+ Runner   : macOS, Xcode 26.5 (Build 17F42), swiftlint 0.63.3, swiftformat, xcodegen,
+            pwsh 7.x — an Xcode runner IS available, so the gate runs (not BLOCKED).
+
+--------------------------------------------------------------------------------
+ SCOPE / WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+ GasPriceAutoPollPage.tsx is a thin PageContainer wrapper — a title + subtitle
+ (promoted from the old /settings#gas-price section) that renders the shared
+ <GasPriceSettings /> component. The parity manifest declares for THIS unit:
+   - data sources : none ("renders from navigation values / local state")
+   - panels       : none named (reproduce the PageContainer chrome + embedded surface)
+   - charts/maps  : none
+   - strings      : 2  → gas.title, gas.subtitle   (PARITY_REQUIRED=2)
+ The embedded GasPriceSettings surface is a SEPARATE, already-shipped parity unit
+ (apps/apple/TeslaSync/feature-views/GasPriceSettings.*); this page composes it,
+ exactly as the web page composes <GasPriceSettings />.
+
+--------------------------------------------------------------------------------
+ OUTPUT-PATH RECONCILIATION (no silent drift)
+--------------------------------------------------------------------------------
+ The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/`.
+ The real compiled source root for app code is `apps/apple/Sources/` (see
+ apps/apple/project.yml `sources:`), and the two predecessor P7 admin pages
+ (ApiPlayground, DiskForecast) live in `apps/apple/Sources/Features/Admin/`. The
+ template token `TeslaSync/Features/Admin` therefore maps to the actual compiled
+ path `Sources/Features/Admin`, exactly as those predecessors resolved it. Files
+ placed there are picked up by the `Sources` glob and compile into BOTH app targets.
+
+--------------------------------------------------------------------------------
+ FILES (all within allowed scope: Features/Admin/** + nav registration + catalog + log)
+--------------------------------------------------------------------------------
+ NEW  apps/apple/Sources/Features/Admin/GasPriceAutoPollPage.swift
+        - SwiftUI `View`; ScrollView{ header(title+subtitle) + GasPriceSettings(model:) }
+        - header binds model.titleKey / model.subtitleKey (the 2 parity strings)
+        - adaptive (fills compact width, left-aligned regular); DEBUG #Previews for
+          Data / Loading / Empty / Error.
+ NEW  apps/apple/Sources/Features/Admin/GasPriceAutoPollPageModel.swift
+        - `@MainActor @Observable GasPriceAutoPollPageModel` — exposes titleKey
+          ("gas.title") + subtitleKey ("gas.subtitle") + owns the embedded
+          `GasPriceSettingsModel`; no networking (ADR-004).
+        - `SampleGasPriceSettingsSource` — interactive route/preview default seam
+          (mirrors DiskForecast's SampleDiskForecastDataSource); production injects
+          the shared-core gas-price status adapter.
+ NEW  apps/apple/Sources/Features/Admin/GasPriceAutoPollRouteRegistration.swift
+        - registers `.gasPrice` → GasPriceAutoPollPage in AppRouteHostRegistry
+          (mirrors ApiPlayground/DiskForecast registrations); source seam injectable.
+ NEW  apps/apple/Tests/Unit/Features/Admin/GasPriceAutoPollPageModelTests.swift
+        - 13 XCTest cases: parity-string bindings, 4 embedded states, sample-source
+          start/toggle/interval/poll, route registration + deep link.
+ EDIT apps/apple/Sources/App/AppRoute.swift
+        - add `.gasPrice` (pathSegment "gas-price", systemImage "fuelpump.fill",
+          group .system — the home of the other admin pages; web groups it under
+          "Integrations", which has no Apple AppRouteGroup peer).
+ EDIT apps/apple/Sources/TeslaSyncApp.swift
+        - chain GasPriceAutoPollRouteRegistration.registry(base:) into the route host.
+ EDIT apps/apple/Localization/Localizable.xcstrings
+        - add gas.title, gas.subtitle (the 2 parity keys, web English fallbacks),
+          route.gasPrice ("Gas Prices", web nav label), and
+          spotlight.route.gasPrice.description (every indexable route carries one).
+ /gas-price deep link resolves to .gasPrice automatically via the path segment
+ (AppRouteParser keys on the first segment) — no alias edit needed.
+
+================================================================================
+ === PARITY ===
+================================================================================
+ PARITY_REQUIRED=2
+
+ [x] string — gas.title
+       binding : GasPriceAutoPollPageModel.titleKey == LocalizedStringKey("gas.title")
+                 (GasPriceAutoPollPageModel.swift) rendered by GasPriceAutoPollPage.header
+                 via TSPageTitle(model.titleKey) (GasPriceAutoPollPage.swift).
+       catalog : Localizable.xcstrings "gas.title" = "Gas Price Auto-Poll" (web fallback).
+       executed: harness check "titleKey binds gas.title" = PASS.
+ [x] string — gas.subtitle
+       binding : GasPriceAutoPollPageModel.subtitleKey == LocalizedStringKey("gas.subtitle")
+                 rendered by GasPriceAutoPollPage.header via Text(model.subtitleKey).
+       catalog : Localizable.xcstrings "gas.subtitle" =
+                 "Automatically fetch US average gas prices from EIA" (web fallback).
+       executed: harness check "subtitleKey binds gas.subtitle" = PASS.
+
+ PARITY_COVERED=2
+ PARITY_COVERED==PARITY_REQUIRED ✓
+
+================================================================================
+ GATE RESULTS
+================================================================================
+ SWIFTFORMAT_LINT : 0/6 files require formatting  (EXIT=0)
+ SWIFTLINT_STRICT : 0 violations on the 6 touched files  (LINT_EXIT=0)
+ PLACEHOLDER_SCAN : Sources/Features/Admin → PLACEHOLDER_COUNT=0, ALLOWED=0 (PLACEHOLDER_EXIT=0)
+                    Tests/Unit/Features/Admin → PLACEHOLDER_COUNT=0, ALLOWED=0 (EXIT=0)
+ EXECUTED HARNESS : swiftc -swift-version 6 (strict concurrency complete), macOS SDK,
+                    real AppRoute/AppRouteParser + GasPriceSettings.{Adapter,Projection,
+                    Model} + GasPriceAutoPollPageModel → 21/21 checks PASS, 0 failures.
+                    (route segment/group/icon + /gas-price deep link + unique segments;
+                     titleKey/subtitleKey bindings; data/loading/empty/error phases;
+                     SampleGasPriceSettingsSource start/toggle/interval/poll.)
+
+ IN-MODULE COMPILE (real app module, Shared.xcframework assembled live this run,
+   `cd apps/shared && ./gradlew :core:assembleSharedXCFramework` → BUILD SUCCESSFUL 7m15s,
+   staged ios-arm64 + ios-arm64-simulator + macos-arm64):
+   - macOS  : xcodebuild -target TeslaSync-macOS … CODE_SIGNING_ALLOWED=NO build →
+              my 3 surface files + AppRoute.swift + TeslaSyncApp.swift compiled AND
+              code-genned with ZERO diagnostics. (grep error: → 0 hits in my files.)
+   - iOS    : xcodebuild -target TeslaSync -sdk iphonesimulator ARCHS=arm64 … build →
+              ZERO `error:` diagnostics module-wide (type-checking of the whole module,
+              including AppRoute.swift, succeeded). 0 errors in my files.
+
+ BUILD_EXIT (full-app scheme/target) = 65 (RED) — pre-existing + out-of-scope ONLY:
+   - macOS RED: TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22
+       "escaping closure captures non-escaping parameter 'content'" (sibling, not mine).
+   - iOS  RED: swift-frontend IRGen crash (llvm::report_fatal_error) —
+       "While evaluating request IRGenRequest(IR Generation for file
+        …/feature-views/AppearanceSettings.Controls.swift)
+        While emitting IR SIL function @$sSbScA_pSgIeAghyg_SbIeAghn_TR" — a backend
+       reabstraction-thunk codegen crash on a sibling file, AFTER type-checking. This is
+       the toolchain IR crash the ApiPlayground predecessor documented.
+   - Also pre-existing: feature-views/RecentDrivesSection.Previews.swift:24:20 type-check
+       timeout (seen on an earlier incremental batch).
+   git status confirms NONE of these blocker files (AIAutoNameUnnamedLocations.swift,
+   AppearanceSettings.Controls.swift, RecentDrivesSection.Previews.swift) are touched by
+   this prompt. All three are catalogued in apps/macos-pending-verifications.md and
+   deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest + signing identities).
+ TEST_EXIT (full-app scheme test) = blocked by the same pre-existing app-target build
+   breakage (the XCTest bundle depends on the app target); the model logic is instead
+   proven by the executed harness above (21/21).
+
+================================================================================
+ HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : the full-app BUILD/TEST is reported RED (EXIT=65); its cause is
+                       enumerated (pre-existing sibling escaping-closure + toolchain IRGen
+                       crash) and shown to be in files I did not touch.
+ 2 No scope narrowing: every element the web page renders is reproduced — PageContainer
+                       title + subtitle (the 2 parity strings) + the embedded
+                       GasPriceSettings surface. No data sources/charts/maps exist to skip.
+ 3 No skip-and-assume: web source read end-to-end; it delegates its body to
+                       <GasPriceSettings /> which is already a shipped Apple surface.
+ 4 No stubs as final : PLACEHOLDER_COUNT=0; SampleGasPriceSettingsSource is a complete,
+                       interactive seam (not a stub), mirroring the sibling pages' defaults.
+ 5 No parity shortcuts: both parity strings bind from the @Observable model and resolve
+                       from Localizable.xcstrings with the exact web key names + fallbacks.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit sibling surfaces, project.yml, or other owners'
+                       files; the generated TeslaSync.xcodeproj + build/ + Shared.xcframework
+                       are git-ignored and not committed.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/6),
+                       swiftlint --strict(0), placeholder(0), executed harness(21/21),
+                       in-module compile of my files macOS(0) + iOS(0). The only RED is the
+                       pre-existing out-of-scope toolchain/sibling breakage, DEFERRED to P99.
+ 9 No silent drift   : changes confined to the files listed above + this log + apple-ledger.json.
+                       The TeslaSync/Features/Admin → Sources/Features/Admin path mapping is
+                       documented above.
+10 EXIT/STATUS below.
+
+================================================================================
+ DISPOSITION
+================================================================================
+ A complete, HIG-native SwiftUI GasPriceAutoPollPage shipped at parity with the web source:
+ the PageContainer chrome (title + subtitle, the 2 parity strings bound through an
+ @Observable GasPriceAutoPollPageModel) above the embedded, already-shipped GasPriceSettings
+ surface — exactly the web composition. Deep-linkable via a new `.gasPrice` route
+ (/gas-price), hosted through the shell's route registry, grouped with the other admin
+ surfaces. Adaptive across macOS/iPad/iPhone; all copy from Localizable.xcstrings with web
+ key names; SI-safe (the embedded surface formats at the display boundary). Verified on BOTH
+ idioms by the real in-module xcodebuild compile (macOS full compile + iOS module type-check,
+ 0 diagnostics in my files) and an executed Swift-6 strict-concurrency harness (21/21). The
+ full-app xcodebuild scheme is RED ONLY due to a pre-existing toolchain IRGen crash
+ (AppearanceSettings.Controls.swift) + a sibling escaping-closure error
+ (AIAutoNameUnnamedLocations.swift), both out-of-scope, untouched by this prompt, and
+ deferred to the P99 acceptance gate.
+
+================================================================================
+ COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin apps/apple/Tests/Unit/Features/Admin \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-GasPriceAutoPollPage.log
+  git commit -m "feat(apps/apple): GasPriceAutoPollPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,125 @@
+=== P4 Widget primitive 0013 WidgetShell (Apple) ===
+run-utc=2026-06-12T17:05Z
+host=Darwin 25.5.0 arm64
+prompt=.github/prompts/monorepo/p4-apple/widget-primitives/P-0013-WidgetShell.prompt.md
+web-source=web/src/features/dashboard/widgets/WidgetShell.tsx
+
+Honesty Covenant: observed verbatim. No red-as-green; no scope narrowing; no stubs;
+the full-app schemes are reported BLOCKED with concrete out-of-scope evidence below.
+
+--- Deliverable (allowed files: apps/apple/TeslaSync/widget-primitives/WidgetShell.* + this log) ---
+WidgetShell.Adapter.swift       (Foundation-only core: slug, Help/Pin value types, freshness state
+                                 machine + relative-time bucketing + query->props projection, Input,
+                                 Phase, Projector — pure/Equatable/Sendable)
+WidgetShell.Model.swift         (P1/S10 strings facade, P1/S11 telemetry seam + once-only view.opened,
+                                 @MainActor @Observable holder: input/phase/justUpdated pulse)
+WidgetShell.swift               (public generic WidgetShell<Actions,Content> View + 3 inits + body)
+WidgetShell.Views.swift         (ready layout, titled header, help button, pin button)
+WidgetShell.States.swift        (freshness chip [DataFreshness peer], loading chrome, error leaf)
+WidgetShell.Previews.swift      (DEBUG previews for every branch)
+WidgetShell.strings             (P1/S10 catalog: freshness.* + a11y keys)
+WidgetShell.AdapterTests.swift  (pure projector/value-type tests)
+WidgetShell.Tests.swift         (model + view-composition + strings/a11y tests)
+
+Parity: web <WidgetShell> is a PURE presentational chrome primitive (no fetcher). Real branches
+reproduced 1:1 — loading short-circuit (<Skeleton h-full rounded-xl>), error short-circuit
+(<QueryError>), ready chrome (titled header: icon + uppercase muted title + HelpTooltip / freshness
+chip + PinButton + actions; OR title-less: freshness overlay + actions row), the content area
+(px-4 pb-3, suppressed under noPadding), the justUpdated success-glow pulse, and the freshness chip's
+four states fresh/fetching/stale/error (error == WifiOff/wifi.slash = the offline indicator) with the
+DataFreshnessAuto forceStaleAfter override. No fabricated states. i18n: every rendered string resolves
+through the P1/S10 facade (freshness.* keys ported verbatim from the <DataFreshness> dependency); no
+hardcoded prose. a11y: VoiceOver labels on freshness (Refresh / "Data freshness: {state}"), pin
+(Pin/Unpin + isSelected), help ("More info about {title}"), loading, error; Dynamic Type via tokens;
+Reduce-Motion honored on pulse/spin/shimmer.
+
+--- Platform capability (SwiftUI + Swift Charts + MapKit; iOS 18 / iPadOS 18 / macOS 15) ---
+xcodebuild: Xcode 26.5 (17F42)        swift: 6.3.2 (arm64-apple-macosx26.0)
+swiftlint: 0.63.3   swiftformat: 0.61.1   xcodegen: 2.45.4
+iOS Simulator: iPhone 16 present; iOS runtime 26.5 (back-deploys to the 18.0 target)
+Shared.xcframework: assembled live via Gradle :core:assembleSharedXCFramework (BUILD SUCCESSFUL in
+  10m47s) + staged to apps/apple/Frameworks/Shared.xcframework (slices: ios-arm64, ios-arm64-simulator,
+  macos-arm64). (Charts/MapKit are not used by this surface — pure presentational chrome, no data viz.)
+
+=== IN-SCOPE GATE STEPS (the shipped surface) — ALL GREEN ===
+
+--- [1] swiftformat --lint apps/apple (whole tree, gate config) ---
+0/5132 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--- [2] swiftlint --strict (scoped to the shipped surface) ---
+WidgetShell.* violations: 0  (re-run after fixes; multiple_closures / opening_brace / identifier_name
+  all resolved). The tree-wide `swiftlint --strict` exits non-zero on 3 PRE-EXISTING violations in
+  another agent's file (WidgetChartSummary.Tests.swift: identifier_name a/b/c) — NOT in scope, NOT mine.
+LINT_EXIT(scoped WidgetShell.*)=0
+
+--- [3] check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- [4] xcodegen generate (file enumeration) ---
+Created project at apps/apple/TeslaSync.xcodeproj  (GEN_EXIT=0)
+WidgetShell references in project.pbxproj: 54  (9 files x {iOS app, macOS app} sources + {iOS, macOS}
+  test bundles for *Tests.swift + .strings resource). widget-primitives IS a wired source path in
+  project.yml for both app targets and both test bundles.
+(generated .xcodeproj is git-ignored; removed after verification)
+
+--- [5] swiftc -typecheck of the shipped surface vs the REAL design system, Swift 6, strict concurrency
+        complete (Adapter+Model+WidgetShell+Views+States + the real Tokens.swift + Buttons.swift) ---
+iOS-18  (arm64-apple-ios18.0-simulator):  0 errors / 0 warnings   IOS_TYPECHECK_EXIT=0
+macOS-15 (arm64-apple-macos15.0):         0 errors / 0 warnings   MAC_TYPECHECK_EXIT=0
+
+--- [6] Adapter logic executed (Foundation harness compiling the REAL WidgetShell.Adapter.swift) ---
+38/38 assertions pass: status machine (error>fetching>stale>fresh), relative-time buckets
+  (just now / Xm / Xh / Xd / Xw + future-clamp), label resolution, query->props projection
+  (forceStaleAfter + passthrough + compact), phase short-circuits (loading>error>ready), pulse guard,
+  input helpers (hasTitle / showsFreshness / compact=!title / effectiveUpdatedAt).
+ADAPTER_RUNNER: ALL PASS   RUNNER_EXIT=0
+
+--- [7] Symbol-collision scan (23 public types) ---
+0 collisions: every public type is WidgetShell-prefixed (WidgetShellSurface/Help/Pin/Freshness/
+  FreshnessStatus/FreshnessQuery/RelativeBucket/RelativeTime/FreshnessLabel/Input/Phase/Projector/
+  Strings/Telemetry/Model/ReadyLayout/Header/HelpButton/PinButton/FreshnessChip/LoadingChrome/
+  ErrorLeaf) + OSLogWidgetShellTelemetry — none defined anywhere else in Sources/ or TeslaSync/.
+
+=== FULL xcodebuild build test GATE (both schemes): BLOCKED — out-of-scope, pre-existing ===
+
+The literal gate runs `xcodebuild -scheme TeslaSync … build test` and `-scheme TeslaSync-macOS build
+test`, which compile the whole 5100+ file app. Driven with an isolated per-slot derivedDataPath (to
+eliminate cross-slot DerivedData contamination — the default ~/Library DerivedData is shared by 5+
+concurrent identically-named "TeslaSync" parallel-slot builds), the slot-203 iOS build result is:
+
+  ** BUILD FAILED **  (IOS_BUILD_EXIT=65)
+  Exactly ONE slot-203 source error, and it is NOT WidgetShell:
+    apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+      error: escaping closure captures non-escaping parameter 'content'
+  Root cause (pre-existing, another agent's merged surface): `func glass(@ViewBuilder _ content:
+  () -> some View)` passes the NON-escaping `content` into `TSGlassPanel.init(@ViewBuilder content:
+  @escaping () -> Content)` (Sources/Components/UI/Cards.swift:7 — the closure is stored). The SAME
+  anti-pattern exists in 3 sibling surfaces (AISignalExplorerNlFilter, AISuggestNewGeofences,
+  AIGeofenceAwareAutomationSuggestions, AIAutoNameUnnamedLocations). These files are OUTSIDE this
+  prompt's allowed files (WidgetShell.* + this log); fixing them would violate the scope/allowed-files
+  contract (Covenant #2, #6). The macOS scheme compiles the SAME shared TeslaSync sources, so it hits
+  the same error, and is additionally blocked by macOS development code-signing (0 valid identities) —
+  the same blockers recorded for every prior P4 surface in apps/macos-pending-verifications.md.
+
+  WidgetShell errors in the real slot-203 iOS app-target build: 0 (grep "WidgetShell" + "error:" = none).
+  i.e. the shipped surface compiles CLEANLY inside the real app target; the build is red only on the
+  unrelated pre-existing AISuggestNewGeofences error.
+
+Deferred (per ADR-012 CI matrix) to the macos-latest acceptance gate
+(p4-apple/P99-0001-apple-acceptance-gate), where the unrelated sibling-surface errors are resolved and
+signing identities exist:
+  cd apps/apple && xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  cd apps/apple && xcodebuild -scheme TeslaSync-macOS build test
+
+=== SUMMARY ===
+Shipped surface: COMPLETE + VERIFIED GREEN (format 0, lint 0, placeholder 0, xcodegen enumerated,
+  iOS-18 + macOS-15 strict-concurrency typecheck 0/0, adapter 38/38, 0 collisions, 0 app-target errors).
+Full-app build test schemes: BLOCKED by a pre-existing, out-of-scope compile error in another agent's
+  AISuggestNewGeofences.swift (+ 3 siblings) + macOS signing + parallel-slot host saturation (load ~52).
+
+EXIT=65
+STATUS=BLOCKED

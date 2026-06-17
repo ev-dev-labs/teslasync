@@ -1,0 +1,192 @@
+================================================================================
+p4-apple · P7 · page:analytics/YearReview — SwiftUI / HIG parity
+================================================================================
+artifact : apps/apple/Sources/Features/Analytics/YearReviewPage.swift (+ models, model, sample, slide kit, 3 slide files, charts, format, route reg, tests)
+host     : macOS (Darwin 25.x); Xcode 26.5 (xcodebuild present); Apple Swift 6.3.2; swiftlint 0.63.x + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.x + Java 17 (Gradle/KMP) present
+parity   : page:analytics/YearReview  (manifest requiredCount=12 = 3 states + 9 strings; no named panels/charts extracted by the generator — the web page delegates to a slide subdeck the extractor did not traverse, so the full 12-slide deck is reproduced for region parity per the prompt's "reproduce every region" clause)
+web src  : web/src/features/analytics/pages/YearReviewPage.tsx  (route /year-review/:year ; delegates to features/analytics/components/review/* : SlideRenderer + 12 slides)
+data srcs: useVehicles -> GET /vehicles ; useYearReview -> GET /analytics/year-review [year, vehicle_id]
+           (both bound through one @Observable YearReviewPageModel via an injected YearReviewDataSource seam, ADR-004; no live SSE on this surface — the web page reads cached query data, no EventSource — so no staleness indicator. The web AIYearReviewNarration overlay renders nothing when ai_mode='off' [the default] and is an AI feature flag, not in this unit's parity manifest; intentionally out of scope.)
+
+PATH-MAPPING NOTE (no silent drift, covenant #9)
+  The prompt's idealized output path is apps/apple/TeslaSync/Features/Analytics/YearReviewPage.swift, but the
+  REAL Xcode project (apps/apple/project.yml) compiles app sources from apps/apple/Sources/** — the
+  TeslaSync/Features/** subtree is NOT a build input (project.yml lists Sources, TeslaSync/feature-views,
+  dashboard-widgets, misc-surfaces, shared-surfaces, widget-primitives — no TeslaSync/Features). The already-DONE
+  sibling pages page:analytics/Statistics + page:analytics/FleetCompare both live under
+  apps/apple/Sources/Features/Analytics/. Placing the page there is what actually compiles, registers, and is
+  covered by the gate; the alternative would be a non-compiled, non-registered stub (covenant #4). Files therefore
+  live under apps/apple/Sources/Features/Analytics/** + the matching Tests/Unit/Features/Analytics/ test dir.
+
+NAME-COLLISION NOTE (no silent drift, covenant #9)
+  The TeslaSync module already ships a separate YearReview parity track (the p4-apple feature-views slide
+  components TeslaSync/feature-views/{SummarySlide,SavingsSlide,SlideRenderer,...} and the dashboard widget
+  TeslaSync/dashboard-widgets/YearReviewWidget*). Those define three model types whose names I had independently
+  chosen — YearReviewSummary, YearReviewVehicle, YearReviewFormat. To avoid a module-level redeclaration/ambiguity
+  (the first build RED'd with 42 "'YearReviewSummary' is ambiguous" cascade errors), this page's equivalents were
+  renamed to the collision-free YearReviewStorySummary / YearReviewStoryVehicle / YearReviewStoryFormat
+  (verified unique: `grep YearReviewStory*` over TeslaSync/ = 0 pre-existing). The pre-existing YearReviewSummary
+  is a small WIDGET projection (year/vehicle/totalDrives/totalDistanceKm/totalEnergyKwh/totalChargeSessions/
+  co2OffsetKg/gasSavings only) and lacks this page's fields (drive highlights, monthly_stats, patterns, charging
+  mix, comparisons), so reuse was not viable; the page keeps its own SI-canonical models (Statistics pattern).
+  All other YearReview* names this page introduces (YearReviewPage, YearReviewPageModel, YearReviewSlide,
+  YearReviewPhase, YearReview{Title,Distance,Drives,...}Slide, YearReviewDrivesChart, ...) are unique.
+
+FILES (allowed scope: Sources/Features/Analytics/**, navigation registration, the string catalog, this log)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewModels.swift              (SI value types: story summary, vehicle, drive highlight, month stat, comparison; 12-slide deck enum)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewPageModel.swift           (@Observable model: data-source seam, phase, vehicle auto-select + reselect, clamped slide nav)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewPageModel.Sample.swift    (sample [3 vehicles] + empty [zero-activity] + failing preview/test data sources)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewStoryFormat.swift         (SI display-boundary formatters via Units + localized sentence builders; web convertDistanceFromSI/whPerKmToDisplay/duration/hour math)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewPage.swift                (adaptive View: phase switch loading/empty/error/ready + immersive story scaffold: progress bar, vehicle Select, close, prev/next arrows, tap zones, swipe, keyboard, slide counter)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewSlideKit.swift            (immersive-canvas styling + token-derived gradients; SlideRenderer dispatcher; shared hero-stat slide)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewPage.Slides.swift         (slides 1-4: Title, Distance hero, Drives+bar, Drive-highlight)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewPage.HabitSlides.swift    (slides 5-8: Energy hero, Charging+pie, Savings, Environment)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewPage.RecapSlides.swift    (slides 9,11,12: Patterns, Comparisons, Summary card)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewPage.Charts.swift         (P3 Swift Charts: drives-per-month BarChart + charging-mix donut PieChart; bounds-safe Array subscript)
+  NEW  apps/apple/Sources/Features/Analytics/YearReviewRouteRegistration.swift   (registers the .yearReview route host; onClose shell hook = web navigate(-1))
+  NEW  apps/apple/Tests/Unit/Features/Analytics/YearReviewPageModelTests.swift   (28 XCTest cases: phases, selection+deck reset, slide nav clamping, derivations, charging slices, all pure formatters)
+  EDIT apps/apple/Sources/App/AppRoute.swift             (+ .yearReview case: enum decl + pathSegment "year-review" + systemImage "party.popper.fill" + .insights group)
+  EDIT apps/apple/Sources/TeslaSyncApp.swift             (compose YearReviewRouteRegistration into the route-host chain, onClose -> selection=.dashboard)
+  EDIT apps/apple/Localization/Localizable.xcstrings     (+47 bare yearReview.* / route.yearReview strings ported verbatim from the extracted translation.yearReview.* en values; +2 net-new yearReview.errorTitle/.retry for the required error state the web lacks; JSON re-validated 8736 -> 8785 keys)
+  EDIT apps/parity/apple-ledger.json                     (+2 rows: apple-macos / apple-ios -> done 12/12)
+
+Navigation note (covenant #7 — no predecessor bypass): the web route /year-review/:year had NO existing AppRoute
+case or alias. A new .yearReview case was added (pathSegment "year-review"); AppRouteParser.parse already strips
+the trailing :year segment via firstSegment matching, so /year-review/2026 deep-links resolve with no parser
+change. The case was added to ALL exhaustive AppRoute switches (systemImage, group) + pathSegment; no sibling
+case was displaced. The new case surfaces in the Insights sidebar group + the command palette (paletteCommands
+maps AppRoute.allCases) — i.e. reachable + deep-linkable. No other exhaustive AppRoute switch broke (full build
+error count stayed 4, all in the pre-existing Input.Previews.swift; a non-exhaustive-switch regression would add
+"switch must be exhaustive" diagnostics — none appeared). The model is built @MainActor in the registration enum
+and captured, mirroring the sibling *RouteRegistration enums.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) assembled via Gradle (apps/shared/gradlew :core:assembleSharedXCFramework) ---
+xcframework successfully written out to .../apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+(ios-arm64, ios-arm64-simulator, macos-arm64) ; BUILD SUCCESSFUL in 10m 36s ; staged to apps/apple/Frameworks/Shared.xcframework
+GRADLE_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; all 11 YearReview* sources + the test file present in pbxproj
+GEN_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Analytics -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=2   (the 2 pre-existing sibling Statistics/FleetCompare redaction opt-outs; this page adds ZERO opt-outs)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- swiftformat --lint (repo .swiftformat; my 12 new/test files + edited AppRoute/App) ---
+0/N files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (repo .swiftlint.yml; my 12 new/test files + edited AppRoute/App) ---
+Done linting! Found 0 violations, 0 serious in 14 files.
+LINT_EXIT=0
+
+--- TYPE-CHECK (macOS): xcodebuild -scheme TeslaSync-macOS -destination platform=macOS CODE_SIGNING_ALLOWED=NO build ---
+The macOS app target type-checks the whole module (525 SwiftCompile/SwiftDriver/EmitSwiftModule tasks). ZERO Swift
+diagnostics reference ANY YearReview* file (grep of the build log for 'YearReview' + 'error:' = 0 hits) — i.e. every
+YearReview* source (models, model, sample, format, page, slide kit, 3 slide files, charts, route reg, tests)
+type-checks cleanly against the REAL design tokens, the REAL shared component library, and the REAL
+Shared.xcframework. The only errors are pre-existing + out-of-scope (see FULL BUILD below).
+TYPECHECK_EXIT(macOS, in-scope)=0
+
+--- TYPE-CHECK (iOS): xcodebuild -scheme TeslaSync -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO build ---
+The iOS app target type-checks the whole module. ZERO YearReview* diagnostics — confirming the `#if os(iOS)`
+branches in YearReviewPage.swift (horizontalSizeClass/isCompact, .toolbar(.hidden, for: .navigationBar),
+.navigationBarTitleDisplayMode) also type-check. Same 4 pre-existing out-of-scope errors only.
+TYPECHECK_EXIT(iOS, in-scope)=0
+
+--- LOGIC HARNESS: standalone swiftc -swift-version 6 of the model + formatters (real YearReviewModels/PageModel/Sample/StoryFormat sources) ---
+xcrun swiftc -swift-version 6 -D DEBUG stub(UnitPreferences+Units) Models Format PageModel Sample harness  => COMPILE_EXIT=0
+./yrharness  => CHECKS=48  FAILURES=0  (phases loading/empty/error/ready, vehicle auto-select + reselect with deck
+   reset to slide 0, goNext/goPrevious/goTo clamping, slideCount==12, currentSlide first/last, isEmpty + derived
+   totalDistanceKm/totalEnergyKwh, and every pure formatter: number/integer/dollars/distanceInt/distanceValue/
+   distanceUnit/efficiencyUnit/efficiencyValue/efficiencyInt/energyKwhInt/co2Kg/duration/hourLabel/earthLaps/
+   homePowerDays/treesPlanted/cupsOfCoffee). Compiled under the SAME Swift 6 language mode + complete concurrency the
+   project uses, so the model's @MainActor/@Observable isolation is exercised exactly as in the app build.
+HARNESS_EXIT=0
+
+--- FULL xcodebuild build (whole app target incl. the pre-existing TeslaSync/* tree) ---
+RED. xcodebuild -scheme TeslaSync-macOS ... build  => BUILD FAILED (exit 65). The ONLY root cause is PRE-EXISTING and
+OUT-OF-SCOPE, in a file this changeset never touches:
+  TeslaSync/shared-surfaces/Input.Previews.swift:88 & :101  error: cannot use explicit 'return' statement in the
+  body of result builder 'ViewBuilder'  (4 diagnostics, all in that one pre-existing file).
+`git status` confirms Input.Previews.swift is NOT in this changeset. This is the same class of pre-existing
+out-of-scope breakage the already-DONE sibling page:analytics/Statistics documented (its log records the full
+xcodebuild as RED too). It is REPORTED here as RED, not masked (covenant #1). The in-scope type-check (0 YearReview
+diagnostics on BOTH macOS + iOS) and the logic harness (48/48) prove the YearReview surface itself is correct; the
+XCTest bundle cannot LINK in this environment only because the app module won't finish emission past the pre-existing
+Input.Previews defect.
+BUILD_EXIT(full, pre-existing out-of-scope)=65
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=12
+================================================================================
+[x] state — loading              YearReviewPage.swift `loadingView` (ProgressView + Text("yearReview.loading")) ; YearReviewPageModel.phase == .loading
+[x] state — empty                YearReviewPage.swift `emptyView` (🚗 + YearReviewStoryFormat.noData(year:) + "yearReview.noDataHint" + Go Back) ; model resolves .empty on isEmpty (web total_drives==0 && total_charge_sessions==0) or nil payload
+[x] state — success              YearReviewPage.swift `story(_:)` (.ready) -> YearReviewSlideView deck (all 12 slides) ; YearReviewPageModel.phase == .ready
+[x] string — yearReview.close        YearReviewPage.swift `closeButton` YearReviewIconButton(label: "yearReview.close") (keyboardShortcut .cancelAction)
+[x] string — yearReview.goBack       YearReviewPage.swift `emptyView` + `errorView` YearReviewStoryButton(title: "yearReview.goBack")
+[x] string — yearReview.loading      YearReviewPage.swift `loadingView` Text("yearReview.loading") + a11y label
+[x] string — yearReview.next         YearReviewPage.swift `sideArrow`/`navZone`/`tapZones` (label "yearReview.next", → arrow + right tap zone + space)
+[x] string — yearReview.noData       YearReviewPage.swift `emptyView` YearReviewStoryFormat.noData(year:) resolves "yearReview.noData" ("No driving data for %1$@")
+[x] string — yearReview.noDataHint   YearReviewPage.swift `emptyView` Text("yearReview.noDataHint")
+[x] string — yearReview.pageTitle    YearReviewPage.swift `story` a11y label YearReviewStoryFormat.pageTitle(year:) ("%1$@ Year in Review") + `progressBar` a11y label "yearReview.pageTitle"
+[x] string — yearReview.prev         YearReviewPage.swift `sideArrow`/`navZone` (label "yearReview.prev", ← arrow + left tap zone)
+[x] string — yearReview.selectVehicle YearReviewPage.swift `vehiclePicker` TSSelect.accessibilityLabel(Text("yearReview.selectVehicle"))
+
+PARITY_COVERED=12
+PARITY_REQUIRED=12
+
+FULL-DECK PARITY (beyond the 12 required items — the prompt's "reproduce every region" clause; web review/* slides):
+  [x] slide 1  Title            YearReviewPage.Slides.swift `YearReviewTitleSlide` (🚗 + year + "yearReview.title" + vehicle)
+  [x] slide 2  Distance hero    YearReviewPage.Slides.swift `YearReviewDistanceSlide` -> HeroStat (🛣️ + distanceInt + unit + earth-laps/"distanceSmall" comparison)
+  [x] slide 3  Drives + bar     YearReviewPage.Slides.swift `YearReviewDrivesSlide` (🗓️ + totalDrives + "yearReview.drives" + "avgPerWeek" + YearReviewDrivesChart BarChart over monthly_stats)
+  [x] slide 4  Longest drive    YearReviewPage.Slides.swift `YearReviewDriveHighlightSlide` (🏔️ "longestDrive" + route + dist/duration/efficiency grid + date, or "noDriveData")
+  [x] slide 5  Energy hero      YearReviewPage.HabitSlides.swift `YearReviewEnergySlide` -> HeroStat (⚡ + energyKwhInt + "energyUnit" + "energyComparison")
+  [x] slide 6  Charging mix     YearReviewPage.HabitSlides.swift `YearReviewChargingSlide` (🔌 + chargeSessions + "avgStartSOC" + YearReviewChargingChart PieChart [supercharger/dcFast/acOther] + legend)
+  [x] slide 7  Savings          YearReviewPage.HabitSlides.swift `YearReviewSavingsSlide` (💰 "youSaved" + $gasSavings + "vsGas" + gas/electric bars + "savingsNote")
+  [x] slide 8  Environment      YearReviewPage.HabitSlides.swift `YearReviewEnvironmentSlide` (🌍 "co2Offset" + co2Kg + "treesEquiv" + 🌳 grid + "more")
+  [x] slide 9  Patterns         YearReviewPage.RecapSlides.swift `YearReviewPatternsSlide` (📊 "drivingPatterns" + favoriteDay/peakHour cards + drives-week/dist-per-drive/efficiency stats)
+  [x] slide 10 Efficient drive  YearReviewPage.Slides.swift `YearReviewDriveHighlightSlide` (🌿 "mostEfficient" + most_efficient_drive)
+  [x] slide 11 Comparisons      YearReviewPage.RecapSlides.swift `YearReviewComparisonsSlide` ("funFacts" + fun-fact card grid)
+  [x] slide 12 Summary card     YearReviewPage.RecapSlides.swift `YearReviewSummarySlide` (year + vehicle + 5 stats [totalDrives/distance/energyKwh/charges/co2KgSaved] + "savedSummary" + "screenshot")
+  (chrome: progress bar, vehicle Select, close, prev/next arrows, edge tap zones, swipe + ←/→/space/esc keyboard, slide counter — all in YearReviewPage.swift)
+  (all 47 bare yearReview.*/route.yearReview keys confirmed present in apps/apple/Localization/Localizable.xcstrings with en values ported verbatim from the web `t(key, default)` calls; JSON re-validated, key count 8736 -> 8785.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The full xcodebuild is reported RED (65) with its
+                       exact pre-existing out-of-scope root cause named (Input.Previews.swift, untouched by me) — not
+                       masked. In-scope gates are all GREEN.
+ 2 No scope narrowing : all 3 required states + 9 required strings implemented (PARITY_COVERED=12); plus the full
+                       12-slide deck + story chrome reproduced for region parity. AI narration overlay is an
+                       off-by-default AI flag not in this unit's manifest — documented, not silently dropped.
+ 3 No skip-and-assume : model + formatter logic EXECUTED via a standalone Swift-6 harness (48/48); the whole app
+                       module type-checked on BOTH macOS and iOS (0 YearReview diagnostics) against real
+                       tokens/components/Shared.xcframework.
+ 4 No stubs as final  : complete implementation; PLACEHOLDER_COUNT=0 (this page adds zero opt-outs).
+ 5 No parity shortcuts: SwiftUI-native (TSSelect/TSBarChart/TSPieChart/TSChartPalette, adaptive size-class layout,
+                       swipe+keyboard+tap nav, .transition, Reduce-Motion-aware animation, materials/tokens) — no web
+                       cloning, no WKWebView. SI converts only at the render boundary via Units.
+ 6 No delegation      : implemented directly; no sub-agents.
+ 7 No predecessor bypass: new .yearReview AppRoute added cleanly (all exhaustive switches updated, parser strips
+                       :year, no sibling displaced); AIYearReviewNarration / feature-view slide track left untouched;
+                       3 model names renamed to YearReviewStory* to avoid a real module collision (documented above).
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — placeholder(0), swiftformat(0), swiftlint --strict(0),
+                       in-scope type-check macOS+iOS (0 YearReview diagnostics), logic harness(48/48), xcodegen(0),
+                       xcframework(0). The full xcodebuild is RED ONLY due to the documented pre-existing
+                       out-of-scope TeslaSync/shared-surfaces/Input.Previews.swift defect.
+ 9 No silent drift    : Localizable.xcstrings keys = web key names verbatim; Sources/ vs TeslaSync/Features/
+                       path-mapping + the YearReviewStory* collision rename both documented above; apple-ledger
+                       updated 12/12 x2.
+10 (terminates below with EXIT + STATUS)
+
+EXIT=0
+STATUS=DONE

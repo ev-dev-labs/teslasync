@@ -1,0 +1,96 @@
+=== P4 Feature view 0191 NotificationRow (Apple) ===
+Runner: macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + xcodegen + pwsh present.
+KMP Shared.xcframework: assembled OK (gradlew :core:assembleSharedXCFramework — BUILD SUCCESSFUL in 19m 56s) and staged to apps/apple/Frameworks/Shared.xcframework.
+Xcode project: regenerated with `xcodegen generate`; all 10 NotificationRow.* files are wired into the TeslaSync / TeslaSync-macOS app targets and the co-located *Tests.swift into the XCTest bundles.
+
+------------------------------------------------------------------------
+SURFACE DELIVERED (apps/apple/TeslaSync/feature-views/NotificationRow.*)
+------------------------------------------------------------------------
+  NotificationRow.swift            main feature view (phase switch, FadeIn, freshness chip)
+  NotificationRow.Adapter.swift    pure projections (row projection, action gating, phase resolver)
+  NotificationRow.Copy.swift       pure labels/formatters/surface-slug/VoiceOver summaries
+  NotificationRow.Source.swift     P1/S8 state-holder seam + InMemory source + inputs + toast
+  NotificationRow.Model.swift      i18n facade + telemetry seam + @Observable NotificationRowModel
+  NotificationRow.Views.swift      selection control, severity badge, action bar, row body, FlowRow
+  NotificationRow.Chrome.swift     freshness chip, connectivity banner, loading/empty/error, toast
+  NotificationRow.Previews.swift   8 previews (unread/read/archived/empty/loading/error/stale/offline)
+  NotificationRow.strings          i18n catalog (table "NotificationRow") incl. the 6 web-source keys
+  NotificationRow.Tests.swift      adapter/copy/a11y/i18n pure tests
+  NotificationRow.ModelTests.swift observable state-holder tests
+Web source reproduced: features/notifications/components/NotificationRow.tsx
+i18n keys from source present: notifications.inbox.row.select / .markRead / .markUnread / .archive
+  / .unarchive, alerts.viewContext  (+ severity / envelope / freshness / toast / a11y keys).
+States rendered: loading, empty, error(retry), stale(banner+chip+auto-refresh), offline(cached+chip), content.
+
+------------------------------------------------------------------------
+GATE STEPS (verbatim commands from the prompt) — real results
+------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65
+    - iOS APP target (TeslaSync) BUILD: SUCCEEDED, 0 Swift errors (NotificationRow code compiles in-target).
+    - iOS XCTest bundle (TeslaSyncTests) COMPILE: FAILED — pre-existing Swift 6 strict-concurrency
+      errors in SIBLING surface test files, NOT in NotificationRow. Confirmed by the compiler:
+        TeslaSync/feature-views/SlideRenderer.FixturesTests.swift:14  static let 'echo' not concurrency-safe
+        TeslaSync/feature-views/PresetGallery.ModelTests.swift:17     let 'passthroughLocalize' not concurrency-safe
+        TeslaSync/feature-views/PresetGallery.Tests.swift:22          let 'passthroughLocalize' not concurrency-safe
+      Repo-wide scope of this PRE-EXISTING pattern (non-@Sendable (String,String)->String in test files):
+        103 sibling *Tests.swift files under TeslaSync/feature-views + TeslaSync/dashboard-widgets.
+      These files are outside this surface's Allowed-files set; they poison the SHARED XCTest bundle for
+      every surface. NotificationRow.Tests.swift / NotificationRow.ModelTests.swift correctly use the
+      @Sendable closure form and are NOT contributors.
+
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65
+    - macOS APP target BUILD: compiled with 0 Swift errors; FAILED only at CodeSign:
+        "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+      => platform-capability limitation (no development certificate on this runner).
+    - macOS XCTest bundle: same pre-existing sibling concurrency breakage as iOS above.
+
+swiftlint --strict
+  LINT_EXIT=2   (Found 1 violation, 1 serious in 2753 files)
+    - The single violation is PRE-EXISTING and NOT in this surface:
+        TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9  opening_brace
+    - NotificationRow.* (all 10 files): 0 violations  (swiftlint --strict, verified separately).
+
+swiftformat --lint apps/apple
+  FORMAT_EXIT=0   (0/2757 files require formatting)
+
+./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/NotificationRow
+  PLACEHOLDER_EXIT=0   (PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0)
+
+------------------------------------------------------------------------
+SURFACE-LEVEL VERIFICATION (this surface, isolated from the poisoned shared bundle)
+------------------------------------------------------------------------
+* swiftc -typecheck of NotificationRow.* (production + #if DEBUG previews) against the REAL design
+  system (Sources/Components + Sources/Design + design tokens), Swift 6 / macOS 15 target: EXIT=0.
+* Isolated XCTest bundle built from NotificationRow sources + NotificationRow.Tests.swift +
+  NotificationRow.ModelTests.swift, linked against XCTest, run with `xcrun xctest`:
+    Test Suite 'All tests' passed — Executed 33 tests, with 0 failures (0 unexpected).
+      NotificationRowProjectionTests        6/6
+      NotificationRowActionTests            (incl.)
+      NotificationRowCopyTests              (incl.)
+      NotificationRowAccessibilityTests     (incl.)
+      NotificationRowLocalizationTests      (incl.)
+      NotificationRowModelTests            14/14
+  => the surface's adapter unit tests, model tests, accessibility-label tests and i18n-key tests
+     all PASS. They cannot be executed via the project's shared XCTest bundle only because that bundle
+     does not compile (pre-existing sibling breakage above).
+
+------------------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------------------
+The NotificationRow surface is COMPLETE and independently verified GREEN (compiles in both app
+targets; 33/33 surface tests pass; swiftformat/placeholder clean; swiftlint clean on the surface).
+The verbatim multi-target `xcodebuild ... test` gate cannot reach EXIT=0 on this runner because of
+conditions OUTSIDE this surface's Allowed-files set and outside this agent's control:
+  (1) macOS app code-signing requires a development certificate not present on the runner
+      (platform-capability limitation), and
+  (2) ~103 PRE-EXISTING sibling-surface test files fail Swift 6 strict concurrency, which prevents the
+      SHARED iOS/macOS XCTest bundle from compiling (predecessor condition; editing them is outside
+      this surface's allowed files).
+No NotificationRow file is a cause of any failing step. Honesty covenant rule 1 (no red-as-green) and
+rule 8 (no commit on red for one's OWN checks) are upheld: the surface's own checks are green and the
+red steps are attributed to their true, external root causes with evidence above.
+
+EXIT=65
+STATUS=BLOCKED

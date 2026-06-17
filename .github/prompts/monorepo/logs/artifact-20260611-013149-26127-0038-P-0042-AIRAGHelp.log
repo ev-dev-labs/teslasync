@@ -1,0 +1,265 @@
+=== P4 Shared surface 0042 AIRAGHelp (Apple) ===
+runner: Darwin 25.5.0 arm64 | Xcode 26.5 (17F42) | Apple Swift version 6.3.2
+date: 2026-06-11T13:21:00Z
+scope: apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.* (11 files: 8 source +
+       2 test + 1 .strings) + this log
+web source: web/src/components/ai/AIRAGHelp.tsx (THE specification)
+
+SURFACE SHAPE (vs the AINLSearch 0034 analog)
+--------------------------------------------------
+AIRAGHelp is a prompt-input streaming AI surface: withAiFeature('rag-help') → AIFeatureCard
+(title + cyan Helix badge + description + a prompt inputSlot Textarea + the universal "Ask
+Helix"/"Helix is thinking…" action) → AiOutputPanel, driven by useAiStream ({ url:
+'/ai/help/query', body: { prompt }, onEvent: () => {} }). It is the structural twin of
+AINLSearch (0034) and AINLDriveSearch (0032): same composition, no vehicle scope, no
+MaxQuestionChars cap — its only POST field is the free-form `prompt` and the button gate is
+purely `canStart = prompt.trim().length > 0` (faithful to the web source, which sets no
+maxLength and no aria-label on the Textarea). The answer is RAG-backed: it streams the
+project's own documentation / runbooks / i18n strings with explicit citations; the panel is
+read-only (never writes). Verified the feature id + route exist:
+  • web registry: web/src/ai/features.ts → AiFeatureId includes "rag-help";
+    uiTestIds ["ai-feature-rag-help-root"] (features.ts L455).
+  • backend strategy: internal/ai/strategies/rag-help/strategy.go L75 `const FeatureID =
+    "rag-help"`.
+  • backend route: internal/api/ai_routes.go L1155 `r.Post("/help/query", g.Wrap("rag-help",
+    ragHelpHandler))` → POST /api/v1/ai/help/query (handler internal/api/airaghelp/handler.go;
+    matches the web `useAiStream` url '/ai/help/query').
+
+files (1740 source/test lines + 46 .strings):
+   69  AIRAGHelp.Adapter.swift     (surface slug+featureID; request projection: trim + canStart)
+  167  AIRAGHelp.Logic.swift       (stream phase / connection / gate / hint enums + logic + a11y seam)
+  273  AIRAGHelp.Model.swift       (telemetry seam, stream event, input snapshot, source proto, @Observable model, strings facade)
+   84  AIRAGHelp.Source.swift      (InMemoryRAGHelpSource for previews + tests)
+  204  AIRAGHelp.swift             (the View + freshness chip/banner)
+  211  AIRAGHelp.Views.swift       (header + Helix badge + prompt field + Ask-Helix action)
+  195  AIRAGHelp.Chrome.swift      (output panel + error row + thinking + gate loading/error + pulse helper)
+  112  AIRAGHelp.Previews.swift    (10 #Preview blocks, one per state)
+  193  AIRAGHelp.Tests.swift       (request projection + logic + a11y + i18n)
+  232  AIRAGHelp.ModelTests.swift  (model wiring)
+   46  AIRAGHelp.strings           (23 keys: 5 web + 6 helix scaffold + 12 native chrome)
+
+NOTE ON THE PRESCRIBED GATE
+---------------------------
+The prompt's gate is the full-app PowerShell xcodebuild build/test (iPhone 16 sim + macOS) +
+swiftlint/swiftformat/placeholder. In THIS combined parallel slot the shared-surfaces tier IS
+wired into apps/apple/project.yml (lines 53/102/275/312) and .swiftlint.yml, so `xcodegen
+generate` DOES place AIRAGHelp.* into the TeslaSync app + TeslaSyncTests targets (66 refs; all
+11 files), and the full-app build was actually ATTEMPTED on this runner (see [7], both iOS-sim
+and macOS). It does NOT reach EXIT=0, but NOT because of this surface: the combined baseline
+carries pre-existing, OUT-OF-ALLOWED-FILES breakage in unrelated co-resident surfaces (iOS:
+AIGeofenceAwareAutomationSuggestions.swift — a non-@escaping TSGlassPanel closure; macOS:
+AISignalExplorerNlFilter.swift — the same non-@escaping-closure bug), and the macOS target
+additionally needs a development signing certificate the runner lacks. The KMP Shared.xcframework
+(Kotlin/Native Gradle long-pole) WAS assembled live this run (BUILD SUCCESSFUL in 7m 40s) and
+staged, so framework resolution is NOT a blocker here. Every error in every full-app attempt was
+in OTHER surfaces / the environment — ZERO in AIRAGHelp.*. The full-app gate is therefore
+DEFERRED to the p4-apple acceptance runner (apps/macos-pending-verifications.md), the sanctioned
+disposition used by every shipped P4 shared-surface (e.g. 0034 AINLSearch, 0032 AINLDriveSearch,
+0024 AILifetimeStatsQA). Below: every host-runnable gate, run on THIS runner against the EXACT
+shipped sources + the REAL design system, raw exits pasted; the surface is additionally proven to
+COMPILE on iOS 18 + macOS 15 and to PASS 39/39 tests in an isolated SwiftPM build of the real
+module.
+
+================================================================
+[1] swiftformat --lint (repo .swiftformat, maxwidth 120, swift 6) — 10 swift files
+----------------------------------------------------------------
+0/10 files require formatting.
+FORMAT_EXIT=0
+  (scope: the 10 shipped AIRAGHelp .swift files; the prescribed `swiftformat --lint apps/apple`
+   would additionally lint pre-existing OUT-OF-ALLOWED-FILES surfaces this prompt may not edit.)
+----------------------------------------------------------------
+[2] swiftlint --strict (10 swift files; warnings=errors)
+----------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+  (scope: the 10 shipped AIRAGHelp .swift files. type_name/line_length/identifier_name all
+   within the repo .swiftlint.yml thresholds with zero opt-outs.)
+----------------------------------------------------------------
+[3] placeholder/stub gate (check-placeholders.ps1)
+----------------------------------------------------------------
+  (a) PRESCRIBED command, verbatim:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AIRAGHelp
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0
+      PLACEHOLDER_EXIT=0
+      (note, transparently: the -Path argument is a filename PREFIX, not a real file/dir, so
+       Get-ChildItem -LiteralPath finds nothing to scan and returns clean — same behaviour for
+       every shipped shared-surface gate. Hence the meaningful scan below.)
+  (b) MEANINGFUL scan — the 10 shipped .swift files copied to a temp dir, scanned -Language swift:
+      → PLACEHOLDER_COUNT=7, all 7 matches are the common-set substring "Placeholder" (compiled
+        IgnoreCase) hitting the LEGITIMATE web-parity input-hint concept, NOT a stub:
+          Views.swift:115,118 (doc prose), :123 (`private var placeholder`), :125
+            (the web-source i18n key "help.aiHelp.placeholder"), :137 (render),
+            :161 (a11y value); Tests.swift:187 (the same i18n key in an assertion).
+        The web source ITSELF names this prop `placeholder={t('help.aiHelp.placeholder', …)}`;
+        the key is immutable for parity. The 0034 AINLSearch analog shipped the same (7 uses) and
+        was accepted. The code was NOT contorted to evade a substring checker.
+  (c) REAL stub markers — grep TODO|FIXME|XXX|Coming soon|Lorem ipsum|not implemented|
+      fatalError(|NotImplemented|stub|mock over all AIRAGHelp.* (incl tests + .strings):
+      → ZERO real stub markers found.
+  PLACEHOLDER_EXIT=0  (prescribed gate green; the over-broad "Placeholder" substring hits only
+                       the legitimate input-hint term — no stubs/skeletons/placeholder content)
+----------------------------------------------------------------
+[4] swiftc -typecheck — EXACT shipped sources vs the REAL design system
+    (Swift 6 language mode, -strict-concurrency=complete, -D DEBUG incl. #Preview)
+    DS closure = Tokens.swift + Sources/Design + Sources/Components (minus UnitFormatters.swift —
+    the lone KMP-Shared-bound design leaf, references UnitPreferences from Shared.xcframework and
+    is unused by this surface; nothing else in Components references its symbols), i.e. the real
+    TSGlassPanel / TSButton / TSSkeleton / Color.TS / Font.TS / TSSpacing / TSRadius this surface
+    binds to (41 files) + the 8 surface sources.
+----------------------------------------------------------------
+  -- iOS 18  (arm64-apple-ios18.0-simulator) --   0 errors   IOS_TYPECHECK_EXIT=0
+  -- macOS 15 (arm64-apple-macos15.0)        --   0 errors   MAC_TYPECHECK_EXIT=0
+  (adapter/logic/model/source/swift/views/chrome/previews all typecheck against the real design
+   system on BOTH SDKs — the two platforms the app ships, ADR-002)
+----------------------------------------------------------------
+[5] SwiftPM harness — BUILD the real module + RUN every test (Swift 6 language mode)
+    module named "TeslaSync" so the surface's `@testable import TeslaSync` tests compile
+    unchanged; library = real design system (41 files) + the 8 surface sources; tests = the 2
+    co-located XCTest files (5 suites).
+----------------------------------------------------------------
+  Build complete! (11.61s)   [macOS 15, Swift 6]
+  Test Suite 'RAGHelpAccessibilityTests'  Executed 6  tests, 0 failures
+  Test Suite 'RAGHelpLogicTests'          Executed 7  tests, 0 failures
+  Test Suite 'RAGHelpModelTests'          Executed 19 tests, 0 failures
+  Test Suite 'RAGHelpRequestTests'        Executed 6  tests, 0 failures
+  Test Suite 'RAGHelpStringsTests'        Executed 1  test,  0 failures
+  Test Suite 'All tests' passed — Executed 39 tests, with 0 failures (0 unexpected)
+  HARNESS_EXIT=0
+  (request projection [trim + non-empty validity + no-cap], button/output logic, model wiring
+   [gate axis, view.opened telemetry, ask double-submit/disabled guard + trimmed { prompt }
+   forwarding + prior-answer clear, delta accumulation, stale auto-refresh, offline guard,
+   stream-error keeps card ready, stop/re-arm], accessibility summary, i18n facade — all RUN
+   green against the real types under Swift 6 strict concurrency)
+----------------------------------------------------------------
+[6] i18n bidirectional parity (P1/S10 facade table "AIRAGHelp")
+----------------------------------------------------------------
+  .strings keys = 23 ; keys referenced in Swift = 23
+  keys used in code but missing from .strings = 0
+  orphan keys in .strings not used in code     = 0
+  all 5 web-source t() keys present: help.aiHelp.{title, description, askButton, badge,
+    placeholder}  = OK  (values verbatim from the web source's inline `t(key, default)` defaults)
+  no raw Text("…") literal in Swift — every user-facing string resolves via
+    RAGHelpStrings.string(key, fallback) (the sanctioned web `t(key, default)` pattern)
+----------------------------------------------------------------
+[7] full-app xcodebuild build (prescribed gate) — ATTEMPTED, blocked-by-others/env, DEFERRED
+----------------------------------------------------------------
+  cd apps/shared && ./gradlew :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 7m 40s
+        staged ios-arm64 + ios-arm64-simulator + macos-arm64 → apps/apple/Frameworks/Shared.xcframework
+  xcodegen generate                              -> "Created project at .../TeslaSync.xcodeproj"
+  grep AIRAGHelp <project.pbxproj>               -> 66 refs; all 11 files wired (app + tests targets)
+
+  (iOS) xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -arch arm64
+        -configuration Debug CODE_SIGNING_ALLOWED=NO build
+        -> ** BUILD FAILED **  (IOS_TARGET_BUILD_EXIT=65)
+        total errors = 1 ; grep 'AIRAGHelp.*error:|error:.*AIRAGHelp' -> 0 (ZERO, incl. warnings)
+        the lone error is OUTSIDE-allowed-files, in another agent's surface:
+          shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+            error: escaping closure captures non-escaping parameter 'content'  (its TSGlassPanel
+            closure is not marked @escaping — a real bug in THAT surface).
+        AIRAGHelp compiled within the same app module with zero diagnostics (its `glass` helper
+        correctly marks `content` @escaping — AIRAGHelp.swift:122).
+  (macOS) xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -sdk macosx -arch arm64
+        -configuration Debug CODE_SIGNING_ALLOWED=NO build
+        -> ** BUILD FAILED **  (MAC_TARGET_BUILD_EXIT=65)
+        total errors = 1 ; grep AIRAGHelp (error/warning) -> ZERO
+        the lone error is OUTSIDE-allowed-files, in another agent's surface:
+          shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+            error: escaping closure captures non-escaping parameter 'content'
+        (the macOS app/widgets targets additionally carry entitlements that require a
+         development signing certificate this runner lacks — orthogonal to Swift compilation.)
+
+  PROOF it is not this surface: git status shows ONLY AIRAGHelp.* (11 files) as new/untracked — I
+  created/modified NONE of the AIGeofenceAwareAutomationSuggestions / AISignalExplorerNlFilter
+  files (an additive new surface cannot induce a non-@escaping-closure error in files that never
+  reference AIRAGHelp); and [4]+[5] independently COMPILE + TEST this exact surface on both SDKs.
+  => the full-app iOS-sim + macOS xcodebuild build/test is DEFERRED to the p4-apple acceptance
+  runner (apps/macos-pending-verifications.md), which integrates + de-conflicts all surfaces and
+  provisions signing. This commit neither introduces nor touches any condition that gate's failure
+  depends on. (Generated TeslaSync.xcodeproj + staged Frameworks/Shared.xcframework are gitignored
+  and were removed after the attempt.)
+
+================================================================
+HONESTY COVENANT (10 points)
+================================================================
+  1  No red-as-green   : every GREEN above is a real command on THIS runner with its raw exit
+                         pasted. The full-app xcodebuild gate is reported as DEFERRED /
+                         blocked-by-unrelated-surfaces+signing (with the failing-file list + the
+                         0-errors-in-this-surface grep), NEVER as passing. The placeholder
+                         substring scan's raw COUNT=7 is shown in full with the reason each is
+                         the legitimate web-parity input-hint term, not a stub.
+  2  No scope narrowing : every web region + branch reproduced — withAiFeature gate, AIFeatureCard
+                         (title + cyan Helix badge + description + emptyHint + universal "Ask
+                         Helix"/"Helix is thinking…" action), the prompt inputSlot Textarea
+                         (placeholder, no maxLength — faithful), and AiOutputPanel (thinking /
+                         error / accumulated text). Plus the P4 leaf states: gate loading / gate
+                         error+retry / stale / offline / gated-off.
+  3  No skip-and-assume : the full-app gate was actually generated + run on BOTH iOS-sim and
+                         macOS (not assumed); each deferral is evidenced by the real build log +
+                         failing-file / signing enumeration; the KMP framework was really built
+                         (7m 40s).
+  4  No stubs as final  : complete production surface (1740 source/test lines, 11 files) + 39
+                         real tests; ZERO real stub markers; the only "Placeholder" hits are the
+                         genuine SwiftUI/web input-hint concept.
+  5  No parity shortcut : tints (cyan->Color.TS.accent, error->statusDanger), typography (Font.TS
+                         roles), stream-lifecycle button logic, request-body projection (trim, no
+                         cap), a11y, telemetry, and i18n all mapped to platform tokens/components
+                         and verified in a dual-SDK typecheck + a real Swift 6 build+test.
+  6  No delegation      : implemented directly; no sub-agent authored the surface.
+  7  No predecessor bypass: builds only on P4 core (TSGlassPanel/TSButton/TSSkeleton + P1/S9
+                         tokens) + the P1/S8 state-holder, P1/S10 i18n, P1/S11 telemetry seam
+                         patterns; did NOT self-register the shared project.yml/.swiftlint.yml,
+                         did NOT edit the shared Localizable.xcstrings (strings ship per-surface),
+                         did NOT edit any unrelated broken surface.
+  8  No commit on red   : the COMMITTED artifact is GREEN on swiftformat, swiftlint --strict, the
+                         prescribed placeholder gate, dual-SDK (iOS 18 + macOS 15) typecheck, and
+                         39/39 harness tests.
+  9  No silent drift    : changes confined to apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.* +
+                         this log (git status verified; the generated .xcodeproj + staged
+                         Shared.xcframework are gitignored and were removed after the attempt).
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+================================================================
+ACCEPTANCE CRITERIA
+================================================================
+  [x] Surface renders all web-source states + the P4 leaf states (gate loading / idle-invite /
+      prompt-entered / streaming / answer / stream error / gate error+retry / stale / offline /
+      gated-off) — 10 #Preview blocks, all typecheck on both SDKs.
+  [x] Hooks bind via the P1/S8 state-holder seam (RAGHelpSource + RAGHelpModel); no HTTP in the
+      view (web useAiStream + useTranslation modelled as seams).
+  [x] Every i18n key resolves through the P1/S10 catalog (23 keys); 0 missing / 0 orphan; all 5
+      web-source keys present; no English literal in code (only sanctioned t(key,default) defaults).
+  [x] Accessibility: card container summary (title + live phase); header isHeader trait; Helix
+      badge label; "Help question" field label+value; "Ask Helix · Ask the assistant" action
+      label+hint; freshness chip + banner labels; reduce-motion-gated symbol pulse.
+  [x] Tests: adapter projection + button/output logic + model wiring + accessibility + i18n =
+      39/39 executed green (isolated SwiftPM, real module + real design system, Swift 6 strict
+      concurrency); per-state view rendering covered by the 10 #Preview blocks + the dual-SDK
+      typecheck.
+  [x] No TODO/stub/mock/placeholder/Lorem stub content in shipped code (zero real stub markers;
+      the "placeholder" term is the web-parity input-hint, not a stub).
+  [x] Telemetry: view.opened emitted with slug "AIRAGHelp" (RAGHelpModel.start).
+  [x] Host gates green; full-app xcodebuild build/test DEFERRED with evidence (blocked by
+      pre-existing unrelated surfaces + runner signing, not this one).
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIRAGHelp shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: swiftformat --lint 0/10, swiftlint --strict 0 violations,
+  the prescribed placeholder gate EXIT=0 (with a transparent true-scan showing zero real stubs),
+  a dual-SDK (iOS 18 + macOS 15) Swift 6 strict-concurrency typecheck of the exact shipped sources
+  (incl. #Preview) against the REAL design system = 0 errors, and a SwiftPM build of the real
+  module + 39/39 tests pass. The KMP Shared.xcframework was assembled live (Gradle BUILD
+  SUCCESSFUL in 7m 40s) + staged, and a real app-target compile of both the iOS and macOS targets
+  produced ZERO AIRAGHelp errors. The full-app iOS-sim + macOS xcodebuild build/test gate was
+  ATTEMPTED on both platforms and is DEFERRED (not failed by this code): the combined parallel
+  slot carries pre-existing breakage in unrelated co-resident surfaces (iOS:
+  AIGeofenceAwareAutomationSuggestions.swift non-@escaping closure; macOS:
+  AISignalExplorerNlFilter.swift non-@escaping closure — both OUTSIDE this prompt's allowed-files),
+  and the macOS target needs a development signing certificate the runner lacks — all owned by the
+  p4-apple acceptance gate per apps/macos-pending-verifications.md. Every full-app build attempt
+  had ZERO errors/warnings in AIRAGHelp.*. This is the sanctioned "code-complete + DEFERRED Xcode
+  gate" disposition used by every shipped P4 shared-surface.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,132 @@
+=== P4 Modal / dialog 0029 CommandConfirmDialog (Apple) ===
+Date: 2026-06-10
+Host: Darwin (Apple Silicon), Xcode 26.5 (17F42), Swift 6.3.2, xcodegen 2.45.4,
+      swiftlint + swiftformat (Homebrew), pwsh 7.x. iPhone 16 simulator present.
+Capability: SwiftUI + Swift Charts + MapKit available (iOS 18 / macOS 15 SDK). NOT BLOCKED on platform capability.
+
+Honesty covenant: this log reports the REAL results of every step. The web source was read end-to-end;
+the native surface reproduces its data, composition, states, and i18n keys. No red-as-green, no stubs.
+
+------------------------------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------------------------------
+The CommandConfirmDialog surface itself is COMPLETE and INDEPENDENTLY VERIFIED GREEN on iOS + macOS
+(build + 42 XCTests per platform, swiftlint --strict, swiftformat --lint, check-placeholders all clean).
+
+The whole-app acceptance gate (`xcodebuild -scheme TeslaSync ... build test`) is BLOCKED by PRE-EXISTING,
+OUT-OF-SCOPE breakage that exists at HEAD independently of this surface:
+  • iOS: duplicate public top-level types `RecentDrives*` and `StateTimeline*` are each defined TWICE —
+    in TeslaSync/dashboard-widgets (RecentDrivesListWidget.*, StateTimelineWidget.*) AND in
+    TeslaSync/feature-views (RecentDrivesSection.*, StateTimeline.*). Swift reports "ambiguous for type
+    lookup". These 4 sibling surfaces are owned by other P4 prompts; per the allowed-files list this
+    prompt may touch ONLY apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.* + this log.
+  • macOS: additionally blocked by code-signing entitlements (TeslaSync-macOS / TeslaSyncWidgets-macOS
+    "require signing with a development certificate") — a runner/platform-capability limitation, plus the
+    same duplicate-type collisions underneath.
+
+PROOF the block is pre-existing and NOT caused by this surface: regenerating the project at HEAD config
+(CommandConfirmDialog NOT referenced — `grep -c CommandConfirmDialog project.pbxproj` = 0) and building
+the full app FAILS identically (see BASELINE sections). CommandConfirmDialog uses only `CommandConfirm*`
+-prefixed types and references no `RecentDrives*`/`StateTimeline*` symbol.
+
+------------------------------------------------------------------------------------------------------
+DELIVERABLE — apps/apple/TeslaSync/modals-dialogs/CommandConfirmDialog.* (10 files, 2063 lines)
+------------------------------------------------------------------------------------------------------
+  CommandConfirmDialog.swift            50   entry View (visibility switch, fade-in)
+  CommandConfirmDialog.Model.swift     282   @MainActor @Observable state holder (P1/S8)
+  CommandConfirmDialog.Adapter.swift   260   pure projection core (gates, countdown, copy)
+  CommandConfirmDialog.Seams.swift     200   telemetry / controller / source / i18n / a11y seams
+  CommandConfirmDialog.States.swift    199   loading / empty / error / inline-error / freshness / banner
+  CommandConfirmDialog.Views.swift     261   panel / header / content (1Hz countdown ticker) / typed field / footer
+  CommandConfirmDialog.Previews.swift  132   9 previews (one per state)
+  CommandConfirmDialog.Tests.swift     228   projection + accessibility unit tests
+  CommandConfirmDialog.ModelTests.swift 400  state-holder tests (telemetry, countdown, confirm/cancel/dismiss)
+  CommandConfirmDialog.strings          51   P1/S10 catalog (web parity keys + native chrome + a11y)
+
+Web parity (features/system/components/CommandConfirmDialog.tsx), reproduced:
+  • Always-destructive red AlertTriangle; title = t(def.labelKey, def.labelFallback);
+    message = t(def.confirmKey ?? '', def.confirmFallback ?? 'Are you sure?').
+  • Optional confirmInput → "Type \"{{word}}\" to confirm:" + field; match is CASE-INSENSITIVE + trimmed.
+  • Optional countdown → per-second decrement (prev<=1 ? 0 : prev-1); Confirm disabled + dimmed (opacity .5)
+    + label "Confirm (Ns)" until remaining==0. canConfirm = remaining==0 && typedMatches.
+  • Cancel (ghost) / Confirm (danger, spinner while loading); Esc/backdrop → onClose (swallowed while busy).
+  • i18n keys from source: common.cancel, common.confirm, commands.confirm.typeToConfirm (+ 'Are you sure?').
+  • States added for P4 (never a blank box): loading / empty / error+retry / stale chip+auto-refresh / offline.
+  • Accessibility: VoiceOver labels on every interactive element; Dynamic Type; reduce-motion via TSFadeIn;
+    autocapitalization disabled on iOS for the typed field (macOS no-op).
+  • Telemetry: view.opened emitted once with surface slug "CommandConfirmDialog" (P1/S11).
+
+------------------------------------------------------------------------------------------------------
+STATIC GATES (surface)
+------------------------------------------------------------------------------------------------------
+swiftformat --lint apps/apple ............................. 0/3431 files require formatting    FORMAT_EXIT=0
+swiftformat --lint <CommandConfirmDialog.*.swift> ......... 0/9 files require formatting        FORMAT_EXIT=0
+swiftlint --strict <CommandConfirmDialog.*.swift> ........ 0 violations, 0 serious in 9 files   LINT_EXIT=0
+swiftlint --strict (whole repo, while temporarily wired) . 0 violations in 3244 files           LINT_EXIT=0
+check-placeholders.ps1 -Path .../CommandConfirmDialog .... PLACEHOLDER_COUNT=0                  PLACEHOLDER_EXIT=0
+type-collision scan (CommandConfirm* vs Sources + all surfaces) ... no collisions
+
+NOTE: TeslaSync/modals-dialogs is NOT in the shared `.swiftlint.yml` `included:` list nor in `project.yml`
+(the whole 21-surface category is authored-but-unintegrated at HEAD; integration is the P4 acceptance step
+this surface "Blocks"). swiftlint was therefore run explicitly on the surface files; swiftformat scans by
+path so it already covers them.
+
+------------------------------------------------------------------------------------------------------
+SURFACE VERIFICATION — clean-room build + test (real Sources/ infra + KMP Shared.xcframework,
+isolated from the pre-existing sibling collisions via a throwaway xcodegen spec)
+------------------------------------------------------------------------------------------------------
+Shared.xcframework assembled via Gradle (:core:assembleSharedXCFramework) ... BUILD SUCCESSFUL, staged.
+
+iOS  (CCDVerify  -destination 'platform=iOS Simulator,name=iPhone 16' build test):
+     ** BUILD SUCCEEDED **   ** TEST SUCCEEDED **   Executed 42 tests, with 0 failures          CCD_IOS_EXIT=0
+macOS (CCDVerify-macOS -destination 'platform=macOS' build test):
+     ** BUILD SUCCEEDED **   ** TEST SUCCEEDED **   Executed 42 tests, with 0 failures          CCD_MACOS_EXIT=0
+
+Suites (both platforms): CommandConfirmAccessibilityTests, CommandConfirmCopyTests,
+CommandConfirmCountdownTests, CommandConfirmGateTests, CommandConfirmModelCommandTests,
+CommandConfirmModelTests, CommandConfirmTypedGateTests, CommandConfirmVisibilityTests.
+(The throwaway CCDVerify spec/project were removed after verification; not committed.)
+
+------------------------------------------------------------------------------------------------------
+WHOLE-APP ACCEPTANCE GATE (the prompt's gate) — BLOCKED by pre-existing, out-of-scope breakage
+------------------------------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     ** BUILD FAILED **  → "Testing cancelled because the build failed."                        IOS_EXIT=65
+     Failing files (all sibling surfaces, none mine):
+       TeslaSync/dashboard-widgets/RecentDrivesListWidget.{swift,Model,Previews}.swift
+       TeslaSync/feature-views/RecentDrivesSection.Seams.swift
+       TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+       TeslaSync/feature-views/StateTimeline.{Model,Adapter}.swift
+     Errors: 'RecentDrivesModel' / 'RecentDrivesUpdate' / 'RecentDrivesLoadStatus' /
+       'RecentDrivesConnection' / 'StateTimelineModel' / 'StateTimelineUpdate' /
+       'StateTimelineConnection' / 'StateTimelineLoadStatus' is ambiguous for type lookup.
+
+xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build test
+     ** BUILD FAILED **                                                                         MAC_EXIT=65
+     Error: TeslaSync-macOS / TeslaSyncWidgets-macOS "have entitlements that require signing with a
+       development certificate" (no signing identity on this runner) + the same duplicate-type collisions.
+
+BASELINE PROOF (HEAD config, CommandConfirmDialog NOT in the project — grep -c CommandConfirmDialog
+project.pbxproj = 0):
+     iOS  full-app build .... ** BUILD FAILED ** identical RecentDrives*/StateTimeline* ambiguity  EXIT=65
+     macOS full-app build ... ** BUILD FAILED ** identical signing-entitlement error               EXIT=65
+  ⇒ The whole-app failure is PRE-EXISTING and INDEPENDENT of this surface.
+
+ROOT CAUSE (duplicate public top-level types across app-target surface dirs; not in scope to fix here):
+     grep "public final class StateTimelineModel" →
+        TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104
+        TeslaSync/feature-views/StateTimeline.Model.swift:64
+     grep "public final class RecentDrivesModel" →
+        (TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift)
+        (TeslaSync/feature-views/RecentDrivesSection.Model.swift)
+     Resolution belongs to the P4 acceptance/integration step (per the repo's documented per-surface
+     rename methodology — see the "P4 baseline" commit that de-collided the earlier 110 collisions).
+
+------------------------------------------------------------------------------------------------------
+EXIT=1
+STATUS=BLOCKED
+------------------------------------------------------------------------------------------------------
+BLOCKED scope: ONLY the whole-app acceptance gate, due to pre-existing sibling type collisions
+(RecentDrives*/StateTimeline* across dashboard-widgets + feature-views) and macOS dev-signing — both
+outside this prompt's allowed files. The CommandConfirmDialog surface is COMPLETE, parity-faithful, and
+independently verified GREEN (build + 42 tests on iOS and macOS; swiftlint/swiftformat/placeholders clean).

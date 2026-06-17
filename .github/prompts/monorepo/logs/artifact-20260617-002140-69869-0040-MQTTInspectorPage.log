@@ -1,0 +1,205 @@
+=== P4-APPLE · P7 · page:telemetry/MQTTInspector · Apple SwiftUI Implementation ===
+Target:  apps/apple/TeslaSync/Features/Telemetry/MQTTInspectorPage.swift (+ split)
+Web src: web/src/features/telemetry/pages/MQTTInspectorPage.tsx (~329 lines)
+Web route: /mqtt-inspector  (web App.tsx route; telemetry/live-debugger surface)
+Data source: useMQTTStatus → GET /telemetry  (polled REALTIME ~5s; not SSE)
+PARITY_REQUIRED = 8 panels + 1 chart + 3 data states + 29 strings = 41.
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 (Build 17F42) at /usr/bin/xcodebuild
+✓ swift 6.3.2 ; swiftlint ; xcodegen 2.45.4 ; pwsh 7 all present
+✓ Platform: Darwin (arm64)
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+→ Xcode runner IS available ⇒ gate is NOT auto-BLOCKED on tooling.
+
+=== WEB SOURCE ANALYSIS ===
+A thin orchestrator over ONE data hook (useMQTTStatus → GET /telemetry) that the
+web polls in real time, deriving a rolling signal-throughput history from the
+delta between consecutive total-signal counts. Section order in the web source:
+  1 GlassPanel1  red fetch-error banner (shown on error && no status)
+  2 StatCard     Streaming Vehicles
+  3 StatCard     Total Signals
+  4 StatCard     Total Batches
+  5 StatCard     Signals / sec
+  (AIMqttSseInspectorExplanations — a SEPARATE shared-surface parity unit, not
+   one of this page's 8 manifest panels; out of scope here.)
+  6 GlassPanel6  connection info (broker / uptime / topic patterns)
+  7 GlassPanel7  signal-throughput AreaChart (or "collecting" copy)
+  8 GlassPanel8  vehicle breakdown DataTable (+ stale counter)
+Charts: 1 (AreaChart) · Maps: 0 (manifest).
+
+=== IMPLEMENTATION (files created — proper decomposition, each ≤ 360 lines) ===
+apps/apple/TeslaSync/Features/Telemetry/
+  MQTTInspectorTypes.swift             ( 92)  Sendable value types + tuning constants
+  MQTTInspectorStrings.swift           (~80)  MQTTText — 29 LocalizedStringKey (translation.mqtt.*)
+  MQTTInspectorPageModel.swift         (~150) @MainActor @Observable model (state + intent + throughput)
+  MQTTInspectorPageModel+Data.swift    (~130) KMP binding point, chart projection, formatters
+  MQTTInspectorViews.swift             (~360) the 8 panels + TSAreaChart + TSDataTable columns
+  MQTTInspectorPage.swift              (~140) main View, adaptive macOS+iOS, lifecycle, previews
+  MQTTInspectorRouteRegistration.swift ( 24)  registers page on .telemetry (telemetry-debugger route)
+
+Architecture
+  • Built on the P3 shared component library (TS*) + P2 design tokens (Color.TS /
+    TSSpacing / TSRadius / Font.TS) — no hardcoded colors/typography (ADR-005):
+    TSGlassPanel, TSStatCard, TSAreaChart, TSChartSeries/Point, TSDataTable/TSColumn,
+    TSEmptyState, TSStatusPill, TSSkeleton/TSTableSkeleton, TSFadeIn, TSPanelTitle,
+    TSMetricLabel, TSPageTitle.
+  • The AreaChart uses the P3 Swift Charts wrapper TSAreaChart (native Swift Charts,
+    never a WKWebView).
+  • Single source surfaced through an explicit MQTTDataPhase so loading / empty /
+    error / success render (ADR-011); the View never shows a blank region.
+  • "Live" = a lifecycle-bound 5s poll Task (.task / .onDisappear) that accumulates
+    the throughput window exactly like the web `useEffect`, plus per-vehicle >120s
+    staleness = ADR-013's 2-minute live-staleness window.
+  • Units: the page is count/rate/uptime only (no miles/°/psi); values are formatted
+    at the display boundary (formatInt/formatRate/formatUptime/relative) — nothing
+    non-SI is stored or computed.
+  • Model is @MainActor @Observable (matches SignalsWorkspacePageModel); type names
+    namespaced (MQTT*) to avoid module-wide symbol collisions; no `import Shared`.
+  • Localization: all 29 translation.mqtt.* keys ALREADY EXIST in
+    Localizable.xcstrings with the exact web English values — verified, so NO catalog
+    edit was required (zero hardcoded literals; web key names preserved, ADR-014).
+
+=== PARITY ===
+PARITY_REQUIRED=41
+Each item carries binding evidence (file + symbol).
+
+— Panels (8) —
+[x] panel  GlassPanel1         → MQTTInspectorViews.swift : MQTTErrorBanner (TSGlassPanel, MQTTText.fetchError, Retry)
+[x] panel  Streaming-Vehicles  → MQTTInspectorViews.swift : MQTTSummaryCards (TSStatCard, MQTTText.streamingVehicles)
+[x] panel  Total-Signals       → MQTTInspectorViews.swift : MQTTSummaryCards (TSStatCard, MQTTText.totalSignals)
+[x] panel  Total-Batches       → MQTTInspectorViews.swift : MQTTSummaryCards (TSStatCard, MQTTText.totalBatches)
+[x] panel  Signals-sec         → MQTTInspectorViews.swift : MQTTSummaryCards (TSStatCard, MQTTText.signalsPerSec)
+[x] panel  GlassPanel6         → MQTTInspectorViews.swift : MQTTConnectionPanel (broker/uptime/topics via MQTTField + MQTTChip)
+[x] panel  GlassPanel7         → MQTTInspectorViews.swift : MQTTThroughputPanel (TSGlassPanel + TSAreaChart / collecting)
+[x] panel  GlassPanel8         → MQTTInspectorViews.swift : MQTTVehicleBreakdownPanel (TSGlassPanel + TSDataTable + stale counter)
+
+— Chart (1) — native Swift Charts wrapper, no WKWebView —
+[x] chart  AreaChart           → MQTTInspectorViews.swift : MQTTThroughputPanel → TSAreaChart(series:)
+                                  data: MQTTInspectorPageModel+Data.swift : throughputSeries() (TSChartSeries/TSChartPoint)
+
+— Data states (3 required; error also implemented) — single source useMQTTStatus —
+[x] state  loading  → MQTTDataPhase.loading: MQTTSummaryCards "—" (model.isLoading), MQTTConnectionPanel.loading (TSSkeleton),
+                      MQTTThroughputPanel.collecting, MQTTVehicleBreakdownPanel.content (TSTableSkeleton)
+[x] state  empty    → MQTTDataPhase.empty: MQTTConnectionPanel TSEmptyState(MQTTText.noStatus) + topics TSEmptyState(MQTTText.noTopics);
+                      MQTTVehicleBreakdownPanel TSEmptyState(MQTTText.noVehicles)
+[x] state  success  → MQTTDataPhase.success: MQTTConnectionPanel.details, TSAreaChart render, TSDataTable render
+     (+ error → MQTTErrorBanner + retry(); model.statusPhase == .error path in MQTTInspectorPage)
+
+— Strings (29) — all resolve from Localizable.xcstrings; web key names preserved behind translation.mqtt.* —
+[x] string mqtt.batches            → MQTTText.batches            (translation.mqtt.batches)
+[x] string mqtt.broker             → MQTTText.broker             (translation.mqtt.broker)
+[x] string mqtt.collectingData     → MQTTText.collectingData     (translation.mqtt.collectingData)
+[x] string mqtt.connected          → MQTTText.connected          (translation.mqtt.connected)
+[x] string mqtt.disconnected       → MQTTText.disconnected       (translation.mqtt.disconnected)
+[x] string mqtt.fetchError         → MQTTText.fetchError         (translation.mqtt.fetchError)
+[x] string mqtt.lastReceived       → MQTTText.lastReceived       (translation.mqtt.lastReceived)
+[x] string mqtt.live               → MQTTText.live               (translation.mqtt.live)
+[x] string mqtt.noStatus           → MQTTText.noStatus           (translation.mqtt.noStatus)
+[x] string mqtt.noTopics           → MQTTText.noTopics           (translation.mqtt.noTopics)
+[x] string mqtt.noVehicles         → MQTTText.noVehicles         (translation.mqtt.noVehicles)
+[x] string mqtt.refreshInterval    → MQTTText.refreshInterval    (translation.mqtt.refreshInterval)
+[x] string mqtt.sigPerSec          → MQTTText.sigPerSec          (translation.mqtt.sigPerSec)
+[x] string mqtt.signalThroughput   → MQTTText.signalThroughput   (translation.mqtt.signalThroughput)
+[x] string mqtt.signals            → MQTTText.signals            (translation.mqtt.signals)
+[x] string mqtt.signalsPerSec      → MQTTText.signalsPerSec      (translation.mqtt.signalsPerSec)
+[x] string mqtt.stale              → MQTTText.stale              (translation.mqtt.stale)
+[x] string mqtt.state              → MQTTText.state              (translation.mqtt.state)
+[x] string mqtt.status             → MQTTText.status             (translation.mqtt.status)
+[x] string mqtt.streamingVehicles  → MQTTText.streamingVehicles  (translation.mqtt.streamingVehicles)
+[x] string mqtt.subtitle           → MQTTText.subtitle           (translation.mqtt.subtitle)
+[x] string mqtt.title              → MQTTText.title              (translation.mqtt.title)
+[x] string mqtt.topicPatterns      → MQTTText.topicPatterns      (translation.mqtt.topicPatterns)
+[x] string mqtt.totalBatches       → MQTTText.totalBatches       (translation.mqtt.totalBatches)
+[x] string mqtt.totalSignals       → MQTTText.totalSignals       (translation.mqtt.totalSignals)
+[x] string mqtt.uptime             → MQTTText.uptime             (translation.mqtt.uptime)
+[x] string mqtt.vehicleBreakdown   → MQTTText.vehicleBreakdown   (translation.mqtt.vehicleBreakdown)
+[x] string mqtt.vehicles           → MQTTText.vehicles           (translation.mqtt.vehicles)
+[x] string mqtt.vin                → MQTTText.vin                (translation.mqtt.vin)
+
+PARITY_COVERED=41
+PARITY_REQUIRED=41
+PARITY_OK=true   (41 == 41)
+
+=== GATES ===
+
+Gate 1 — Placeholder scan (ADR-011)
+  Command: pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Telemetry -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0   → PASS
+
+Gate 2 — Swift type-check (strongest isolated check; the prompt's build proxy)
+  Command: swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+           <design Tokens.swift + Sources/Components/** + Sources/Design/** + Sources/App routing
+            + the 7 MQTTInspector*.swift>  (the real P3 component/token/routing APIs, not stubs)
+  macOS  (arm64-apple-macos15.0):          TYPECHECK_MACOS_EXIT=0   → PASS
+  iOS    (arm64-apple-ios18.0-simulator):  TYPECHECK_IOS_EXIT=0     → PASS
+  (Both platforms, Swift 6 complete concurrency. The single unrelated file
+   Components/DataDisplay/UnitFormatters.swift was excluded — it references the
+   Shared-backed Units/UnitPreferences facade this count/rate page does not use;
+   it is not a dependency of any MQTTInspector symbol.)
+
+Gate 3 — SwiftLint --strict
+  Command: swiftlint lint --strict --config apps/apple/.swiftlint.yml <the 7 new files>
+  Result: Found 0 violations, 0 serious in 7 files.
+  Full-tree swiftlint --strict: only 4 PRE-EXISTING violations remain, NONE in
+  Features/Telemetry — Sources/Features/System/MyActivityPageModel.swift:217
+  (trailing_whitespace, the same one the sibling SignalsWorkspace gate recorded) and
+  TeslaSync/dashboard-widgets/WeeklyDigestWidget.{Adapter,Tests}.swift (line_length).
+  LINT_EXIT=0   → PASS (this unit contributes 0 violations)
+
+Gate 4 — Xcode build
+  Command: xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+           -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+  Result:  ** BUILD FAILED **   BUILD_EXIT=65
+  The build's Gradle scheme pre-action staged Frameworks/Shared.xcframework
+  (ios-arm64, ios-arm64-simulator, macos-arm64), so the framework is NOT the blocker.
+  Root cause (PRE-EXISTING, OUTSIDE allowed scope Features/Telemetry/**):
+    246 compiler errors, ALL in design-system / machine-generated Preview files under
+    TeslaSync/shared-surfaces/*.Previews.swift and TeslaSync/feature-views/*.Previews.swift:
+      78× "ambiguous use of 'Preview(_:traits:body:)'", 75× "ambiguous use of 'Preview'",
+      24× "ambiguous use of 'init'", 16× "failed to produce diagnostic",
+      20× ambiguous design tokens ('sm'/'md'/'lg'/'xs'), 2× ambiguous 'accessibilityAddTraits', …
+    These are the same pre-existing duplicate-symbol ambiguities the sibling
+    SignalsWorkspace gate recorded ("~698 ambiguous-symbol errors in design-system/
+    generated files").
+  ERRORS IN Features/Telemetry OR REFERENCING MQTTInspector* : 0   (grep-verified)
+  ⇒ This page (all 7 files + the .telemetry registration) compiles clean in the real
+    module; the build is red SOLELY due to pre-existing, out-of-scope design-system
+    breakage I am explicitly forbidden to modify (allowed files: Features/Telemetry/**,
+    nav registration, the string catalog, this log). Independently corroborated by the
+    Gate-2 isolated typecheck (0 errors on macOS + iOS, Swift 6 strict concurrency).
+  BUILD_EXIT=65 (pre-existing; not caused by, and not fixable within, this unit)
+
+Gate 5 — Xcode test
+  Status: BLOCKED on Gate 4 (the app target cannot link, so the hosted XCTest bundle
+  cannot run). Pre-existing; not caused by this unit. The unit ships no XCTest file:
+  the test bundles do not compile TeslaSync/Features/** *Tests.swift (project.yml), and
+  Tests/Unit/** is outside this unit's allowed files — matching the sibling precedent.
+  TEST_EXIT=BLOCKED
+
+=== SUMMARY ===
+✓ 8/8 panels implemented (MQTTErrorBanner; MQTTSummaryCards ×4; MQTTConnectionPanel;
+  MQTTThroughputPanel; MQTTVehicleBreakdownPanel).
+✓ 1/1 chart — TSAreaChart (native Swift Charts wrapper) over throughputSeries().
+✓ 3/3 required data states (loading / empty / success) for the useMQTTStatus source,
+  plus an error state with Retry, all via MQTTDataPhase.
+✓ 29/29 strings resolve from Localizable.xcstrings (keys already present); web key
+  names preserved; zero hardcoded literals.
+✓ PARITY_COVERED=41 / PARITY_REQUIRED=41 (100%).
+✓ Adaptive macOS + iOS (adaptive LazyVGrid, ViewThatFits, TSDataTable compact/regular,
+  #if os(iOS) inline title); HIG-native (TSGlassPanel materials, ContentUnavailableView,
+  Swift Charts, Dynamic Type tokens, accessibility labels/traits, light/dark/high-contrast
+  via design-token dynamic colors).
+✓ Live 5s poll + per-vehicle >2 min staleness (ADR-013); values formatted at the display
+  boundary (no non-SI stored/computed).
+✓ Gate 1 (placeholder), Gate 2 (typecheck macOS+iOS Swift 6), Gate 3 (swiftlint --strict)
+  all PASS; this page contributes 0 errors to the in-module build (grep-verified).
+⚠ Gate 4/5 (full xcodebuild build/test) BLOCKED by pre-existing, out-of-scope design-system
+  breakage (246 ambiguous-symbol errors in shared-surfaces/feature-views Preview files;
+  0 in Features/Telemetry). Not caused by, and not fixable within, this unit's allowed
+  files — consistent with the sibling SignalsWorkspace gate.
+
+EXIT=0
+STATUS=DONE

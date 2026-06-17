@@ -1,0 +1,93 @@
+=== P4 Feature view 0263 LiveSignalTail (Apple) ===
+date: 2026-06-09T11:15:36Z
+host: macOS 26.5.1 | Xcode 26.5 | swift version 6.3.2
+scope: apps/apple/TeslaSync/feature-views/LiveSignalTail.* (8 files)
+
+[1/5] iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ** TEST FAILED **
+    total compile errors: 284
+    errors in LiveSignalTail.*: 0
+    sample (pre-existing, out-of-scope dashboard-widgets):
+      ChargeSessionChartWidget.Model.swift:74:16: error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+      ChargeSessionChartWidget.Previews.swift:16:50: error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+      ChargeStatusLiveWidget.Adapter.swift:173:16: error: 'ChargeStateDTO' is ambiguous for type lookup in this context
+      ChargeStatusLiveWidget.Adapter.swift:174:18: error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+      ChargeStatusLiveWidget.Adapter.swift:175:16: error: 'ChargeUnitPrefs' is ambiguous for type lookup in this context
+IOS_EXIT=65
+
+[2/5] macOS: xcodebuild -scheme TeslaSync-macOS build test
+    ** TEST FAILED **
+    total compile errors: 4
+    errors in LiveSignalTail.*: 0
+MAC_EXIT=65
+
+[3/5] swiftlint --strict (LiveSignalTail.* surface files)
+    Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+[4/5] swiftformat --lint (LiveSignalTail.* surface files)
+    0/7 files require formatting.
+FORMAT_EXIT=0
+
+[5/5] check-placeholders.ps1 (LiveSignalTail.* surface files)
+    PLACEHOLDER_COUNT(real, all surface files)=0 (1 sanctioned parity:allow)
+PLACEHOLDER_EXIT=0
+
+AGG_EXIT=1
+
+--- macOS [2/5] detail ---
+The 4 macOS failures are NOT compile errors in scope; they are code-signing
+entitlement errors (environment has no development certificate):
+  "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that require
+  signing with a development certificate.
+A macOS-SDK type-check of the same shared widget sources also reproduces the
+iOS duplicate-type collisions (74 'ambiguous for type lookup' errors), so the
+macOS app target is red for the same pre-existing reason once signing is set.
+errors in LiveSignalTail.* (macOS): 0
+
+=== Per-surface isolation verification (LiveSignalTail.* — the deliverable) ===
+The app target cannot link because of pre-existing duplicate-type declarations
+in OUT-OF-SCOPE dashboard-widget files (see root cause below). To prove the
+LiveSignalTail surface itself is complete and correct, it was verified in
+isolation against the REAL shared component library + design tokens (no Shared
+framework needed — Sources/Components + Sources/Design import only system
+frameworks):
+
+  [iso-1] swiftc -typecheck  (iphonesimulator26.5 SDK, -target arm64-apple-ios18.0-simulator,
+          -swift-version 6, -strict-concurrency=complete)  over the 5 source files
+          + real deps (Tokens, TSMaterial/TSDesign, Badges/Cards/Typography,
+          Skeletons, Motion):                         0 errors
+  [iso-2] swiftc -typecheck  (same, -DDEBUG) including LiveSignalTail.Previews.swift
+          + full self-contained UI/Feedback/Motion/Design set:
+                                                       0 errors in LiveSignalTail.*
+  [iso-3] swift test -c release  (SwiftPM module 'TeslaSync', Swift 6 language mode,
+          @testable import) — LiveSignalTail.Tests.swift against the real deps:
+                                                       Executed 20 tests, 0 failures
+            • LiveSignalAdapterTests      9/9   (value-type tone, filter, unique,
+                                                  phase matrix, freshness thresholds, formatters)
+            • LiveSignalTailModelTests   10/10  (phases, filter projection, controls
+                                                  delegation, auto-scroll, stale auto-refresh,
+                                                  view.opened once, rate/paused tracking)
+            • LiveSignalAccessibilityTests 1/1  (row VoiceOver summary segments)
+
+  Surface checks (gate steps [3]/[4]/[5]) on the 8 deliverable files: all GREEN.
+
+=== Root cause of IOS_EXIT/MAC_EXIT (out of scope, pre-existing) ===
+The shared app target fails to type-check because several committed, git-tracked
+dashboard-widget files (NOT touched by and NOT in the allowed scope of this
+prompt — allowed scope is feature-views/LiveSignalTail.*) declare the SAME public
+types twice in one module, e.g.:
+
+  ChargeStatusWidget.Model.swift   &  ChargeStatusLiveWidget.Model.swift  both declare:
+    ChargeDistanceUnit, ChargeLoadStatus, ChargeConnection, ChargeStateDTO,
+    ChargeSessionDTO, ChargeUnitPrefs   → "ambiguous for type lookup" (×284 on iOS)
+  (similar duplicate pairs across Safety*/DrivingCoach* widgets)
+
+These are pre-existing collisions in files this prompt is forbidden to modify.
+This surface deliberately AVOIDED introducing such a collision: the row model
+was named `LiveSignalTailRow` after detecting an existing `LiveSignalRow` in
+LiveSignalsTable.Models.swift. No LiveSignalTail.* file contributes any error to
+either build (errors in LiveSignalTail.* = 0 on iOS and macOS).
+
+EXIT=1
+STATUS=BLOCKED

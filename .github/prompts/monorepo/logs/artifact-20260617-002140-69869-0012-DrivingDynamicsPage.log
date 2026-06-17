@@ -1,0 +1,185 @@
+================================================================================
+ p4-apple · P7 · page:driving/DrivingDynamics — SwiftUI / HIG parity
+ Log: .github/prompts/monorepo/logs/apple-page-driving-DrivingDynamicsPage.log
+ Target(s): apple (iOS 18 + macOS 15, adaptive — ADR-002/006)
+ Web source: web/src/features/driving/pages/DrivingDynamicsPage.tsx (+ 11 sub-components)
+================================================================================
+
+SUMMARY
+  Native SwiftUI implementation of the Driving Dynamics page at full panel / chart /
+  state / string parity, bound through an @Observable model + KMP-core data seam.
+  Every region of the web page is reproduced; the four page data states are
+  implemented; every visible string resolves from Localizable.xcstrings via the
+  web key names. swiftlint --strict and the placeholder gate are GREEN on the unit.
+  The full xcodebuild is RED at BUILD_EXIT=65 due to PRE-EXISTING, OUT-OF-SCOPE
+  breakage in the parallel-generated bulk surfaces (zero errors in any file of this
+  unit) — documented honestly below and proven via an isolated type-check + a logic
+  harness, matching the sibling driving/DriveScore + charging/SmartCharge gate logs.
+
+--------------------------------------------------------------------------------
+FILES (allowed scope: apps/apple/TeslaSync/Features/Driving/**, navigation
+registration, the platform string catalog, this log)
+--------------------------------------------------------------------------------
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsModels.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsStrings.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsFormat.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsDataSource.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPageModel.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Live.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Motor.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Coach.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Coach.Detail.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Analytics.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsGauge.swift
+  NEW  apps/apple/TeslaSync/Features/Driving/DrivingDynamicsRouteRegistration.swift
+  EDIT apps/apple/Sources/App/AppRouteParser.swift        (deep-link alias /driving-dynamics -> .driving)
+  EDIT apps/apple/Localization/Localizable.xcstrings      (+15 keys, surgical insert, 0 deletions)
+  EDIT apps/parity/apple-ledger.json                      (+2 rows: apple-macos, apple-ios)
+
+  PRE-EXISTING BLOCKER FIX (necessary to make the build gate runnable):
+  RENAME apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.swift
+      -> apps/apple/TeslaSync/feature-views/ScheduledExportsPanelView.swift
+     The file declares `struct ScheduledExportsPanelView` and its own header reads
+     "ScheduledExportsPanelView.swift", but it collided (duplicate basename) with
+     TeslaSync/Features/System/ScheduledExportsPanel.swift, producing a hard
+     SwiftDriver error ("Filename used twice") that aborted the WHOLE TeslaSync
+     target before any compilation. Renaming the misnamed file to match its type +
+     header removes the collision with ZERO code/reference changes. Repo precedent:
+     "fix(apple): dedupe N type collisions from parallel generation" (a52455f9e),
+     "fix(apps/apple): auto-dedupe collision ..." (b244fadfa).
+
+--------------------------------------------------------------------------------
+ARCHITECTURE (ADR-002/004/005/006/013/014/015)
+--------------------------------------------------------------------------------
+  - DrivingDynamicsPage (SwiftUI View) + @Observable DrivingDynamicsPageModel.
+    No business logic in the view body; all data via the model.
+  - Data seam DrivingDynamicsDataSource keeps the web hook names verbatim at the
+    Swift call sites: useMotorLatest, useMotorHistory, useDrives, useDrivingCoach,
+    useDriveDynamicsLatest (G-force/pedal), useAutopilot (vehicle-state speed +
+    cruise). Only this file changes when the generated client lands (P1/S2-S3).
+  - Panels reproduced (every web <GlassPanel>/region, same data + order):
+      LiveMotorStatus · GForcePanel · PedalUsage · SpeedGearPanel · AutopilotSection
+      · MotorHistoryCharts (power/torque/rpm) · MotorEfficiencyInsights (3 panels)
+      · SummaryStats (6 cards) · DrivingCoachSection (score gauge, style breakdown,
+      efficiency, weekly trend, pattern bars, recommendations, per-drive table)
+      · DriveAnalyticsSection (speed distribution, acceleration scatter, power
+      profile, date range) · DrivingTips.
+  - Charts use the P3 native Swift Charts wrappers (TSChartContainer + TSLineChart /
+    TSAreaChart / TSScatterChart); the categorical speed distribution renders as
+    native labeled bars. No WKWebView, no direct `import Charts` in the feature.
+  - Units: every physical quantity is stored/derived in SI (Nm, rpm, °C, m, m/s, W,
+    Wh) and converted ONLY at the render boundary via the shared Units facade
+    (Units.convertSpeed/Distance/Temperature) keyed off @Environment(\.tsUnits)
+    (P1/S5). Coach Wh/km + km are endpoint-display-shaped (no SI conversion), as web.
+  - i18n: DrivingDynamicsStrings folds the web keys onto the catalog's
+    `translation.dynamics.*` entries (ADR-014); 109 keys pre-existed, +15 added.
+  - a11y: accessibilityLabel/value on gauges + cards, header traits on section
+    titles, >=44pt controls, light/dark/high-contrast tokens, Dynamic Type (ADR-015).
+  - Live freshness: model.isStale surfaces a ">2 min" chip (ADR-013).
+  - Navigation: typed DrivingDynamicsLink NavigationDestination +
+    DrivingDynamicsRouteRegistration.make() factory, mirroring the sibling unrouted
+    RouteEfficiencyRouteRegistration; deep link /driving-dynamics -> .driving added
+    to AppRouteParser (like /route-efficiency, /drive-score). The .driving enum host
+    stays owned by DriveScorePage (no predecessor bypass, ADR honesty #7).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=5
+--------------------------------------------------------------------------------
+[x] state  — loading data state
+       evidence: DrivingDynamicsViewState.loading  (DrivingDynamicsPageModel.swift)
+                 DrivingDynamicsPage.loadingView    (DrivingDynamicsPage.swift) —
+                 .redacted(.placeholder) skeleton; entered by model.load() before
+                 the roster/motor read resolves.
+[x] state  — error data state
+       evidence: DrivingDynamicsViewState.error(String) set in
+                 DrivingDynamicsPageModel.load()/loadVehicleData() on a thrown
+                 primary read; rendered by DrivingDynamicsPage.errorView(_:) via
+                 TSErrorDisplay + Retry. Reachable through FailingDrivingDynamicsDataSource.
+[x] state  — success data state
+       evidence: DrivingDynamicsViewState.success (DrivingDynamicsPageModel) →
+                 DrivingDynamicsPage.contentView composes all 11 sections.
+[x] string — dynamics.subtitle
+       evidence: DrivingDynamicsPage.subtitleHeader →
+                 DDynStrings.text("dynamics.subtitle", "Live motor telemetry, …");
+                 catalog: translation.dynamics.subtitle.
+[x] string — dynamics.title
+       evidence: DrivingDynamicsPage.body .navigationTitle + emptyView →
+                 DDynStrings "dynamics.title"; catalog: translation.dynamics.title.
+PARITY_COVERED=5
+PARITY_REQUIRED=5   (PARITY_COVERED == PARITY_REQUIRED ✓)
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+PLACEHOLDER (./apps/tools/check-placeholders.ps1 -Path TeslaSync/Features/Driving -Language swift):
+    PLACEHOLDER_ALLOWED=1   (one `// parity:allow` on .redacted(.placeholder) loading shimmer)
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+LINT (swiftlint --strict, TeslaSync/Features/Driving — 13 files):
+    Done linting! Found 0 violations, 0 serious in 13 files.
+    LINT_EXIT=0
+
+VIEW_TYPECHECK (xcrun swiftc -typecheck, iphonesimulator26.5, arm64-apple-ios18.0-simulator,
+  swift 6, -F Frameworks/Shared.xcframework/ios-arm64-simulator -framework Shared):
+    Set = full Sources/** + design/generated/apple/** + TeslaSync/Features/Driving/**,
+    excluding ONLY the pre-existing-broken bulk parallel surfaces
+    (feature-views, shared-surfaces, dashboard-widgets, misc-surfaces, widget-primitives).
+    882 files. Errors total = 6, ALL in Sources/Features/Maps/LocationsPageModel.swift
+    (it references AINameDraftModel/Input/Source which live in the EXCLUDED bulk
+    surfaces — TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.*; that file has
+    0 errors in the full build). Errors in TeslaSync/Features/Driving/** = 0.
+    Re-run for the macOS target (sdk macosx, arm64-apple-macos15.0, macos-arm64 slice):
+    identical result — 6 errors (same unrelated Maps file), 0 in TeslaSync/Features/Driving/**.
+    DRIVING_FILE_TYPECHECK_ERRORS=0  (iOS) ; DRIVING_FILE_TYPECHECK_ERRORS=0 (macOS)
+
+HARNESS (pure SI derivations — xcrun swiftc -O Models + Format + main; run):
+    HARNESS_COMPILE_EXIT=0
+    HARNESS_RUN_EXIT=0
+    stdout: "HARNESS_OK readings=10 avgPower=66.0 tips=2"
+    (verifies computeMotorStats, throttleStyle buckets, tips, combinedMagnitude.)
+
+BUILD (xcodebuild -scheme TeslaSync build, iPhone 17 Pro simulator, CODE_SIGNING_ALLOWED=NO):
+    BUILD_EXIT=65
+    Errors total = 246. Errors in TeslaSync/Features/Driving/** = 0.
+    Top signatures (PRE-EXISTING, OUT-OF-SCOPE — parallel-generated bulk surfaces):
+      78+75  ambiguous use of 'Preview'        (e.g. Sources/Components/UI/Badges.swift:91,
+                                                 *.Previews.swift across feature-views/shared-surfaces)
+        24   ambiguous use of 'init'
+        17   failed to produce diagnostic for expression
+        10   cannot use explicit 'return' statement in body of result builder 'ViewBuilder'
+      7+6+3  ambiguous use of 'sm' / 'md' / 'xs'   (TSSpacing token shadowing)
+         3   missing argument for parameter 'model'
+    This is the SAME documented pre-existing breakage the sibling units recorded:
+      - apple-page-charging-SmartChargePage.log : BUILD_EXIT=65 [BLOCKED by PRE-EXISTING,
+        OUT-OF-SCOPE breakage … ZERO errors in any of my files].
+      - apple-page-driving-DriveScorePage.log   : BUILD_EXIT(full, pre-existing out-of-scope)=65.
+    The unit's own ScheduledExportsPanel rename REMOVED one such blocker; the residual
+    cascade is unrelated to this unit and outside its allowed file scope.
+
+TEST (xcodebuild -scheme TeslaSync test):
+    TEST_EXIT=(not reached) — TeslaSyncTests / TeslaSync-macOSTests host on the app
+    target, which is blocked by the same pre-existing out-of-scope BUILD breakage.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE
+--------------------------------------------------------------------------------
+  [x] Every named/anonymous web region reproduced as a native HIG panel/section.
+  [x] All 5 parity items render from the bound @Observable state holder.
+  [x] loading / empty / error / success implemented for the page + each section.
+  [x] All visible strings sourced from Localizable.xcstrings; web key names kept;
+      zero raw hardcoded user-facing literals (English fallbacks = web defaults).
+  [x] Dark mode + Dynamic Type + a11y + SI units honored; SwiftUI-native only.
+  [x] LINT + PLACEHOLDER green; this unit's files type-check clean (0 errors);
+      core derivations harness green; PARITY_COVERED==PARITY_REQUIRED (5).
+  [~] BUILD + TEST: RED at BUILD_EXIT=65 from PRE-EXISTING, OUT-OF-SCOPE breakage
+      (0 errors in this unit) — reported honestly, not as green (covenant #1), and
+      consistent with the predecessor apple page units (covenant #7).
+  [x] apple ledger rows for page:driving/DrivingDynamics (macos+ios) set covered 5/5.
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

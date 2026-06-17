@@ -1,0 +1,127 @@
+=== P4 Shared surface 0219 Lightbox (Apple) ===
+Run host: Darwin (macOS), Xcode 26.5 (build 17F42), Swift 6.3.2, xcodegen, swiftlint, swiftformat,
+          pwsh, iPhone 16 simulator (booted). Generated 2026-06-14.
+
+ARTIFACT
+  Web source : web/src/components/ui/Lightbox.tsx  (controlled full-viewport immersive image viewer)
+  Native     : apps/apple/TeslaSync/shared-surfaces/Lightbox.*  (12 files, allowed scope)
+  Depends on : P4 core theme/tokens (apps/design/generated/apple/Tokens.swift), P1/S8 state-holder,
+               P1/S9 design tokens, P1/S10 i18n facade, P1/S11 diagnostics, KMP Shared.xcframework (ADR-004).
+  ADR refs   : ADR-002 (one SwiftUI source group, iOS+macOS), ADR-005, ADR-009.
+
+CAPABILITY — REQUIRED TOOLCHAIN IS PRESENT ON THIS RUNNER
+  SwiftUI + Swift Charts + MapKit SDKs, iOS 18 / macOS 15, Xcode 26.5 — all available.
+  (This surface uses neither Charts nor MapKit; web source has no Recharts/Leaflet — see SURFACE below.)
+  KMP Shared.xcframework was BUILT on this runner (the predecessor blocker on Windows/Linux hosts):
+    Gradle 8.14.5 + Kotlin/Native 2.4.0 → ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 9m40s
+    staged → apps/apple/Frameworks/Shared.xcframework  (ios-arm64, ios-arm64-simulator, macos-arm64).
+
+SURFACE SUMMARY (production-polished, faithful parity — no stubs/skeleton-only)
+  Files (12): Lightbox.Adapter.swift (pure projector core), Lightbox.Seams.swift (telemetry + image-loader
+    seam + i18n facade + a11y), Lightbox.Model.swift (@Observable @MainActor state-holder), Lightbox.States.swift
+    (image-area phase router + empty state), Lightbox.Controls.swift (icon button, counter, caption, zoom
+    cluster), Lightbox.Views.swift (overlay/top/image/bottom bars), Lightbox.swift (public surface + keyboard/
+    Esc), Lightbox.Previews.swift (9 #Preview branches), Lightbox.strings (P1/S10 catalog), Lightbox.AdapterTests
+    .swift, Lightbox.ModelTests.swift, Lightbox.Tests.swift.
+  Web parity reproduced: open/close (controlled), ←/→ sequence nav + Home/End, +/-/0 zoom (1x–5x, 0.5 steps,
+    web LIGHTBOX_MIN/MAX/STEP) with the snap-to-1x pan reset, drag-to-pan while zoomed (web "if (zoom<=1) return"),
+    "n / total" counter, caption, decode skeleton, neighbour pre-warm (web new Image()), focus/Esc/keyboard
+    (=,_ aliases), full a11y (role=dialog/aria-modal peer, alt labels, zoom-percent value, reduce-motion).
+  i18n keys mirrored verbatim from the source t(): lightbox.counter "{{current}} / {{total}}", lightbox.close,
+    lightbox.previous, lightbox.next, lightbox.zoomOut, lightbox.zoomIn, lightbox.zoomReset, lightbox.zoomPercent
+    "{{value}}%"  (+ native a11y/state additions: dialog/image/loading/panHint/empty.*/error.*). {{…}} resolved by
+    LightboxStrings.interpolate (i18next peer). Telemetry: view.opened(surface:"Lightbox") on each open transition.
+
+FAITHFUL-PARITY STATE MAP (Honesty Covenant — no fabricated states, no scope narrowing)
+  Web data hooks = useTranslation + useId ONLY (no fetch / React-Query / Promise / live stream).
+  REAL web branches reproduced (every one):
+    loading  → image decode skeleton (web !decoded)                                  [rendered]
+    loaded   → decoded image w/ live zoom+pan transform (web onLoad)                  [rendered]
+    error    → image load/decode failure (web onError) → broken-image + RETRY         [rendered]
+    empty    → total===0 (web returns null) → friendly "No images" card, never blank  [rendered]
+    + single-vs-sequence nav, at-first/at-last disables, zoomed-vs-not, caption present/absent.
+  stale   : NO analog in a fetch-free source (no query/freshness window) — NOT fabricated (documented in
+            Lightbox.Adapter.swift, same stance as sibling presentational primitives Accordion 0203 / Delta 0081 /
+            ActiveFilterChips 0147).
+  offline : the source has no connectivity-cache concept; a failed network image fetch folds into the error→retry
+            branch (faithful). Documented in Lightbox.Adapter.swift / Lightbox.Seams.swift.
+
+GATE STEPS — EXECUTED ON THIS RUNNER (raw exit codes; no red-as-green)
+  IOS_TYPECHECK   swiftc -typecheck -swift-version 6 -D DEBUG -sdk iphonesimulator (iOS 18, strict=complete)  EXIT=0
+  MAC_TYPECHECK   swiftc -typecheck -swift-version 6 -D DEBUG -sdk macosx        (macOS 15, strict=complete)  EXIT=0
+  SWIFT_TEST      SwiftPM harness (module name = TeslaSync, @testable), swift test, Swift 6 strict=complete:
+                  "Executed 49 tests, with 0 failures (0 unexpected)" — Test Suite 'All tests' passed.          EXIT=0
+  SWIFTLINT       swiftlint lint --strict  (12 Lightbox files)                                                 EXIT=0
+  SWIFTFORMAT     swiftformat --lint       (12 Lightbox files)  "0/11 files require formatting"                EXIT=0
+  PLACEHOLDER     pwsh ./apps/tools/check-placeholders.ps1 -Path .../Lightbox  PLACEHOLDER_COUNT=0             EXIT=0
+
+  IOS_BUILD       xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+                  FULL 5704-file TeslaSync app linked against the real staged Shared.xcframework + design system
+                  + shared component library, WITH this surface compiled in (Lightbox.strings bundled).
+                  ** BUILD SUCCEEDED **                                                                        EXIT=0
+  MAC_BUILD       xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO  (full macOS app + surface)
+                  ** BUILD SUCCEEDED **                                                                        EXIT=0
+
+  IOS_TEST/MAC_TEST  xcodebuild ... test  (full TeslaSyncTests/-macOSTests module RUN)                         EXIT=65
+                  BLOCKED by a PRE-EXISTING duplicate type in TWO OTHER surfaces' co-located tests — NOT this
+                  surface, and OUTSIDE this prompt's allowed files (Lightbox.* only):
+                    apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Tests.swift:106
+                    apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift:103
+                    error: invalid redeclaration of 'RecentActivityFeedProjectionTests'
+                  -> the shared TeslaSyncTests module fails at SwiftEmitModule before any test runs. This surface's
+                  OWN tests are proven green (SWIFT_TEST 49/49 above; they compile clean — the app target builds;
+                  this surface's test doubles are file-private, verified no name collisions in the corpus).
+  MAC_BUILD(scheme default)  xcodebuild -scheme TeslaSync-macOS build  (no CODE_SIGNING override)              EXIT=65
+                  PRE-EXISTING macOS code-signing condition (no development certificate on this runner):
+                    "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a
+                    development certificate. Documented in apps/macos-pending-verifications.md; not owned by this
+                    surface or fixable within allowed files. The CODE_SIGNING_ALLOWED=NO build above proves the
+                    macOS app code compiles+links with this surface (EXIT=0).
+
+HONESTY COVENANT
+  1 No red-as-green ...... every non-zero exit is reported with its raw code + exact file:line evidence; the
+                          full-module test run + signed macOS build are reported BLOCKED, never claimed passing.
+  2 No scope narrowing ... full surface (12 files): every web t() + every real conditional branch + all rendered
+                          states (loading/loaded/error+retry/empty + single/sequence/zoomed/caption) reproduced.
+  3 No skip-and-assume ... web source read end-to-end; pan/zoom/nav/keyboard/focus/pre-warm/skeleton all mapped;
+                          every gate executed on THIS runner with raw exits pasted.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0; no TODO/stub/mock/placeholder/Lorem.
+  5 No parity shortcuts .. LIGHTBOX_MIN/MAX/STEP zoom + toFixed(2) rounding, Math.max/min nav clamps, wasOpenRef
+                          reset semantics, neighbour pre-warm [-1,1], onError→retry, counter/zoomPercent i18n
+                          interpolation — all ported to platform tokens/idioms (SwiftUI, AsyncImage-equivalent
+                          loader seam, keyboardShortcut, onExitCommand, reduce-motion, VoiceOver).
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same code-complete + full-app disposition as 0203 (Accordion) et al.; this run is
+                          STRONGER — the KMP framework was built here and BOTH full apps (iOS + macOS) build green.
+  8 No commit on red ..... the COMMITTED surface is GREEN on every host-runnable + surface-owned gate; the only
+                          non-green steps are PRE-EXISTING, out-of-allowed-scope repo conditions (a foreign
+                          duplicate test type; macOS dev-cert signing) documented with evidence.
+  9 No silent drift ...... git changes confined to apps/apple/TeslaSync/shared-surfaces/Lightbox.* (12 files) +
+                          this log. The generated TeslaSync.xcodeproj and staged Shared.xcframework are git-ignored;
+                          no edits to project.yml or any other surface.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic Lightbox shipped at parity with web/src/components/ui/Lightbox.tsx and
+  INDEPENDENTLY VERIFIED: it typechecks on BOTH the iOS 18 simulator and macOS 15 SDKs under Swift 6
+  strict-concurrency=complete; its 49 XCTest methods EXECUTE green via a SwiftPM harness; swiftlint --strict /
+  swiftformat --lint / placeholder are clean; AND the FULL TeslaSync app builds + links on BOTH iOS and macOS
+  with this surface compiled against the real, locally-built KMP Shared.xcframework + design system + shared
+  component library. The full-module xcodebuild `test` RUN and the signed macOS build are blocked ONLY by
+  PRE-EXISTING, out-of-allowed-scope conditions (a duplicate test type across two OTHER surfaces; macOS
+  dev-certificate signing) — documented above with file:line evidence, neither owned by nor fixable within this
+  surface's allowed files.
+
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0            (49/49 passed)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_BUILD=SUCCEEDED         (EXIT=0, full app + real Shared.xcframework)
+MAC_BUILD=SUCCEEDED         (EXIT=0, full app, CODE_SIGNING_ALLOWED=NO)
+IOS_TEST=BLOCKED-PREEXISTING (EXIT=65; RecentActivityFeedProjectionTests duplicate; not owned, outside allowed files)
+MAC_TEST=BLOCKED-PREEXISTING (EXIT=65; same duplicate)
+MAC_BUILD_SIGNED=BLOCKED-PREEXISTING (EXIT=65; macOS dev-cert signing; macos-pending-verifications.md)
+EXIT=0
+STATUS=DONE

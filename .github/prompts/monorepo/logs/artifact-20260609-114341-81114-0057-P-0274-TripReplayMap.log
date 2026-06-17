@@ -1,0 +1,154 @@
+=== P4 Feature view 0274 TripReplayMap (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/TripReplayMap.*
+Web src : web/src/features/trips/components/TripReplayMap.tsx
+Run host: Darwin (Apple Silicon), Xcode 26.5 / Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1
+Date    : 2026-06-09
+
+------------------------------------------------------------------------------
+TOOLCHAIN CAPABILITY NOTE (decisive for the build/test steps below)
+------------------------------------------------------------------------------
+apps/versions.lock.md (ADR-012) LOCKS the Apple app to:  Xcode 26 / Swift 6.0.1.
+This runner only has:                                    Xcode 26.5 / Swift 6.3.2.
+No Swift 6.0.1 / Xcode 26.0 toolchain is installed (no swiftly/swiftenv, single
+/Applications/Xcode.app). The locked toolchain is UNAVAILABLE on this runner.
+
+The non-locked Swift 6.3.2 frontend has a deterministic IRGen regression that
+crashes (llvm::report_fatal_error) while generating code for a PRE-EXISTING,
+out-of-scope sibling surface — TeslaSync/feature-views/AppearanceSettings.Controls.swift
+(added by commit 0dd623aa3 "feat(apps/apple/feature-views): add AppearanceSettings
+surface (P4)"). The crash is in the reabstraction thunk for that file's idiomatic
+Toggle(isOn: Binding(get: { isOn }, set: onChange)) where `onChange` is a
+`@MainActor (Bool) -> Void` (SIL thunk @$sSbScA_pSgIeAghyg_SbIeAghn_TR). It is NOT
+in this surface and NOT triggered by it (proof below).
+
+Per this prompt's capability clause ("If unavailable on the runner -> STATUS=BLOCKED
+with API evidence") the whole-app `xcodebuild build test` steps are BLOCKED on the
+locked toolchain being unavailable. Every step that CAN run on this runner was run
+and is green for this surface; the surface's host-testable core was additionally
+proven green by a decoupled SwiftPM test run (see VERIFY section).
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------------------------
+** BUILD FAILED **
+Swift frontend CRASH during IR generation of a pre-existing sibling file:
+
+  Please submit a bug report (https://swift.org/contributing/#reporting-bugs) ...
+  4.  While evaluating request IRGenRequest(IR Generation for file
+      ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+  7  swift-frontend  ... llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+  Command SwiftCompile failed with a nonzero exit code
+
+Zero errors attributable to TripReplayMap.* (type-checking of every TripReplayMap
+file completed; no `error:` lines reference this surface).
+IOS_EXIT=65
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------------------
+** TEST FAILED ** (build failed before compilation finished)
+Blocked by code-signing capability — the macOS app + widget entitlements require a
+development certificate that is not provisioned on this runner:
+
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing in the Signing & Capabilities editor.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+  Testing cancelled because the build failed.
+
+(Had it reached compilation it would additionally hit the same Swift 6.3.2 IRGen
+crash on AppearanceSettings.Controls.swift, since both app targets share Sources/.)
+Zero errors attributable to TripReplayMap.*.
+MAC_EXIT=65
+
+------------------------------------------------------------------------------
+swiftlint --strict        (cwd apps/apple)
+------------------------------------------------------------------------------
+1 violation, PRE-EXISTING and out-of-scope:
+  TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: error:
+    Opening Brace Spacing Violation (opening_brace)
+  (committed at HEAD; sibling surface, not editable under this prompt's allowed-files.)
+TripReplayMap.* : 0 violations  (scoped run: `swiftlint lint --strict <TripReplayMap files>` = exit 0)
+LINT_EXIT=2
+
+------------------------------------------------------------------------------
+swiftformat --lint apps/apple
+------------------------------------------------------------------------------
+0/2927 files require formatting, 3 files skipped.   (includes all 10 TripReplayMap .swift files)
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TripReplayMap
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(No TODO / stub / mock / placeholder / Lorem / fatalError in shipped code.)
+
+==============================================================================
+VERIFY — surface-scoped evidence that ran green on THIS runner (Swift 6.3.2)
+==============================================================================
+The surface's host-testable core (TripReplayMap.Model.swift + .Format.swift +
+.Adapter.swift, Foundation/Observation/OSLog only) plus its pure unit tests were
+compiled AND executed as a decoupled SwiftPM package (`swift test`) so they are
+not blocked by the unrelated sibling IRGen crash:
+
+  Compiling TripReplayCore TripReplayMap.Adapter.swift   OK (compiled + IRGen, 6.3.2)
+  Compiling TripReplayCore TripReplayMap.Model.swift     OK
+  Compiling TripReplayCore TripReplayMap.Format.swift    OK
+  Test Suite 'All tests' passed.
+  Executed 40 tests, with 0 failures.
+
+  Coverage:
+   - TripReplayGeo        : isValid / haversine / hasMeaningfulRoute / firstValidIndex /
+                            nearestSampleIndex / heading  (web lib/geo.ts + TripReplayMap parity)
+   - TripReplaySpeed      : band ladder vs raw 30/60/100  (web speedColor parity)
+   - TripReplayProjector  : route / stationary / single-fix / empty projection,
+                            speed-banded segments, start/end/anchor markers, camera fit,
+                            nearest-sample lookup, playhead at index   (adapter cached->projection)
+   - TripReplayAccessibility : canvas / playhead / marker VoiceOver summaries
+   - TripReplayMapModel   : resolvePhase matrix, content/empty/loading/error,
+                            cached-stays-content, freshness, refresh delegation,
+                            stale auto-refresh guard, view.opened telemetry (once),
+                            seek clamp + onSeek, seek-to-coordinate nearest, no-op
+                            without route, playhead reflects index, initialIndex clamp.
+
+PROOF the build blocker is independent of this surface:
+  A baseline `xcodebuild ... build` with all 11 TripReplayMap.* files STASHED OUT of
+  the tree still crashes identically on AppearanceSettings.Controls.swift
+  (IR Generation, SIL @$sSbScA_pSgIeAghyg_SbIeAghn_TR). => the crash pre-exists and is
+  not caused or curable by this surface.
+
+The per-state view tests (loading/empty/error/stale/offline/content/stationary via
+ImageRenderer) and Xcode previews are authored in TripReplayMap.ModelTests.swift /
+TripReplayMap.Previews.swift; they exercise the same code paths and will execute under
+the locked Swift 6.0.1 toolchain on CI (where AppearanceSettings.Controls.swift compiles).
+
+------------------------------------------------------------------------------
+Deliverable summary (parity with web/src/features/trips/components/TripReplayMap.tsx)
+------------------------------------------------------------------------------
+Files (apps/apple/TeslaSync/feature-views/):
+  TripReplayMap.swift           main surface view (glass panel, phase switch, onAppear/stop)
+  TripReplayMap.Model.swift     P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 facade
+  TripReplayMap.Format.swift    pure geo + speed-band + heading (web lib/geo.ts + speedColor)
+  TripReplayMap.Adapter.swift   projector positions->projection + playhead + a11y summaries
+  TripReplayMap.Views.swift     MapKit canvas: speed trail, start/end/anchor, animated playhead,
+                                tap-to-seek (MapReader.convert -> nearest sample), style switcher
+  TripReplayMap.States.swift    stationary banner, no-positions empty, skeleton, error+retry, chip
+  TripReplayMap.Previews.swift  #Preview per state (route/stationary/empty/loading/error/stale/offline)
+  TripReplayMap.strings         i18n catalog (parity keys + native chrome), table "TripReplayMap"
+  TripReplayMap.Tests.swift / .ProjectorTests.swift / .ModelTests.swift   unit + per-state UI tests
+
+States reproduced: loading, empty (web "No position data available for this drive"),
+error+retry, stale chip, offline chip, content-with-route (speed-colored trail + start/end +
+animated/reduce-motion playhead), content-stationary (anchor + "Route can't be plotted" banner).
+i18n: every web key resolved through the P1/S10 facade; no English literals in code.
+a11y: VoiceOver labels on canvas, markers, playhead, style switcher, retry; Dynamic Type via
+tokens; Reduce Motion honored (playhead snaps, no pulse).
+Telemetry: view.opened emitted with surface slug "TripReplayMap" (P1/S11), asserted once.
+
+EXIT=65
+STATUS=BLOCKED (locked Swift 6.0.1 toolchain unavailable on runner; whole-app build/test
+blocked by a pre-existing, out-of-scope Swift 6.3.2 IRGen crash [iOS] and missing dev
+signing certificate [macOS]. Surface-scoped lint/format/placeholder = green; surface core
+= 40/40 unit tests green on this runner; blocker proven independent of this surface.)

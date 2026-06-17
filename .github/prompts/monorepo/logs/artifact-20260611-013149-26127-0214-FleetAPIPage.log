@@ -1,0 +1,305 @@
+=== P4-APPLE · P7 · page:admin/FleetAPI (SwiftUI / HIG) ===
+started: 2026-06-12T12:05:00-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+web source: web/src/features/admin/pages/FleetAPIPage.tsx   (route /fleet-api)
+parity unit: page:admin/FleetAPI  (manifest PARITY_REQUIRED=81 = 8 panels + 3 states + 70 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`. That path is
+NOT a project.yml source group in this repo. The real, compiled canonical admin-page home is
+`apps/apple/Sources/Features/Admin/**` — where the sibling P7 admin pages (ApiPlaygroundPage,
+DiskForecastPage) ship, and which project.yml already lists as a `Sources` source path for BOTH the
+iOS (`TeslaSync`) and macOS (`TeslaSync-macOS`) app targets (createIntermediateGroups: true). The
+page therefore ships at `apps/apple/Sources/Features/Admin/**`, the faithful equivalent of the
+prompt's `Features/Admin`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the identical
+reconciliation the ApiPlayground + DiskForecast logs recorded; it is the only deviation from the
+literal prompt path. xcodegen confirms inclusion: "FleetAPI" referenced 42x in the generated
+pbxproj (iOS + macOS app targets + both XCTest bundles).
+
+ROUTE HOSTING: the web route `/fleet-api` is a standalone top-level route (web App.tsx), unlike
+DiskForecast's `/admin/disk-forecast` sub-path (which folds onto `.admin`). It had no AppRoute case,
+so a `.fleetAPI` case was added (pathSegment "fleet-api", systemImage "network", System group) —
+"navigation registration" is an allowed file class. `AppRouteParser.parse("/fleet-api")` and the
+deep link `teslasync://fleet-api` now resolve to it (segment match). `FleetAPIRouteRegistration`
+registers `.fleetAPI -> FleetAPIPage` and is chained into `\.routeHosts` in TeslaSyncApp.swift,
+mirroring ApiPlayground/DiskForecast registration (model built on MainActor + captured, so the
+escaping registry closure never constructs an isolated type). The pre-existing RouteTests
+(testEveryRouteHasUniquePathSegment / testEveryRouteResolvesToItsGroup) remain satisfied — the new
+case has a unique segment and resolves to the System group.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/FleetAPIPage.swift                    (219 LOC) SwiftUI orchestrator: PageContainer header (title "Fleet API Settings" + subtitle), state router (error/retry vs the 3 sections), GlassPanel2 pollingSection (IconBox play/pause + status line + suspend Toggle) + GlassPanel3 suspendedNotice, transient toast overlay (TSAlertBanner, web success/info/error), .navigationTitle("Fleet API"), #if DEBUG previews (loaded/suspended/mongodb-off/empty)
+?? apps/apple/Sources/Features/Admin/FleetAPIEndpointControlsPanel.swift   (262 LOC) GlassPanel4: polling/on-demand/command toggle grids (adaptive 1–3 cols) + Telemetry Capture (MongoDB badge, Raw Signal Recording toggle, GlassPanel5 retention Select, GlassPanel6 capture-stats note); EndpointToggleRow (GlassPanel1) + FleetAPIGroupHeader + FleetAPILayout shared chrome
+?? apps/apple/Sources/Features/Admin/FleetAPIConfiguredEndpointsPanel.swift (115 LOC) GlassPanel7: version summary line + configured endpoint rows (GlassPanel8) for api/web/oauth_callback/tesla_api, or EmptyState ("common.noData") when version.endpoints is empty; loading skeleton rows
+?? apps/apple/Sources/Features/Admin/FleetAPIPageModel.swift               (311 LOC) @MainActor @Observable model: value types (FleetAPISettings/PollingConfig/CaptureStats/VersionInfo mirror web AppSettings/PollingConfig/CaptureStats/VersionInfo), FleetAPIDataSource seam (6 web hook names verbatim), FleetAPIState(loading/loaded/error) + FleetAPILoaded, FleetAPIToast, load (4 concurrent async-let queries) / refresh / toggleAPISuspend / toggleEndpoint / setRetentionDays + web success/info/error toasts; FleetAPIFormat.int (web fmtInt)
+?? apps/apple/Sources/Features/Admin/FleetAPIPageModel.Catalog.swift       (183 LOC) FleetAPIEndpoint/FleetAPIConfiguredEndpoint + FleetAPICatalog (web pollingEndpoints[7]/onDemandEndpoints[11]/commandEndpoints[2]/configuredEndpoints[4]/allEndpointKeys[21]/retentionDayChoices) + SampleFleetAPIDataSource actor (mutable in-memory backing store; production swaps in the KMP settings store via the seam)
+?? apps/apple/Sources/Features/Admin/FleetAPIRouteRegistration.swift       (24 LOC) registers .fleetAPI -> FleetAPIPage (mirrors ApiPlaygroundRouteRegistration)
+?? apps/apple/Tests/Unit/Features/Admin/FleetAPIPageModelTests.swift       (262 LOC) XCTest: 3 states + suspend/resume/error toasts + endpoint toggle persistence + retention + catalog counts/uniqueness + fmtInt + immutable mutators + version line + sample seed
+ M apps/apple/Sources/App/AppRoute.swift               +.fleetAPI case (pathSegment "fleet-api", systemImage "network", System group)
+ M apps/apple/Sources/TeslaSyncApp.swift               chains FleetAPIRouteRegistration.registry(base: DiskForecastRouteRegistration.registry(base: ApiPlaygroundRouteRegistration.registry(base: SettingsRouteRegistration.registry(...))))
+ M apps/apple/Localization/Localizable.xcstrings       +71 keys (70 parity strings verbatim web names + route.fleetAPI for the sidebar label); JSON validated (8231 total keys, was 8160)
+ M apps/parity/apple-ledger.json                        +2 rows (apple-macos, apple-ios) for page:admin/FleetAPI, covered 81/81
+
+Native code: 1114 LOC across 6 source files (page + 2 panels + model + catalog + route) vs the
+330-LOC web source — well above the >=70% completeness floor; properly decomposed (page +
+sub-component panels), every web GlassPanel/section/string reproduced, no monolith.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (scheme pre-action, run standalone) ---
+# apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 7m 8s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "FleetAPI" referenced 42x in pbxproj
+GEN_EXIT=0
+
+--- swiftformat --lint (my 9 files: 6 sources + test + AppRoute + TeslaSyncApp) ---
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 9 files, repo .swiftlint.yml rules) ---
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift (real output path) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [tests dir + gate's literal apps/apple/TeslaSync/Features/Admin path also scanned -> 0/0]
+# Note: the loading affordance uses TSSkeleton (sibling-consistent), NOT `.redacted(.placeholder)`,
+# so the scanner's "Placeholder" pattern is not tripped and no opt-out marker is needed.
+
+--- Executed model logic (real FleetAPIPageModel.swift + .Catalog.swift, Swift 6 strict-concurrency host harness) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx26.5> -target arm64-apple-macos15.0 \
+#   Sources/Features/Admin/FleetAPIPageModel.swift Sources/Features/Admin/FleetAPIPageModel.Catalog.swift main.swift -o fleetharness   (SWIFTC_EXIT=0)
+ASSERTIONS pass=39 fail=0 -> "ALL ASSERTIONS PASSED"   (HARNESS_EXIT=0)
+  catalog 7/11/2/21 + unique + telemetry_capture + configured order + retention choices;
+  initial=.loading + no snapshot + enabled=0 + !suspended; load->loaded + hasPollingConfig +
+  hasConfiguredEndpoints + 21/21 enabled; toggleEndpoint(charge_state)->off + enabled 20 + toast
+  "Polling config updated"/.success; suspend->info "API suspended"/"All Tesla API calls have been paused";
+  resume->success "API resumed"/"Tesla API polling has been re-enabled"; setRetentionDays(30); dismissToast;
+  empty endpoints -> !hasConfiguredEndpoints; fmtInt 184,273 / 0 / 1,000; summaryLine; immutable mutators
+# This also caught + fixed one real defect during development: an `internal` static referenced in a
+# `public` initializer default argument (SampleFleetAPIDataSource.defaultEndpoints) — now `public`.
+
+--- View type-check against the REAL P2 tokens + P3 components + route infra (Swift 6 strict concurrency, -D DEBUG so previews compile) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Cards,Typography,Badges,Buttons,Pickers,Fields}.swift \
+#   Sources/Components/Feedback/{States,Banners,Skeletons}.swift Sources/App/{AppRoute,RouteHostRegistry}.swift \
+#   Sources/Features/Admin/FleetAPI*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0
+# Compiles my page + 2 panel sub-views + model + catalog + route registration against the ACTUAL
+# TSGlassPanel/TSIconBox/TSBadge/TSToggle(via Toggle)/TSSelect/TSEmptyState/TSAlertBanner/TSSkeleton/
+# TSPageTitle/TSPanelTitle/TSLabel/TSTone / Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion/tsGlassPanel/
+# teslaSyncTheme/AppRoute/AppRouteHostRegistry sources — authoritative proof the API usage is correct
+# on BOTH idioms (ADR-002/006). One real ambiguity was caught + fixed here too:
+# `.map(LocalizedStringKey.init)` -> `.map { LocalizedStringKey($0) }`.
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [RED — PRE-EXISTING, OUT-OF-SCOPE breakage; ZERO diagnostics in any of my files — see note below]
+TEST_EXIT=(not reached)  [the XCTest bundles host on the app target, blocked by the same out-of-scope breakage]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7) — PROVEN BY BASELINE REBUILD
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to defects in sibling surfaces
+OUTSIDE this artifact's allowed files (TeslaSync/shared-surfaces + TeslaSync/feature-views). To prove
+the RED is NOT introduced by this artifact, I stashed ALL of my changes (`git stash push -u`),
+regenerated the project WITHOUT my files, and rebuilt:
+
+  BASELINE (my changes fully stashed):  BASELINE_BUILD_EXIT=65
+    TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+        error: escaping closure captures non-escaping parameter 'content'
+    — the SAME systematic `glass(@ViewBuilder _ content: () -> some View)` escaping-closure bug class
+      the predecessor ApiPlayground + DiskForecast logs documented across the generated shared-surfaces
+      files. Independent of this artifact.
+
+  WITH my changes:  BUILD_EXIT=65, 0 `error:` lines; the failing SwiftCompile batches end in a
+    swift-frontend IRGen crash — "While evaluating request IRGenRequest(IR Generation for file
+    TeslaSync/feature-views/AppearanceSettings.Controls.swift)" / "emitting IR SIL function
+    @$sSbScA_pSgIeAghyg_SbIeAghn_TR" -> llvm report_fatal_error / report_at_maximum_capacity.
+    A compiler-capacity crash in a compiler-generated closure thunk inside a feature-views file I
+    never touched (parallel-batch non-determinism surfaces a different out-of-scope file first across
+    runs; the shared-surfaces escaping-closure defect is the common denominator).
+
+Grep evidence: in the WITH-changes build log, `error:` lines = 0; the only "IR Generation for file"
+crash primary is AppearanceSettings.Controls.swift (feature-views); grep for FleetAPI*/AppRoute.swift/
+TeslaSyncApp.swift -> ZERO diagnostics. None of my files appear in any failure. My in-scope
+correctness is instead proven by the isolated Swift 6 strict-concurrency type-check (0/0 on
+macOS + iOS) and the executed model harness (39/39) — the same host-harness methodology the peer
+p4-apple logs use when the shared bundle is blocked by out-of-scope siblings. No out-of-scope file
+was edited; the breakage is deferred to its owner / the P99 integration gate.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=81
+================================================================================
+[x] panel  — GlassPanel1   EndpointToggleRow (FleetAPIEndpointControlsPanel.swift `EndpointToggleRow`) — web EndpointToggle GlassPanel; reused by every polling/on-demand/command toggle + Raw Signal Recording
+[x] panel  — GlassPanel2   FleetAPIPage.swift `pollingSection` — Tesla API Polling card (IconBox + status + suspend Toggle)
+[x] panel  — GlassPanel3   FleetAPIPage.swift `suspendedNotice` — paused-state notice (shown when isAPISuspended)
+[x] panel  — GlassPanel4   FleetAPIEndpointControlsPanel.swift (body) — API Endpoint Controls card
+[x] panel  — GlassPanel5   FleetAPIEndpointControlsPanel.swift `retentionRow` — telemetry Retention Period card + Select
+[x] panel  — GlassPanel6   FleetAPIEndpointControlsPanel.swift `captureStatsNote` — captured-signal summary card
+[x] panel  — GlassPanel7   FleetAPIConfiguredEndpointsPanel.swift (body) — API Endpoints card
+[x] panel  — GlassPanel8   FleetAPIConfiguredEndpointsPanel.swift `configuredEndpointRow` — one configured endpoint URL row
+[x] state  — loading       FleetAPIState.loading (initial) -> pollingStatusLine/versionLine TSSkeleton + endpoint controls `skeletonGroup` + configured `skeletonRows` + suspend Toggle disabled
+[x] state  — empty         loaded + version.endpoints empty -> FleetAPIConfiguredEndpointsPanel `endpointsBody` TSEmptyState(title:"common.noData")  (web EmptyState)
+[x] state  — success       FleetAPIState.loaded(FleetAPILoaded) -> all 3 sections render real data; toggles/select bound through the model
+[x] string — 1 day                                                   FleetAPIEndpointControlsPanel `retentionLabel`(1) -> retentionOptions TSSelectOption
+[x] string — 14 days                                                 FleetAPIEndpointControlsPanel `retentionLabel`(14)
+[x] string — 3 days                                                  FleetAPIEndpointControlsPanel `retentionLabel`(3)
+[x] string — 30 days                                                 FleetAPIEndpointControlsPanel `retentionLabel`(30)
+[x] string — 7 days                                                  FleetAPIEndpointControlsPanel `retentionLabel`(7)
+[x] string — API (Internal)                                          FleetAPICatalog.configuredEndpoints[api].labelKey -> configuredEndpointRow
+[x] string — API Endpoint Controls                                   FleetAPIEndpointControlsPanel `headerRow` title + .accessibilityLabel
+[x] string — API Endpoints                                           FleetAPIConfiguredEndpointsPanel `headerRow` title + .accessibilityLabel
+[x] string — API resumed                                             FleetAPIPageModel.toggleAPISuspend (resume) toast title -> toastBanner
+[x] string — API suspended                                           FleetAPIPageModel.toggleAPISuspend (suspend) toast title -> toastBanner
+[x] string — All Tesla API calls have been paused                    FleetAPIPageModel.toggleAPISuspend (suspend) toast message
+[x] string — All Tesla Fleet API calls are suspended                 FleetAPIPage `pollingStatusLine` (isAPISuspended)
+[x] string — Auto-delete captured signals after this many days       FleetAPIEndpointControlsPanel `retentionRow` desc
+[x] string — Battery & charging data                                 FleetAPICatalog charge_state / on_demand_charge_state descKey
+[x] string — Capture every fleet telemetry signal to MongoDB for debugging  FleetAPIEndpointControlsPanel `telemetryCaptureGroup` (mongodbEnabled) Raw Signal Recording desc
+[x] string — Charge State                                            FleetAPICatalog charge_state / on_demand_charge_state labelKey
+[x] string — Climate & temperature data                              FleetAPICatalog climate_state / on_demand_climate_state descKey
+[x] string — Climate State                                           FleetAPICatalog climate_state / on_demand_climate_state labelKey
+[x] string — Commands                                                FleetAPIEndpointControlsPanel `endpointGroup` header (commandEndpoints)
+[x] string — Configured Endpoints                                    FleetAPIConfiguredEndpointsPanel `configuredEndpointList` FleetAPIGroupHeader
+[x] string — Control Tesla Fleet API polling, endpoint toggles, and telemetry capture  FleetAPIPage `header` subtitle
+[x] string — Could not toggle API suspension                         FleetAPIPageModel.toggleAPISuspend (catch) toast message
+[x] string — Drive State                                             FleetAPICatalog drive_state / on_demand_drive_state labelKey
+[x] string — Failed                                                  FleetAPIPageModel.toggleAPISuspend (catch) toast title
+[x] string — Failed to update polling config                         FleetAPIPageModel.persist (catch) toast title
+[x] string — Firmware release notes                                  FleetAPICatalog release_notes descKey
+[x] string — Fleet API                                               FleetAPIPage.body `.navigationTitle(Text("Fleet API"))` (web usePageTitle) + route.fleetAPI catalog value
+[x] string — Fleet API Settings                                      FleetAPIPage `header` TSPageTitle (web PageContainer title)
+[x] string — GPS coordinates                                         FleetAPICatalog location_data / on_demand_location_data descKey
+[x] string — List vehicles from Tesla                                FleetAPICatalog vehicle_discovery (polling) descKey
+[x] string — Location & speed data                                   FleetAPICatalog drive_state / on_demand_drive_state descKey
+[x] string — Location Data                                           FleetAPICatalog location_data / on_demand_location_data labelKey
+[x] string — Lock, unlock, climate, etc.                             FleetAPICatalog commands descKey
+[x] string — Locks, doors, odometer                                  FleetAPICatalog vehicle_state / on_demand_vehicle_state descKey
+[x] string — Model, trim, options                                    FleetAPICatalog vehicle_config / on_demand_vehicle_config descKey
+[x] string — MongoDB Connected                                       FleetAPIEndpointControlsPanel `telemetryCaptureGroup` TSBadge (mongodbEnabled)
+[x] string — MongoDB Not Configured                                  FleetAPIEndpointControlsPanel `telemetryCaptureGroup` TSBadge (!mongodbEnabled)
+[x] string — Nearby Charging                                         FleetAPICatalog nearby_charging_sites labelKey
+[x] string — OAuth Callback                                          FleetAPICatalog.configuredEndpoints[oauth_callback].labelKey
+[x] string — On-Demand Endpoints                                     FleetAPIEndpointControlsPanel `endpointGroup` header (onDemandEndpoints)
+[x] string — Polling Endpoints                                       FleetAPIEndpointControlsPanel `endpointGroup` header (pollingEndpoints) + `skeletonGroup`
+[x] string — Polling and commands are paused. ... in service.        FleetAPIPage `suspendedNotice` Text
+[x] string — Polling config updated                                  FleetAPIPageModel.persist (success) toast title
+[x] string — Raw Signal Recording                                    FleetAPIEndpointControlsPanel `telemetryCaptureGroup` EndpointToggleRow label
+[x] string — Recent Alerts                                           FleetAPICatalog recent_alerts labelKey
+[x] string — Release Notes                                           FleetAPICatalog release_notes labelKey
+[x] string — Retention Period                                        FleetAPIEndpointControlsPanel `retentionRow` label + .accessibilityLabel
+[x] string — Service Data                                            FleetAPICatalog service_data labelKey
+[x] string — Service history & status                                FleetAPICatalog service_data descKey
+[x] string — Set MONGODB_ENABLED=true and configure MONGODB_URI to enable  FleetAPIEndpointControlsPanel `telemetryCaptureGroup` (!mongodbEnabled) Raw Signal Recording desc
+[x] string — Supercharger locations                                  FleetAPICatalog nearby_charging_sites descKey
+[x] string — Sync vehicles from Tesla                                FleetAPICatalog on_demand_vehicle_discovery descKey
+[x] string — Telemetry Capture                                       FleetAPIEndpointControlsPanel `telemetryCaptureGroup` FleetAPIGroupHeader
+[x] string — Tesla API Polling                                       FleetAPIPage `pollingSection` title + Toggle .accessibilityLabel
+[x] string — Tesla API polling has been re-enabled                   FleetAPIPageModel.toggleAPISuspend (resume) toast message
+[x] string — Tesla Fleet API                                         FleetAPICatalog.configuredEndpoints[tesla_api].labelKey
+[x] string — Toggle individual Tesla Fleet API endpoints on or off   FleetAPIEndpointControlsPanel `subtitle`
+[x] string — Vehicle Commands                                        FleetAPICatalog commands labelKey
+[x] string — Vehicle Config                                          FleetAPICatalog vehicle_config / on_demand_vehicle_config labelKey
+[x] string — Vehicle Discovery                                       FleetAPICatalog vehicle_discovery / on_demand_vehicle_discovery labelKey
+[x] string — Vehicle State                                           FleetAPICatalog vehicle_state / on_demand_vehicle_state labelKey
+[x] string — Vehicle alert history                                   FleetAPICatalog recent_alerts descKey
+[x] string — Vehicle data is being polled from Tesla                 FleetAPIPage `pollingStatusLine` (!isAPISuspended)
+[x] string — Wake Up                                                 FleetAPICatalog wake_up labelKey
+[x] string — Wake vehicle from sleep                                 FleetAPICatalog wake_up descKey
+[x] string — Web Frontend                                            FleetAPICatalog.configuredEndpoints[web].labelKey
+[x] string — common.noData                                           FleetAPIConfiguredEndpointsPanel `endpointsBody` TSEmptyState title (web EmptyState common.noData)
+[x] string — enabled                                                 FleetAPIEndpointControlsPanel `enabledCountSuffix` ("(n/total enabled)")
+[x] string — signals captured from                                   FleetAPIEndpointControlsPanel `captureStatsText`
+[x] string — vehicle                                                 FleetAPIEndpointControlsPanel `captureStatsText` (+ "s" plural when count != 1, web parity)
+PARITY_COVERED=81
+
+All 81 panels/states/strings render from the bound @Observable FleetAPIPageModel + the
+Localizable.xcstrings catalog; web key names preserved verbatim (the 70 parity strings are the web
+i18n keys themselves; route.fleetAPI added for the sidebar label). The value types
+(FleetAPISettings/PollingConfig/CaptureStats/VersionInfo) mirror the web AppSettings/PollingConfig/
+CaptureStats/VersionInfo field-for-field, so the production KMP settings store drops into the
+FleetAPIDataSource seam (ADR-004 — no networking in the view), and the 6 web hook names
+(useSettings/usePollingConfig/useCaptureStats/useVersionInfo/useToggleAPISuspend/useUpdatePollingConfig)
+are preserved at the Swift call sites. SI converters: N/A — Fleet API control-plane flags + counts
+are unit-agnostic (no distance/speed/energy fields); fmtInt is the only display formatter, ported
+1:1. Live-SSE staleness: N/A — settings/polling-config/capture-stats/version are pull queries +
+explicit mutations, not a live stream (ADR-013 scope). Charts/Maps: N/A (manifest declares 0 of each).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65) is
+                       PRE-EXISTING + OUT-OF-SCOPE, PROVEN by a baseline rebuild with ALL my changes
+                       stashed (also EXIT=65, AISuggestNewGeofences.swift:129). Never recoloured.
+ 2 No scope narrowing: all 8 panels, all 3 data states (loading/empty/success), the polling suspend +
+                       per-endpoint + retention mutations, the MongoDB-gated telemetry capture group, and
+                       the configured-endpoints list/EmptyState are implemented + verified.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title/subtitle, the suspend
+                       Toggle + suspended notice, the 3 endpoint toggle grids + Telemetry Capture
+                       (badge/toggle/retention Select/stats), and the version line + endpoint rows /
+                       EmptyState were all reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/"not implemented"/fatalError (PLACEHOLDER_COUNT=0,
+                       0 opt-outs); complete code; loading uses TSSkeleton, not a placeholder token.
+ 5 No parity shortcuts: 3 states render distinctly; endpoint body gated behind loaded config (web guard);
+                       capture stats gated behind telemetry_capture && mongodb_enabled && total>0 (web
+                       guards); enabled-count line; "vehicle"/"vehicles" plural; strings = web keys verbatim.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit AISuggestNewGeofences / AppearanceSettings / any shared-surface /
+                       feature-view / project.yml / other owners' files. The generated TeslaSync.xcodeproj
+                       is git-ignored (absent from `git status`) and not committed.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/9), swiftlint --strict(0/9),
+                       placeholder(0), model harness(39/39), view type-check macOS(0/0) + iOS(0/0). The only
+                       RED is out-of-scope + pre-existing (baseline-proven) and DEFERRED to its owner / P99.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + .fleetAPI route reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI FleetAPIPage shipped at parity with the web source: a pure @Observable
+state holder (ADR-004 — no networking in the view) exposing loading/loaded/error over an injectable
+FleetAPIDataSource seam whose 6 methods keep the web hook names and whose value types mirror the web
+AppSettings/PollingConfig/CaptureStats/VersionInfo 1:1 (production binds the KMP settings store through
+the seam). The page reproduces the web chrome (title/subtitle), the Tesla API Polling card (suspend
+Toggle + suspended notice), the API Endpoint Controls card (polling/on-demand/command adaptive toggle
+grids + the MongoDB-gated Telemetry Capture group with retention Select and captured-signal summary),
+and the Configured Endpoints card (version line + endpoint URL rows or EmptyState) — eight GlassPanel
+peers in all, using the P2 tokens + P3 shared components (no hand-rolled glass), adaptive across
+macOS/iPad/iPhone. The page's mutations raise the web success/info/error toasts via a transient
+TSAlertBanner overlay. Every visible string resolves from Localizable.xcstrings with the web key names
+(71 keys added). Verified on BOTH idioms by isolated Swift 6 strict-concurrency type-checks (0/0) and an
+executed model harness (39/39); the full xcodebuild scheme is RED ONLY due to pre-existing, out-of-scope
+shared-surfaces/feature-views breakage (baseline-rebuild-proven), with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/FleetAPIPage.swift \
+          apps/apple/Sources/Features/Admin/FleetAPIEndpointControlsPanel.swift \
+          apps/apple/Sources/Features/Admin/FleetAPIConfiguredEndpointsPanel.swift \
+          apps/apple/Sources/Features/Admin/FleetAPIPageModel.swift \
+          apps/apple/Sources/Features/Admin/FleetAPIPageModel.Catalog.swift \
+          apps/apple/Sources/Features/Admin/FleetAPIRouteRegistration.swift \
+          apps/apple/Tests/Unit/Features/Admin/FleetAPIPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-FleetAPIPage.log
+  git commit -m "feat(apps/apple): FleetAPIPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,218 @@
+================================================================================
+p4-apple · P7 · page:settings/Privacy  —  PrivacyPage (SwiftUI / HIG)
+================================================================================
+Web source : web/src/features/settings/pages/PrivacyPage.tsx  (route /account/privacy)
+Parity unit: page:settings/Privacy   (kind=page)   PARITY_REQUIRED=2
+Idioms     : apple-macos + apple-ios (adaptive, ADR-002/006)
+Date       : 2026-06-16
+Runner     : macOS 26 (Darwin) · Xcode 26.5 (17F42) · Swift 6.3.2 · xcodegen + swiftlint
+             + swiftformat + pwsh present → Xcode runner AVAILABLE (not BLOCKED).
+
+--------------------------------------------------------------------------------
+0. TARGET-PATH ADAPTATION (no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt names `apps/apple/TeslaSync/Features/Settings/PrivacyPage.swift`.
+That directory is NOT a source group in the XcodeGen spec (apps/apple/project.yml);
+the repo's real layout — established by every prior P7 page — homes routed pages under
+`apps/apple/Sources/Features/<domain>/` (auto-globbed by the `Sources` path) and their
+co-located model tests under `apps/apple/Tests/Unit/Features/<domain>/`. This is the
+SAME adaptation the sibling DLQInspector P7 made (generated `TeslaSync/Features/Admin/…`
+→ shipped `apps/apple/Sources/Features/Admin/…`, see its log COMMIT block). I followed
+that precedent so the file actually compiles into the build:
+
+   PrivacyPage.swift              → apps/apple/Sources/Features/Settings/
+   PrivacyRouteRegistration.swift → apps/apple/Sources/Features/Settings/
+   PrivacyPageTests.swift         → apps/apple/Tests/Unit/Features/Settings/
+
+The placeholder + lint gates were therefore run against the REAL path
+`apps/apple/Sources/Features/Settings` (the prompt's literal `TeslaSync/Features/Settings`
+does not exist). No project.yml edit was needed — `Sources/**` + `Tests/Unit/**` are
+already recursive source globs.
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURE — thin page shell over the already-built PrivacySection
+--------------------------------------------------------------------------------
+The web PrivacyPage is a thin `PageContainer` (title + subtitle + copyLink) wrapping the
+shared `<PrivacySection />`. The native PrivacySection component ALREADY EXISTS, fully
+built + unit-tested, at apps/apple/TeslaSync/feature-views/PrivacySection.* (10 files,
+~1934 LOC: PrivacyModel + 4 P1/S8 seams, recent-pages clear flow w/ confirm sheet + silence
+opt-in, tri-state cookie/analytics consent, success toast, loading/stale/offline states).
+So — exactly like the sibling TeslaRegionPage wraps RegionSettings — PrivacyPage is the
+routed PageContainer shell that:
+  • renders the web page title + subtitle (the 2 parity strings),
+  • renders a HIG-native "Copy link" affordance (web PageContainer `copyLink`) — a TSButton
+    writing the canonical deep link to UIPasteboard/NSPasteboard, flipping to "Copied" for
+    2s, reusing the shared translation.common.copyLink.* catalog keys,
+  • embeds PrivacySection(model:), which owns ALL panels/regions + every data state,
+  • binds an @Observable PrivacyModel (built over the 4 in-memory P1/S8 seams in the route
+    registration; production injects the real /system/version + recents + consent seams).
+Adaptive: a leading-aligned column in a ScrollView filling the macOS/iPad regular width and
+the iPhone compact width alike; the embedded section reflows its rows + consent cluster.
+No networking/business logic in the view. Units: the surface renders only browser-local
+toggles/counters (no SI quantities) → no unit conversion applies (P1/S5 boundary unused).
+
+Data states: the manifest declares 0 API data sources ("renders from navigation values /
+local state"). PrivacySection nonetheless covers loading (skeleton until the consent policy
+first resolves) / ready / stale / offline + the empty-recents (clear disabled at 0) and each
+consent decision — never a blank region (ADR-011). No network loading/empty/error matrix is
+required because no async source is declared; nothing is gated behind `data && …`.
+
+--------------------------------------------------------------------------------
+2. FILES CHANGED (in scope)
+--------------------------------------------------------------------------------
+ADDED:
+  apps/apple/Sources/Features/Settings/PrivacyPage.swift              (page shell + copy-link + previews)
+  apps/apple/Sources/Features/Settings/PrivacyRouteRegistration.swift (registers .privacy)
+  apps/apple/Tests/Unit/Features/Settings/PrivacyPageTests.swift      (14 assertions across 6 tests)
+NAV REGISTRATION:
+  apps/apple/Sources/App/AppRoute.swift          (+case .privacy: pathSegment account/privacy,
+                                                  systemImage hand.raised.fill, group .account)
+  apps/apple/Sources/App/AppRouteParser.swift    (+alias "/account/privacy" → .privacy)
+  apps/apple/Sources/TeslaSyncApp.swift          (+PrivacyRouteRegistration.registry(base:))
+STRING CATALOG (3 keys, additive +69/-0, JSON re-validated):
+  apps/apple/Localization/Localizable.xcstrings  (route.privacy,
+                                                  translation.account.privacy.title,
+                                                  translation.account.privacy.subtitle)
+LEDGER:
+  apps/parity/apple-ledger.json                  (+2 rows page:settings/Privacy, 2/2, done)
+INHERITED-BREAK UNBLOCK (see §4):
+  apps/apple/Tests/Unit/Features/Notifications/WebhooksPageModelTests.swift (+import SwiftUI)
+
+The 23 other translation.privacy.* / translation.consent.* / translation.recentPages.* /
+translation.common.* keys the section renders were ALREADY in the catalog (web i18n
+extraction); only the 3 above were missing and were added.
+
+================================================================================
+=== PARITY ===   PARITY_REQUIRED=2
+================================================================================
+[x] string — account.privacy.title
+      catalog : translation.account.privacy.title = "Privacy"
+      render  : Sources/Features/Settings/PrivacyPage.swift:56
+                TSPageTitle("translation.account.privacy.title")
+      test    : Tests/Unit/Features/Settings/PrivacyPageTests.swift (page binds PrivacyModel +
+                .privacy route; rendered as PageContainer title — mirrors TeslaRegionPage)
+[x] string — account.privacy.subtitle
+      catalog : translation.account.privacy.subtitle =
+                "Manage browser-local data: recently viewed pages and cookies / analytics consent."
+      render  : Sources/Features/Settings/PrivacyPage.swift:57
+                Text("translation.account.privacy.subtitle")
+
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+PARITY_OK=true   (PARITY_COVERED == PARITY_REQUIRED)
+
+================================================================================
+3. GATE RESULTS
+================================================================================
+# Scope note: the repo swiftlint config pins `included:` to the whole app, so
+# `swiftlint --strict <path>` lints the entire project regardless of the path arg;
+# results are reported below as IN-SCOPE (my files) vs INHERITED (pre-existing).
+
+PLACEHOLDER_EXIT=0
+  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Settings -Language swift
+    PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+  (Tests/Unit/Features/Settings also scanned → PLACEHOLDER_COUNT=0.) ZERO opt-outs in my files.
+
+FORMAT_EXIT=0  (in scope)
+  swiftformat --lint {my 7 touched .swift files} → "0/7 files require formatting."
+
+LINT (swiftlint --strict, whole project):
+  IN-SCOPE  : 0 violations across Sources/Features/Settings + Tests/Unit/Features/Settings
+              + AppRoute.swift + AppRouteParser.swift + TeslaSyncApp.swift.
+  INHERITED : 2 line_length violations in TeslaSync/feature-views/AnomalyInlineRow.Previews.swift
+              (L37=134, L89=127 chars) — untouched by me, present at HEAD. OUT OF SCOPE (§4).
+  LINT_EXIT_INSCOPE=0   LINT_EXIT_FULLPROJECT=2 (inherited only)
+
+BUILD (xcframework staged via Gradle :core:assembleSharedXCFramework, BUILD SUCCESSFUL 16m):
+  iOS   : xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 17 Pro' build
+            → TeslaSync.app compiled + linked, 0 errors.  BUILD_EXIT_iOS=0
+  macOS : xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS'
+            CODE_SIGNING_ALLOWED=NO build   (env has no dev cert; the .app's hardened-runtime
+            + app-group entitlements require signing to *package*, not to compile)
+            → full app compiled + linked, 0 Swift errors incl. the macOS-only `#elseif
+              os(macOS)` NSPasteboard branch the iOS SDK never sees.  BUILD_EXIT_macOS=0
+
+TEST:
+  IN-SCOPE (both idioms, isolated -only-testing): PrivacyPageTests + RouteTests
+     iOS   → Executed 14 tests, 0 failures.  ** TEST SUCCEEDED **
+     macOS → Executed 14 tests, 0 failures.  ** TEST SUCCEEDED **
+       PrivacyPageTests (6): testRegistersPrivacyRoute, testPreservesBaseRegistrations,
+         testRouteMetadataMatchesWeb, testCanonicalPathParsesToRoute,
+         testAccountRootStillResolvesToSettings, testSampleModelSeedsPopulatedState — all passed.
+       RouteTests (8, regression of the route invariants my new case touches) — all passed,
+         incl. testEveryRouteHasUniquePathSegment + testEveryRouteResolvesToItsGroup.
+       ExploreCatalogTests (route-derived hub) — all passed in the full run, incl.
+         testGroupPreservesCanonicalOrderAndSkipsEmpty / testGroupCoversEveryEntryExactlyOnce.
+  FULL-SUITE iOS (xcodebuild test, all bundles):
+     TeslaSyncUITests → passed.
+     TeslaSyncTests   → 1 failure, INHERITED, OUT OF SCOPE (§4): ToastCenterMutationBridgeTests
+       .testMutationFailedUsesLocalizedErrorDetail (Toast.Tests.swift:183, committed 2026-06-14).
+  TEST_EXIT_INSCOPE=0   TEST_EXIT_FULLSUITE=1 (inherited only)
+
+================================================================================
+4. INHERITED / OUT-OF-SCOPE breaks (NOT introduced by this prompt)
+================================================================================
+These pre-date this change, live OUTSIDE the parity unit's allowed files, and are
+DEFERRED to their owners / P99 (the DLQInspector P7 set the precedent of committing on
+all-GREEN in-scope gates while documenting inherited reds).
+
+(a) WebhooksPageModelTests.swift — missing `import SwiftUI` (uses LocalizedStringKey on
+    L13/L14). Committed by the sibling WebhooksPage P7 at 3bfe32c0e (2026-06-16 17:32),
+    untouched by me. This is a HARD COMPILE error in the SHARED TeslaSyncTests bundle: it
+    blocks the WHOLE bundle from compiling, so NO test — including my PrivacyPageTests —
+    can run until it is resolved. Because verifying my own work is impossible otherwise, I
+    applied the single minimal, unambiguous unblock: one `import SwiftUI` line. No behavior
+    change; the file's intent (compare LocalizedStringKey values) is unchanged. This is the
+    ONLY sibling file I touched and it is disclosed here in full (no silent drift).
+
+(b) ToastCenterMutationBridgeTests.testMutationFailedUsesLocalizedErrorDetail — asserts a
+    mutation-failure toast title equals the caller `fallback:"Failed to save"`, but the
+    ToastCenter impl resolves a generic localized "Something went wrong". Deterministic,
+    network-free, in TeslaSync/shared-surfaces/Toast.Tests.swift (committed 2026-06-14,
+    untouched by me). My catalog change is purely additive (+69/-0; none of my 3 keys are
+    toast keys) so it cannot affect this assertion → it fails at HEAD independently of my
+    work. The fix (impl-prefers-fallback vs test-expects-generic) is an ambiguous design
+    call owned by the Toast surface, not this Privacy page. NOT fixed — deferred.
+
+(c) AnomalyInlineRow.Previews.swift L37/L89 line_length — pre-existing at HEAD, a sibling
+    feature-view preview, unrelated to Privacy. NOT fixed — deferred.
+
+Distinction rationale: (a) was the minimum necessary to make ANY verification runnable and
+its fix is trivial+correct; (b)+(c) do not block verifying my work (my tests run + pass; my
+files lint+format clean), are ambiguous and/or unrelated, and are left to their owners.
+
+================================================================================
+5. HONESTY COVENANT (binding)
+================================================================================
+ 1 No red-as-green     : every gate's RAW result is recorded above. In-scope is GREEN;
+                         the 3 inherited reds (§4) are named, attributed to their commits,
+                         and explicitly NOT counted as my green.
+ 2 No scope narrowing  : the page reproduces the web PageContainer chrome (title + subtitle
+                         + copyLink) AND embeds the full PrivacySection (every GlassPanel /
+                         region: header, recent-pages row, consent row, confirm sheet, toast,
+                         status banner) — nothing dropped.
+ 3 No skip-and-assume  : web PrivacyPage.tsx + PrivacySection.tsx + PageContainer/CopyLinkButton
+                         read end-to-end; the existing native PrivacySection (10 files) + its
+                         PrivacyModel/seams read end-to-end before wiring.
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0, zero opt-outs in my files; the copy-link control
+                         is a real cross-platform pasteboard write, not a no-op.
+ 5 No parity shortcuts : both parity strings resolve from Localizable.xcstrings with the web
+                         key names (translation.account.privacy.title/subtitle); copyLink reuses
+                         the shared translation.common.copyLink.* keys; route maps /account/privacy.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: built ON the existing PrivacySection + AppRouteHostRegistry; did not
+                         re-implement or fork them. The one sibling edit (4a) is a disclosed
+                         compile-unblock, not a bypass of my own work.
+ 8 No commit on red    : committing with ALL IN-SCOPE gates GREEN on BOTH idioms (placeholder,
+                         swiftformat, in-scope swiftlint, iOS+macOS app build, iOS+macOS
+                         PrivacyPageTests+RouteTests 14/14) and PARITY_COVERED==PARITY_REQUIRED.
+                         The only reds are the inherited out-of-scope items in §4.
+ 9 No silent drift     : changes confined to the files in §2 + this log + the ledger. The
+                         xcstrings edit is additive (3 keys after the "strings" opener; JSON
+                         re-validated; +69/-0). The single sibling unblock (4a) is disclosed.
+10 EXIT/STATUS below.
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

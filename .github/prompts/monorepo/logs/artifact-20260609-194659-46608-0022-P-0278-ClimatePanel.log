@@ -1,0 +1,174 @@
+=== P4 Feature view 0278 ClimatePanel (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ClimatePanel.*
+Web src  : web/src/features/vehicles/components/telemetry-panels/ClimatePanel.tsx
+Host     : macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint+swiftformat+xcodegen+pwsh+java17
+Date     : 2026-06-09
+
+--------------------------------------------------------------------------------
+0. NAMING NOTE (no silent drift)
+--------------------------------------------------------------------------------
+The `ClimatePanel*` Swift type namespace is already owned by the existing
+dashboard-widget `TeslaSync/dashboard-widgets/ClimateControlPanelWidget.*`
+(ClimatePanelModel, ClimatePanelProjection, ClimatePanelTemperatureUnit,
+ClimatePanelSource, ClimatePanelStrings, ClimatePanelAccessibility, …) in the
+SAME `TeslaSync` module. To stay collision-free this surface prefixes every public
+type with `CabinClimate*` (View `CabinClimatePanel`). The file names remain
+`ClimatePanel.*` (allowed-files + commit scope) and the P1/S11 diagnostics surface
+slug remains the literal "ClimatePanel" (CabinClimateSurface.slug).
+
+Files shipped (9):
+  ClimatePanel.swift            — the surface View (FadeIn + GlassPanel + header + body)
+  ClimatePanel.Adapter.swift    — snapshot, temp unit + SI convert, formatter, chip value types
+  ClimatePanel.Projector.swift  — projection + builder, phase, freshness chip, accessibility
+  ClimatePanel.Model.swift      — telemetry seam, outcome, source seam, @Observable model, i18n facade
+  ClimatePanel.Views.swift      — header, body, content, metric tiles, rows, fan gauge, status chip
+  ClimatePanel.StateViews.swift — flow layout, skeleton, stale/offline banner, error, empty
+  ClimatePanel.Previews.swift   — 7 previews (loading/loaded/loaded°F/empty/error/stale/offline)
+  ClimatePanel.strings          — P1/S10 i18n catalog (web parity keys + native chrome)
+  ClimatePanel.Tests.swift      — adapter + projection + accessibility + model tests
+
+--------------------------------------------------------------------------------
+1. GATE COMMANDS (as specified in the prompt) — real results
+--------------------------------------------------------------------------------
+[1a] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     Pre-action build-shared-xcframework.sh : Gradle :core:assembleSharedXCFramework
+       => BUILD SUCCESSFUL in 6m12s ; GRADLE_EXIT=0 ; Shared.xcframework staged
+          (ios-arm64 + ios-arm64-simulator + macos-arm64). NOTE: predecessors recorded
+          this as the long-pole that timed out at 150s; here it was run to completion.
+     App build => ** TEST FAILED ** (Testing cancelled because the build failed)
+     IOS_EXIT=65
+     Root cause (PRE-EXISTING, NOT this surface): duplicate cross-surface type
+       definitions make these ambiguous for type lookup —
+         StateTimelineModel / StateTimelineUpdate / StateTimelineConnection /
+         StateTimelineLoadStatus
+       are each declared in BOTH
+         apps/apple/TeslaSync/feature-views/StateTimeline.Model.swift
+         apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+       (a parallel-merge collision of the same class documented in
+        apps/macos-pending-verifications.md for DashboardWidgetSize / ChargingProjection).
+       The cascading "Cannot infer contextual base in reference to member
+       'offline'/'loading'/'loaded'/'failed'/'stale'" errors all originate there.
+     ClimatePanel error count in the full iOS build:  0   (grep 'error:' | grep ClimatePanel)
+
+[1b] xcodebuild -scheme TeslaSync-macOS build test
+     App build => ** TEST FAILED **
+     MAC_EXIT=65
+     Root cause (ENVIRONMENT, NOT this surface): code-signing.
+         error: "TeslaSync-macOS" has entitlements that require signing with a
+                development certificate.
+         error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+                development certificate.
+       `security find-identity -p codesigning` => 0 valid identities found.
+     ClimatePanel error count in the full macOS build: 0
+
+[1c] swiftlint --strict   (this surface's 8 .swift files)
+     => Done linting! Found 0 violations, 0 serious in 8 files.   LINT_EXIT=0
+     (Tree-wide `swiftlint --strict` over all 2300+ surfaces is NOT asserted here; it
+      includes pre-existing non-ClimatePanel issues outside the allowed-files scope.)
+
+[1d] swiftformat --lint   (this surface's 8 .swift files)
+     => 0/8 files require formatting.                              FORMAT_EXIT=0
+
+[1e] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ClimatePanel -Language swift
+     => PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0       PLACEHOLDER_EXIT=0
+     (Also scanned each of the 8 .swift files individually: PLACEHOLDER_COUNT=0 each.)
+
+--------------------------------------------------------------------------------
+2. SURFACE VERIFIED GREEN — host-runnable, ClimatePanel-scoped evidence
+--------------------------------------------------------------------------------
+[2a] Real iOS-18 typecheck (Swift 6, strict concurrency = complete), compiled against
+     the REAL generated apps/design/generated/apple/Tokens.swift + the shared
+     Sources/Design + Sources/Components it uses:
+       xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+         -target arm64-apple-ios18.0-simulator <41 shared files> <7 ClimatePanel src>
+       => IOS_TYPECHECK_EXIT=0   (0 errors, 0 warnings)
+
+[2b] Real macOS-15 typecheck (Swift 6, strict concurrency = complete):
+       xcrun --sdk macosx swiftc -typecheck -swift-version 6 \
+         -target arm64-apple-macos15.0 <41 shared files> <7 ClimatePanel src>
+       => MAC_TYPECHECK_EXIT=0   (0 errors, 0 warnings)
+
+[2c] Isolated SwiftPM test run (module named TeslaSync so the co-located
+     `@testable import TeslaSync` compiles unchanged; pure Adapter+Projector+Model):
+       swift test  (swift-tools 6.0, .macOS(.v15))
+       => Executed 35 tests, with 0 failures (0 unexpected).
+       Coverage: SI temp convert (celsius identity / 9·5+32 / negative crossover /
+         nil+non-finite -> nil), formatTemperature parity (1-decimal, grouped,
+         no-space unit, em dash), fan gauge (raw value + six-bar ramp + saturate +
+         default-0), HVAC-state em-dash fallback, the three pills (defrost raw-mode +
+         info tone, climate on/off + success, precondition on/off + warning + no glyph,
+         source order), freshness-chip projection, VoiceOver chip/fan/summary builders,
+         and the full model lifecycle (loading/loaded/empty/failed, offline-keeps-cache,
+         offline-without-cache, stale window, reloadIfStale, fetch re-entrancy guard,
+         view.opened-once telemetry).
+
+[2d] xcodegen generate  => Created TeslaSync.xcodeproj ; all 9 ClimatePanel.* files
+     enumerated into the iOS + macOS app and test targets (9 fileRefs each).
+
+[2e] Proof the surface itself is clean inside the full app compile:
+       grep 'error:' ios_gate.log | grep ClimatePanel   => 0
+       grep 'error:' mac_gate.log | grep ClimatePanel   => 0
+
+--------------------------------------------------------------------------------
+3. PARITY (web ClimatePanel.tsx -> native), states, i18n
+--------------------------------------------------------------------------------
+Data sources : useTranslation -> CabinClimateStrings (P1/S10) ;
+               useUnits        -> CabinClimateUnitContext + pure SI temp converter/formatter
+                                  (display-boundary only; DB/API stay SI per Phase-42).
+Shared comps : @/components/ui (TSGlassPanel, TSCard, TSButton),
+               @/components/data-display (TSMetricValue tiles),
+               @/components/feedback (TSEmptyState, TSQueryError, TSSkeleton).
+Charts/maps  : none (web source has none).
+Sections     : Cabin + Outside temps (MetricCard), Driver/Passenger setpoint rows,
+               HVAC State row, Fan Speed gauge (six ramp bars + value),
+               Defrost / Climate / Precondition pills (flow-wrapped).
+States (all render): loading (skeleton), loaded, empty ("No climate data available"),
+               error (QueryError + retry), stale (chip + banner + auto-refresh),
+               offline (cached value + offline chip/banner).
+Accessibility: VoiceOver labels on every tile/row/gauge/pill + a panel summary;
+               Dynamic Type via tokenized fonts; Reduce Motion honored by TSFadeIn.
+Telemetry    : view.opened emitted once with surface slug "ClimatePanel" (P1/S11).
+i18n keys (web parity, in ClimatePanel.strings table "ClimatePanel"):
+  common.climate, common.insideTemp, common.outsideTemp, telemetry.driverSetpoint,
+  telemetry.passengerSetpoint, telemetry.hvacState, telemetry.fanSpeed,
+  telemetry.defrost, telemetry.climate, telemetry.precondition, common.on, common.off,
+  telemetry.noClimateData
+  (+ native chrome: telemetry.climate.{live,stale,offline,staleBanner,offlineBanner,
+   refresh,loading,errorTitle,errorMessage,level}). No English literals in code;
+   every fallback mirrors the web t(key, default) second argument.
+
+--------------------------------------------------------------------------------
+4. BLOCKERS (outside the allowed-files scope: ClimatePanel.* + this log)
+--------------------------------------------------------------------------------
+B1 (iOS build): pre-existing duplicate type definitions StateTimeline{Model,Update,
+   Connection,LoadStatus} across StateTimeline.Model.swift (feature-views) and
+   StateTimelineWidget.Model.swift (dashboard-widgets) -> "ambiguous for type lookup".
+   Not a ClimatePanel file; cannot be fixed within the allowed scope.
+B2 (macOS build): 0 valid code-signing identities on this host + macOS app/widget
+   entitlements requiring a development certificate. Environmental.
+Both are the exact macOS-runner-deferred conditions tracked in
+apps/macos-pending-verifications.md for the prior P4 surfaces; resolved by the
+p4-apple/P99-0001 acceptance gate on a macos-latest runner with signing identities
+(and once the StateTimeline parallel-merge collision is de-duplicated by its owner).
+
+--------------------------------------------------------------------------------
+5. SUMMARY
+--------------------------------------------------------------------------------
+This surface (ClimatePanel.*) is verified GREEN on every host-runnable, in-scope gate:
+  iOS-18 typecheck=0, macOS-15 typecheck=0, isolated tests 35/35, swiftlint 0,
+  swiftformat 0, placeholder 0, xcodegen enumerates 9 files, and 0 ClimatePanel
+  errors inside both full-app compiles. The full-app `xcodebuild build test` for both
+  platforms is BLOCKED by pre-existing cross-surface collisions (iOS) and missing
+  code-signing identities (macOS), neither of which is a ClimatePanel file or within
+  the allowed-files scope. No red was reported as green; no stubs; full parity.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+ISOLATED_TESTS=35/35
+EXIT=65
+STATUS=BLOCKED

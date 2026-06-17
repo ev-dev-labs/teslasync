@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and understanding the task. Let me look at the key files in parallel.
+
+Let me explore the apple app structure and the web components I need to port.
+
+Now let me look at the web components I need to port and the existing Notifications feature pages for patterns.
+
+The web panel is large. Let me check the parity manifest to understand the exact scope, and look at existing apple patterns (ChannelsPage as a simple example, and the parity manifest record).
+
+Let me read the manifest record for this page and check if the child feature-views (QuietHoursPanel, AIQuietHoursSuggestion) exist as parity units and in the apple app.
+
+Both child components already exist as their own parity units (`feature-views/QuietHoursPanel.swift`, `shared-surfaces/AIQuietHoursSuggestion.swift`). This page is a thin wrapper that composes them with the seed hand-off, like `ChannelsPage`. Let me study the existing components, route registration, and page model patterns.
+
+Now I need to understand the seed/draft hand-off mechanism between the two models. Let me read the model files.
+
+Now I understand the seed hand-off uses `onApply: (QuietHoursWindowPatch) -> Void`. Let me find how the panel model accepts a seed/patch (the `seedDraft` parity) and check the `QuietHoursWindowPatch` type.
+
+Let me look at the `QuietHoursWindowPatch` type, the `QuietHoursDraft`, and check whether the panel model already exposes a seed method for the patch hand-off.
+
+Let me check the web panel's `seedDraft` consumption logic and existing apple page-model patterns (like ChannelsPageModel's siblings) plus the AlertRules route registration for the nav pattern.
+
+I now understand the seed hand-off. Let me find the sample sources for both child models and the navigation wiring pattern. Reading several files in parallel.
+
+Now let me find the navigation host wiring, the page scaffold/header pattern, and the string catalog. Several parallel checks.
+
+Destinations aren't centrally registered yet (each page ships its own registration file). Let me check the nav host pattern, verify the Channels strings exist in the catalog (precedent), and find the header components.
+
+Let me locate the shared components properly using the grep tool (parallel searches).
+
+`TSPageTitle`/`TSFadeIn` live in `Sources/Components`. I need to understand the module/target structure to know imports and internal-access boundaries. Let me read `project.yml`.
+
+One module (`TeslaSync`) compiles everything, so my new file can set the panel model's `internal(set)` `draft` and call internal `recomputePhase()`. Now let me check the toolchain availability (decides DONE vs BLOCKED) and read the header components + route parser.
+
+Toolchain is fully available (Xcode 26.5, xcodegen, swiftlint, pwsh) — so the gate can run and I target `STATUS=DONE`. Now let me read the source seams for both models and the route parser to build the page model correctly.
+
+I have the seam details. Let me verify the `TSPageTitle` signature, the route parser mapping, and check for any `QuietHoursPage` symbol collision in `Sources/Notifications/Routing/QuietHours.swift`.
+
+Key finding: there are two notification page patterns. My Output path (`TeslaSync/Features/Notifications/`) matches the `ChannelsPage`/`AlertRulesPage` pattern (typed `NavigationDestination` + `…RouteRegistration`), so I'll follow that. Let me verify no symbol collisions and confirm remaining tokens/enums.
+
+All dependencies confirmed. Let me set up a task plan and todos, then implement.
+
+Let me check the ledger entry, an existing sibling log for format, and the `QuietHoursLoadStatus` enum.
+
+Let me read the full ChannelsPage log to match its exact format for my log.
+
+Let me read the tail of the ChannelsPage log to see its final EXIT/STATUS and confirm the methodology.
+
+I now have the complete established methodology from the sibling ChannelsPage (EXIT=0/STATUS=DONE via in-scope green gates + isolated Swift-6 typecheck; full xcodebuild deferred due to absent KMP framework). Let me verify swiftformat, the Frameworks state, and lint configs before writing code.
+
+All confirmed: `Frameworks/` has only `.gitkeep` (full-build blocker is real), swiftlint `included:` excludes `TeslaSync/Features` (lint my files directly), code lines ≤120. I'll follow the sibling's exact methodology. Let me mark the first todo in progress and create the three Swift files.
+
+Now let me add the two strings to the catalog, inserting after the `notifications.channels` block.
+
+Now let me validate the JSON catalog and start running the in-scope gates (format, lint, placeholder scan).
+
+JSON valid, both keys present (11817 total). Now the in-scope gates. First, swiftformat lint on my three files.
+
+One trailing-comma fix needed. Let me auto-format my three files, then re-lint to confirm clean.
+
+Clean. Let me verify the formatting change and run swiftlint --strict + placeholder scan.
+
+swiftformat 0/3, swiftlint --strict 0 violations. Now the placeholder scan (as the gate specifies).
+
+Placeholder scan clean (COUNT=0, EXIT=0). Now xcodegen generate, then I'll do the isolated Swift-6 typecheck.
+
+xcodegen clean (0), project git-ignored, my files referenced. Now the strong proof: an isolated Swift‑6 typecheck of my files against their real dependency closure. First let me map the closure — check for any `Shared` (KMP) imports and locate `.teslaSyncTheme()` and the AI panel's component peers.
+
+None of the closure imports `Shared` (KMP), so an isolated typecheck is viable. Let me map the `Sources` structure to assemble the dependency closure, and get the SDK/target triples.
+
+Now let me assemble the curated dependency closure and run the isolated Swift‑6 strict‑concurrency typecheck (macOS first), iterating on any missing deps.
+
+All 52 errors are from `Sources/Components/DataDisplay/UnitFormatters.swift` (the Shared‑coupled formatter my page doesn't use — the sibling excluded it too). Let me exclude it and re‑run.
+
+macOS typecheck: **0 errors** (69-file closure incl. my files + previews). Now the iOS target.
+
+Both macOS and iOS typechecks pass with **0 errors** (incl. previews). Let me confirm the full-build blocker is real (the KMP staging pre-action) without triggering the heavy Gradle build, then update todos.
+
+Full-build blocker confirmed real (KMP `Shared.xcframework` absent; scheme pre-action requires Gradle/Kotlin-Native staging). Let me run the gate's exact directory-level swiftlint command to capture the whole-dir result, and do a final placeholder grep on my files.
+
+The dir-path lint expands to the whole project (config `included:` list) and surfaces 4 **pre-existing, out-of-scope** violations (not in my files — my explicit-file lint was 0). Let me confirm exactly which files they're in.
+
+The 4 violations are pre-existing, out-of-scope (MyActivityPageModel + WeeklyDigestWidget — same ones the sibling noted), none in my files. My unit lints clean. All in-scope gates are green. Let me update todos and write the parity log.
+
+Now let me write the parity log following the established sibling format. First capturing host/timestamp info.
+
+Now I'll write the comprehensive parity log following the established sibling format with all real gate results.
+
+Now let me update the apple-ledger with the two new rows (macos + ios), inserting after the Channels rows.
+
+Let me validate the ledger JSON and verify the new rows.
+
+Ledger valid (2 QuietHours rows, both done 2/2). Let me do a final review of the formatted files before committing.
+
+Code is clean and correct. Let me run a final combined in-scope gate verification and check git status before committing.
+
+All final gates green and git status shows exactly my intended changes (xcodeproj correctly git-ignored). Let me commit.
+
+Commit `78b004c40` created with all 6 intended files (xcodeproj correctly excluded). Let me finalize todos and do a last verification of the log's required EXIT/STATUS terminator.
+
+All complete and verified. The log ends with `EXIT=0`/`STATUS=DONE`, `PARITY_COVERED=2 == PARITY_REQUIRED=2`, all 8 todos done, working tree clean, and the git-ignored xcodeproj was not committed.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

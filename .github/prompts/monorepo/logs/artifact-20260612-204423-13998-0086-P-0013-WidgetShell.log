@@ -1,0 +1,124 @@
+=== P4 Widget primitive 0013 WidgetShell (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/widget-primitives/0013-... (P4 · Widget primitive · 0013 · WidgetShell)
+Web source: web/src/features/dashboard/widgets/WidgetShell.tsx
+Native output: apps/apple/TeslaSync/widget-primitives/WidgetShell.*
+Runner: Darwin (arm64), Xcode 26.5 (17F42), Apple Swift 6.3.2, iOS 26.5 / macOS 26 SDKs.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+The WidgetShell surface (a shared, purely-presentational widget shell) was
+ported to native SwiftUI at full parity with the web source and is VERIFIED
+GREEN on every host-runnable per-surface gate (isolated iOS-18 + macOS-15
+typecheck under Swift 6 -strict-concurrency=complete; isolated SwiftPM
+build + 56/56 tests; swiftlint --strict 0/10; swiftformat --lint 0/10;
+placeholder gate PLACEHOLDER_COUNT=0; xcodegen enumerates all 11 files).
+
+The full-app `xcodebuild -scheme TeslaSync ... build test` (iOS + macOS) could
+NOT reach EXIT=0 on this runner: it is blocked by a PRE-EXISTING, UNRELATED
+swift-frontend IRGen compiler crash (Swift 6.3.2) in
+TeslaSync/feature-views/AppearanceSettings.Controls.swift +
+TeslaSync/shared-surfaces/withAiFeature.swift — files this surface does NOT
+touch, in a compile batch that contains NONE of this surface's files. This is
+the same class of "full-app build blocked by other agents' parallel-merged
+code" deferral already tracked for ~20 prior P4 surfaces in
+apps/macos-pending-verifications.md, deferred to
+p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing).
+
+------------------------------------------------------------------------------
+FILES (11; apps/apple/TeslaSync/widget-primitives/WidgetShell.*)
+------------------------------------------------------------------------------
+WidgetShell.Adapter.swift        — surface slug; value types (Input/Freshness/Error/Help);
+                                   WidgetShellPhase + pure WidgetShellProjector; WidgetShellPulse.
+WidgetShell.Freshness.swift      — pure clock-driven relative-time/label/tooltip derivations.
+WidgetShell.Strings.swift        — P1/S10 i18n facade (DataFreshness + QueryError + help/pin copy).
+WidgetShell.Model.swift          — P1/S11 telemetry seam + P1/S8 @Observable holder (pulse, view.opened).
+WidgetShell.Views.swift          — skeleton / QueryError leaf / title / icon / body container.
+WidgetShell.FreshnessView.swift  — freshness chip (4 states) + help popover + pin button.
+WidgetShell.swift                — public generic View<Content, Actions>; phase composition.
+WidgetShell.Previews.swift       — DEBUG previews for every state.
+WidgetShell.strings              — i18n catalog contribution (table "WidgetShell").
+WidgetShell.Tests.swift          — model + views + status-mapping + strings (37 cases).
+WidgetShell.AdapterTests.swift   — pure projector + relative-time boundaries + equality (19 cases).
+
+Parity: reproduces every REAL branch of the web source — loading (Skeleton),
+error (QueryError; offline vs network branch + retry), the titled/title-less
+header, the 4-state DataFreshness chip (fresh/fetching/stale/error + "never
+updated"), help tooltip, pin button, header actions, padded/noPadding body,
+and the pulse-on-update glow. Prompt's generic state list mapped to real
+branches: loading→loading, error→error, offline→error.isOffline (QueryError
+offline copy), stale→freshness.stale, empty→freshness "never updated" (nil
+timestamp) + host-owned body content. No fabricated states (the web shell has
+no body "empty" branch — the hosted widget owns that, per faithful-parity).
+
+------------------------------------------------------------------------------
+GATE STEPS
+------------------------------------------------------------------------------
+[xcodegen generate]                                         EXIT=0  (project regenerated; 66 WidgetShell.* pbxproj refs across the 11 files)
+
+[xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test]
+  IOS_EXIT=65  ** BUILD FAILED **  (3 attempts: load avg 86 / 27 / 27)
+  ROOT CAUSE — pre-existing, UNRELATED swift-frontend IRGen crash (NOT a code error; 0 `error:` diagnostics across 4341 compiles):
+    "Please submit a bug report ... and include the crash backtrace."
+    4. While evaluating request IRGenRequest(IR Generation for file
+       ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+    5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"   (reabstraction thunk; Bool/Actor? closure)
+       IRGenSILFunction::visitFullApplySite -> SyncCallEmission::setArgs -> emitSILFunction (swift-frontend 6.3.2)
+    Command SwiftCompile failed with a nonzero exit code   (failing batch: AnomalyInlineRow..AppShell..AppearanceSettings; ZERO WidgetShell files in it)
+  INNOCENCE PROOF:
+    - `grep -c WidgetShell` on AppearanceSettings*.swift + withAiFeature*.swift = 0 (crash files never reference this surface)
+    - `git status --porcelain` = only the 11 new WidgetShell.* files added; NO existing file modified (crash batch is byte-identical to baseline)
+    - This surface's files compiled CLEANLY in the real iOS app-target compile before the crash:
+      SwiftCompile OK: WidgetShell.Adapter/Freshness/FreshnessView/Model/Previews/Strings/Views/.swift
+      WidgetShell.strings: builtin-copyStrings --validate ... OK
+    - Crash reproduced at load 86 AND load 27 -> a Swift 6.3.2 IRGen toolchain bug in pre-existing code, exacerbated by extreme shared-runner load (up to 72 concurrent swift-frontend across parallel slots).
+
+[xcodebuild -scheme TeslaSync-macOS build test]
+  MAC_EXIT=blocked (not run to green) — would hit the SAME AppearanceSettings IRGen crash, and macOS additionally lacks a signing identity:
+  `security find-identity -p codesigning` -> "0 valid identities found" (matches every prior P4 macOS deferral).
+
+KNOWN-ISSUE PRECEDENT — the IDENTICAL crash signature is already documented + proven surface-independent:
+  The thunk "@$sSbScA_pSgIeAghyg_SbIeAghn_TR" in feature-views/AppearanceSettings.Controls.swift IRGen is the
+  SAME swift-frontend IRGen capacity crash recorded in apps/macos-pending-verifications.md for:
+    - p4-apple/shared-surfaces/0079-DataFreshness   ("report_at_maximum_capacity -> llvm::report_fatal_error", same thunk)
+    - p4-apple/shared-surfaces/0143-TimeMachineBanner ("IDENTICAL ... @$sSbScA_pSgIeAghyg_SbIeAghn_TR ... AppearanceSettings.Controls.swift")
+    - p4-apple/shared-surfaces/0205-CommandPalette  (same thunk; PROVEN surface-independent — a baseline
+      `xcodebuild build` with that surface's files removed + xcodegen regenerated crashed identically,
+      BASELINE_EXIT=65, same thunk, same file). It is a whole-module IRGen scaling crash, NOT a surface defect.
+
+[swiftlint --strict]   (10 swift files)   LINT_EXIT=0   "Done linting! Found 0 violations, 0 serious in 10 files."
+[swiftformat --lint]   (10 swift files)   FORMAT_EXIT=0 "0/10 files require formatting."
+[check-placeholders.ps1 -Path .../WidgetShell]   PLACEHOLDER_EXIT=0
+  (+ explicit scan of all 11 files: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0)
+
+------------------------------------------------------------------------------
+PER-SURFACE GREEN EVIDENCE (host-runnable; isolates the surface from the broken full-app build)
+------------------------------------------------------------------------------
+[iOS-18 isolated typecheck]   xcrun --sdk iphonesimulator swiftc -typecheck
+   -target arm64-apple-ios18.0-simulator -swift-version 6 -strict-concurrency=complete -D DEBUG
+   (8 impl files + Tokens.swift + TSDesign.swift + Badges.swift)        IOS_TYPECHECK_EXIT=0  (0 errors / 0 warnings)
+
+[macOS-15 isolated typecheck] xcrun --sdk macosx swiftc -typecheck
+   -target arm64-apple-macos15.0 -swift-version 6 -strict-concurrency=complete -D DEBUG
+   (same inputs)                                                        MAC_TYPECHECK_EXIT=0  (0 errors / 0 warnings)
+
+[isolated SwiftPM build + test]  swift test  (Package: macOS 15, .swiftLanguageMode(.v6); impl + design tokens + both test files)
+   Test Suite 'All tests' passed.  Executed 56 tests, with 0 failures (0 unexpected).   SWIFT_TEST_EXIT=0
+   Suites: WidgetShellAdapterTests, WidgetShellFreshnessStatusTests, WidgetShellPhaseTests,
+           WidgetShellFreshnessProjectionTests, WidgetShellRelativeTimeTests, WidgetShellFreshnessLabelTests,
+           WidgetShellPulseTests, WidgetShellValueTypeTests, WidgetShellModelTests, WidgetShellViewTests,
+           WidgetShellStatusMappingTests, WidgetShellStringsTests.
+
+Acceptance criteria:
+ [x] Surface renders all states from the web source (loading/error/offline/stale/never + titled/title-less/noPadding/pulse).
+ [x] Data binds via the P1/S8 state-holder (WidgetShellModel); no direct HTTP from the view (pure presentational shell).
+ [x] Every i18n string resolves through the P1/S10 facade (WidgetShellStrings, table "WidgetShell"); no English literals in code.
+ [x] Accessibility labels on every interactive element (freshness chip, help, pin, retry; skeleton/loading; header trait).
+ [x] Tests: adapter unit tests + per-state view-composition + a11y/strings (56/56 pass).
+ [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate clean, 0 opt-outs).
+ [~] EXIT=0 / STATUS=DONE for the full-app gate -> BLOCKED by pre-existing unrelated IRGen crash (evidence above); deferred to P99 acceptance gate.
+
+------------------------------------------------------------------------------
+EXIT=65
+STATUS=BLOCKED
+BLOCKED_REASON=Full-app `xcodebuild build test` (iOS+macOS) blocked by a PRE-EXISTING, UNRELATED swift-frontend 6.3.2 IRGen crash in AppearanceSettings.Controls.swift/withAiFeature.swift (a compile batch with ZERO WidgetShell files; crash files have ZERO WidgetShell references; no existing file modified) plus macOS signing (0 identities) and extreme shared-runner load. The WidgetShell surface itself is fully green on every host-runnable per-surface gate (iOS+macOS typecheck, 56/56 SwiftPM tests, swiftlint --strict 0, swiftformat --lint 0, placeholder 0). Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest), per apps/macos-pending-verifications.md precedent.

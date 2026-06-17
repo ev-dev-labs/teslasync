@@ -1,0 +1,166 @@
+=== P4 Shared surface 0108 TimeStamp (Apple) ===
+Date: 2026-06-11
+Host: macOS 26.5.1 (Darwin 25.5.0, arm64, 20 cores, 64 GB) — SHARED runner
+Prompt: .github/prompts/monorepo/p4-apple/shared-meaningful/P-0108-TimeStamp.prompt.md
+Web source: web/src/components/data-display/TimeStamp.tsx
+Allowed files: apps/apple/TeslaSync/shared-surfaces/TimeStamp.* , this log file
+
+------------------------------------------------------------------------------
+Honesty Covenant (binding — verbatim)
+------------------------------------------------------------------------------
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+This log reports the gate exactly as observed. The two full-app xcodebuild steps are
+RED and that is stated plainly (covenant #1). The cause is pre-existing compile errors
+in pristine sibling surfaces OUTSIDE this prompt's allowed files, plus macOS code-signing
+not being configured on this runner — neither is fixable within the allowed scope and
+neither is the TimeStamp surface.
+
+------------------------------------------------------------------------------
+Platform capability (all present — toolchain is NOT the blocker)
+------------------------------------------------------------------------------
+Xcode 26.5 (build 17F42)                                          OK
+Swift 6.3.2 (swiftlang-6.3.2.1.108)                               OK
+swiftlint 0.63.3 / swiftformat 0.61.1                             OK
+iOS 26.5 simulators incl. "iPhone 16"                            OK
+pwsh 7.x (for check-placeholders.ps1)                             OK
+KMP shared core: built + staged Frameworks/Shared.xcframework     OK
+  (gradle :core:assembleSharedXCFramework — BUILD SUCCESSFUL;
+   slices: ios-arm64, ios-arm64-simulator, macos-arm64)
+
+------------------------------------------------------------------------------
+Deliverable — TimeStamp surface (11 files, all under the allowed path)
+------------------------------------------------------------------------------
+TimeStamp.Adapter.swift     pure core: value/format/preference enums; verbatim ports of
+                            web formatDateTime ("Apr 4, 2026, 09:30 AM") + formatRelative
+                            ("just now"/"{n}m/h/d ago"/date tail) + resolveTimezone/resolveLocale
+TimeStamp.Model.swift       P1/S8 @Observable state-holder; P1/S11 view.opened telemetry seam;
+                            P1/S10 i18n facade; connectivity axis; input snapshot
+TimeStamp.Seams.swift       P1/S8 source protocol + Live/InMemory sources (no HTTP in the view)
+TimeStamp.Projection.swift  pure projection → loading/empty/error/content; primary + tooltip
+                            secondary (the alternate format); a11y label + hint
+TimeStamp.Views.swift       inline value + .help() tooltip (web <Tooltip>) + VoiceOver hint;
+                            freshness chip (Button, labeled)
+TimeStamp.States.swift      loading skeleton + QueryError-peer retry chrome
+TimeStamp.swift             the TimeStamp View; renders every state + freshness chip
+TimeStamp.strings           P1/S10 catalog: every relative phrase + chrome/a11y key
+TimeStamp.Previews.swift    8 previews (relative/absolute/auto/empty/loading/error/stale/offline)
+TimeStamp.Tests.swift       adapter + projection coverage
+TimeStamp.ModelTests.swift  model / source / telemetry / freshness / a11y coverage
+
+States reproduced from the web source: empty ("—", no tooltip) + content (primary inline,
+alternate on hover/VoiceOver), plus the P4 leaf axis loading/error/stale/offline (matching the
+sibling DateTime surface 0084). format=auto defers to the time_format_default preference; the
+`in` prop overrides the tz mode. No English string literals in code (all via TimeStamp.strings).
+
+------------------------------------------------------------------------------
+Surface verification — GREEN on the real toolchain (everything in scope)
+------------------------------------------------------------------------------
+[1] swiftlint --strict   (tree-wide, includes my 10 swift files)
+    cmd: swiftlint --strict --no-cache
+    -> Done linting! Found 0 violations, 0 serious in 4159 files.
+    LINT_EXIT=0
+
+[2] swiftformat --lint   (tree-wide)
+    cmd: swiftformat --lint apps/apple
+    -> 0/4457 files require formatting, 3 files skipped.
+    FORMAT_EXIT=0
+
+[3] check-placeholders   (scoped to the surface, exactly as the gate invokes it)
+    cmd: pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/TimeStamp -Language swift
+    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[4] Surface unit/projection/model/telemetry/a11y tests — compiled + executed on the real
+    Swift 6.3.2 toolchain via an isolated SwiftPM module (TimeStamp.Adapter/Projection/Model/
+    Seams + the real TimeZoneMode from DateTime.Adapter + the surface tests):
+    cmd: swift test   (Target Platform: arm64e-apple-macos14.0)
+    -> Executed 50 tests, with 0 failures (0 unexpected)
+    SURFACE_TESTS_EXIT=0
+
+[5] Surface SwiftUI layer (Adapter+Projection+Model+Seams+Views+States+swift+Previews)
+    type-checked against the real shared-component signatures, both platforms:
+    macOS:  swiftc -typecheck -target arm64-apple-macosx14.0           -> exit 0
+    iOS:    swiftc -typecheck -target arm64-apple-ios18.0-simulator    -> exit 0
+    SURFACE_TYPECHECK_EXIT=0
+
+Conclusion: the TimeStamp surface is complete and compiles + passes all of its tests on the
+real iOS and macOS toolchains, and is clean under swiftlint --strict, swiftformat --lint, and
+check-placeholders.
+
+------------------------------------------------------------------------------
+Gate step: xcodebuild iOS Simulator (iPhone 16) build test
+------------------------------------------------------------------------------
+cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+Result: ** BUILD FAILED ** — NOT in the TimeStamp surface. The whole-app compile fails on
+pristine sibling files that this prompt is NOT allowed to edit:
+
+  TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is
+    unable to type-check this expression in reasonable time; try breaking up the expression
+    into distinct sub-expressions
+  (reproduced in isolation: the expression takes 4183 ms to type-check — a genuine Swift 6.3.2
+   inference blow-up; not flag-fixable: -solver-expression-time-threshold=120 still errors.)
+
+  TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure
+    captures non-escaping parameter 'content'
+  TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping
+    closure captures non-escaping parameter 'content'
+  TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure
+    captures non-escaping parameter 'content'
+  TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure
+    captures non-escaping parameter 'content'
+
+git status confirms ALL of the above files are pristine (unmodified by this prompt); the only
+changes in the tree are the 11 TimeStamp.* files. These siblings were added after the prior
+green TimeStamp run (when shared-surfaces held ~9 files; it now holds 892), and their own
+prompts have not yet fixed them. They are outside this prompt's allowed files.
+IOS_EXIT=65
+
+------------------------------------------------------------------------------
+Gate step: xcodebuild macOS (TeslaSync-macOS) build test
+------------------------------------------------------------------------------
+cmd: xcodebuild -scheme TeslaSync-macOS build test
+Result: ** BUILD FAILED ** before compilation — code signing is not configured on this runner:
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+         certificate.
+(project.yml ships DEVELOPMENT_TEAM="" — signing identities are a CI-runner provisioning concern,
+ per apps/macos-pending-verifications.md; the iOS Simulator does not require signing, which is why
+ the iOS step reached compilation. Had signing been present, the macOS app would then hit the same
+ pristine-sibling compile errors listed above.)
+The TimeStamp macOS sources are verified independently: swift test (arm64-apple-macos14.0) = 50/0
+and the macOS-target view type-check = exit 0 (above).
+MAC_EXIT=65
+
+------------------------------------------------------------------------------
+Acceptance criteria
+------------------------------------------------------------------------------
+[x] Surface renders all states from the web source (empty + content) plus the P4 leaf
+    loading/error/stale/offline — per-state subviews + 8 previews + tests.
+[x] Hooks bind via the shared P1/S8 state-holder seam (TimeStampSource); the view never fetches.
+[x] Every i18n key from the source has a matching key in the P1/S10 catalog (TimeStamp.strings);
+    absolute + >=7-day dates are locale-formatted (no English literal); relative phrases are keyed.
+[x] Accessibility labels on every interactive element (freshness-chip Button labeled; value body
+    exposes label + alternate-format hint; retry button labeled; "—" labeled "No timestamp").
+[x] Tests: adapter unit + per-state projection + model/telemetry/freshness + a11y (50 tests, 0 fail).
+[x] No TODO / stub / mock / Placeholder / Lorem in shipped code (check-placeholders EXIT=0).
+[~] EXIT=0 / STATUS=DONE — the full-app xcodebuild build+test cannot reach EXIT=0 on this runner
+    because of pre-existing compile errors in 5 pristine sibling files outside this prompt's
+    allowed files, plus macOS code-signing not being provisioned. Both are out-of-scope and not
+    the TimeStamp surface; the surface itself is verified green by [1]-[5] above.
+
+------------------------------------------------------------------------------
+Per-step results
+------------------------------------------------------------------------------
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TESTS_EXIT=0
+SURFACE_TYPECHECK_EXIT=0
+IOS_EXIT=65   (blocked: pristine sibling compile errors — outside allowed files)
+MAC_EXIT=65   (blocked: macOS code-signing not provisioned + same sibling errors)
+
+EXIT=65
+STATUS=BLOCKED

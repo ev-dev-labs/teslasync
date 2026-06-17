@@ -1,0 +1,132 @@
+=== P4 Dashboard widget 0032 CostForecastWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.*
+Web src : web/src/features/dashboard/widgets/CostForecastWidget.tsx
+Registry: id=cost-forecast  category=charging  default=2x4  min=1x2  max=4x40
+Toolchain present: Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh, Java 17 (KMP).
+Shared.xcframework: built from apps/shared (Gradle) and staged — BUILD SUCCESSFUL.
+
+================================================================================
+SECTION A — SURFACE VERIFICATION (in-scope: CostForecastWidget.* only)  -> ALL PASS
+================================================================================
+
+A1. swiftlint --strict (the 9 CostForecastWidget.* swift files)
+    Done linting! Found 0 violations, 0 serious in 9 files.
+    -> 0 violations.
+
+A2. swiftformat --lint (the 9 CostForecastWidget.* swift files)
+    0/9 files require formatting.
+    -> 0 violations.
+
+A3. Isolation typecheck — full widget incl. SwiftUI + Swift Charts + #Preview,
+    compiled against the real iphonesimulator SDK + the surface's only real deps
+    (apps/design/generated/apple/Tokens.swift, Sources/DashboardWidgets/DashboardWidgetInfra.swift),
+    Swift 6, SWIFT_STRICT_CONCURRENCY=complete, -D DEBUG:
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+            -swift-version 6 -D DEBUG <Tokens, DashboardWidgetInfra, CostForecastWidget.*(non-test)>
+      TYPECHECK_EXIT=0
+    -> The widget compiles cleanly (no networking in the view; binds via the model seam).
+
+A4. Unit tests EXECUTED (adapter + model phases + registry + layout + accessibility).
+    The 2 co-located test files were run in an isolated SwiftPM package (same sources,
+    @testable import retargeted) so they execute independently of the unrelated,
+    pre-existing sibling-widget build breakage documented in Section B:
+      swift test
+      Test Suite 'All tests' passed.
+      Executed 32 tests, with 0 failures (0 unexpected).
+    Coverage: buildBars merge/trailing-6/null-defaults; nextCost/lastCost/trendUp/avgPerKwh;
+              standard+compact stat strings ("$90", "$0.15", up/down arrow + delta);
+              fmtNumber/formatCurrency parity; layout ladder (compact/standard/wide);
+              model phase matrix (loading/empty/error/content); view.opened telemetry once;
+              refresh + stale auto-refresh; registry id/size + clamp; a11y summary + per-bar value.
+    -> 32/32 PASS.
+
+A5. check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+    -> No TODO/FIXME/stub/placeholder/Lorem in shipped code.
+
+A6. i18n key coverage: 24/24 keys referenced in code are defined in CostForecastWidget.strings
+    (0 used-but-undefined, 0 orphans). Every source string resolves through the P1/S10 facade
+    (CostForecastWidgetStrings); no hardcoded English literals in the view.
+
+States reproduced from the web source: loading (skeleton), empty ("No forecast data"),
+error (QueryError-equivalent + Retry), stale (chip + auto-refresh + banner),
+offline (cached + banner), content (stat header + Swift Charts bar chart). Layouts:
+compact (cols<=1, stats only), standard (cols==2, +chart), wide (cols>=3, larger ticks).
+
+NOTE on namespacing: this single-module app already ships a *different* surface,
+the `CostForecastSection` feature-view, which owns the bare `CostForecast*` / `CostBar`
+type names. To avoid a module-level redeclaration, every type this widget introduces is
+namespaced `CostForecastWidget*` (the surface struct stays `CostForecastWidget`). String
+literals (slug "CostForecastWidget", table, "cost-forecast" id, "widget.costForecast.*"
+keys) are unchanged.
+
+================================================================================
+SECTION B — AGGREGATE GATE (as specified)  -> BLOCKED by pre-existing, out-of-scope causes
+================================================================================
+Allowed files for this prompt are CostForecastWidget.* + this log. The failures below
+are ALL in files this prompt may not modify; none are in CostForecastWidget.*.
+git status confirms the only added files are CostForecastWidget.* (+ this log).
+
+B1. xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65
+    Root cause = PRE-EXISTING cross-widget collisions in sibling surfaces (single app module),
+    NOT CostForecastWidget. Representative compiler errors:
+      ChargeStatusWidget.Adapter.swift:118:15: error: invalid redeclaration of 'ChargingProjection'
+      ChargingDetailSection.Adapter.swift:240: public enum ChargingProjection   (the colliding 2nd decl)
+      ChargeStatusWidget.Adapter.swift:164/177/226 + ChargeStatusWidget.swift:299: 'ChargingProjection' is ambiguous
+      ChargeCostTrackerWidget.Adapter.swift:328:69: error: ambiguous use of 'miles'
+    grep over the full build log: 0 errors in any CostForecastWidget.* file.
+
+B2. xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=75
+    Root cause = ENVIRONMENT code-signing limitation (no development certificate on this runner;
+    project DEVELOPMENT_TEAM=""). Fails before compilation:
+      error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    Not a code defect and not CostForecastWidget.
+
+B3. swiftlint --strict   (whole included tree, from apps/apple)
+    LINT_EXIT=2
+    Found 1 violation, 1 serious in 1947 files — PRE-EXISTING, in a sibling widget, NOT mine:
+      LiveSignalSparklinesWidget.Builder.swift:158:9: error: Opening Brace Spacing Violation (opening_brace)
+    CostForecastWidget.* = 0 violations (see A1).
+
+B4. swiftformat --lint apps/apple   (whole tree)
+    0/1951 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0   -> PASS (includes CostForecastWidget.*).
+
+B5. check-placeholders.ps1  (CostForecastWidget)
+    PLACEHOLDER_EXIT=0   -> PASS (see A5).
+
+================================================================================
+CONCLUSION
+================================================================================
+The CostForecastWidget surface is COMPLETE and fully verified within its allowed
+file scope: it typechecks against the real SDK (A3), all 32 of its unit tests pass
+(A4), and it is clean under swiftlint --strict (A1), swiftformat --lint (A2),
+check-placeholders (A5), with exact i18n coverage (A6) and every web-source state
+reproduced.
+
+The aggregate gate (B1/B2/B3) is RED for reasons entirely OUTSIDE this prompt's
+allowed scope and outside CostForecastWidget:
+  * B1 iOS  — pre-existing duplicate `ChargingProjection` type (ChargeStatusWidget vs
+              ChargingDetailSection) + `miles` ambiguity (ChargeCostTrackerWidget).
+  * B2 macOS- missing development signing certificate on this runner (DEVELOPMENT_TEAM="").
+  * B3 lint — pre-existing opening_brace violation in LiveSignalSparklinesWidget.Builder.swift.
+These live in other surfaces' files (each owned by its own prompt) and in the build
+environment; this prompt is forbidden from editing them. Even resolving B1/B3 could
+not make the gate green because B2 (macOS signing) is an environment limitation.
+Per the Honesty Covenant (No red-as-green, No commit on red for one's own work),
+the aggregate result is reported truthfully rather than masked.
+
+IOS_EXIT=65
+MAC_EXIT=75
+LINT_EXIT=2
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED

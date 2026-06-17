@@ -1,0 +1,176 @@
+=== P4 Widget primitive 0011 WidgetStatusGrid (Apple) ===
+Artifact : apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.*  (7 .swift + 1 .strings)
+Web src  : web/src/features/dashboard/widgets/shared/WidgetStatusGrid.tsx
+Host     : Darwin arm64 · macOS 26.5.1 (25F80) · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat + pwsh + xcodegen present
+Date     : 2026-06-12
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint / swiftformat / pwsh / xcodegen -> all present
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0); iPhone 16 simulator (iOS 26.5) booted.
+  KMP Shared.xcframework buildable on this host (Kotlin/Native Apple toolchain present) — staged for the full build.
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  The web `WidgetStatusGrid` is a PURE presentational widget primitive (a shared widget building block):
+  it takes `cells: StatusCell[]` + optional `cols` (2|3|4) / `compact` / `emptyMessage` / `emptyIcon` and
+  renders a responsive grid of status chips. Each chip = an optional leading icon + a truncated label over an
+  optional value, a tone-tinted rounded border, and a small status dot pinned to the top-trailing corner
+  (web `absolute right-2 top-2 size-2`). The grid COLLAPSES its column count by the widget's own rendered
+  width (web container-query class table): cols 2 -> always 2; cols 3 -> 1 (<256) / 2 (>=256) / 3 (>=384);
+  cols 4 -> 2 (<384) / 4 (>=384). `compact` forces 2 columns, suppresses the value line (web
+  `!compact && cell.value`), and tightens the padding. Its only own branch is `cells.length === 0 ->
+  <EmptyState message={emptyMessage} icon={emptyIcon} />`. There is NO fetch / React-Query / Promise in the
+  source, so it has NO loading/error/stale/offline branch (the host widget that owns the query renders
+  those). Per the sibling presentational-primitive precedent (WidgetChartSummary 0002, WidgetComparisonCard
+  0003) this surface reproduces ONLY the source's REAL branches:
+    • populated grid    (one StatusGridCell per cell; responsive 2/3/4-up column collapse)
+    • status tones      (ok->success, warning->warning, error->danger, inactive/unknown->neutral glass)
+    • compact variant   (2 columns, value suppressed, tight padding)
+    • empty leaf        (friendly "never a blank box" peer of web <EmptyState message emptyIcon/>)
+  Files: WidgetStatusGrid.Adapter/Model/.swift/Views/Previews/Tests/AdapterTests.swift + .strings.
+  Bindings : P1/S8 WidgetStatusGridModel @Observable holder (props + projection; no HTTP in the view);
+             P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius) — no Tailwind ports, no raw hex;
+             P1/S10 NSLocalizedString facade (table "WidgetStatusGrid"); P1/S11 view.opened telemetry
+             (slug "WidgetStatusGrid", emitted once + idempotent across appear/disappear).
+  i18n     : web source has 0 t() keys (anonymous; its only literal "No status data available" — the
+             emptyMessage default — is reproduced via widgetStatusGrid.empty). Native a11y/HIG additions:
+             emptyHint; spoken status words status.{ok,warning,error,inactive,unknown}; cellLabel /
+             cellLabelNoValue combined readings. Every key the code resolves exists in the catalog; 0 dead.
+  a11y     : each chip folds label+value into ONE VoiceOver element and RESTATES the status as a spoken word
+             (so the color-coded dot is not the only status signal — colorblind/VoiceOver parity); the dot +
+             decorative icon are accessibilityHidden; min-h 44 (HIG touch target); Dynamic Type via tokens;
+             empty leaf is one combined element. ContentUnavailableView is the native EmptyState peer.
+
+----------------------------------------------------------------------------------------
+PROJECT INTEGRATION (no config edits required this round)
+----------------------------------------------------------------------------------------
+  The widget-primitives tier was already wired by prompt 0003: project.yml lists TeslaSync/widget-primitives
+  on both app targets (excludes *Tests.swift) and both XCTest bundles (includes *Tests.swift); .swiftlint.yml
+  already has TeslaSync/widget-primitives in `included`. The 7 new .swift + 1 .strings are picked up
+  path-based — confirmed by xcodegen below (48 file refs). No project.yml / .swiftlint.yml change needed.
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint
+      surface (7 .swift)                               -> 0/7 files require formatting
+      tree-wide (apps/apple)                           -> 0/5124 files require formatting, 2 skipped
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict
+      surface (WidgetStatusGrid.*, 7 .swift)           -> Found 0 violations, 0 serious in 7 files
+      LINT_EXIT=0  (surface scope)
+      tree-wide                                        -> Found 3 violations, 3 serious in 4826 files
+        ALL 3 are PRE-EXISTING and OUTSIDE this prompt's allowed-files scope (WidgetStatusGrid.*):
+          TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52:13 identifier_name ('a')
+          TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:53:13 identifier_name ('b')
+          TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:54:13 identifier_name ('c')
+        These belong to surface 0002 (WidgetChartSummary); fixing them is out of allowed scope. ZERO
+        WidgetStatusGrid violations. Tree-wide LINT is therefore RED only for a pre-existing, unrelated file.
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1)
+      -Path apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid (literal gate path) -> ALLOWED=0 COUNT=0 EXIT=0
+      -Path apps/apple/TeslaSync/widget-primitives -Language swift (real dir, makes the 0 meaningful)
+                                                       -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+      self-grep of the 8 files for TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/stub/mock/fatalError -> 0
+      PLACEHOLDER_EXIT=0
+
+[4] isolated SwiftPM build + test  (FULL surface — Adapter + Model + Views + main + Previews + the REAL
+    design tokens Tokens.swift; Package swift-tools 6.0, macOS v15, Swift 6 language mode = strict concurrency)
+      swift test -> Executed 35 tests, with 0 failures (0 unexpected)
+      Suites: WidgetStatusGridAdapterTests(1), WidgetStatusGridStatusKindTests(3),
+              WidgetStatusGridResolvedColumnsTests(2), WidgetStatusGridCellsTests(4),
+              WidgetStatusGridResolveTests(3), WidgetStatusGridLayoutTests(3),
+              WidgetStatusGridValueTypeTests(5)  [pure adapter = 21] ;
+              WidgetStatusGridModelTests(7), WidgetStatusGridViewTests(3),
+              WidgetStatusGridStringsTests(4)    [model/views/strings = 14]
+      SPM_TEST_EXIT=0  (35/35 — adapter projection/column-collapse/value-gating, model once-only view.opened,
+                        every-branch view composition, i18n/a11y facade. Note: this performs full IRGen +
+                        link + EXECUTION of the surface incl. its SwiftUI views — proof the code codegens.)
+
+[5] dual-SDK swiftc -typecheck  (FULL surface incl. the SwiftUI views + previews, compiled against the REAL
+    design system — ../design/generated/apple/Tokens.swift; -swift-version 6 -D DEBUG)
+      iOS 18    (-target arm64-apple-ios18.0-simulator, --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)         -> 0 errors  MAC_TYPECHECK_EXIT=0
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 8 files (48 refs total — file-ref + build-files across the iOS/macOS app
+      + iOS/macOS test bundles): WidgetStatusGrid.{Adapter,Model,swift,Views,Previews,Tests,AdapterTests}.swift
+      + WidgetStatusGrid.strings (6 refs each).
+
+----------------------------------------------------------------------------------------
+INTEGRITY NOTE — a REAL surface bug was caught by the full build and FIXED (not hand-waved)
+----------------------------------------------------------------------------------------
+  The first full iOS xcodebuild (pre-fix) did NOT pass the surface: it surfaced 33 REAL errors, ALL in
+  WidgetStatusGrid (33/33). Root cause = a module-level NAME COLLISION:
+      WidgetStatusGrid.Adapter.swift:47: error: invalid redeclaration of 'StatusKind'
+  My `enum StatusKind { ok, warning, error, inactive, unknown }` collided with a PRE-EXISTING, unrelated
+  `enum StatusKind { success, warning, danger, neutral }` in TeslaSync/feature-views/helpers.Adapter.swift
+  (surface "helpers"). The ambiguity cascaded into 'StatusKind is ambiguous' lookups, failed Equatable
+  synthesis on StatusCell/StatusGridCell, and 'cannot infer contextual base' in the previews.
+  The isolated SPM harness (separate module) could not catch this — only the real TeslaSync module did.
+  FIX (in-scope, allowed files only): renamed the enum to `StatusCellKind` (surface-scoped, faithful to the
+  web `StatusCell['status']`). Verified `StatusCell` / `StatusGridColumns` / `StatusGridCell` and the view
+  structs are unique in the module (no other collisions). Re-ran every gate above (all green) and re-ran the
+  full iOS build -> 0 WidgetStatusGrid errors. This is logged in full because the honesty covenant forbids
+  red-as-green: the surface was red, was fixed, and is now green.
+
+----------------------------------------------------------------------------------------
+FULL-APP xcodebuild build test  (the prompt gate) — RED, DEFERRED (NOT a WidgetStatusGrid failure)
+----------------------------------------------------------------------------------------
+  The KMP Shared.xcframework WAS staged for this run:
+    apps/apple/Scripts/build-shared-xcframework.sh (gradlew :core:assembleSharedXCFramework)
+      -> BUILD SUCCESSFUL in 13m 59s
+    staged -> apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64).
+
+  [iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         => ** BUILD FAILED **   IOS_EXIT=65
+         The TeslaSync module type-checked + emitted PAST all WidgetStatusGrid sources, then failed for 2
+         reasons, BOTH pre-existing and unrelated to this surface (other agents' parallel-merged files):
+           1. TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+              error: escaping closure captures non-escaping parameter 'content'
+           2. TeslaSync/feature-views/AppearanceSettings.Controls.swift:
+              swift-frontend IRGen crash (llvm::report_fatal_error during IR Generation for that file)
+         grep "error:" | grep WidgetStatusGrid => 0   (ZERO surface errors)
+         grep WidgetStatusGrid on any error/crash/fail line => 0  (the 19 WidgetStatusGrid mentions are all
+         benign SwiftCompile / SwiftDriverJobDiscovery action lines — the surface compiled inside the module).
+
+  [macOS] xcodebuild -scheme TeslaSync-macOS build test
+         => ** BUILD FAILED / TEST FAILED **   MAC_EXIT=65   (failed in ~14s, BEFORE any Swift compilation)
+         Fails at the SIGNING/entitlements validation, with:
+           error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+           error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+         security find-identity -p codesigning => 0 valid identities found.
+         0 SwiftCompile actions for TeslaSync sources (fails pre-compile); grep WidgetStatusGrid error: => 0.
+         (Surface compilation on macOS is independently proven GREEN by [4] SPM run on arm64-apple-macos and
+          [5] macOS-15 SDK typecheck.)
+
+  Concrete deferral causes on THIS host (pre-existing / environmental, unrelated to this surface, all OUTSIDE
+  the allowed-files scope WidgetStatusGrid.*):
+    • macOS development-signing — 0 valid codesigning identities (entitlements need a dev cert).
+    • 2 pre-existing failures in OTHER agents' parallel-merged surfaces (AISignalExplorerNlFilter escaping
+      closure + AppearanceSettings.Controls IRGen crash) that fail the shared TeslaSync module.
+    • 3 pre-existing swiftlint identifier_name violations in WidgetChartSummary.Tests.swift (surface 0002).
+  Per apps/macos-pending-verifications.md this full-app gate is owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner (with sibling surfaces green).
+
+----------------------------------------------------------------------------------------
+VERDICT
+----------------------------------------------------------------------------------------
+  Surface WidgetStatusGrid is COMPLETE and verified GREEN by every host-runnable + surface-scoped gate:
+    FORMAT_EXIT=0  LINT_EXIT=0 (surface; tree-wide red is 3 pre-existing WidgetChartSummary violations)
+    PLACEHOLDER_EXIT=0  SPM_TEST_EXIT=0 (35/35, full IRGen + execution)
+    IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+  A real surface bug (StatusKind name collision) was caught by the first full build and FIXED; the re-run
+  shows ZERO WidgetStatusGrid errors. The full-app xcodebuild build test is RED only for pre-existing,
+  unrelated reasons (macOS dev-signing + two other agents' compile failures) — ZERO WidgetStatusGrid errors
+  in either the iOS or macOS app-target build — and is deferred to the P99 acceptance gate, recorded in
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

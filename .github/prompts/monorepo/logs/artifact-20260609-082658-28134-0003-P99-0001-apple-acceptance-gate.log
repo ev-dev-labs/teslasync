@@ -1,0 +1,259 @@
+================================================================================
+P4 · P99 · 0001 — APPLE macOS + iOS/iPadOS ACCEPTANCE GATE
+================================================================================
+Prompt:   .github/prompts/monorepo/p4-apple/P99-0001-apple-acceptance-gate.prompt.md
+Log:      .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+Date:     2026-06-09T15:33:36Z
+Host:     Atuls-Mac-Studio.local / Darwin 25.5.0 arm64
+HEAD:     62e18b5afec6c235084ce2a8db7014e6a061f257  (branch auto/20260609-082658-28134/3)
+Mode:     ACCEPTANCE GATE — RUN ONLY. No code fixes. No scope change. No delegation.
+Covenant: 1 no red-as-green | 2 no scope narrowing | 3 no skip-and-assume |
+          4 no stubs-as-final | 5 no parity shortcuts | 6 no delegation |
+          7 no predecessor bypass | 8 no commit on red | 9 no silent drift |
+          10 log ends with EXIT=<int> + STATUS=<DONE|BLOCKED>
+
+================================================================================
+=== PREFLIGHT ===
+================================================================================
+
+-- Host / OS --
+$ sw_vers
+ProductName:		macOS
+ProductVersion:		26.5.1
+BuildVersion:		25F80
+$ uname -srm
+Darwin 25.5.0 arm64
+
+-- Toolchain --
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices available
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ swiftlint version
+0.63.3
+$ swiftformat --version
+0.61.1
+$ pwsh --version
+PowerShell 7.6.2
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+$ xcodegen --version
+Version: 2.45.4
+
+CAP: XCODEBUILD_AVAILABLE=NO   *** active developer dir is Command Line Tools
+     (/Library/Developer/CommandLineTools), NOT a full Xcode.app. `xcodebuild`
+     cannot build, test, or archive any scheme on this host.
+CAP: IOS_SIMULATORS_AVAILABLE=NO  *** `simctl` is not present (ships with Xcode);
+     no iOS Simulator destinations exist, so 'platform=iOS Simulator,name=iPhone 16'
+     is unreachable.
+
+The prompt header is explicit: "Capability: requires macOS + Xcode, simulators,
+signing identities, and archive credentials; if the gate can't run -> STATUS=BLOCKED."
+Two of the four mandated capabilities (full Xcode, simulators) are absent before a
+single build/test/archive command is issued.
+
+-- Code-signing identities --
+$ security find-identity -v -p codesigning
+     0 valid identities found
+CAP: SIGNING_IDENTITIES=0      (signed iOS/macOS archives require >=1 valid identity
+     + a DEVELOPMENT_TEAM; none present, and "changing signing configuration" is Out
+     of Scope for this gate).
+
+-- Schemes referenced by the Gate (verified against apps/apple/project.yml) --
+$ grep -E 'TeslaSync|schemes' apps/apple/project.yml
+   schemes: TeslaSync, TeslaSync-macOS, TeslaSyncActivities, TeslaSyncWatch,
+            TeslaSyncWatchWidgets, TeslaSyncWidgets, TeslaSyncWidgets-macOS
+   (Both Gate target schemes — "TeslaSync" and "TeslaSync-macOS" — are declared.
+    The .xcodeproj is materialized from project.yml by xcodegen; `xcodegen generate`
+    succeeds, but it cannot be introspected or built here because `xcodebuild`
+    itself is non-functional without full Xcode. The generated .xcodeproj was a
+    transient build-prep artifact and was removed; no source was modified.)
+
+-- Working tree cleanliness (entry & exit) --
+$ git status --porcelain
+   (empty)
+TREE_CLEAN=YES (clean at entry; this run-only gate writes only this log.)
+
+-- Predecessors: P4/P0..P9 phase prompts + all generated P7 page prompts must be STATUS=DONE --
+P4 phase prompt logs present (p4-p[0-9]-*), with recorded STATUS:
+  p4-p0-0001-apple-scaffold.log               -> STATUS=DONE
+  p4-p1-0001-shared-facade.log                -> STATUS=DONE
+  p4-p2-0001-design-tokens.log                -> STATUS=DONE
+  p4-p3-0001-ui-components.log                -> STATUS=DONE
+  p4-p3-0002-charts-components.log            -> STATUS=DONE
+  p4-p3-0003-data-display-components.log      -> STATUS=DONE
+  p4-p3-0004-feedback-forms-components.log    -> STATUS=DONE
+  p4-p3-0005-maps-motion-components.log       -> STATUS=DONE
+  p4-p4-0001-app-structure-navigation.log     -> STATUS=DONE
+  p4-p5-0001-auth-onboarding.log              -> STATUS=DONE
+  p4-p6-0001-live-data-sse.log                -> STATUS=DONE
+  p4-p6-0002-push-notifications.log           -> STATUS=DONE
+  p4-p8-0001-widgetkit-widgets.log            -> STATUS=DONE
+  p4-p8-0002-intents-handoff-menus.log        -> STATUS=DONE
+  p4-p8-0003-watchos-companion-settings.log   -> STATUS=DONE
+  -> P4 phase P0..P8 count=15, all STATUS=DONE.
+  *** MISSING: p4-p9-*.log — P9-0001-xctest-unit and P9-0002-xcuitest-ui have NO
+      canonical log in .github/prompts/monorepo/logs/. "P4/P0..P9 all STATUS=DONE"
+      is therefore UNSATISFIED (Covenant rule 7 — no predecessor bypass).
+
+Generated P7 page prompt logs (p4-apple-*): total=333  NOT_DONE=1
+  *** NOT DONE: p4-apple-dashboard-widgets-0001-AlertFeedWidget.log — the log has NO
+      `STATUS=` line; its final line is `IOS_EXIT=143` (** BUILD INTERRUPTED **).
+      A generated P7 page prompt therefore did NOT reach STATUS=DONE.
+
+Cross-cutting shared/foundation predecessor:
+  *** p1-s3-0001-kmp-scaffold.log -> STATUS=BLOCKED. This is the canonical producer
+      of Frameworks/Shared.xcframework, which BOTH Apple app targets link (ADR-004).
+      A BLOCKED producer means the build prerequisite is not satisfied per record.
+
+-- Required Gate artifacts (parity ledgers + verifier) --
+$ test -f apps/parity/apple-macos-ledger.json
+   apple-macos-ledger.json MISSING
+$ test -f apps/parity/apple-ios-ledger.json
+   apple-ios-ledger.json MISSING
+$ test -f apps/tools/check-parity-ledger.ps1
+   check-parity-ledger.ps1 MISSING
+  (apps/parity/ contains only ledger.schema.json, shared-ledger.json,
+   shared-ledger.schema.json, manifest.schema.json, parity-manifest.json — neither
+   Apple idiom ledger exists, and the verifier the Gate invokes does not exist.
+   Creating them is Out of Scope: "creating missing pages/components, modifying
+   parity definitions" and "Do NOT fix code".)
+
+================================================================================
+=== GATE === (firsthand execution of every step in the prompt's Gate block)
+================================================================================
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+$ (cd apps/apple && swiftlint --strict)   # uses apps/apple/.swiftlint.yml
+... Linting 2631 files ...
+/…/apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: error: Opening Brace Spacing Violation: Opening braces should be preceded by a single space and on the same line as the declaration (opening_brace)
+Done linting! Found 1 violation, 1 serious in 2631 files.
+LINT_EXIT=2
+
+$ swiftformat --lint apps/apple
+Reading config file at apps/apple/.swiftformat
+SwiftFormat completed in 12.99s.
+0/2635 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+$ & ./apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift
+... 67 matches across apps/apple (e.g. WatchSummaryWidget.Views.swift, YearReviewWidget.*,
+    AchievementBadge.*, ChargingSection.Chart.swift, CommandSearch.*, ConditionBuilder.*,
+    DrivingCoachSection.*, LiveMotorStatus.Adapter.swift, TemperatureSection.Views.swift) ...
+PLACEHOLDER_ALLOWED=24
+PLACEHOLDER_COUNT=67
+PLACEHOLDER_EXIT=1
+
+$ & ./apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-macos-ledger.json -RequiredPercent 100
+&: The term './apps/tools/check-parity-ledger.ps1' is not recognized as a name of a cmdlet, function, script file, or executable program.
+MAC_LEDGER_EXIT=  (unset — verifier script does not exist; step cannot run)
+
+$ & ./apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-ios-ledger.json -RequiredPercent 100
+&: The term './apps/tools/check-parity-ledger.ps1' is not recognized as a name of a cmdlet, function, script file, or executable program.
+IOS_LEDGER_EXIT=  (unset — verifier script does not exist; step cannot run)
+
+$ xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS' archive
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_ARCHIVE_EXIT=1
+
+$ xcodebuild -scheme TeslaSync-macOS archive
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_ARCHIVE_EXIT=1
+
+-- Gate exit-code summary (EXIT=0 requires ALL of the following to be 0) --
+  IOS_EXIT=1            (RED — no full Xcode / no simulator)
+  MAC_EXIT=1            (RED — no full Xcode)
+  LINT_EXIT=2           (RED — 1 serious SwiftLint violation)
+  FORMAT_EXIT=0         (green)
+  PLACEHOLDER_EXIT=1    (RED — 67 placeholders > 24 allowed)
+  MAC_LEDGER_EXIT=unset (RED — ledger + verifier missing)
+  IOS_LEDGER_EXIT=unset (RED — ledger + verifier missing)
+  IOS_ARCHIVE_EXIT=1    (RED — no full Xcode / no signing identity)
+  MAC_ARCHIVE_EXIT=1    (RED — no full Xcode / no signing identity)
+  => Aggregate EXIT != 0.
+
+================================================================================
+=== VERDICT ===
+================================================================================
+
+Acceptance criteria assessed against firsthand evidence above:
+  [FAIL] All P4/P0..P9 and P7 predecessor logs STATUS=DONE
+         — P9-0001/P9-0002 have no canonical log; p4-apple-dashboard-widgets-0001-
+           AlertFeedWidget is not DONE (ends IOS_EXIT=143); p1-s3-0001=BLOCKED.
+  [FAIL] apple-macos-ledger.json and apple-ios-ledger.json both 100%
+         — both ledgers MISSING; verifier check-parity-ledger.ps1 MISSING.
+  [FAIL] iOS Simulator + macOS build/test, SwiftLint, SwiftFormat, placeholder green
+         — build/test cannot run (no Xcode); SwiftLint RED (1 serious);
+           placeholder RED (67>24). Only SwiftFormat is green.
+  [FAIL] iOS/iPadOS + macOS archives sign successfully
+         — archives cannot run (no Xcode) and could not sign (0 identities, no team).
+
+Verdict: BLOCKED on five independent, evidence-backed grounds:
+
+A. CAPABILITY — full Xcode + simulators absent (prompt mandate: "requires macOS +
+   Xcode, simulators, signing identities, and archive credentials; if the gate can't
+   run -> STATUS=BLOCKED"):
+   - xcode-select -p => /Library/Developer/CommandLineTools (Command Line Tools, not
+     Xcode.app). `xcodebuild` is non-functional => IOS_EXIT=MAC_EXIT=IOS_ARCHIVE_EXIT=
+     MAC_ARCHIVE_EXIT=1 at the toolchain layer, before any project/signing concern.
+   - `simctl` unavailable => no iOS Simulator destination for the iPhone 16 step.
+
+B. CAPABILITY — code signing / archive credentials absent:
+   - security find-identity -v -p codesigning => 0 valid identities; no DEVELOPMENT_TEAM.
+   - Even with full Xcode, signed iOS/iPadOS + macOS archives are not producible here.
+
+C. REQUIRED GATE ARTIFACTS missing (acceptance criterion "both ledgers 100%" is
+   unverifiable; Gate ledger steps cannot run as written):
+   - apps/parity/apple-macos-ledger.json : MISSING.
+   - apps/parity/apple-ios-ledger.json   : MISSING.
+   - apps/tools/check-parity-ledger.ps1  : MISSING (pwsh: "not recognized").
+   Producing these is Out of Scope ("modifying parity definitions" / "Do NOT fix code").
+
+D. PREDECESSORS not all DONE (Covenant rule 7 — no predecessor bypass):
+   - p4-p9-*.log (P9-0001-xctest-unit, P9-0002-xcuitest-ui): no canonical log =>
+     "P4/P0..P9 all STATUS=DONE" UNSATISFIED.
+   - p4-apple-dashboard-widgets-0001-AlertFeedWidget.log: not DONE (ends IOS_EXIT=143,
+     ** BUILD INTERRUPTED **) => generated P7 page prompts are not all DONE.
+   - p1-s3-0001-kmp-scaffold.log = STATUS=BLOCKED (producer of the Shared.xcframework
+     both Apple targets link).
+   - (For completeness: P4 phase P0..P8 = 15/15 STATUS=DONE; generated P7 page prompts
+     = 332/333 STATUS=DONE.)
+
+E. CODE-QUALITY GATES RED (Out of Scope to remediate — "Do NOT fix code"):
+   - LINT_EXIT=2 : SwiftLint --strict, 1 serious violation —
+     apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+     opening_brace (Opening Brace Spacing). 1 violation in 2631 files.
+   - PLACEHOLDER_EXIT=1 : placeholder scan PLACEHOLDER_COUNT=67 > PLACEHOLDER_ALLOWED=24.
+   (SwiftFormat --lint is green: 0/2635 files require formatting.)
+
+Per scope, none of A-E were remediated: "Fixing code, creating missing pages/
+components, modifying parity definitions, or changing signing configuration" is
+explicitly Out of Scope, and this is a RUN-ONLY gate. This log records firsthand
+evidence only; the sole transient artifact (a git-ignored/untracked TeslaSync.xcodeproj
+materialized by `xcodegen generate` as build-prep) was removed, leaving the working
+tree clean. No source was modified. Covenant rule 8 (no commit on red): because this
+gate is RED/BLOCKED, the acceptance log is NOT committed — only a green run (aggregate
+exit 0, status DONE) commits per Implementation step 6.
+
+Promotion path to STATUS=DONE: run on a macOS runner with FULL Xcode (xcode-select ->
+Xcode.app) + iOS Simulators + a valid Apple development signing identity +
+DEVELOPMENT_TEAM + archive credentials (ADR-012 macos-latest), AFTER:
+  (1) P9-0001-xctest-unit and P9-0002-xcuitest-ui reach STATUS=DONE,
+  (2) p1-s3-0001-kmp-scaffold reaches STATUS=DONE,
+  (3) p4-apple-dashboard-widgets-0001-AlertFeedWidget reaches STATUS=DONE,
+  (4) apps/parity/apple-macos-ledger.json + apple-ios-ledger.json (both 100%) and
+      apps/tools/check-parity-ledger.ps1 are produced by their owning prompts,
+  (5) the SwiftLint opening_brace defect and the 43-over-budget placeholders are
+      remediated by their owning surface prompts.
+
+EXIT=1
+STATUS=BLOCKED

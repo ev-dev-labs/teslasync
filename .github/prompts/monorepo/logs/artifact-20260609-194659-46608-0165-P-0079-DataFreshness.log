@@ -1,0 +1,120 @@
+=== P4 Shared surface 0079 DataFreshness (Apple) ===
+Runner: Darwin arm64 (Mac Studio) · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat (brew) · pwsh
+Capability: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 — PRESENT (this surface uses SwiftUI only; no charts/maps in the web source).
+Web source: web/src/components/data-display/DataFreshness.tsx (the spec — chip + DataFreshnessAuto).
+Native output: apps/apple/TeslaSync/shared-surfaces/DataFreshness.{swift,Adapter,Projection,Model,Views,Previews,Tests,AdapterTests}.swift + DataFreshness.strings (9 files, additive).
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (this prompt's responsibility) — ALL GREEN
+--------------------------------------------------------------------------------
+
+[1] swiftformat --lint (shipped DataFreshness files)
+    > 0/8 files require formatting.
+    FORMAT_FILES_EXIT=0
+
+[2] swiftlint lint --strict (shipped DataFreshness files)
+    > Done linting! Found 0 violations, 0 serious in 8 files.
+    SWIFTLINT_FILES_EXIT=0
+
+[3] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/DataFreshness
+    > PLACEHOLDER_ALLOWED=0
+    > PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[4] Isolated SwiftPM build + XCTest (Swift 6, .macOS(.v15), strict concurrency complete)
+    Compiled the 5 surface sources + Previews against the REAL design system
+    (apps/design/generated/apple/Tokens.swift — the only external dependency the
+    surface uses: Color.TS / Font.TS / TSSpacing / TSMotion). No stubs, no fakes.
+    > Build complete!
+    > Test Suite 'All tests' ... Executed 54 tests, with 0 failures (0 unexpected)
+    Suites: DataFreshnessStatusTests(8) DataFreshnessRelativeTimeTests(6)
+            DataFreshnessInterpolationTests(4) DataFreshnessInputTests(10)
+            DataFreshnessAdapterMiscTests(3) DataFreshnessProjectionTests(12)
+            DataFreshnessModelTests(8) DataFreshnessViewsTests(3)
+    ISOLATED_BUILD_EXIT=0
+    ISOLATED_TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+REPO-WIDE GATE STEPS (exact gate invocations)
+--------------------------------------------------------------------------------
+
+xcodegen generate
+    > Created project at apps/apple/TeslaSync.xcodeproj
+Stage Shared.xcframework (KMP) — gradle :core:assembleSharedXCFramework
+    > BUILD SUCCESSFUL ; release Shared.xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64)
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    > ** TEST FAILED **  (compile failures in PRE-EXISTING sibling surfaces — see ANALYSIS)
+    IOS_EXIT=65
+
+xcodebuild -scheme TeslaSync-macOS build test
+    > error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    > error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    > ** TEST FAILED **  (pre-existing macOS development-signing requirement — no dev cert/DEVELOPMENT_TEAM on this runner)
+    MAC_EXIT=65
+
+swiftlint --strict        (repo-wide, 3667 files)
+    > Done linting! Found 0 violations, 0 serious in 3667 files.
+    LINT_EXIT=0
+
+swiftformat --lint apps/apple   (repo-wide, 3897 files)
+    > 0/3897 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0
+
+check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/DataFreshness
+    > PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+ANALYSIS — the IOS/MAC build-test failures are PRE-EXISTING and EXTERNAL to this surface
+--------------------------------------------------------------------------------
+
+Honesty covenant #1 (no red-as-green): the full-module `build test` is RED, so this
+log does NOT report EXIT=0. The failures are NOT in the DataFreshness surface:
+
+* iOS (IOS_EXIT=65): every compile error is a duplicate-type collision across
+  OTHER, parallel-authored sibling surfaces — 10 files, all under
+  dashboard-widgets/ + feature-views/, zero under shared-surfaces/:
+    - 'RecentDrivesModel'/'RecentDrivesConnection'/'RecentDrivesLoadStatus'/'RecentDrivesUpdate'
+      "ambiguous for type lookup" — RecentDrivesModel is defined TWICE in the module:
+        TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+        TeslaSync/feature-views/RecentDrivesSection.Model.swift:23
+    - 'StateTimelineModel'/'StateTimelineConnection'/'StateTimelineLoadStatus'/'StateTimelineUpdate'
+      "ambiguous" — StateTimelineWidget.* vs StateTimeline.* (same pattern).
+    Failing files:
+      TeslaSync/dashboard-widgets/RecentDrivesListWidget.{Model,Previews,}.swift
+      TeslaSync/dashboard-widgets/StateTimelineWidget.{Model,Previews,}.swift
+      TeslaSync/feature-views/RecentDrivesSection.{Previews,Seams}.swift
+      TeslaSync/feature-views/StateTimeline.{Previews,Source}.swift
+    grep "error:.*DataFreshness|error:.*shared-surfaces"  → 0 matches.
+
+* macOS (MAC_EXIT=65): a development-signing entitlement requirement on the
+  TeslaSync-macOS / TeslaSyncWidgets-macOS targets (no dev certificate /
+  DEVELOPMENT_TEAM is configured on this runner). It is not a compile error and
+  not related to any source change. grep "error:.*DataFreshness" → 0 matches.
+
+* This change is PURELY ADDITIVE: `git status` shows only the 9 new
+  DataFreshness.* files (untracked); no existing file is modified. Stashing them
+  leaves both pre-existing failures unchanged. Fixing the duplicate types or the
+  macOS signing config is OUT OF SCOPE for this prompt (Allowed files:
+  DataFreshness.* + this log; Out of scope: other surfaces, project/signing config).
+  Per ADR-012, the authoritative full-tree build runs on the CI macos-latest matrix
+  over the integrated tree, not per parallel surface prompt.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all web states (fresh / fetching=loading / stale / error / offline-cached / never-updated=empty / compact) — projection + previews + tests.
+[x] Hooks bind through the shared P1/S8 state-holder seam (DataFreshnessSource/Model); no HTTP in the view.
+[x] Every web i18n key present in P1/S10 table (DataFreshness.strings): freshness.justNow/minutes/hours/days/weeks/updating/error/updatingTooltip/lastUpdated/neverUpdated/refresh + a11y.dataFreshness (+ native state words).
+[x] Accessibility: VoiceOver label + value + button/status role, Dynamic Type (token fonts), Reduce-Motion gating (ping/spin/pulse + tooltip).
+[x] Tests: adapter unit tests + per-state projection tests + model state-holder tests + a11y label tests + views compose — 54 tests, 0 failures (isolated).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] P1/S11 view.opened telemetry emitted once with slug "DataFreshness".
+[~] Full-app xcodebuild iOS+macOS build test: BLOCKED by pre-existing external defects (above), not by this surface.
+
+The surface is complete and independently verified GREEN; the integration build test
+is blocked by pre-existing, out-of-scope defects in sibling surfaces + macOS signing.
+
+EXIT=65
+STATUS=BLOCKED

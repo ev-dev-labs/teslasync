@@ -1,0 +1,145 @@
+=== P4 Feature view 0308 VehicleSettingsTab (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/VehicleSettingsTab.*
+Web spec : web/src/features/vehicles/components/VehicleSettingsTab.tsx (395 lines)
+Date     : 2026-06-12
+Host     : Darwin (arm64), real macOS host with full Apple toolchain.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT / CAPABILITY (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG)
+--------------------------------------------------------------------------------
+Xcode 26.5 (Build 17F42)
+Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint 0.63.3
+swiftformat 0.61.1
+xcodegen (installed)
+Simulator 'iPhone 16' AVAILABLE (used verbatim by the gate destination).
+Shared.xcframework (KMP) built via Scripts/build-shared-xcframework.sh — BUILD SUCCESSFUL
+  (slices: ios-arm64, ios-arm64-simulator, macos-arm64) and staged to Frameworks/.
+Platform capability for SwiftUI / Swift Charts / MapKit / iOS18 / macOS15 is PRESENT.
+
+Note: this surface composes from native primitives (SwiftUI form controls) per Apple HIG;
+the web source uses no Recharts/Leaflet, so no Swift Charts / MapKit surface is required
+(prompt "Charts / maps used: (none)").
+
+--------------------------------------------------------------------------------
+DELIVERED FILES (apps/apple/TeslaSync/feature-views/) — 11 Swift + 1 strings, 2269 LOC
+--------------------------------------------------------------------------------
+VehicleSettingsTab.Models.swift     — Foundation DTOs/enums (source, kind, value, phase, row)
+VehicleSettingsTab.Adapter.swift    — pure projector: descriptor catalog, effectiveToDraft,
+                                       parseDraft, datetime-local<->RFC3339, resolvePhase, pill map
+VehicleSettingsTab.Seams.swift      — P1/S8 source + P1/S8 mutator + P1/S11 telemetry + P1/S10 i18n
+                                       + in-memory source + a11y builder
+VehicleSettingsTab.Model.swift      — @Observable state holder (rows, phase, per-key validation/
+                                       save errors + in-flight, upsert/reset, stale/offline, view.opened)
+VehicleSettingsTab.States.swift     — loading skeleton, empty notice, error+retry, freshness chip,
+                                       connectivity banner, inline error
+VehicleSettingsTab.Views.swift      — header, content, rows, VehicleSettingRow, source pill, actions
+VehicleSettingsTab.Inputs.swift     — per-kind inputs (text / select Picker / datetime DatePicker)
+VehicleSettingsTab.swift            — main section view: FadeIn + GlassPanel chrome, phase switch, a11y
+VehicleSettingsTab.Previews.swift   — #Preview per state (content/empty/loading/error/stale/offline)
+VehicleSettingsTab.Tests.swift      — adapter + accessibility unit tests
+VehicleSettingsTab.ModelTests.swift — state-holder lifecycle + mutation/validation/freshness tests
+VehicleSettingsTab.strings          — P1/S10 i18n catalog (every key resolved by the surface)
+
+Parity reproduced from the web source: 6 ordered descriptors (nickname/text,
+mute_until/timestamp, charge_cost_tariff_id/text, units_distance|temperature|energy/select),
+the source pill (override/user/vehicle/default), per-row Save (enabled only when dirty) +
+Reset (enabled only when source==override), the "Saving…"/"Resetting…" pending labels, the
+"Value is required." + datetime + select validations, and the datetime-local -> RFC3339
+conversion. Bound via P1/S8 seams (no direct HTTP in the view), i18n via P1/S10, telemetry
+view.opened slug=VehicleSettingsTab via P1/S11. All prompt states render: loading, empty,
+error, content + stale chip + offline banner + per-key inline validation/save error.
+
+--------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (deterministic; this surface in isolation) — ALL GREEN
+--------------------------------------------------------------------------------
+[swiftlint --strict]  Done linting! Found 0 violations, 0 serious in 11 files.   LINT_EXIT=0
+[swiftformat --lint]  0/11 files require formatting.                             FORMAT_EXIT=0
+[check-placeholders]  PLACEHOLDER_COUNT=0 for every VehicleSettingsTab.* file.   PLACEHOLDER_EXIT=0
+                      (no TODO/FIXME/XXX/Placeholder/Lorem/stub/mock/"not implemented")
+
+[swiftc -typecheck, macOS arm64, -swift-version 6 (strict concurrency complete)]   exit 0
+[swiftc -typecheck, iOS 18 Simulator arm64, -swift-version 6]                       exit 0
+  (surface sources type-checked against the real SDK with the P1/S9 token + motion deps)
+
+[swift test — SwiftPM harness, module TeslaSync, macOS, Swift 6 strict concurrency]
+  Executed 39 tests, with 0 failures (0 unexpected).
+  Coverage: descriptor catalog/order, source wire-decode, effectiveToDraft (text/select/
+  timestamp/scalar/nil), parseDraft (ok/empty/invalid date/invalid select), datetime-local
+  <-> RFC3339 round-trip + invalid handling, resolvePhase matrix, source-pill variant map,
+  dirty check, accessibility section/row labels; model lifecycle (view.opened once+idempotent),
+  loading->content (6 rows), loaded-empty->empty, failed-no-payload->error, failed-with-payload
+  ->content+inline error, save valid->upsert+refresh, save blank->required+skip, save invalid
+  select->validation+skip, save server failure->inline+no refresh, reset override->reset+refresh,
+  reset non-override->guarded, stale auto-refresh once+re-arm, offline keeps rows+no refresh.
+
+--------------------------------------------------------------------------------
+FULL-SCHEME xcodebuild build (the prompt gate's IOS/MAC legs) — BLOCKED (pre-existing,
+out-of-scope swift-frontend compiler crash in ANOTHER surface)
+--------------------------------------------------------------------------------
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+       Whole-module type-check (EmitSwiftModule for 'TeslaSync') completed with 0 source errors
+       (this surface compiles inside the iOS app module). IR generation then crashed:
+         ** BUILD FAILED **      IOS_BUILD_EXIT=65
+         swift-frontend SIGNAL crash — "Please submit a bug report ... crash backtrace."
+         4. While evaluating request IRGenRequest(IR Generation for file
+            ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+         5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+         (IRGenSILFunction::visitFullApplySite -> SyncCallEmission::setArgs)
+         source error: lines = 0
+       IOS_EXIT=65
+
+[macOS] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build
+         ** BUILD FAILED **      MAC_EXIT=65
+         Identical swift-frontend IRGen crash on the SAME file:
+         While evaluating request IRGenRequest(... AppearanceSettings.Controls.swift)
+         source error: lines = 0
+       MAC_EXIT=65
+
+  (build test not reached: the app target does not link, so the hosted XCTest bundles
+   TeslaSyncTests / TeslaSync-macOSTests cannot run in this scheme.)
+
+--------------------------------------------------------------------------------
+PROOF THE BLOCKER IS PRE-EXISTING AND INDEPENDENT OF THIS SURFACE
+--------------------------------------------------------------------------------
+Baseline reproduction: moved ALL VehicleSettingsTab.* files OUT of the tree,
+`xcodegen generate`, then rebuilt TeslaSync-macOS:
+   ** BUILD FAILED **   baseline-build-exit=65
+   swift-frontend IRGen crash on the SAME file — AppearanceSettings.Controls.swift
+   source error: lines = 0
+=> The crash occurs WITH and WITHOUT this surface, in a file this prompt is NOT allowed
+   to touch (allowed files: VehicleSettingsTab.* + this log). It is a Swift 6.3.2 / Xcode
+   26.5 compiler (swift-frontend) IRGen segfault on a Bool/actor reabstraction thunk in
+   AppearanceSettings.Controls.swift, not a source defect — and not caused by this work.
+   This surface's own files compile (type-check) cleanly in both the iOS and macOS app
+   modules and pass every isolatable gate above. Files restored; project regenerated (72
+   VehicleSettingsTab references present in the app + test targets).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all web-source states (loading/empty/error/content + stale/offline +
+    per-key validation/save error) — previews + model tests per state.
+[x] Hooks bind to the shared P1/S8 state-holder seam layer; no direct HTTP from the view.
+[x] Every i18n key the surface resolves has a matching entry in VehicleSettingsTab.strings (P1/S10).
+[x] Accessibility labels on every interactive element (inputs, pickers, save/reset, clear, pill);
+    section + row VoiceOver summaries; a11y label test present.
+[x] Tests: adapter unit tests + per-state model/UI coverage + a11y label tests (39 tests, 0 fail).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders = 0).
+[~] EXIT=0 NOT achievable: the full-scheme xcodebuild build/test cannot pass because
+    swift-frontend 26.5/6.3.2 crashes during IRGen of AppearanceSettings.Controls.swift —
+    a pre-existing, out-of-scope toolchain crash (proven via the baseline build). All
+    host-runnable + isolatable gates for THIS surface are green.
+
+--------------------------------------------------------------------------------
+GATE EXIT CODES
+--------------------------------------------------------------------------------
+IOS_EXIT=65        (xcodebuild build: pre-existing swift-frontend IRGen crash, AppearanceSettings.Controls.swift)
+MAC_EXIT=65        (xcodebuild build: same pre-existing crash)
+LINT_EXIT=0        (swiftlint --strict, VehicleSettingsTab.* : 0 violations)
+FORMAT_EXIT=0      (swiftformat --lint, VehicleSettingsTab.* : 0 require formatting)
+PLACEHOLDER_EXIT=0 (check-placeholders, VehicleSettingsTab.* : COUNT=0)
+
+EXIT=65
+STATUS=BLOCKED

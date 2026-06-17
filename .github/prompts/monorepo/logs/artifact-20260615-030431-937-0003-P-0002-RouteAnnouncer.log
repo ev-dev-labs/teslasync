@@ -1,0 +1,203 @@
+=== P4 Shared surface 0002 RouteAnnouncer (Apple) ===
+Host: Darwin (macOS) · Xcode 26.5 (Build 17F42) · Apple Swift 6.3.2 · DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+Toolchain present: xcodebuild, xcodegen 2.45.4, swiftlint, swiftformat, pwsh, java 17 + apps/shared/gradlew, iPhone 16 simulator (booted)
+Web source (THE spec): web/src/components/a11y/RouteAnnouncer.tsx
+Native output (directory layout — makes the Gate `-Path .../RouteAnnouncer` + Commit `git add .../RouteAnnouncer` non-vacuous):
+  apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer/
+    RouteAnnouncer.swift             (entry View; surfaceSlug + defaultAnnounceDelay)
+    RouteAnnouncer.Model.swift       (P1/S8 state-holder, projection, P1/S11 telemetry seam, P1/S10 i18n facade)
+    RouteAnnouncer.Adapter.swift     (pure core: padding, RouteAnnouncement, RouteSnapshot, RouteAnnounceReducer, a11y builders)
+    RouteAnnouncer.Seams.swift       (source protocol, navigator = useLocation port, scheduler seam, presenter seam)
+    RouteAnnouncer.Views.swift       (live-region card, history row/section, data body, freshness chip)
+    RouteAnnouncer.States.swift      (loading / empty / error chrome)
+    RouteAnnouncer.Previews.swift    (DEBUG previews — data/empty/loading/error/stale/offline)
+    RouteAnnouncer.strings           (P1/S10 i18n catalog contribution, table "RouteAnnouncer")
+    RouteAnnouncer.Tests.swift       (adapter + projection + a11y unit tests)
+    RouteAnnouncer.ModelTests.swift  (model timing/voicing/connection/telemetry + navigator + live-source tests)
+
+All RouteAnnouncer symbols are Route-prefixed to avoid collision with the sibling 0001 AnnouncerRegion types
+in the same TeslaSync module (verified: 0 external definitions of any Route* symbol I declare).
+
+════════════════════════════════════════════════════════════════════════
+SECTION A — SURFACE-SCOPED VERIFICATION (the per-surface gate)        ✅ ALL GREEN
+════════════════════════════════════════════════════════════════════════
+Every step actually run; raw results below.
+
+A1. xcodegen generate (TeslaSync/shared-surfaces is ALREADY wired into both app targets + both unit-test
+    bundles in project.yml; the nested RouteAnnouncer/ dir is picked up recursively, with `**/*Tests.swift`
+    excluding the two test files from the app targets — 0 project.yml edits needed).
+    → "Created project at .../TeslaSync.xcodeproj"
+    → target-membership parsed from the generated project.pbxproj:
+        TeslaSync (iOS app)        : RouteAnnouncer.{swift,Model,Adapter,Seams,Views,States,Previews}.swift + RouteAnnouncer.strings
+        TeslaSync-macOS (app)      : (same 7 sources + strings)
+        TeslaSyncTests (iOS)       : RouteAnnouncer.Tests.swift, RouteAnnouncer.ModelTests.swift
+        TeslaSync-macOSTests       : RouteAnnouncer.Tests.swift, RouteAnnouncer.ModelTests.swift
+      → 0 *Tests.swift leak into the app targets (app targets total 4698 swift sources, 0 are *Tests.swift).
+
+A2. Isolated SwiftPM build + tests — module named "TeslaSync" so `@testable import TeslaSync` compiles verbatim;
+    Swift 6 language mode + strict-concurrency complete; macOS 15; API-faithful shims for the exact P1/S9 tokens
+    + shared components the surface consumes (TSCard/TSButton/TSSkeleton/TSEmptyState/TSFadeIn, Color.TS/Font.TS,
+    TSSpacing/TSRadius — signatures mirror apps/apple/Sources/Components + apps/design/generated/apple/Tokens.swift).
+    → swift build: "Build complete! (9.30s)" — compiles the WHOLE surface (entry + Model + Adapter + Seams + Views
+        + States + Previews) clean under Swift 6 strict concurrency.
+    → swift test: "Executed 39 tests, with 0 failures (0 unexpected)".
+        RouteAnnouncerPaddingTests         4/4  (ZWS rotation 1·2·3·0·1·0 ; padded ; U+200B ; duplicate-distinct)
+        RouteAnnounceReducerTests          4/4  (firstRender suppress + counter unchanged ; empty-title clear +
+                                                 counter unchanged ; present-title padded + counter advances ;
+                                                 identical consecutive titles → distinct announcements)
+        RouteAnnouncerProjectionTests      6/6  (error precedence ; loading ; empty ; data most-recent-first ;
+                                                 current-without-entries still data ; empty errorMessage ≠ error)
+        RouteAnnouncerAccessibilityTests   4/4  (region label name→title ; empty-word fallback ; history title→path ;
+                                                 history drops empty path)
+        RouteAnnouncerModelTests          10/10 (view.opened once + idempotent ; initial route SILENT + UNSCHEDULED ;
+                                                 navigation defers read then speaks LATEST title ; deferred read sees
+                                                 the SETTLED title ; rapid navigations cancel pending → only final
+                                                 announces ; empty settled title clears region + stays silent ;
+                                                 identical titles both re-announce via rotating padding ; model
+                                                 forwards configured delay (web delayMs) ; stop cancels pending ;
+                                                 surfaceSlug)
+        RouteAnnouncerConnectionTests      4/4  (stale one-shot auto-refresh ; re-arm after live ; offline keeps
+                                                 connection + no auto-refresh ; manual refresh delegates)
+        RouteAnnouncerNavigatorTests       4/4  (navigate advances sequence + notifies ; updateTitle keeps sequence ;
+                                                 subscribe/cancel ; reset)
+        LiveRouteAnnouncerSourceTests      3/3  (start emits initial route as live snapshot ; navigate emits new
+                                                 snapshot ; stop unsubscribes)
+
+A3. swiftc -typecheck — real SDKs, Swift 6, -strict-concurrency=complete (the 7 non-test surface files + shims)
+    → iOS 18   (arm64-apple-ios18.0-simulator, iPhoneSimulator26.5 SDK):  IOS_TYPECHECK_OK
+    → macOS 15 (arm64-apple-macos15.0,        MacOSX SDK):                MAC_TYPECHECK_OK
+
+A4. swiftlint --strict (real apps/apple/.swiftlint.yml; shared-surfaces is in `included`)
+    → 0 RouteAnnouncer violations. (Repo-wide `swiftlint --strict` now exits 0 — see B3.)
+
+A5. swiftformat --lint (the surface)
+    → "0/9 files require formatting."  (the 9 RouteAnnouncer files; 0 require formatting)
+
+A6. placeholder gate — ACTUAL non-vacuous scan of the shipped surface
+    & ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer
+    → PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+    (Scans all 10 real files. No TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-implemented; 0 parity:allow opt-outs.
+     Test doubles live in the *Tests.swift files only and are named Spy*/Recording*/InMemory*/Manual* — the words
+     "stub"/"mock" appear nowhere in shipped code.)
+
+A0/BONUS. FULL-APP iOS `build` actually SUCCEEDED with the surface compiled in.
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath <isolated> build test
+    → Scheme pre-action built the KMP Shared.xcframework via Gradle/Kotlin-Native (debug+release, FROM-CACHE; toolchain
+      present, slow under shared-host load).
+    → ** BUILD SUCCEEDED **  — the whole 4698-source TeslaSync app target linked, with the surface compiled in:
+        SwiftCompile … RouteAnnouncer/RouteAnnouncer.{swift,Views,States,Model,Adapter,Seams}.swift  (in target 'TeslaSync')
+        CopyStringsFile … TeslaSync.app/RouteAnnouncer.strings  (validated UTF-8)
+      and the two test files compiled into the TeslaSyncTests bundle:
+        SwiftCompile … RouteAnnouncer/RouteAnnouncer.{ModelTests,Tests}.swift  (in target 'TeslaSyncTests')
+    → 0 RouteAnnouncer-attributed errors anywhere in the build.
+    Caveat (transparent): reaching ** BUILD SUCCEEDED ** required TEMPORARILY correcting ONE pre-existing, unrelated
+    app-source error outside this surface's allowed file scope —
+        Sources/Features/Driving/DriveScorePage.Panels.swift:25  (LocalizedStringKey passed to String(localized:),
+        which expects String.LocalizationValue).
+    That one-line change was made ONLY to demonstrate the app builds with this surface and was REVERTED with
+    `git checkout` before commit (git status shows the working tree's sole change is the RouteAnnouncer/ directory).
+
+════════════════════════════════════════════════════════════════════════
+SECTION B — FULL-APP GATE COMMANDS (prompt Gate block)   ⛔ BLOCKED by pre-existing/unrelated/environment
+════════════════════════════════════════════════════════════════════════
+Run verbatim on the PRISTINE repo (temp fix reverted). Each non-zero exit is caused by a PRE-EXISTING, repo-wide
+condition or a host-environment gap that exists independently of RouteAnnouncer — zero RouteAnnouncer-attributed errors.
+
+B1. xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    → IOS_EXIT=65.
+    → App `build`: the only blocker on the pristine tree is the pre-existing
+        Sources/Features/Driving/DriveScorePage.Panels.swift:25  LocalizedStringKey→String.LocalizationValue mismatch
+      (proven above: with that single unrelated line corrected, ** BUILD SUCCEEDED ** and the surface compiles in).
+    → `test`: the TeslaSyncTests bundle (which DID compile RouteAnnouncer.{Tests,ModelTests}.swift) fails to build on a
+      pre-existing, unrelated Swift-6 concurrency error:
+        Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20:57: error: call to main actor-isolated static
+        method 'artifact(id:status:bytes:sha256:storage:error:)' in a synchronous nonisolated context
+      so no test executes. Both blockers are outside the surface's allowed file scope (RouteAnnouncer.* + this log).
+    → RouteAnnouncer-attributed errors: 0.
+
+B2. xcodebuild -scheme TeslaSync-macOS build test
+    → MAC_EXIT=65 (environment). `security find-identity -p codesigning -v` → "0 valid identities found"; the macOS
+      app + TeslaSyncWidgets-macOS entitlements require a development signing certificate that does not exist on this
+      host. → RouteAnnouncer-attributed errors: 0.
+
+B3. swiftlint --strict            → LINT_EXIT=0  ✅
+    The repo-wide strict lint passes (the surface's own large_tuple finding in an early draft was fixed by switching
+    the model test harness to XCTest fixtures; no pre-existing violations remain in this slot).
+
+B4. swiftformat --lint apps/apple → FORMAT_EXIT=1
+    9/6194 files require formatting — ALL pre-existing and unrelated:
+      Sources/Features/Admin/UsersPageModel.swift, Sources/Features/Battery/SleepEfficiency{Models,PageModel}.swift,
+      Sources/Features/Dashboard/{GlanceModels,GlancePage.Sections,GlancePageModel.Sample,GlancePageModel}.swift,
+      Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift, Tests/Unit/Features/Dashboard/GlancePageModelTests.swift.
+    The RouteAnnouncer surface passes (A5: 0/9). → 0 RouteAnnouncer formatting offenders.
+
+B5. check-placeholders.ps1 -Path .../RouteAnnouncer → PLACEHOLDER_EXIT=0  (see A6)
+
+Relative to the prior P4-apple ledger, two of that run's blockers are GONE in this slot (0 *Tests.swift leak into the
+app targets; DashboardWidgetSize is declared exactly once), and swiftlint is now clean — the iOS app `build` itself
+succeeds with this surface. The residual full-`build test`/macOS reds are pre-existing unrelated test-bundle/app
+errors + host signing, deferred to the p4-apple/P99 acceptance gate on a signed macOS runner with the repo-wide
+GDPRExportPageModelTests / DriveScorePage.Panels fixes.
+
+════════════════════════════════════════════════════════════════════════
+SECTION C — LAYOUT & WIRING NOTES
+════════════════════════════════════════════════════════════════════════
+C1. Layout: the surface is a directory apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer/ holding the
+    RouteAnnouncer.* file set, so the Gate's `-Path .../RouteAnnouncer` is an ACTUAL (non-vacuous) recursive scan and
+    the Commit's `git add .../RouteAnnouncer` resolves to a real path (a flat-file prefix would be a no-op scan / a
+    fatal `git add`).
+C2. Build wiring: project.yml already lists `TeslaSync/shared-surfaces` in both app targets (excludes `**/*Tests.swift`
+    + `*Tests.swift`) and in both unit-test bundles (includes `**/*Tests.swift` + `*Tests.swift`). The nested
+    RouteAnnouncer/ directory is therefore wired automatically — project.yml contains 0 references to RouteAnnouncer
+    and required NO edits. The generated .xcodeproj is git-ignored.
+
+════════════════════════════════════════════════════════════════════════
+SECTION D — PARITY NOTES (web source is THE specification)
+════════════════════════════════════════════════════════════════════════
+D1. Web-effect logic reproduced verbatim + unit-tested (A2):
+      • firstRender guard — the initial route is NEVER announced (recorded, not scheduled): RouteAnnouncerModelTests
+        .testInitialRouteIsSilentAndUnscheduled.
+      • deferred read — `setTimeout(delayMs=100)` → RouteAnnounceScheduling seam; the read uses the SETTLED title
+        (web: the lazy page's usePageTitle settles during the delay): .testDeferredReadSeesTheSettledTitle.
+      • empty title → clear the region, silent, counter unchanged (web `setMessage('')`): .testEmptyTitleClears…
+      • rotating 0–3 ZERO-WIDTH-SPACE suffix (`counter % 4`) so two routes with the SAME title both re-announce:
+        RouteAnnouncerPadding + .testIdenticalConsecutiveTitlesBothReAnnounce.
+      • cancel-pending on rapid navigation (web cleanup `clearTimeout`) — only the FINAL destination announces:
+        .testRapidNavigationsCancelPendingAndOnlyFinalAnnounces.
+      • custom delay (web `delayMs` prop): model `delay` parameter forwarded to the scheduler:
+        .testModelForwardsConfiguredDelayToScheduler.
+D2. Data sources: bound to the navigation feed (native useLocation peer = RouteAnnouncerNavigator) via the P1/S8
+    RouteAnnouncerSource seam; no direct HTTP/router access from the view. The web source DELIBERATELY does not route
+    through useAnnouncer (it documents why — route changes are declarative and need their own region); the native port
+    mirrors that with its own RouteAnnouncementPresenter rather than the shared 0001 Announcer. The prompt's
+    auto-listed "useAnnouncer" is superseded by the actual source, exactly as the web file states.
+D3. Apple idiom: the web `<VisuallyHidden liveRegion priority="polite">` maps to
+    AccessibilityNotification.Announcement at .default (polite) speech priority (ADR-009). The native parity surface
+    additionally renders the region VISIBLY as a route-announcements inspector (the convention set by sibling 0001
+    AnnouncerRegion) so every state is a real, non-blank UI while the real VoiceOver voicing happens through the
+    presenter seam.
+D4. States: the web source reads synchronous router state, so its intrinsic states are idle (suppressed initial route
+    → empty hidden region) / announcing (title + padding voiced) / cleared (empty title). All are rendered; the P4
+    leaf contract adds loading / error / stale / offline (freshness chip + one-shot stale auto-refresh) over the
+    bound navigation feed, each a real surface (never a blank box). i18n (P1/S10): table "RouteAnnouncer", no English
+    prose literal in code. Telemetry (P1/S11): view.opened emitted once with surface slug "RouteAnnouncer".
+    Accessibility: VoiceOver labels on the region + history rows + the freshness button; Dynamic-Type semantic fonts;
+    reduce-motion respected (no bespoke animation); localized region/history labels asserted by tests.
+
+════════════════════════════════════════════════════════════════════════
+SUMMARY
+════════════════════════════════════════════════════════════════════════
+Surface verification (A1–A6 + bonus): GREEN — SwiftPM build + 39/39 tests under Swift 6 strict concurrency;
+  iOS-18 + macOS-15 swiftc -typecheck; swiftlint --strict 0 violations; swiftformat --lint 0/9; placeholder 0;
+  target membership enumerated; and the full iOS app ** BUILD SUCCEEDED ** with the surface compiled in (after
+  temporarily correcting ONE unrelated pre-existing app error, reverted before commit).
+Full-app gate (B1–B5): IOS_EXIT=65, MAC_EXIT=65, LINT_EXIT=0, FORMAT_EXIT=1, PLACEHOLDER_EXIT=0 — every non-zero
+  caused by PRE-EXISTING, unrelated repo conditions (DriveScorePage.Panels.swift app error; GDPRExportPageModelTests
+  + GlancePageModel* test-bundle errors/format; 9 unrelated swiftformat files) + macOS development-signing absence;
+  0 RouteAnnouncer-attributed errors. Deferred to p4-apple/P99 acceptance gate.
+
+SURFACE_SCOPED_STATUS=DONE
+FULL_APP_GATE_STATUS=BLOCKED (pre-existing/unrelated/environment; 0 RouteAnnouncer-attributed errors)
+
+EXIT=65
+STATUS=BLOCKED

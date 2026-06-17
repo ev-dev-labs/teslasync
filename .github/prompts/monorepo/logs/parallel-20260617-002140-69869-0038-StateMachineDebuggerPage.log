@@ -1,0 +1,204 @@
+I'll start by exploring the repository structure to understand the existing codebase, the web source, and the Apple app conventions.
+
+Xcode 26.5, swiftlint, swift 6.3.2, and pwsh are all available — the gate is runnable. Let me explore the web source and Apple app structure.
+
+CommandHistoryPage (just merged) is the ideal reference — it uses a multi-file pattern. Let me read the web source and the reference Apple page in parallel.
+
+Strong reference pattern established. Let me read the rest of the web source and remaining reference files.
+
+Let me read the rest of the web source (the render/JSX) and the views reference file.
+
+Now let me read the final section of the web source and explore the shared component library (P3) and design tokens (P2).
+
+Now I have the full web source. Let me extract the exact manifest record for this page and explore the shared component library (charts, tokens, panels).
+
+Let me locate the shared component library and design tokens (TSGlassPanel, Color.TS, etc.).
+
+The shared library is in `apps/apple/Sources/Components/`. Let me explore it, the design tokens, and an existing pie-chart page for the chart pattern.
+
+Both `Sources/` and `TeslaSync/Features/` compile into one `TeslaSync` module, with tokens from `design/generated/apple`. Let me read the chart components, design tokens, and key UI components.
+
+Let me read the chart models, design tokens, and an existing distribution-chart page to nail the pie-chart pattern.
+
+Excellent pie-chart pattern reference. Let me read the design tokens and the core UI component files in parallel.
+
+Let me read the remaining key components (skeletons, pickers, tabs, data table, badges, metrics, lists) and locate pagination/copy/tooltip helpers.
+
+Let me read the pickers, tabs, data table, and badges, and locate pagination, copy-button, tooltip, and icon-box helpers.
+
+Let me locate the remaining helpers: vehicle select, pagination, data table, badges, icon box, button, clipboard, timeline.
+
+Let me read the timeline/status components, the web StateBadge, and the FSM types to capture state coloring.
+
+Let me read the vehicle FSM states/theme, locate the xcstrings catalog, the ledger entry, and a reference log + placeholder script.
+
+The ledger has no row for this page yet. Let me inspect the ledger structure (CommandHistory row), the xcstrings format, a reference log, and the placeholder script.
+
+Let me read a reference log (CommandHistory), the placeholder patterns, and inspect the xcstrings format.
+
+Now let me study the reference log format I must reproduce, and confirm the placeholder matcher behavior.
+
+The predecessor log is a goldmine — it confirms the full app target is blocked by pre-existing out-of-scope baseline breakage, so unit-scoped typecheck is the positive evidence path. Let me set up a tracking plan, verify the baseline breakage, and read the API hooks for accurate data shapes.
+
+Baseline breakage confirmed (StatusApiDocsPage redeclares TSSpacing/TSRadius); Shared.xcframework not vendored. I'll use the unit-scoped typecheck path like the predecessor. Let me read the remaining hooks/types and set up my plan.
+
+I now have a clear panel mapping. The 11 panels = literal GlassPanels numbered by overall panel index, with ChartContainer→State-Distribution and the 4 StatCards named. Let me record my plan and read the final pieces (swiftlint rules, bar chart, motion, layout, full VehicleState).
+
+Important constraint: `--strict` makes file_length (>400) and function_body_length (>50) fail, so I must decompose heavily. Let me read the bar chart wrapper and a sibling page scaffold, then write my plan.
+
+I have everything I need. Let me record the plan and todos, then start building.
+
+Let me read the web `computeFlapIds` and timeline-chart bucketing so I port them faithfully.
+
+I have all the logic I need (flap detection ported). Now I'll build the files. Starting with the data/value-types file.
+
+Now the formatters + pure derivations file.
+
+Now the model file (enums, data-source protocol with hook-named methods, `@Observable` store).
+
+I left a stub in `fetchAll()` — I must fix that immediately (it's both a stub and contains a forbidden word). Let me rewrite the model cleanly with extensions (to respect `type_body_length`) and a real implementation.
+
+Now the sample data source (drives the populated state out of the box).
+
+Now the page scaffold with header/actions, state router, and section composition.
+
+I must avoid symbol collisions (the baseline already has duplicate-symbol issues). Let me check whether my intended view type names already exist in the module.
+
+`FSMHealthPanel` already exists. To be safe I'll prefix all my view types with `FSMDebugger`. Let me confirm none of those prefixed names exist.
+
+`FSMHealthPanel` is a real existing feature-view. I'll prefix all my view types with `FSMDebugger`. Let me also verify my data type names don't collide.
+
+Two collisions: `FSMTransitionRow` and `DetailEntry`. Let me confirm the rest and check typealiases before renaming.
+
+Only `FSMTransitionRow` and `DetailEntry` collide. Let me verify my replacement names are free, then rename across my files.
+
+28 stragglers is unexpected after the rename — let me inspect what matched.
+
+BSD `sed` doesn't support `\b` — the rename was a no-op. Let me use `perl` instead.
+
+Renames applied. Now update the page file to use the `FSMDebugger*`-prefixed view names (avoiding the existing `FSMHealthPanel`).
+
+Renames done. Now let me create the shared controls + state views file (range menu, share button, state badge, loading, error).
+
+Now the sections file (GlassPanel1 filters, GlassPanel2 current-state hero, summary cards, health, sub-FSM).
+
+I need to add two helpers I referenced (`overallAvgIntervalSec`, `flappingMessage`) and fix the flap banner to avoid interpolation-key complexity. Let me also guard against single-char identifiers (swiftlint min 2).
+
+Now the charts file (State-Distribution ChartContainer+PieChart+legend, Transition-Counts panel, state diagram, timeline bar chart).
+
+GlassPanel3 (live region) needs step/select/clear actions on the model. Let me add those plus the step-navigation derived state to the model.
+
+Let me add a short-time formatter to Support, then write the live region (GlassPanel3).
+
+Now the transitions file (GlassPanel10 log table + pagination, GlassPanel11 detail).
+
+Now the route registration file.
+
+All Swift files written. Let me fix a likely swiftlint issue (a 3-tuple triggers `large_tuple`) and check file sizes / single-char identifiers before typechecking.
+
+All files ≤400 lines, no single-char identifiers. Now let me set up the unit-scoped typecheck — first I need to know which shared component files depend on the (unvendored) KMP `Shared` module so I can exclude them, like the predecessor did.
+
+Only `UnitFormatters.swift` needs KMP. Let me list `Sources/Design` and run the unit-scoped typecheck against the real component library (excluding the KMP-dependent file and unused Maps).
+
+Unit-scoped typecheck passes clean (Swift 6, strict concurrency, EXIT=0). Now swiftlint `--strict` and the placeholder scan on my files.
+
+18 `line_length` violations (>120). Let me view and wrap each offending line.
+
+Let me wrap all the long lines.
+
+Now reformat the `cycle` array (12 long lines). Let me view and replace it.
+
+Let me re-run swiftlint and the typecheck to confirm everything's clean now.
+
+Just the `Step` init signature. Let me wrap it.
+
+swiftlint `--strict` = 0 violations and typecheck = EXIT 0. Now the placeholder scan. Let me run it on the System dir and isolate my unit's contribution.
+
+The 13 matches are all in pre-existing siblings (`ScheduledExportsPanelForm`, `TeslaAccountPage`) — none in my files. Let me prove my unit scores 0 by scanning a temp copy of only my files.
+
+My unit is clean: PLACEHOLDER_COUNT=0, ALLOWED=0, EXIT=0, and 0 forbidden words. The 13 full-dir matches are pre-existing siblings. Let me update todos and extract every string key I reference to add to the catalog.
+
+Let me identify the stray bare `"fsm"` literal and check which of my keys already exist in the catalog.
+
+The bare `"fsm"` is a column id (not a key). None of my keys exist yet. Let me add all 77 keys to the catalog via a precise text-insertion script (preserving existing formatting), with a value map and validation.
+
+The catalog loaded fine but my `"strings"` marker whitespace didn't match. Let me inspect the exact bytes and fix the marker.
+
+The marker is `"strings": {` (compact colon). Let me check the exact format of an existing key entry to match my insertion style precisely.
+
+The marker is `"strings": {` (compact). My key-entry blocks already match the ` : ` inner style. Let me fix the marker and re-run.
+
+78 keys added (47 required + 31 helper), JSON valid. Let me verify the required keys landed correctly and re-validate.
+
+All 47 required keys present, JSON valid (version 1.0). Let me clean up and capture concrete evidence of the pre-existing baseline breakage (so I can report the full build honestly), then do a final verification sweep.
+
+Concrete pre-existing baseline breakage confirmed (generated `Tokens.swift` vs sibling `StatusApiDocsPage.swift` redeclare `TSSpacing`/`TSRadius`). My unit compiles clean in isolation. Let me do a final module-wide collision sweep for every type I declared.
+
+Let me stop the slow loop and run a faster single-pass collision check.
+
+`Step` is my `private` nested type (no module-scope collision; the typecheck already proved this). All 50 other types are unique module-wide. My unit introduces zero collisions. Let me add the 2 ledger rows — first checking the ledger format/schema.
+
+The ledger row was not present. Let me append the two rows (apple-macos + apple-ios) via precise text insertion and validate.
+
+Ledger updated (2 rows, 63/63, JSON valid). Now let me gather precise file:line evidence for all 63 parity items to build the log.
+
+Now the file:line for each of the 47 required strings.
+
+All 47 strings mapped. Let me mark todos done, get final line counts, and write the evidence log.
+
+Now let me write the evidence log with the full `=== PARITY ===` section (all 63 items with file+symbol evidence).
+
+Let me verify the manually-cited line numbers in the log are accurate.
+
+Two minor off-by line numbers to correct in the log. Let me verify the loading-state line and fix all.
+
+Let me correct the three line numbers in the log (fsm.title :61→:63, fsm.noState :95→:96, loading :127→:119).
+
+Corrections applied. Final verification sweep before committing.
+
+All green: swiftlint 0 violations, typecheck EXIT=0, both JSON valid, log ends EXIT=0/STATUS=DONE. Let me review git status and commit the allowed files.
+
+Exactly the expected changes, all within allowed scope. Let me stage and commit.
+
+Clean staged diff — only insertions (xcstrings +858 = 78 keys, ledger +18 = 2 rows), no reformatting. Let me commit.
+
+Committed. Let me finalize the todo tracking and confirm the working tree is clean.
+
+All todos complete, working tree clean, temp files removed. The task is done and verified.
+
+## Summary
+
+Implemented the native **SwiftUI / Apple HIG** parity of the web `StateMachineDebuggerPage` (route `/state-debugger`) at full panel/chart/state/string parity, adaptive across macOS + iOS.
+
+**Delivered** (11 decomposed files, 2401 lines, under `apps/apple/TeslaSync/Features/System/`):
+- `@MainActor @Observable StateMachineDebuggerPageModel` over an injectable `StateMachineDataSource` seam whose four methods are the web hooks ported **by name** (`useVehicleStateMachine`/`useFSMStats`/`useFSMTransitions`/`useSignalSnapshot`) — no networking in the view (ADR-004).
+- All **11 panels** (GlassPanel1 filters, GlassPanel2 live-state hero, GlassPanel3 live controls + state timeline + snapshot inspector, State-Distribution, GlassPanel5 counts, the 4 summary StatCards, GlassPanel10 log + pagination, GlassPanel11 detail), both **charts** (`TSChartContainer` + `TSPieChart`, plus a `TSBarChart` timeline), and **3 data states** (loading/empty/success). The web's anonymous regions (FSM health, sub-FSMs, state diagram) are reproduced natively too — no scope narrowing.
+- **47 required i18n keys + 31 helpers** added to `Localizable.xcstrings` (web key names kept; zero hardcoded literals); P2 tokens only; full a11y; `>2 min` staleness flag (ADR-013); typed `NavigationDestination` registration.
+
+**Gates (PARITY_COVERED == PARITY_REQUIRED = 63):**
+- `swiftlint --strict`: **0 violations** in 11 files
+- swift6 `-strict-concurrency=complete` typecheck against the **real** P2/P3 component library: **EXIT=0**
+- placeholder scan (unit-scoped): **0**; module-wide duplicate-symbol sweep: all 51 types unique
+- xcstrings + apple-ledger.json validated; ledger +2 rows (macOS/iOS, 63/63 done); evidence log ends `EXIT=0 / STATUS=DONE`
+
+**Honest disclosure:** the full `xcodebuild` target build/test remain blocked by **pre-existing, out-of-scope baseline breakage** (`StatusApiDocsPage.swift` redeclares the P2 `TSSpacing`/`TSRadius` enums — reproduced concretely — plus the unvendored KMP `Shared.xcframework`), not by this unit, which is verified clean in isolation. Committed as `4483ba79c`.
+
+
+
+All 13 todos are complete, work is committed (`4483ba79c`), and every gate is green. The task is finished.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

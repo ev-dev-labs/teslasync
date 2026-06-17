@@ -1,0 +1,114 @@
+=== P4 Shared surface 0180 LiveTelemetrySegment (Apple) ===
+Run (local):      2026-06-11 22:09–22:14 -0700  (2026-06-12 ~05:09–05:14 UTC)
+Toolchain:        Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh
+Simulators:       iPhone 16 present + booted (iOS 26.5)
+Shared core:      apps/shared :core:assembleSharedXCFramework -> BUILD SUCCESSFUL (7m34s); staged to Frameworks/Shared.xcframework
+Project:          xcodegen generate -> TeslaSync.xcodeproj (sources glob-discovered; all 8 LiveTelemetrySegment files included)
+Capability:       SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 toolchain ALL present -> not a capability BLOCK for the surface itself.
+Note on method:   xcodebuild invoked with -derivedDataPath build/DD-ios | build/DD-mac for cache reuse/speed. The pass/fail
+                  OUTCOME is identical to the bare gate command (the blocking errors are deterministic compile / signing errors).
+
+================================================================================
+GATE STEP RESULTS
+================================================================================
+
+----- [1] iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test -----
+Result: ** TEST FAILED ** (build phase). Testing cancelled because the build failed.
+Compile errors (ALL in pre-existing sibling shared-surfaces, NONE in LiveTelemetrySegment.*):
+  TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures non-escaping parameter 'content'
+  TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:            error: escaping closure captures non-escaping parameter 'content'
+  (earlier build-for-testing runs additionally surfaced the same bug at
+   TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22, plus non-deterministic
+   "unable to type-check in reasonable time" timeouts e.g. RecentDrivesSection.Previews.swift:24:20.)
+Errors attributable to LiveTelemetrySegment.* : 0   (grep ": error:" gate-ios.log | grep LiveTelemetrySegment -> 0)
+IOS_EXIT=65
+
+----- [2] macOS: xcodebuild -scheme TeslaSync-macOS build test -----
+Result: ** TEST FAILED ** (signing phase, before compile — ~9s).
+Environmental errors (DEVELOPMENT_TEAM="" in project.yml; no development certificate on this runner):
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing...
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing...
+Errors attributable to LiveTelemetrySegment.* : 0
+MAC_EXIT=65
+
+----- [3] swiftlint --strict (apps/apple, whole tree as gate) -----
+Result: clean.
+LINT_EXIT=0
+
+----- [4] swiftformat --lint apps/apple (whole tree as gate) -----
+Result: 0/4830 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+----- [5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment -----
+Result: PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0.
+Cross-check scanning the whole shared-surfaces dir then filtering to my files: 0 violations in LiveTelemetrySegment.* .
+PLACEHOLDER_EXIT=0
+
+================================================================================
+THE LiveTelemetrySegment SURFACE ITSELF — VERIFIED CLEAN
+================================================================================
+Files shipped (apps/apple/TeslaSync/shared-surfaces/):
+  LiveTelemetrySegment.Projection.swift     pure projection: tone/icon/label/age/tooltip/aria + ageSecondsLabel + Meta
+  LiveTelemetrySegment.Model.swift          @Observable state-holder + telemetry seam (P1/S11) + i18n facade (P1/S10) + nav seam
+  LiveTelemetrySegment.Views.swift          Dot / StatusIcon (reduce-motion gated) / Body leaves — tokens only (P1/S9)
+  LiveTelemetrySegment.swift                public surface: Button + .help tooltip + a11y label/value + view.opened onAppear
+  LiveTelemetrySegment.Previews.swift       DEBUG previews — every status x (full / icon-only) + reduce-motion spinner
+  LiveTelemetrySegment.strings              statusBar.live.* catalog (7 keys, web parity)
+  LiveTelemetrySegment.ProjectionTests.swift  per-status projection + age-label thresholds + tooltip + a11y label/value
+  LiveTelemetrySegment.Tests.swift          model/seam/telemetry/navigation + view signature + tone->token
+
+Parity with web/src/components/layout/status-bar/LiveTelemetrySegment.tsx:
+  - Data source useLiveConnection -> bound via shared P1/S8 state holder (LiveConnectionSnapshot / LiveIndicatorSource);
+    no direct HTTP in the view.
+  - All 4 statuses reproduced: connected="Live"(+ "· Xs"), reconnecting="Reconnecting"(spinner),
+    disconnected="Offline", unknown="Idle". States loading/empty/error/stale/offline map onto these branches exactly
+    as the web source (which has no skeleton gate): initial->unknown, hard-offline->disconnected, stale->connected w/ aging age.
+  - ageSecondsLabel (Xs/Xm/Xh, em-dash fallback), tooltip body, and aria-label ("Live telemetry status: {short}") ported.
+  - iconOnly prop honored. Navigation to /signal-diff via injected navigator seam (LiveTelemetrySegmentMeta.route).
+  - i18n: every web t() key present in the .strings catalog; no English literals in code (unit symbols s/m/h are verbatim,
+    matching the web source which does not translate them).
+  - Accessibility: single VoiceOver button, label + freshness value, .updatesFrequently, decorative dot/icon hidden,
+    reduce-motion-gated spin.
+  - Telemetry: view.opened emitted once with slug "LiveTelemetrySegment" (P1/S11).
+Per-step gates the surface OWNS all pass: compiles with 0 errors, swiftlint=0, swiftformat=0, placeholders=0.
+
+================================================================================
+WHY THE BUILD/TEST GATE IS BLOCKED  (pre-existing + environmental, OUT OF allowed-files scope)
+================================================================================
+Allowed files for this prompt: apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.* and this log ONLY.
+
+(A) iOS — pre-existing DETERMINISTIC compile bug in sibling AI* shared-surfaces (owned by their own P4 prompts):
+    AIGeofenceAwareAutomationSuggestions.swift / AISuggestNewGeofences.swift / AISignalExplorerNlFilter.swift each declare a
+    helper `private func glass(@ViewBuilder _ content: () -> some View)` and pass the NON-escaping `content` into
+    `TSGlassPanel { content() }`. Sources/Components/UI/Cards.swift declares
+        public init(@ViewBuilder content: @escaping () -> Content)
+    so the closure escapes -> "escaping closure captures non-escaping parameter 'content'". This is a hard, deterministic
+    error that fails the shared TeslaSync app target (which compiles every shared-surface file together), independent of
+    this surface.
+
+    PROOF it is pre-existing (not introduced by my additive files):
+      - Moved my 8 (untracked) LiveTelemetrySegment.* files OUT, re-ran `xcodegen generate`, rebuilt build-for-testing:
+        baseline STILL fails ("** TEST BUILD FAILED **") with no LiveTelemetrySegment involved.
+      - My files introduce only new, uniquely-prefixed symbols (no collisions) and reference none of the AI* files.
+      - Across every build run, grep ": error:" never matched any LiveTelemetrySegment.* file.
+
+(B) macOS — ENVIRONMENTAL: TeslaSync-macOS / TeslaSyncWidgets-macOS entitlements require a development signing certificate
+    (project.yml sets DEVELOPMENT_TEAM=""). This runner has no provisioning identity, so `build test` fails at the signing
+    phase before any compilation. Not related to this surface and not fixable within the allowed files.
+
+Neither (A) nor (B) can be fixed without editing files outside the allowed set (sibling AI* surfaces / project.yml /
+signing config), which would violate the per-surface isolation contract (Honesty Covenant rule 6 "No delegation",
+rule 2 "No scope narrowing") and collide with the prompts that own those files.
+
+Per Honesty Covenant rule 8 ("No commit on red") and rule 1 ("No red-as-green"): the LiveTelemetrySegment surface is
+COMPLETE and verified clean, but because the aggregate build/test gate is red for the pre-existing/environmental reasons
+above, this run is reported BLOCKED and NOT committed.
+
+================================================================================
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=65
+STATUS=BLOCKED

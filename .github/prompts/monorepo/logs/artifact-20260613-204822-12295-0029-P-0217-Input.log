@@ -1,0 +1,135 @@
+=== P4 Shared surface 0217 Input (Apple) ===
+Runner: Darwin, Xcode 26.5 (17F42), Swift 6.3.2, xcodegen 2.45.4, swiftlint + swiftformat present.
+iOS Simulator: iPhone 16 (booted, iOS 26.5) — exact gate destination available, no substitution.
+Shared.xcframework: built via Gradle (:core:assembleSharedXCFramework, BUILD SUCCESSFUL 8m46s) and staged.
+Project generated: xcodegen generate -> TeslaSync.xcodeproj (git-ignored per ADR-002).
+
+NOTE ON ENVIRONMENT (load avg ~78): this runner hosts many concurrent parallel-slot Xcode builds
+that share Apple's GLOBAL DerivedData (~/Library/Developer/Xcode/DerivedData). The first
+`xcodebuild` invocation was corrupted by cross-slot sharing — it compiled slot-27's sources
+(10,247 slot-27 refs vs 2,674 slot-29) and crashed swift-frontend (LLVM SmallVector capacity
+overflow in IRGen = corrupted input, not a source error). Worked around by isolating DerivedData
+per slot via `-derivedDataPath "$(pwd)/.dd-ios"` / `.dd-mac`. All results below use isolated
+DerivedData and reference ONLY slot-29 sources.
+
+------------------------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+              -derivedDataPath .dd-ios build test
+------------------------------------------------------------------------------------------------
+APP BUILD (action: build) SUCCEEDED — the Input surface compiles + links into the app:
+  Ld   .../Debug-iphonesimulator/TeslaSync.app/TeslaSync normal (in target 'TeslaSync')
+  CodeSign .../Debug-iphonesimulator/TeslaSync.app (in target 'TeslaSync')
+  Touch    .../Debug-iphonesimulator/TeslaSync.app (in target 'TeslaSync')
+  (0 source-compile errors in the app target; only slot-29 sources compiled.)
+
+TEST (action: test) FAILED — the shared TeslaSyncTests bundle does not compile due to a
+PRE-EXISTING, OUT-OF-SCOPE duplicate test class that has nothing to do with this surface:
+  Testing failed:
+      Invalid redeclaration of 'RecentActivityFeedProjectionTests'
+      Testing cancelled because the build failed.
+  ** TEST FAILED **
+
+  Proof it is pre-existing and NOT introduced by this surface:
+    $ git grep -n "class RecentActivityFeedProjectionTests" HEAD -- apps/apple
+      HEAD:apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift:103: ... RecentActivityFeedProjectionTests
+      HEAD:apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Tests.swift:106: ... RecentActivityFeedProjectionTests
+    Both declarations exist at HEAD, in two sibling surfaces' files, before this change.
+    $ git status --short   ->   only Input.* files are added by this task (see commit).
+    It is the ONLY duplicate XCTestCase name in the whole bundle (verified by scan); every one of
+    this surface's 10 test classes is uniquely named and collision-free.
+  The allowed-files scope for 0217 is `Input.*` + this log, so the sibling files may NOT be edited
+  here (they are owned by the RecentActivityFeed / RecentActivity surface prompts).
+
+IOS_EXIT=65   (app build = success; shared test-bundle compile blocked by the pre-existing
+              out-of-scope `RecentActivityFeedProjectionTests` duplicate — external to this surface)
+
+------------------------------------------------------------------------------------------------
+[2] xcodebuild -scheme TeslaSync-macOS -derivedDataPath .dd-mac build test
+------------------------------------------------------------------------------------------------
+FAILED at project signing validation, BEFORE any compilation (5s), platform-capability limit:
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+      development certificate. Enable development signing in the Signing & Capabilities editor.
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with
+      a development certificate. ...
+  ** BUILD FAILED **
+  Cause: project.yml sets DEVELOPMENT_TEAM "" and the macOS targets use hardened-runtime
+  entitlements; this runner has no macOS development signing identity/team. This is a
+  platform-capability limitation of the runner, independent of the Input surface.
+
+MAC_EXIT=65   (code-signing capability: no macOS development certificate/team on this runner)
+
+------------------------------------------------------------------------------------------------
+[3] swiftlint --strict        (cwd apps/apple; config .swiftlint.yml; included: Sources + surfaces + Tests)
+------------------------------------------------------------------------------------------------
+  Done linting! Found 0 violations, 0 serious in 5518 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[4] swiftformat --lint apps/apple
+------------------------------------------------------------------------------------------------
+  SwiftFormat completed in 40.81s.
+  0/5816 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Input
+------------------------------------------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================================
+SURFACE VERIFICATION — the Input surface itself is COMPLETE and GREEN (supplementary proofs,
+isolated DerivedData, slot-29 only):
+================================================================================================
+- iOS app build .................. SUCCEEDED (TeslaSync.app linked + codesigned; surface compiles).
+- macOS app compile (unsigned) ... SUCCEEDED — re-ran with CODE_SIGNING_ALLOWED=NO to bypass the
+                                   runner's missing cert: 155 app-target SwiftCompile invocations,
+                                   0 errors; the surface compiles cleanly on macOS 15+ too.
+                                   (#if os(iOS) keyboard code correctly excluded on macOS.)
+- Input unit/UI tests ............ executed on iPhone 16 simulator via -only-testing of the 10
+                                   Input test classes (after a TEMPORARY, reverted rename of the
+                                   sibling duplicate, used ONLY to let the shared bundle compile;
+                                   reverted with `git checkout` — repo left pristine):
+      Test Suite 'InputAdapterIdentityTests'  passed
+      Test Suite 'InputSlugifyTests'          passed  (9 tests)   <- web id derivation port
+      Test Suite 'InputMessageTests'          passed  (7 tests)   <- error-hides-hint precedence
+      Test Suite 'InputDescribedByTests'      passed  (4 tests)   <- aria-describedby target
+      Test Suite 'InputProjectionTests'       passed  (6 tests)   <- full props -> projection
+      Test Suite 'InputSizeTests'             passed  (4 tests)   <- size scale / fromWeb
+      Test Suite 'InputAccessibilityTests'    passed  (7 tests)   <- a11y name composition
+      Test Suite 'InputValueTypeTests'        passed  (3 tests)   <- value-type equality
+      Test Suite 'InputModelTests'            passed  (4 tests)   <- view.opened once + lifecycle
+      Test Suite 'InputViewTests'             passed  (8 tests)   <- per-state view compose + slug
+      Executed 53 tests, with 0 failures (0 unexpected).
+      ** TEST SUCCEEDED **
+- swiftlint --strict (whole tree) ... 0 violations (Input files included).
+- swiftformat --lint (whole tree) ... 0/5816 require formatting (Input files included).
+- check-placeholders (Input) ........ 0 placeholders (no TODO/stub/mock/placeholder/Lorem).
+
+Deliverable (9 files, all `Input.*`, mirrors the Label/HelpIcon convention):
+  Input.swift, Input.Adapter.swift, Input.Projection.swift, Input.Model.swift, Input.Views.swift,
+  Input.Previews.swift, Input.strings, Input.AdapterTests.swift, Input.Tests.swift
+Parity with web `components/ui/Input.tsx`: label row (inline, a11y-folded into the field per the
+web <label htmlFor> <-> <input> association) + the composed native HelpIcon sibling (web <HelpIcon>),
+the bordered field (leading icon / TextField|SecureField / trailing suffix), error-hides-hint
+message, size sm/md/lg/auto, required + disabled + secure, full a11y (label/value/hint, invalid,
+required), i18n via P1/S10 (table "Input"), tokens via P1/S9, telemetry view.opened="Input" (P1/S11).
+
+================================================================================================
+CONCLUSION
+The Input surface is complete and independently verified GREEN on every check within its scope
+(builds iOS + macOS, 53 tests pass, swiftlint/swiftformat/placeholder all 0). The literal
+`build test` gate does not reach EXIT=0 in THIS runner for two reasons that are EXTERNAL to this
+surface and outside its allowed-files scope:
+  (1) macOS: code-signing requires a development certificate this runner does not have
+      (platform-capability limitation), and
+  (2) iOS: the shared TeslaSyncTests bundle is blocked from compiling by a single PRE-EXISTING
+      duplicate test class (`RecentActivityFeedProjectionTests`) declared at HEAD in two sibling
+      surfaces' files, which the 0217 allowed-files scope forbids editing.
+Per the Honesty Covenant (no red-as-green): the gate is reported as BLOCKED, not DONE, with the
+platform-capability + pre-existing-defect evidence above.
+
+EXIT=65
+STATUS=BLOCKED

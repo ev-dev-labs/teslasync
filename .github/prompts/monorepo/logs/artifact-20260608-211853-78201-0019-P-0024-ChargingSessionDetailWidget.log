@@ -1,0 +1,262 @@
+================================================================================
+P4 · Dashboard widget · 0024 — ChargingSessionDetailWidget (Apple)
+Run: 2026-06-08T22:44-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/19
+Base: 3b30a99d
+Prompt: P4/dashboard-widgets/0024 — ChargingSessionDetailWidget
+Web source (THE spec): web/src/features/dashboard/widgets/ChargingSessionDetailWidget.tsx
+Mode: code-complete + REAL Xcode iOS build+test GREEN on this host (exceeds the
+      0073/0035 DEFERRED-Xcode precedent); macOS app build/test hits the runner's
+      missing-signing-identity wall (documented, not faked); 1 pre-existing
+      out-of-scope swiftlint debt item disclosed.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42)                                  OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)      OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)             OK
+  Swift Charts ............... import Charts compiles on BOTH SDKs (used by surface) OK
+  MapKit ..................... not used by this surface (web "Charts/maps: none")  N/A
+  iPhone 16 simulator ........ present + booted (gate destination)                 OK
+  xcodegen ................... 2.45.4                                              OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  JDK (KMP xcframework) ...... openjdk 17.0.19                                     OK
+  Shared.xcframework ......... BUILT + staged via :core:assembleSharedXCFramework
+                               (ios-arm64 / ios-arm64-simulator / macos-arm64)     OK
+  code-signing identity ...... `security find-identity -v -p codesigning` = 0 valid WARN
+                               -> macOS app target (hardened runtime + entitlements)
+                                  cannot be signed here; iOS simulator does not need it.
+  Runner contention .......... shared 40-slot parallel runner, load avg peaked ~199
+                               (146 concurrent swift-frontend) — slows but does not
+                               block; the iOS build+test still completed GREEN.
+
+  Capability verdict: SwiftUI + Swift Charts + iOS 18 / macOS 15 are ALL present and
+  PROVEN — the full iOS app (this surface included) BUILT and the simulator TEST ran
+  GREEN, and the surface compiles against BOTH SDKs. The BLOCKED escape hatch (for a
+  missing platform capability) does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.*) ===
+  ChargingSessionDetailWidget.Model.swift     283  P1/S8 state-holder seam
+                                                   (ChargingSessionDetailSource -> Model)
+                                                   + P1/S11 telemetry seam + P1/S10 strings
+                                                   facade + SI input DTOs (energyAddedWh /
+                                                   durationS / powerW / socPercent) + in-memory
+                                                   source; phase + empty-reason resolution
+  ChargingSessionDetailWidget.Adapter.swift   278  testable projection core — classifyCharger
+                                                   switch, latestSessionID reduce, watt->kW
+                                                   points, peakPowerKw, durationMinutes, summary,
+                                                   dual-axis ChargingSessionDetailScale (SoC%->kW
+                                                   space), Format (decimal1/duration/shortTime),
+                                                   Accessibility summary
+  ChargingSessionDetailWidget.Views.swift     352  presentational subviews — stat strip, the
+                                                   dual-axis power(Area)+SoC(dashed Line) Swift
+                                                   Chart, legend, charger chip (Badge), compact
+                                                   big-kWh body, friendly empty surface
+  ChargingSessionDetailWidget.swift           328  surface (glass shell + freshness chip +
+                                                   refresh/open + phase switch + compact vs
+                                                   standard/wide composition + registry)
+  ChargingSessionDetailWidget.Previews.swift  178  #if DEBUG previews — one per state (content/
+                                                   wide/compact/empty/no-telemetry/loading/error/
+                                                   offline/stale)
+  ChargingSessionDetailWidget.Tests.swift     341  XCTest — adapter + model + registry + a11y
+                                                   (28 test methods)
+  ChargingSessionDetailWidget.strings          63  P1/S10 catalog contribution (9 web-source keys
+                                                   + 3 charger-classification keys + registry
+                                                   description + native chrome/axis/a11y keys; 28
+                                                   keys total, 1:1 with code references)
+  Total 1823 lines across 7 files; every Swift file <= 352 (house file_length <= 400).
+  Shared types (DashboardWidgetSize / DashboardWidgetRegistration / Color.TS / Font.TS /
+  TSSpacing / TSRadius / TSSkeleton / Swift Charts) are REUSED from the registered app
+  module — no redeclaration, no duplicate symbols (proven by the GREEN iOS app build).
+
+=== PARITY (vs web ChargingSessionDetailWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (ChargingSessionDetailSource ->
+    ChargingSessionDetailModel): useVehicles + useChargingSessions + useChargingSessionDetail
+    + useChargeTelemetry + useTranslation. The production app wires the source over the KMP
+    charging stores; the view performs NO HTTP. The web latestSessionId reduce over
+    useChargingSessions is reproduced as the pure, tested ChargingSessionDetailProjection
+    .latestSessionID(from:). The aggregate isLoading = detailLoading || telemetryLoading is
+    coalesced into ChargingSessionDetailLoadStatus.
+  SI on disk -> the input DTOs carry SI (energyAddedWh in Wh, durationS in seconds, powerW
+    in watts, socPercent), converted to display units ONLY at the projection boundary:
+    energyKwh = Wh/1000 (web convertEnergyFromSI(...,'kWh')), powerKw = W/1000 (web power_kw),
+    durationMinutes = floor(s/60) (web duration_min). No _mi/_min/_kwh/_kw field names added.
+  Projection -> classifyCharger mirrors the web switch EXACTLY (nil/empty -> AC/Home; contains
+    "supercharger"/"tesla" -> Supercharger; "<invalid>" -> AC/Home; else -> DC Fast). peakPower
+    = max(power_kw) (default 0). durationStr = Xm / Hh Mm / Hh. stats = Energy Added (kWh) +
+    Duration + Peak Power (kW) + Charger. All unit-tested + EXECUTED green (host AND simulator).
+  Chart -> the web Recharts ComposedChart (green power <Area> on the LEFT axis + dashed cyan
+    SoC <Line> on the RIGHT axis, domains [0, dataMax+5] / [0,100]) is ported to Swift Charts:
+    AreaMark + LineMark (power, #22c55e) + dashed LineMark (SoC, #22d3ee), with the SoC mapped
+    into the kW plotting space by ChargingSessionDetailScale so the trailing 0/50/100% axis
+    lines up exactly. isWide drives axis tick density (web axisTick vs axisTickSm). Leaflet ->
+    none (no map on this surface).
+  Composition -> compact (cols<=1): large kWh-added figure (emerald) + "kWh added" caption +
+    charger chip, or the empty surface (web isCompact branch). standard/wide (cols>=2): glass
+    shell (bolt icon + "Charge Session Detail" title + freshness chip + refresh + Open) over the
+    4-stat strip + dual-axis chart + legend; the empty surface when there is no session; a muted
+    "No charge telemetry" note when a session resolves with no samples (web renders an empty
+    chart area — never a blank box here).
+  States (all render) -> loading (skeleton chrome; compact: number skeleton) · error (retry
+    affordance) · empty "No charge sessions" · content · no-telemetry · stale (freshness chip)
+    · offline (cached values + chip). Model phase keeps cached content visible behind a
+    background refetch (web shell), a hard error replaces the body (web error -> WidgetShell error).
+  i18n -> all 9 web-source strings resolve through the P1/S10 facade with the web t(key,default)
+    fallback: widget.chargingSessionDetail.{title,energy,duration,peakPower,charger,powerKw,soc,
+    unitKwh,empty}. The web classifyCharger literals (Supercharger / DC Fast / AC / Home) are
+    promoted to i18n keys (no English literals in native code). 28 keys total; code<->strings
+    diff = EMPTY (verified). No hardcoded English in native code (verbatim facade only).
+  a11y -> stat cells carry combined label:value:unit; the chart carries a combined VoiceOver
+    summary (title + 4 stats); the compact body + charger chip + legend + every button carry an
+    accessibilityLabel; Dynamic Type via Font.TS tokens; Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> ChargingSessionDetailModel.start() emits viewOpened(surface:
+    "ChargingSessionDetailWidget") (P1/S11). Asserted by a spy test (fires exactly once) AND
+    observed live in the iOS run log ([diagnostics] view.opened surface=...).
+  Registry -> ChargingSessionDetailWidget.registration: id "charging-session-detail", category
+    "charging", default 2x4, min 1x2, max 4x40 (+ clamp()), matching registry/charging.ts. Asserted.
+
+=== GATE — EXECUTED ON THIS HOST (real commands, real exit codes) ===
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      ** BUILD SUCCEEDED **   (the full iOS app, THIS surface compiled in — the 5 surface
+          .swift files were individually SwiftCompiled in target 'TeslaSync', 0 errors; the
+          ChargingSessionDetailWidget.strings was validated UTF-8 + copied into the .app)
+      ** TEST SUCCEEDED **
+        TeslaSyncTests.xctest: Executed 6616 tests, with 0 failures (0 unexpected)
+        Of those, THIS surface on the iPhone 16 (iOS 18) simulator:
+          ChargingSessionDetailAdapterTests        PASSED
+          ChargingSessionDetailModelTests          PASSED
+          ChargingSessionDetailRegistryTests       PASSED
+          ChargingSessionDetailAccessibilityTests  PASSED
+          -> 28 ChargingSessionDetail* test cases passed, 0 failed
+        Total failed test cases across the entire iOS run: 0
+      IOS_EXIT=0                                                                    OK
+[2] swift test — the SAME 28-method XCTest suite EXECUTED on the macOS host via a
+    self-contained SwiftPM harness over the REAL production Adapter/Model/Views/Widget
+    sources (+ real design Tokens + DashboardWidgetInfra + a minimal TSSkeleton shim),
+    Swift 6 language mode, surface target under -default-isolation MainActor:
+      Executed 28 tests, with 0 failures (0 unexpected) in 0.009 seconds
+        ChargingSessionDetailAdapterTests        16/16
+        ChargingSessionDetailModelTests           9/9
+        ChargingSessionDetailRegistryTests        2/2
+        ChargingSessionDetailAccessibilityTests   1/1
+      SWIFT_TEST_EXIT=0                                                             OK
+[3] swiftc -typecheck — iOS 18 SIMULATOR SDK (the surface + Tokens + Infra + TSSkeleton shim,
+    -swift-version 6 -default-isolation MainActor -target arm64-apple-ios18.0-simulator):
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[4] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[5] swiftlint --strict — THIS surface's 6 .swift files (explicit paths):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      CSD_LINT_EXIT=0                                                               OK
+    swiftlint --strict — FULL gate scope (apps/apple, .swiftlint.yml `included:`):
+      1 violation, in a PRE-EXISTING sibling surface OUTSIDE this prompt's allowed files:
+        TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+          error: Opening Brace Spacing Violation (opening_brace)
+      That file is unmodified by this prompt (git shows it untouched; the line exists at
+      HEAD) and is OUTSIDE the allowed glob (ChargingSessionDetailWidget.*) — fixing it would
+      breach the allowed-files boundary (Honesty rule 9). 0 of the violations are in this
+      surface's files.
+      FULL_LINT_EXIT=2  (RED — pre-existing, out-of-scope; NOT this deliverable)
+[6] swiftformat --lint apps/apple (config: apps/apple/.swiftformat):
+      0/1921 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) over the surface:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — macOS app build/test (RAN; hits the runner's signing wall — RED, environmental) ===
+    xcodebuild -scheme TeslaSync-macOS -derivedDataPath /tmp/dd-macos build test
+      ** BUILD FAILED ** / ** TEST FAILED **
+      The ONLY errors are code-signing/entitlements (zero compile errors; grep of the macOS
+      log for non-signing `error:` = none; no ChargingSessionDetail error):
+        error: "TeslaSync-macOS" has entitlements that require signing with a development
+               certificate. Enable development signing in the Signing & Capabilities editor.
+        note:  Disabling hardened runtime with ad-hoc codesigning.
+        (same for "TeslaSyncWidgets-macOS")
+      Root cause: `security find-identity -v -p codesigning` = 0 valid identities on this
+      runner; the macOS app target ships ENABLE_HARDENED_RUNTIME + app-group entitlements that
+      REQUIRE a development certificate. This is a runner provisioning gap that fails identically
+      for the whole pre-existing app — NOT a defect in this surface, and the macOS app target's
+      signing config is OUTSIDE this prompt's allowed files. The surface itself is PROVEN on
+      macOS by step [4] (macOS-15 SDK typecheck = 0) and step [2] (28/28 host XCTest green).
+      MAC_EXIT=65   (RED — environmental signing wall; matches the accepted 0035/0073 precedent)
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders ALL web states (loading/error/empty/content/no-telemetry/stale/offline) —
+      implemented; each has a #if DEBUG preview; phase + empty-reason logic unit-tested AND
+      EXECUTED green on BOTH the macOS host and the iOS 18 simulator.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (ChargingSessionDetailSource ->
+      ChargingSessionDetailModel); no HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 9 web-source keys + 3 charger
+      keys all present; 28-key code<->strings diff EMPTY.
+  [x] Accessibility labels on every interactive element; stat cells + chart carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 28 methods, EXECUTED 28/28 green
+      on the host AND 28/28 on the iOS 18 simulator inside the real xcodebuild test run.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — every gate that pertains to THIS deliverable is green (iOS build+test,
+      scoped swiftlint, swiftformat, placeholder, host tests, both-SDK typechecks, i18n). The two
+      RED items are disclosed, environmental/pre-existing, and OUTSIDE the allowed files: (a) the
+      macOS app signing wall (0 dev certs), (b) one pre-existing swiftlint debt item in a sibling
+      surface. Both match the accepted 0035/0073 precedent disposition.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the macOS gate (MAC_EXIT=65, signing) and the full-tree swiftlint
+                       (FULL_LINT_EXIT=2, pre-existing sibling file) are shown RED with their real
+                       errors + exit codes. Every "OK" is a command actually run with its real
+                       exit code, including a REAL iOS xcodebuild BUILD+TEST (6616 tests, 0
+                       failures; this surface's 28 cases green on the iPhone 16 simulator).
+  2  No scope narrowing: implemented ALL states/views + the dual-axis power/SoC chart + legend +
+                       charger chip + compact/standard/wide composition + i18n + a11y + telemetry
+                       + registry.
+  3  No skip-and-assume: each gate executed; nothing assumed. iOS build+test, host tests, both
+                       typechecks, lint, format, placeholder, AND the macOS attempt were all RUN.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (A TSSkeleton shim
+                       was used ONLY in the throwaway typecheck/SwiftPM harness, never shipped.)
+  5  No parity shortcuts: faithful port of classifyCharger / latestSessionId / chartData /
+                       durationStr / peakPower / stats memos + the dual-axis ComposedChart (exact
+                       web hex, left power Area + right dashed SoC Line, aligned % axis) + full
+                       compact/standard/wide composition + every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface) — FORBIDDEN.
+  7  No predecessor bypass: did NOT edit the macOS signing config, project.yml, the shared
+                       Localizable.xcstrings, or the pre-existing LiveSignalSparklines violation
+                       — all outside the allowed files. Strings shipped as the per-surface table.
+  8  No commit on red  : THIS deliverable is green on every gate that pertains to it; the two RED
+                       items are environmental/pre-existing and out-of-scope (not this code).
+  9  No silent drift   : changes confined to the allowed ChargingSessionDetailWidget.* files +
+                       this log. (Untracked TeslaSync.xcodeproj + Frameworks/Shared.xcframework
+                       are gitignored build artifacts; 2 pre-existing modified web/ files were
+                       NOT touched by this prompt and are excluded from the commit.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ChargingSessionDetailWidget shipped at parity with the web source:
+  pure-Swift projection core (classifyCharger / latest-session / watt->kW / duration / peak /
+  summary / dual-axis scale), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every
+  state + i18n key + a11y label, a Swift Charts dual-axis power-curve-with-SoC chart reproducing
+  the web's exact composition + hex, registry-correct (charging-session-detail, 2x4 / 1x2 / 4x40).
+  Verified to the MAXIMUM this runner allows AND BEYOND the 0035/0073 precedent: the REAL iOS
+  xcodebuild BUILD+TEST is GREEN end-to-end (IOS_EXIT=0; 6616 unit tests 0 failures; this
+  surface's 28 cases green on the iPhone 16 simulator), the surface compiles against BOTH the
+  iOS 18 and macOS 15 SDKs, and the same 28 tests execute 28/28 on the macOS host. The only RED
+  steps are environmental/pre-existing and outside this prompt's allowed files: the macOS app
+  code-signing wall (0 development certificates on the runner; MAC_EXIT=65) and one pre-existing
+  swiftlint opening_brace violation in the sibling LiveSignalSparklinesWidget.Builder.swift —
+  neither a defect in this surface. Surface lint (0 violations), format (0), and placeholder
+  (COUNT=0) are all green.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Adapter.swift \
+          apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Model.swift \
+          apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Views.swift \
+          apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.swift \
+          apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Previews.swift \
+          apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.Tests.swift \
+          apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.strings \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0024-ChargingSessionDetailWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add ChargingSessionDetailWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

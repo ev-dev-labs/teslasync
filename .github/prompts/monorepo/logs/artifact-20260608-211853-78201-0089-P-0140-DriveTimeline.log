@@ -1,0 +1,190 @@
+================================================================================
+P4 · Feature view · 0140 — DriveTimeline (Apple)
+Run: 2026-06-09T01:30-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/89
+Base: 581466428
+Prompt: P4/feature-views/0140 — DriveTimeline
+Web source (spec): web/src/features/driving/components/drive-detail/DriveTimeline.tsx
+Mode: code-complete + host-validated (swiftc -typecheck ×3 on BOTH the macOS 15 and
+      iOS 18 simulator SDKs / swiftlint --strict / swiftformat --lint / placeholder
+      gate / xcodegen generate) + DEFERRED full-app xcodebuild build/test (un-staged
+      KMP Shared.xcframework + a PRE-EXISTING out-of-scope dashboard-widget duplicate
+      symbol; apps/macos-pending-verifications.md / ADR-012; the established P4
+      disposition shared by 0009/0026/0030/0038/0054/0061/0067/0108).
+================================================================================
+
+=== CAPABILITY PROBE (this host) ===
+  swift / swiftc ............. Apple Swift 6.3.2, macOS 15 + iOS 18 SDKs present        OK
+  active developer dir ....... /Applications/Xcode.app/Contents/Developer (Xcode 26.5) OK (full Xcode, not CLT)
+  iOS Simulator (simctl) ..... iPhone 16 (83717DEE-…) booted + available               OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                              OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                   OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                               OK
+  Frameworks/Shared.xcframework  .gitkeep ONLY (159 bytes) — the KMP core is NOT staged
+                               on this fresh slot; `xcodebuild` link requires a ~3-min
+                               Gradle `:core:assembleSharedXCFramework` first.          NOT STAGED
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI — available and
+  proven by SIX real-SDK typechecks (macOS 15 + iOS 18, each: surface / +previews /
+  +tests) against the shipped design tokens + component library. The
+  capability-BLOCKED escape hatch (SwiftUI/Charts/MapKit unavailable) does NOT apply;
+  STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/DriveTimeline.*) ===
+  DriveTimeline.Model.swift       292  DriveTimelineDrive DTO (start/end Date?, durationS) + snake-case decode
+                                       (start_ts/end_ts/duration_s) + ISO-8601 (fractional-tolerant) parse +
+                                       numeric coercion · error taxonomy · cache-then-network load state (ADR-013) ·
+                                       Shared-free P1/S8 DriveTimelineSource seam + InMemory · @Observable model
+                                       (live/preview/web-prop inits + loadState) · P1/S10 i18n facade
+  DriveTimeline.Projection.swift  212  DriveTimelineFormat.time (web formatTime: nil→'—', locale short time) +
+                                       .duration (web formatDuration(durationS/60): floor(min/60)h round(min%60)m) ·
+                                       DriveTimelineProjection (startText/durationText/endText/isInProgress) ·
+                                       presentation resolver (every state) · a11y summary (completed + in-progress)
+  DriveTimeline.Components.swift  276  timeline content (green start flag+time / muted duration / red end flag+time
+                                       or "In progress") + emerald→cyan progress bar (web from-emerald-500
+                                       to-cyan-400) · freshness chip + refresh accessory · retry · empty · error ·
+                                       offline · loading skeleton · text() helper
+  DriveTimeline.swift             133  the surface: TSFadeIn + glass panel (web FadeIn + GlassPanel) · trailing
+                                       freshness accessory header · content state switch · P1/S11 view.opened on
+                                       .task · stale auto-refresh
+  DriveTimeline.Previews.swift     94  8 #Preview states (content·completed / content·in-progress / content·stale /
+                                       loading / empty / offline·cached / offline·no-data / error) — DEBUG-only
+  DriveTimeline.Tests.swift       306  adapter (decode/time/duration/projection/coercion) + presentation resolver
+                                       (every state) + web-prop mapping + telemetry + a11y + model — 26 test methods
+  DriveTimeline.strings            45  per-surface i18n table "DriveTimeline" (source key driveDetail.inProgress +
+                                       duration tokens + native chrome + a11y templates)
+  ----------------------------------------------------------------------------------------------------------------
+  TOTAL                          1358  (web source 34 lines → native = full state machine + tests + i18n + a11y;
+                                       the web leaf is a 1-render presentational component, so the native superset
+                                       adds the P4 loading/empty/error/stale/offline contract the prompt mandates,
+                                       nothing stubbed)
+
+=== PARITY MAP (web DriveTimeline.tsx → native) ===
+  • Prop drive: DriveDetail → DriveTimeline(drive:) web-prop init → load-state mapping (loaded → content).
+  • formatTime(drive.startTs) → DriveTimelineFormat.time → projection.startText (green start flag).
+  • formatDuration(drive.durationS / 60) (drive-detail/helpers.ts) → DriveTimelineFormat.duration → durationText
+    (muted middle). Exact arithmetic: h=floor(min/60), m=round(min%60), "{h}h {m}m" else "{m}m" — unit-tested for
+    0m / 2m / 45m / 1h 0m / 1h 13m / 1h 30m / 1h 2m and .nan/.infinity → 0m.
+  • drive.endTs ? formatTime(drive.endTs) : t('driveDetail.inProgress','In progress') → projection.endText +
+    isInProgress (red end flag). The ONE source i18n key driveDetail.inProgress is reproduced verbatim.
+  • <Flag className="h-3 w-3" /> green/red → SF Symbol flag.fill with TSTone.success / TSTone.danger (semantic
+    design tokens; green-400/red-400 map to statusSuccess/statusDanger).
+  • h-3 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400 → Capsule LinearGradient
+    [Color.TS.statusSuccess (EXACT #10b981 token), cyan-400 #22d3ee sRGB], height 12 (dynamic-gradient exception).
+  • FadeIn + GlassPanel(p-4) → TSFadeIn + Color.TS.surface rounded panel, padding TSSpacing.lg (16 = p-4).
+  • text-xs / text-[var(--text-secondary)] / text-[var(--text-muted)] → Font.TS.caption + Color.TS.textMuted
+    (no inline styles, no neon text, no raw hex except the one gradient stop).
+  • States superset (web single content render + prompt loading/empty/error/stale/offline) →
+    DriveTimelinePresentation, every branch rendered (none hidden).
+  • i18n: per-surface NSLocalizedString table "DriveTimeline" (+ English value fallback) — parallel-safe; the
+    shared Localizable.xcstrings is NOT edited (Honesty rule 7). Zero English literals in view code (the web's
+    hardcoded h/m duration tokens are routed through native chrome keys).
+  • Telemetry: REUSES the canonical DashboardWidgetTelemetryEvent / DashboardWidgetTelemetrySink (the app-wide
+    P1/S11 diagnostics seam). DriveTimeline.viewOpenedEvent == .viewOpened(surface:"DriveTimeline"), emitted on .task.
+  • Self-contained types (DriveTimelineDrive etc. owned by DriveTimeline.*) so the surface compiles independently
+    of sibling slots at merge time (no cross-surface symbol coupling).
+  • SI note: durationS is SI seconds (web duration_s); display formats to h/m at the render boundary only — no
+    new unit-suffixed Go/JSON fields. Phase-48 SI rules respected.
+
+=== GATE EXECUTION (commands actually run on this host; real exit codes) ===
+  Host typechecks — surface vs the REAL generated design tokens
+  (apps/design/generated/apple/Tokens.swift: Color.TS / Font.TS / TSSpacing / TSRadius) + the REAL component
+  library (Components/UI/Badges.swift TSTone, Components/Motion/Motion.swift TSFadeIn, and the verbatim TSSkeleton
+  struct from Components/Feedback/Skeletons.swift — its sibling skeletons depend on TSCard and are omitted; this
+  surface only uses TSSkeleton). The 3 public telemetry types and XCTest's macro-only assertions are verbatim
+  host-harness shims (the real types live in Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift and the
+  XCTest bundles). swift-version 6, strict-concurrency=complete:
+
+    macOS 15 SDK (arm64-apple-macos15.0):
+    (1) swiftc -typecheck — shipping surface (4 src)                                  TYPECHECK1_EXIT=0  OK
+    (2) swiftc -typecheck — surface + Previews (-D DEBUG, #Preview macros expand)     TYPECHECK2_EXIT=0  OK
+    (3) swiftc -typecheck — surface + Tests (in-module, XCTest shim)                  TYPECHECK3_EXIT=0  OK
+
+    iOS 18 simulator SDK (arm64-apple-ios18.0-simulator) — the gate's primary destination:
+    (1i) swiftc -typecheck — shipping surface                                         IOS_TC_SURFACE_EXIT=0  OK
+    (2i) swiftc -typecheck — surface + Previews                                       IOS_TC_PREVIEWS_EXIT=0 OK
+    (3i) swiftc -typecheck — surface + Tests                                          IOS_TC_TESTS_EXIT=0    OK
+
+  (4) swiftlint --strict DriveTimeline.{Model,Projection,Components,swift,Previews,Tests}
+        → "Found 0 violations, 0 serious in 6 files"                                  LINT_EXIT=0        OK
+  (5) swiftformat --lint  DriveTimeline.*  → "0/6 files require formatting"           FORMAT_EXIT=0      OK
+  (6) check-placeholders.ps1 — REAL scan of the 7 staged DriveTimeline.* files
+        → PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0 (the literal prompt path
+          .../feature-views/DriveTimeline is a non-existent dir → the script's
+          "nothing to scan" clean path also returns 0; the staged-file scan is the
+          substantive check)                                                         PLACEHOLDER_EXIT=0 OK
+  (7) xcodegen generate  → "Created project …/TeslaSync.xcodeproj"; project.pbxproj enumerates all 7 DriveTimeline
+        files (Model/Projection/Components/swift/Previews/Tests/strings) across the iOS + macOS app + test targets
+                                                                                      XCODEGEN_EXIT=0    OK
+
+  Full-app xcodebuild build/test — DEFERRED with on-host evidence (NOT claimed as a pass):
+    • The iOS-Simulator + macOS `xcodebuild -scheme … build test` cannot link on this fresh slot:
+        (a) Frameworks/Shared.xcframework is a .gitkeep placeholder (159 bytes) — the KMP core must first be
+            assembled via Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework, ~3 min,
+            Kotlin/Native toolchain), and
+        (b) a PRE-EXISTING, OUT-OF-SCOPE duplicate symbol fails the app-target compile regardless of this surface:
+              apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift:126:
+                  public struct ChargeSessionDTO: Sendable, Equatable {
+              apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Models.swift:22:
+                  public struct ChargeSessionDTO: Sendable, Equatable, Identifiable {
+            → "'ChargeSessionDTO' is ambiguous for type lookup" (a parallel-merge collision in the dashboard-widgets
+            tree, the same class of failure the 0030/0061 logs recorded). Both files are OUTSIDE this prompt's
+            allowed set (DriveTimeline.* + this log); editing them is forbidden by Honesty rules 2/6/9.       IOS_EXIT=DEFERRED
+    • The macOS target compiles the IDENTICAL shared source set (project.yml: Sources + dashboard-widgets +
+      feature-views), so it hits the same out-of-scope collision, plus it needs macOS development signing absent on
+      a shared runner.                                                                                       MAC_EXIT=DEFERRED
+
+  Deferral disposition: the full-app iOS-Simulator + macOS `xcodebuild build test` is DEFERRED to the signed macOS
+  acceptance gate (p4-apple/P99-0001-apple-acceptance-gate), exactly as apps/macos-pending-verifications.md + ADR-012
+  record for the sibling feature-view surfaces. The DriveTimeline surface itself is verified: 6 real-SDK typechecks
+  green (macOS 15 + iOS 18 × surface/previews/tests), lint/format/placeholder clean, xcodegen-enumerated. It adds
+  ZERO errors to the tree; the build blockers are the un-staged KMP framework + an out-of-scope duplicate symbol.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced (content: completed + in-progress),
+      plus the prompt's loading / empty / error / stale / offline contract — every branch rendered, none hidden.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (DriveTimelineSource seam); no direct HTTP in the view.
+  [x] Every i18n key from source (driveDetail.inProgress) has a matching key in the per-surface P1/S10 catalog
+      (0 drift) + native chrome + a11y keys.
+  [x] Accessibility labels present on every interactive element (refresh/retry buttons, freshness chip, the
+      combined timeline VoiceOver summary for completed + in-progress, loading/empty labels); Dynamic Type via
+      tokens; reduce-motion via TSSkeleton + TSFadeIn.
+  [x] Tests: adapter unit tests (decode / time / duration / projection / coercion) + per-state presentation tests +
+      a11y label test + telemetry test (26 methods) — typecheck-green in-module against the real surface on both SDKs.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (real placeholder scan = 0).
+  [~] EXIT=0 for every host gate (typecheck ×6 / lint / format / placeholder / xcodegen); full-app xcodebuild
+      build/test DEFERRED to the signed macOS gate (un-staged KMP xcframework + out-of-scope duplicate symbol) —
+      STATUS=DONE per the established P4 disposition.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green: every host gate ran on THIS host with its real exit code; the xcodebuild DEFERRAL is backed by
+     on-host evidence (the .gitkeep-only framework + the two verbatim ChargeSessionDTO declarations) and is NOT
+     claimed as a pass.
+  2  No scope narrowing: the source's data (start/duration/end+"In progress"), composition (flags + gradient bar),
+     and its one i18n key are all reproduced; only DriveTimeline.* + this log were touched.
+  3  No skip-and-assume: each gate executed; typecheck was run SIX ways (macOS+iOS × surface/+previews/+tests).
+  4  No stubs as final: every state is fully rendered; the only shims (telemetry types, TSSkeleton subset, XCTest
+     macros) are HOST-HARNESS scaffolding — verbatim copies of the REAL committed APIs, not shipped code.
+  5  No parity shortcuts: hand-composed timeline (start/end flags + duration + the exact emerald→cyan bar) with the
+     verbatim formatTime / formatDuration logic, unit-tested per branch.
+  6  No delegation.
+  7  No predecessor bypass: per-surface .strings table; shared Localizable.xcstrings + out-of-scope files untouched.
+  8  No commit on red: DriveTimeline.* is green across every gate it owns; it adds 0 errors to the tree.
+  9  No silent drift: self-contained types; allowed files only (DriveTimeline.* + this log).
+  10 EXIT/STATUS below.
+
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+TYPECHECK1_EXIT=0
+TYPECHECK2_EXIT=0
+TYPECHECK3_EXIT=0
+IOS_TC_SURFACE_EXIT=0
+IOS_TC_PREVIEWS_EXIT=0
+IOS_TC_TESTS_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE

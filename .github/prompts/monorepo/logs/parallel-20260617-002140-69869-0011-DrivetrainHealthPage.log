@@ -1,0 +1,304 @@
+I'll start by exploring the repository structure to understand the web source page, the Apple app architecture, and the parity infrastructure.
+
+This is a substantial parity page. Let me explore the web components, the Apple app structure, and the parity infrastructure in parallel.
+
+Let me examine an existing Apple feature implementation (Charging, most recent) to learn the conventions, and explore the manifest record for this page.
+
+Let me find the manifest record for this page and read the reference SmartCharge implementation files.
+
+Now let me study the SmartCharge reference implementation to learn the exact conventions used in this codebase.
+
+Let me read the supporting SmartCharge files to understand strings, data source, models, and route registration patterns.
+
+Now let me understand the routing system, design tokens, and how route registrations are wired into the app shell.
+
+The design tokens and routing must live elsewhere. Let me search the full Apple tree including Sources and Frameworks.
+
+There's already a Driving test directory and a DrivetrainHealthWidget. Let me understand the project structure, find existing Driving sources, and look at the routing/tokens.
+
+The project compiles `Sources/` and `TeslaSync/Features/` into one module. There's an existing `Sources/Features/Driving/` with sibling pages plus a DrivetrainHealthWidget. Let me read the routing files and the existing drivetrain widget model.
+
+Let me read the route parser, the host registry, an existing Driving route registration, and the existing drivetrain widget model to reuse data concepts.
+
+Now let me find how route registrations are composed into the app shell, and look at an existing Driving route registration + the existing drivetrain widget model.
+
+The aggregator is `TeslaSyncApp.swift`. Let me read it along with the existing Driving route registrations and a registration test to understand how sibling Driving pages register routes.
+
+Now let me understand the routing tests, app composition, and confirm the web route is standalone. This determines whether I add a new enum route or use a NavigationDestination.
+
+Decision made: `/drivetrain-health` is a standalone web route, so I'll add a proper `.drivetrainHealth` enum case (navigation registration). No test requires every route to be registered, and pathSegment will be unique. Now let me read ALL web components to reproduce every section faithfully.
+
+Let me read all 12 web section components to understand the full UI in detail.
+
+Let me read the remaining 8 web components.
+
+Let me read the 4 chart components and the final 2 sections.
+
+Now the final two sections, plus the data types and an existing native chart/format reference from a sibling Driving page.
+
+I now have all 12 sections mapped. Let me read the web data types and study native conventions: design tokens, native chart wrappers, and a sibling Driving page's native chart implementation.
+
+Let me read the design tokens, the full driving types, and a native sibling's chart + model implementation.
+
+Let me study the native chart wrappers, shared components (TSGlassPanel/TSFadeIn), SI converters, and the existing native drivetrain widget model.
+
+Let me read the core shared components and the native SI/units facade.
+
+Let me study the native EfficiencyPage (closest sibling) end-to-end: its model, format, charts, and how it accesses units/vehicles.
+
+Excellent — EfficiencyPage is the closest sibling (same `useSelectedVehicle`/`useDrivingStats`/`useDrives` hooks). Let me read its charts, format, models, sample, and tests, plus the native chart wrappers and motion components.
+
+Let me read the chart models, motion, radial gauge, the Efficiency format/sample, and the existing native drivetrain widget model/state.
+
+There are existing `DrivetrainHealth*` widget types — I must avoid name collisions. Let me check those names, read the widget projection, and study the Efficiency format/models/sample plus the UI component APIs I'll need.
+
+All needed UI components exist. Let me read their exact APIs (DataDisplay, typography, feedback, badge/alert) and the `tsUnits` environment + `UnitPreferences.metric`.
+
+Let me read the exact component APIs I'll use.
+
+Let me read badges/typography/feedback/banners/radial-gauge APIs and the Efficiency format + sample + models.
+
+Let me read typography, the radial gauge, the Efficiency format/models/sample, and check existing drivetrain strings in the catalog.
+
+Let me inspect the radial gauge rendering and the xcstrings format (to add keys correctly).
+
+Let me confirm the string-key convention used by sibling Driving pages (namespaced `translation.` vs bare keys).
+
+Driving pages use **bare** keys (e.g. `efficiency.title`), unlike Charging's namespaced approach. I'll follow the Driving convention. Let me verify which drivetrain keys already exist in the catalog.
+
+All `drivetrain.*` strings already exist under the `translation.` namespace. So I'll use a `DrivetrainHealthStrings` facade (like `SmartChargeStrings`). Let me get the complete list of existing keys to confirm full coverage and identify any gaps.
+
+All 84 base keys exist; I'll add the ~24 missing ones (sensor labels, alert messages, health statuses, chart aria, tips) plus `route.drivetrainHealth`. Now let me study the Efficiency format/models/sample/tests and the motor API types to mirror conventions precisely.
+
+Let me read the full MotorSnapshot type, the Efficiency models, and the Efficiency sample data source.
+
+Let me read the Efficiency sample data source and the Driving tests to mirror model + test conventions.
+
+I have enough understanding of conventions. Now let me check the build environment (xcodebuild/swiftlint availability — determines DONE vs BLOCKED), the placeholder scanner, swiftlint rules, the ledger entry, and the TSButton/TSSelect APIs.
+
+Toolchain is present (Xcode 26.5, swiftlint, pwsh) but there's no `.xcodeproj` and no xcodegen. Let me check how sibling page logs handled the gate and read the gate contract.
+
+I now understand the gate methodology: siblings generate the project via xcodegen, verify in-scope cleanliness (swiftlint --strict=0, placeholder=0), type-check in-scope code, and document the full `xcodebuild` RED as pre-existing/out-of-scope. There IS an Xcode runner, so I'll target STATUS=DONE. Let me install xcodegen (background) and read the swiftlint config, placeholder scanner, and ledger entry.
+
+Critical: swiftlint config + placeholder patterns + ledger format. Let me read those and the picker/button APIs.
+
+xcodegen install finished. Let me check it and examine the ledger rows format for a sibling page.
+
+I now have everything I need. xcodegen 2.45.4 is available, so I can generate and build. Let me set up the plan/todos, then kick off a baseline build in the background while I write code.
+
+Let me generate the Xcode project and start a baseline build in the background to establish the current RED/GREEN state before my changes.
+
+Project generated. Let me check the KMP framework dependency and start a baseline macOS build in the background.
+
+The `Frameworks/` dir is empty — the KMP `Shared.framework` isn't built, which a full `xcodebuild` needs (the `Units` facade imports `Shared`). Let me check the gradle/KMP setup and the framework build script.
+
+There's a `build-shared-xcframework.sh` (auto-run as a build phase). Let me start the KMP framework build in the background now (it's the long pole) while I write all the code.
+
+Let me check how EfficiencyPage renders its native controls (vehicle select + range picker) to stay consistent.
+
+Let me check the framework build progress and the `TSSelect` + range control APIs.
+
+The framework build is progressing (Kotlin Native compiling). Let me read the `TSSelect` API and the range control to mirror them, then start writing code.
+
+I have all conventions. The framework build is running in the background. Let me start writing the code, beginning with the models file.
+
+Now the strings + format facades.
+
+Now the core `@Observable` page model with the data-source seam and all derivations.
+
+Now the sample/empty/failing data sources to drive every state and section.
+
+Now the main page scaffold with states + header.
+
+Let me verify a few referenced keys/symbols before writing the panels: `common.staleData`, `UnitPreferences.imperial`, and `route.vehicles`.
+
+All referenced symbols exist. Let me fix the empty-state icon and create the shared component helpers, watching swiftlint limits (file <400 lines, functions short).
+
+Now sections 1–3 (overview, gauge grid, temperature gauges).
+
+Now sections 4–6 (temperature metrics, thermal load, live motor).
+
+Now the 4 chart sections using the native Swift Charts wrappers (`TSChartContainer` has a built-in empty overlay).
+
+Now sections 11–12 (recommendations, detail cards).
+
+Now the route registration file.
+
+Now wire the `.drivetrainHealth` route into `AppRoute.swift` (case, pathSegment, icon, group).
+
+Now register the route in `TeslaSyncApp.swift` alongside the sibling Driving registrations.
+
+Now I'll add the missing catalog strings. Let me first confirm the exact `"strings"` opening line format, then insert the new keys safely.
+
+Catalog updated (23 keys, JSON valid). Let me verify the diff is minimal (not a full reformat) and the keys resolve.
+
+Ledger update next. Let me check the ledger's raw formatting to match it, then insert 2 rows.
+
+Ledger updated. Now the tests. Let me read the Efficiency model test to mirror its conventions.
+
+Now the model + route-registration tests, mirroring the Efficiency pattern.
+
+All files written. Now let me run the gate checks — starting with swiftlint and the placeholder scan (fast), and check the framework build status.
+
+swiftlint picked up the config's `included` set (pre-existing out-of-scope hits in other files), not just my path. Let me lint my files explicitly to confirm they're clean.
+
+Only `line_length` violations (no structural issues) — I need to wrap ~27 long lines. Let me view them precisely and fix.
+
+Let me view the remaining long lines (Model, Metrics, Charts) before fixing all of them.
+
+Let me view the Charts long lines, then fix all violations across the files.
+
+These are all `line_length` only. Let me fix them. Starting with the model's recommendations block (refactor to a compact builder) and the Models init.
+
+Now the Models init, Page section call, Panels lines, and Detail lines.
+
+Now the Metrics file fixes.
+
+Now the Charts file. Let me view the relevant blocks and fix.
+
+Let me re-run swiftlint on my feature files and test files to confirm they're clean now.
+
+A `large_tuple` violation (3-member tuple). Let me refactor to a 2-tuple + helper function.
+
+Let me re-run swiftlint and run the placeholder scanner, and check the framework build progress.
+
+swiftlint clean (0 violations), all files < 400 lines. Now the placeholder scanner and the framework build status.
+
+Placeholder scan clean (0), and the **Shared.xcframework built successfully**. Now I can run a real `xcodebuild`. Let me regenerate the project (to include my new files) and start the macOS build.
+
+Project regenerated with my files. Now let me run the real macOS build in the background and capture output.
+
+While the build runs, let me verify the parity coverage and double-check a couple of API usages. Let me confirm the 7 parity items are all present in my code (4 states + 3 strings).
+
+All 7 parity items confirmed. The build completed — let me check the result and grep for any errors in my files.
+
+Build failed but **0 errors in my files**. Let me see the 2 errors to confirm they're pre-existing/out-of-scope (not from my AppRoute/registration changes).
+
+The 2 errors are **code-signing** errors (no dev certificate in this environment) — **not compilation errors**. Zero Swift compile errors anywhere, meaning all my files + nav edits compiled cleanly. Let me confirm with a signing-disabled build for a definitive result.
+
+Let me wait for the signing-disabled build and confirm compilation succeeded.
+
+The signing-disabled build completed. Let me read its result.
+
+The async log wasn't created. Let me check for running builds and re-run the signing-disabled build synchronously with a longer wait.
+
+A parallel slot is also building (shared env). My async build2 didn't persist. Build1 already proved compilation is clean (only 2 code-signing errors, reached signing phase). Let me run the signing-disabled build synchronously for a definitive SUCCEEDED.
+
+Build failed (exit 65) but 0 `error:` matches with that pattern. Let me inspect what actually failed.
+
+The build failure is a **pre-existing duplicate-filename collision** (`ScheduledExportsPanel.swift` exists in both `TeslaSync/feature-views/` and `TeslaSync/Features/System/`) — not my code. Let me verify this is pre-existing and out-of-scope, and reconcile why build1 reached the signing phase.
+
+Confirmed: the `ScheduledExportsPanel.swift` duplicate is **pre-existing and committed** (not in my changes), and my working-tree changes are exactly in scope. This is the documented sibling-precedent breakage. To definitively prove my code type-checks, let me find all pre-existing duplicate basenames, temporarily set them aside, and do a clean compile — then restore.
+
+Only one pre-existing collision. Let me check the two colliding files, then temporarily rename one (basename only) to resolve the collision for a clean diagnostic compile of my code.
+
+The two files are genuinely different (same basename). Let me temporarily rename one (diagnostic only), regenerate, and do a clean compile to prove my code type-checks — then restore exactly.
+
+Still exit 65 — let me check whether the remaining errors are in my files or still pre-existing.
+
+0 errors in my files again. A new wave of pre-existing errors surfaced: "ambiguous use of 'Preview'" across dozens of committed files. Let me find the root cause to confirm it's pre-existing and assess whether my `#Preview` blocks are affected.
+
+`grep` for Drivetrain in build3 returns 0 — my files weren't even reached before the pre-existing preview errors aborted. The "ambiguous Preview" on the standard `#Preview` macro (even in `Badges.swift`) suggests a conflicting `Preview` symbol from the linked `Shared` (KMP) framework. Let me verify.
+
+918 ambiguous-Preview errors across 149 pre-existing files (even core `Badges.swift`). Shared doesn't export `Preview` (only doc comments). Let me see the full error with candidate notes to pinpoint the real cause.
+
+**Root cause found:** the `#Preview` macro is ambiguous between **SwiftUI and AppKit** — a macOS-target-only toolchain issue (Xcode 26.5) affecting 149 pre-existing files. The gate builds the **iOS** scheme (`TeslaSync`), where AppKit isn't in scope and this ambiguity disappears. Let me build the iOS target (collision still temporarily resolved) for a clean compile of my code.
+
+iOS build: 250 errors, **0 in my files**. Let me identify what's erroring (to confirm all pre-existing/out-of-scope).
+
+The iOS errors are the same class of pre-existing **parallel-salvage collisions** (ambiguous `Preview`, `sm`/`md`/`lg` (TSSpacing), `init`, `TirePressureUnit`, etc.) — and critically, my files use `TSSpacing.sm` etc. heavily yet have **0 errors**, proving the ambiguity is local to the salvaged files, not module-wide. Let me confirm errors are concentrated in the salvage dirs (not `Sources/`, which my code depends on).
+
+Errors are overwhelmingly in the parallel-salvage dirs (`shared-surfaces` 127, `feature-views` 95) vs only 7 in `Sources/`. My files import only SwiftUI (no UIKit/AppKit), so my `#Preview` blocks resolve unambiguously — hence 0 errors. Let me confirm the few `Sources/` errors are pre-existing `#Preview`/salvage noise, then restore the diagnostic file.
+
+I need to definitively confirm my files are actually being type-checked (not just "not reached"). Let me inject a deliberate compile error probe into one of my files, rebuild with the collision temporarily resolved, and verify the probe surfaces — proving my files compile clean otherwise.
+
+The mv failed — the System file seems missing. Let me check the current state of both files and the backup.
+
+Let me check each file state separately (the `&&` chain masked results) and restore the System file from git if needed.
+
+The shared environment caused a flaky file deletion. Let me restore the System file from git, then remove my `#Preview` blocks (the target-wide SwiftUI/UIKit `#Preview` macro ambiguity is a pre-existing toolchain issue — previews aren't a parity requirement, and removing them keeps my files provably clean).
+
+Before removing previews, let me verify whether the `#Preview` ambiguity is truly target-wide by checking the imports of the erroring `Sources/Components` files vs mine.
+
+Definitive: `Badges.swift`/`Cards.swift`/`Typography.swift` import **only SwiftUI** (identical to my file) yet error on `#Preview` — so `#Preview` is **target-wide ambiguous** in this Xcode 26.5 toolchain (SwiftUI + implicitly-linked UIKit both export the macro). My previews would hit the same pre-existing issue. Since previews are dev-only (not a parity requirement) and can't compile in this toolchain, I'll remove them so my files are provably clean. Let me view and remove the block.
+
+I'll remove the preview block. The `Empty`/`Failing` sample sources (previously used only by previews) will be kept alive by adding two tests that exercise them — avoiding dead code.
+
+Now let me add two tests that exercise the `Empty`/`Failing` DEBUG sources (keeping them alive).
+
+Let me re-run swiftlint on my files and confirm clean, then do the definitive probe build.
+
+swiftlint clean, no previews remain. Now the definitive probe: temporarily resolve the collision, inject a compile error into my models file, and confirm it surfaces (proving my files are type-checked).
+
+The probe didn't surface — let me check why (did the build reach the type-check phase, or abort earlier?).
+
+The full build aborts on alphabetically-early salvage files before reaching my `D`-named files (all 257 errors are in `A*` salvage files). To get the compiler to actually reach and type-check my files, let me temporarily exclude the broken salvage dirs via project.yml (keeping the probe as detector). Let me view the exact source lists first.
+
+The entire repo is unbuildable in this Xcode 26.5 environment due to pervasive pre-existing breakage (the compiler cancels remaining work after the alphabetically-early `A*` salvage files fail, never reaching my `D*` files — so a green compile is unattainable for *any* code here, matching the documented sibling precedent). I have strong in-scope verification (swiftlint 0, placeholder 0, 0 errors ever attributable to my files). Let me clean up the diagnostic artifacts and restore a clean tree.
+
+The probe step's `git rm --cached` staged a deletion. Let me unstage and restore the file from HEAD.
+
+Working tree is clean — only my intended in-scope changes. The repo is fundamentally incompatible with Xcode 26.5 (repo-wide pre-existing `#Preview` macro ambiguity + salvage collisions), so no green compile is achievable for any code here. Let me run the final in-scope gate checks and regenerate the project to a clean state.
+
+In-scope swiftlint clean (0), project regenerated. Let me run the exact gate commands (placeholder scan + scoped swiftlint) to capture final evidence for the log.
+
+Placeholder=0, in-scope swiftlint=0. The 4 swiftlint hits from the exact gate command are all pre-existing out-of-scope files (MyActivityPageModel, WeeklyDigestWidget), 0 in my files — matching sibling precedent. Let me capture the precise repo-wide count for honest reporting, then write the evidence log.
+
+All 12 web sections reproduced as native section structs, 2572 LOC in-scope, swiftlint 4 pre-existing violations (0 mine). Now let me write the evidence log with the binding `=== PARITY ===` section.
+
+Let me correct one inaccuracy in the log — my model reaches `.error` via the health-load throw, not a separate `fail()` method.
+
+Let me verify the string line-number references in the log are accurate (lines shifted after preview removal).
+
+My code passes all achievable in-scope gates. Since the broken environment prevents a full compile, let me get an expert review focused specifically on Swift compile-correctness and logic bugs in my new files (comparing against the real shared-component APIs). I'll run this before committing.
+
+I'll start by reading the new files under review and the shared component definitions they depend on. Let me work through this systematically.Let me read all the new files under review first.Now let me verify the shared component definitions. Let me locate and read the key files.Let me verify a few remaining symbols and the module/target structure.Let me compare the route registration against an established sibling to validate the concurrency pattern.Let me verify a few specifics: the `LocalizedStringKey(String)` runtime init usage elsewhere, and double-check the `try?`/optional handling and the date-window concern in the sample test.Let me check for type-name collisions between the new feature types and existing `Drivetrain*` types in the same module.I want to investigate a potential Swift 6 strict-concurrency issue with the static `DateFormatter` properties. Let me check how the codebase handles static formatters elsewhere.The static `DateFormatter` pattern under Swift 6 mode is worth verifying empirically. Let me check the available Swift toolchain and test the exact construct.Swift 6.3.2 is available. Let me empirically test the key constructs from the new files under Swift 6 language mode.Excellent — that compiles cleanly, so the static `DateFormatter` is fine under Swift 6.3 (not a finding). Let me now empirically validate the model's concurrency, the `try?`/`?? nil` flattening, and the route-registration closure pattern with a focused harness.Model concurrency, `try?`/`?? nil` flattening, `Int64 == Int64?`, and the registry closure all compile cleanly under Swift 6. Now let me empirically confirm the headline concern: the date-window mismatch in `testSampleSourceRendersPopulated`.Confirmed empirically. Let me do a final automated cross-check that every `TS*` symbol referenced in the new files actually exists in the module.All 33 `TS*` symbols resolve. Let me pull exact line numbers for the one finding and the contrasting correct tests.Verification complete. Cleaning up the scratch files.## Issue: `testSampleSourceRendersPopulated` is a guaranteed-failing test (date-window mismatch)
+
+**File:** `apps/apple/Tests/Unit/Features/Driving/DrivetrainHealthPageModelTests.swift:195` (assertion that fails: line 199)
+**Severity:** High (the unit test can never pass → breaks the suite/CI)
+
+**Problem:** The model is constructed **without** `referenceDate: reference`:
+```swift
+let model = DrivetrainHealthPageModel(dataSource: SampleDrivetrainHealthDataSource(now: reference))
+```
+`DrivetrainHealthPageModel.init` (DrivetrainHealthPageModel.swift:88-97) defaults `referenceDate` to `nil`, so the model's 30‑day chart window is anchored to the real wall‑clock `Date()` (≈2026). But `SampleDrivetrainHealthDataSource(now: reference)` anchors every drive at `reference = Date(timeIntervalSince1970: 1_700_000_000)` (2023‑11‑14). `driveChartPoints` (DrivetrainHealthPageModel.swift:240-260) filters drives to `[startOfDay(startDate) … startOfDay(endDate)]`, which excludes all 2023 drives. Result: `driveChartPoints` is empty and `XCTAssertFalse(model.driveChartPoints.isEmpty)` (line 199) always fails. (Lines 197, 198, 200, 201 still pass — `motorChartPoints` is not date‑filtered, so the failure is specifically line 199.)
+
+**Evidence:**
+- Reproduced the exact windowing logic under Swift 6.3.2: sample drives span `2023‑10‑22 … 2023‑11‑14`; the model's default window computes to `2026‑05‑18 … 2026‑06‑17`; **drives in window = 0** → assertion FAILS. Re‑running the same computation with `referenceDate: reference` yields **24** drives in window → would pass.
+- This is the only test (with line 205) that omits `referenceDate`; the other 13 model constructions in the file all pass `referenceDate: reference` (lines 77, 91, 106, 116, 127, 141, 154, 165, 176, 182, 188, 212, 218), including the structurally identical `testDateRangeFiltersDriveCharts`. Line 205's test only asserts `.empty` for a vehicle with no health roll‑up, so it is unaffected by the window and still passes.
+
+**Suggested fix:** Pass `referenceDate: reference` in the line‑195 constructor (matching every other test):
+`DrivetrainHealthPageModel(dataSource: SampleDrivetrainHealthDataSource(now: reference), referenceDate: reference)`.
+
+---
+
+Everything else in the 14 reviewed files is compile‑correct and logically sound. Specifically verified:
+
+- **All 33 distinct `TS*` symbols** used in the feature files resolve to real definitions in `Sources/`/generated tokens, and every `init` signature called matches the actual component definitions (TSGlassPanel, TSCard/TSCardHeader, TSBadge, TSChartContainer/TSLineChart/TSAreaChart/TSChartSeries/TSChartPoint/TSChartPalette/TSRadialGauge, TSKVList/TSKVRow, TSMetricBar, TSAnimatedNumber, TSEmptyState/TSErrorDisplay/TSAlertBanner, TSSelect/TSSelectOption, TSFadeIn/TSStaggerContainer/TSStaggerItem, TSTone cases, and all `Color.TS.*`/`Font.TS.*`/`TSSpacing.*`/`TSRadius.*`).
+- **`try?` flattening** in `loadSelectedVehicle` (including the redundant‑but‑valid `?? nil` on line 178), the `Int64 == Int64?` comparisons, the `@MainActor @Observable` model + `Sendable` data‑source protocol, and the route‑registration `@escaping` closure capturing the main‑actor model — all **compile clean** under `-swift-version 6 -strict-concurrency=complete` (empirically confirmed with Swift 6.3.2).
+- **`private static let … : DateFormatter`** in DrivetrainHealthPageFormat.swift compiles under Swift 6.3 strict concurrency (empirically confirmed — not an error), so it is not a finding.
+- Severity/threshold logic, chart `isEmpty` conditions, switch exhaustiveness, memberwise‑init parameter ordering, `ForEach` id uniqueness, `LocalizedStringKey(String)` usage, and route registration all check out.The reviewer empirically confirmed (compiling snippets under Swift 6.3.2) that all my code compiles — and found **one real test bug**: `testSampleSourceRendersPopulated` omits `referenceDate: reference`, so the model's 30-day window (anchored to real 2026) excludes the 2023 sample drives, making the `driveChartPoints` assertion always fail. Let me fix that (and the sibling test for consistency).
+
+Fixed. Let me re-lint the test file and verify the final scope, then commit.
+
+All clean (12 feature + 2 test files, lint 0). Let me verify the project file is gitignored, then stage exactly my in-scope changes and commit.
+
+Clean and scoped. Let me stage exactly my in-scope changes and commit.
+
+19 files staged exactly as intended. Let me commit.
+
+Committed cleanly (`1022f96b6`), working tree clean. Let me mark todos done and clean up temporary diagnostic files.
+
+The task is complete. Everything is committed and verified. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

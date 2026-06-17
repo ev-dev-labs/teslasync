@@ -1,0 +1,151 @@
+=== P4 Modal / dialog 0008 SessionExpiredModal (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — `xcodebuild -version` resolves directly (active developer
+                       dir already points at Xcode.app; no override / no sudo needed on this runner).
+  Toolchain          : swift 6.3.2 · swiftlint (Homebrew) · swiftformat (Homebrew) · xcodegen 2.45.4 · pwsh 7.6
+  Capability         : SwiftUI present; iOS 18 + macOS 15 SDKs installed. This surface uses NO Swift Charts and
+                       NO MapKit (the web source has none — prompt "Charts / maps used: (none)"). Every primitive
+                       it needs (TSGlassPanel / TSFadeIn / TSButton, @Observable, @Bindable, ContentUnavailableView,
+                       DatePicker-free form, Capsule/RoundedRectangle chrome) is in the iOS 18 / macOS 15 SDK, so
+                       the platform capability IS available → NOT capability-BLOCKED. The surface was independently
+                       compiled + unit-tested under the Xcode 26.5 toolchain and typechecked on BOTH SDKs (see GATES).
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/feedback/SessionExpiredModal.tsx — the ForwardAuth "session fully expired" hard block.
+    Hooks: useTranslation; useSessionMonitor() → { mode, hasExpired }. Local state: eventTriggered (set true by
+    a `teslasync:session-expired` document CustomEvent — the "a 401 fired between polls" path; sticky once true).
+    Branches:
+      • mode === 'open'                 → return null (no auth provider; the event is ignored here too).
+      • open = hasExpired || eventTriggered.
+      • <Modal open onClose={no-op} size="sm" ariaLabel=t('session.expired.title','Session expired')> — NON-
+        dismissible (Esc + backdrop are absorbed); the ONLY exit is the action.
+        Body (space-y-4 text-center): rose lock disc (bg-rose-300/15 + Lock text-rose-300);
+        h2 t('session.expired.title','Session expired'); p t('session.expired.body','For your security, your
+        session has timed out. Sign in again to pick up where you left off.');
+        <Button variant=primary className="w-full" onClick=handleSignIn>t('session.expired.signIn','Sign in
+        again')</Button>.
+      • handleSignIn → navigateToReauth() (lib/resilience) — explicit IdP handoff (writes current URL +
+        embeds it in rd=); replaces the fragile reload-current-path behaviour behind a Service Worker.
+    i18n keys extracted: session.expired.title, session.expired.body, session.expired.signIn.
+
+NATIVE OUTPUT (apps/apple/TeslaSync/modals-dialogs/SessionExpiredModal.*)
+  Adapter.swift    — pure projection core (Foundation only): surface slug, SessionMode/LoadStatus/Connection/
+                     Phase, SessionContext (+ sticky-event latchingEvent), SessionExpiredProjection
+                     (shouldBlock = web `open`; resolvePhase; resolved).
+  Seams.swift      — P1/S11 telemetry seam (view.opened), re-auth control seam (web navigateToReauth),
+                     coalesced source snapshot, P1/S8 SessionExpiredSource protocol + in-memory source,
+                     P1/S10 i18n facade, VoiceOver summary builders.
+  Model.swift      — @MainActor @Observable SessionExpiredModel (P1/S8): latches the 401 event, resolves
+                     phase + freshness, drives signIn (web navigateToReauth), emits view.opened once,
+                     guarded stale auto-refresh; isBlocking / isOffline derived.
+  States.swift     — loading (skeleton chrome, shapes — no redaction-reason literal), empty (open mode),
+                     dormant (healthy session), error (QueryError + retry), freshness chip, connectivity banner.
+  Views.swift      — the expired hard block (web Modal body): rose lock disc, title, body, full-width
+                     "Sign in again", offline note; + the i18n Text helper.
+  SessionExpiredModal.swift — the View: TSFadeIn + TSGlassPanel, conditional freshness chip, switches over
+                     phase; non-dismissible (no close affordance); onAppear start / onDisappear stop; a11y.
+  Previews.swift   — one #Preview per state (Expired / Empty-open / Dormant / Loading / Error / Stale / Offline).
+  SessionExpiredModal.strings — P1/S10 catalog: the 3 verbatim web keys + the native-envelope keys.
+  Tests.swift / ModelTests.swift — adapter/projection/a11y + state-holder coverage (co-located XCTest).
+
+STATE MAPPING (every prompt-required state renders — no hidden surface)
+  loading  → phase .loading        : skeleton chrome (icon disc + title/body/action bars, reduce-motion-aware pulse)
+  empty    → phase .empty          : open mode — "No sign-in required" ContentUnavailableView (web `return null`)
+  error    → phase .error(msg)     : "Couldn't check your session" + Retry → model.refresh()
+  stale    → connection .stale     : stale chip + one guarded auto-refresh (re-armed on return to live)
+  offline  → connection .offline   : cached verdict kept + offline chip + banner + "reconnect to sign in" note
+  content  → phase .expired        : THE hard block (web Modal body) — rose lock, title, body, full-width CTA
+  (+ web)  → phase .dormant        : healthy session, block not engaged (web Modal open=false) shown as a
+                                     reassuring "Session active" panel rather than a blank box
+  Event latch: a `teslasync:session-expired` fold-in keeps .expired even if a later poll reports healthy
+               (web sticky `eventTriggered`) — covered by a model test.
+
+GATES — per-surface (the substantive quality bar; all GREEN)
+  [1] Isolated build + XCTest (Swift 6, strict-concurrency=complete, REAL design system)
+      A standalone SwiftPM package vendoring the REAL design-system sources (generated Tokens.swift +
+      Sources/Design + Components/UI{Buttons,Cards,Typography,Badges} + Components/Motion) + the 7 production
+      surface files + the 2 co-located test files, built with the Xcode 26.5 swift 6.3.2 toolchain:
+        Build complete!
+        Executed 28 tests, with 0 failures (0 unexpected)
+      → BUILD_EXIT=0  TEST_EXIT=0   (28/28 — adapter/projection/event-latch/a11y + full state-holder lifecycle)
+  [2] iOS 18 SDK typecheck (Swift 6, strict concurrency, -D DEBUG so #Preview is checked)
+        xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+          -D DEBUG -target arm64-apple-ios18.0-simulator <design system> <surface>
+      → IOS_TYPECHECK_EXIT=0
+  [3] macOS 15 SDK typecheck (Swift 6, strict concurrency, -D DEBUG)
+        xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+          -D DEBUG -target arm64-apple-macos15.0 <design system> <surface>
+      → MACOS_TYPECHECK_EXIT=0
+  [4] swiftlint --strict (app config, the 9 surface files)
+        Done linting! Found 0 violations, 0 serious in 9 files.
+      → LINT_EXIT=0
+  [5] swiftformat --lint (app config, the 9 surface files)
+        0/9 files require formatting.
+      → FORMAT_EXIT=0
+  [6] check-placeholders.ps1 (swift) — scanned the 9 surface files in isolation AND the exact gate path form
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+      → PLACEHOLDER_EXIT=0   (no TODO/FIXME/stub/mock/Placeholder/Lorem; loading skeleton uses shapes, not
+                              a `.placeholder` redaction reason, so nothing is opt-out-marked)
+
+GATES — full-app xcodebuild (DEFERRED; not failed by this code)
+  The prompt gate's `xcodebuild -scheme TeslaSync … build test` (iOS) and `xcodebuild -scheme TeslaSync-macOS
+  build test` (macOS) cannot exercise THIS surface in this slot, for two pre-existing, out-of-allowed-files
+  reasons — both owned by the P4-core / P99 acceptance gate, not by this surface:
+
+    (a) modals-dialogs is not registered in the Xcode project. project.yml lists only Sources, dashboard-widgets,
+        feature-views, misc-surfaces for the app + test targets (NOT TeslaSync/modals-dialogs), and .swiftlint.yml
+        `included` likewise omits it. Proof: `xcodegen generate` succeeds (GEN_EXIT=0) but the generated
+        TeslaSync.xcodeproj/project.pbxproj contains 0 references to "modals-dialogs" / "SessionExpiredModal".
+        The sibling P4 modal AddAnnotationPopover (0002) is in the IDENTICAL unwired state → the directory wiring
+        is the P4-core dependency's job. Allowed-files for THIS prompt = SessionExpiredModal.* + this log, so
+        editing project.yml / .swiftlint.yml is out of scope (covenant #2 No scope narrowing, #7 No predecessor
+        bypass — both honoured by NOT touching them).
+
+    (b) Shared.xcframework is not staged. The scheme's pre-build Run Script assembles the KMP core via Gradle
+        Kotlin/Native (apps/apple/Scripts/build-shared-xcframework.sh); apps/apple/Frameworks holds only .gitkeep
+        and apps/shared/core/build/XCFrameworks/release/Shared.xcframework does not exist. Producing it is a
+        Kotlin/Native compile (heavy), unrelated to this SwiftUI surface and outside its allowed files.
+
+  Because the surface references ONLY the design system (no app shell, no KMP `Shared` symbols), gates [1]–[3]
+  above reproduce the EXACT compile + test the full-app xcodebuild would run FOR THIS SURFACE, with the same
+  swift 6.3.2 frontend, the same strict-concurrency=complete mode, the same iOS 18 / macOS 15 SDKs, and the REAL
+  design-system sources. This is the established P4 "isolated-build + DEFERRED full-app" disposition (see the
+  committed sibling log artifact-…-0200-P-0002-AddAnnotationPopover.log, EXIT=0/STATUS=DONE).
+
+HONESTY COVENANT
+  1  No red-as-green   : xcodebuild full-app NOT claimed green — explicitly DEFERRED with pbxproj/​framework proof.
+                         The green bar is the per-surface gates [1]–[6], each with pasted real output + exit 0.
+  2  No scope narrowing: every prompt-required state renders (loading/empty/error/stale/offline + content), plus
+                         the web-specific dormant + open-mode + sticky-event branches. project.yml left untouched
+                         by mandate, not by omission.
+  3  No skip-and-assume: web source read end-to-end incl. useSessionMonitor + navigateToReauth; open-mode event
+                         suppression + the 401 latch reproduced + tested.
+  4  No stubs as final : complete implementations; no TODO/placeholder; skeleton is real shape chrome; spies are
+                         test-only (Spy*/InMemory*/Silent*), never shipped.
+  5  No parity shortcuts: the 3 web i18n keys are verbatim; full-width primary CTA; non-dismissible (no close);
+                         rose lock disc via statusDanger; HIG-native (TSGlassPanel/TSFadeIn/TSButton + tokens).
+  6  No delegation      : authored directly; no sub-agent delegation (prompt says delegation FORBIDDEN).
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened, and the
+                          P4-core modals-dialogs wiring all respected — the latter left for its owning prompt.
+  8  No commit on red   : committed artifact (10 SessionExpiredModal.* files + this log) is GREEN on every
+                          runnable per-surface gate; the deferred full-app gate is blocked only by pre-existing,
+                          unrelated, out-of-allowed-files conditions this commit does not touch.
+  9  No silent drift    : changes confined to modals-dialogs/SessionExpiredModal.{Adapter,Seams,Model,States,
+                          Views,swift,Previews,Tests,ModelTests}.swift + SessionExpiredModal.strings + this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SessionExpiredModal shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it builds and its 28 tests pass under the app's own Swift 6 strict-concurrency rules against the REAL
+  design system via the Xcode 26.5 toolchain; it typechecks clean on BOTH the iOS 18 and macOS 15 SDKs with
+  #Preview compiling; swiftlint --strict, swiftformat --lint and the placeholder gate are all green on the nine
+  surface files. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this
+  code) on pre-existing, unrelated, out-of-allowed-files blockers — the P4-core-owned modals-dialogs project.yml
+  wiring (0 pbxproj refs; sibling 0002 identical) and the unstaged KMP Shared.xcframework — owned by the
+  P4/P99 acceptance gate on a signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,147 @@
+=== P4 Shared surface 0002 RouteAnnouncer (Apple) ===
+Run host: macOS 26.5.1 | Xcode 26.5 | Swift version 6.3.2
+Date: Sun Jun 14 07:49:53 PDT 2026
+Surface files (10): RouteAnnouncer.{swift,Adapter,Model,Seams,Views,States,Previews,Tests,ModelTests}.swift + RouteAnnouncer.strings
+
+--- [1/6] swiftformat --lint (surface files) ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-6/apps/apple/.swiftformat
+SwiftFormat completed in 27.26s.
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- [2/6] swiftlint --strict (surface files) ---
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+--- [3/6] check-placeholders.ps1 (surface files, isolated copy) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+--- placeholder gate also run as specified (-Path .../RouteAnnouncer prefix) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_PREFIX_EXIT=0
+
+--- [4/6] KMP Shared.xcframework (scheme pre-action dependency) ---
+cd apps/shared && ./gradlew :core:assembleSharedXCFramework  →  BUILD SUCCESSFUL in 7m 31s (assembled live this run)
+KMP_EXIT=0
+
+--- [5/6] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+# Full-app iOS-Simulator build of the real app target succeeded: ALL 7 RouteAnnouncer source files compiled into the TeslaSync app module.
+  compiled: RouteAnnouncer.Adapter.swift
+  compiled: RouteAnnouncer.Model.swift
+  compiled: RouteAnnouncer.Previews.swift
+  compiled: RouteAnnouncer.Seams.swift
+  compiled: RouteAnnouncer.States.swift
+  compiled: RouteAnnouncer.swift
+  compiled: RouteAnnouncer.Views.swift
+  RouteAnnouncer compile errors: 0
+# The app module emitted; the ONLY error in the entire run is a PRE-EXISTING, OUT-OF-SCOPE duplicate test class:
+  /Users/atulgupta/Documents/repos/.teslasync-parallel/20260614-061656-85557/slot-6/apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift:103:24: error: invalid redeclaration of 'RecentActivityFeedProjectionTests'
+  collision sites (both committed at HEAD, neither in this prompt's allowed scope):
+    - apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift:103   (RecentActivity surface — other prompt)
+    - apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Tests.swift:106 (RecentActivityFeed surface — other prompt)
+** TEST FAILED **
+IOS_EXIT=65
+
+--- [5b] RouteAnnouncer XCTest suites (iOS Simulator; pre-existing collision locally de-duped for the run, change REVERTED + NOT committed) ---
+  Test Suite 'LiveRouteAnnouncerSourceTests' passed
+  Test Suite 'RouteAnnouncerAccessibilityTests' passed
+  Test Suite 'RouteAnnouncerModelTests' passed
+  Test Suite 'RouteAnnouncerNavigatorTests' passed
+  Test Suite 'RouteAnnouncerPaddingTests' passed
+  Test Suite 'RouteAnnouncerProjectionTests' passed
+  Test Suite 'RouteAnnouncerProjectorTests' passed
+  Test Suite 'RouteAnnouncerRouteChangeTests' passed
+  Test Suite 'RouteAnnouncerTimingTests' passed
+  Test Suite 'RouteAnnouncerVoicingTests' passed
+  Executed 45 tests, with 0 failures (0 unexpected) in 0.213 (0.411) seconds
+  ** TEST SUCCEEDED **
+  IOS_TEST_EXIT=0
+
+--- [6/6] xcodebuild -scheme TeslaSync-macOS build (arch=arm64, CODE_SIGNING_ALLOWED=NO) ---
+  macOS-15 app target build of the real app module (includes the RouteAnnouncer surface):
+  RouteAnnouncer compile errors (macOS): 0
+  total compile errors (macOS app target): 0
+  ** BUILD SUCCEEDED **
+  MAC_BUILD_EXIT=0
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+[x] Surface renders on Apple with ALL states from the web source reproduced:
+    loading / empty(silent first-render landing) / error / data + stale / offline.
+    (RouteAnnouncer.swift switch + RouteAnnouncer.States.swift + RouteAnnouncer.Views.swift)
+[x] Hooks bind to the shared P1/S8 state-holder layer; NO direct HTTP/navigation in the view.
+    view → RouteAnnouncerModel(@Observable) → RouteAnnouncerSource seam →
+    LiveRouteAnnouncerSource ← RouteAnnouncerNavigator (native port of web useLocation) ;
+    voicing via RouteAnnouncerPresenter (native port of the web aria-live="polite" region / useAnnouncer).
+[x] Every i18n key resolves through the P1/S10 facade (RouteAnnouncerStrings → NSLocalizedString
+    table "RouteAnnouncer", web-English fallback). The web source is anonymous (renders document.title,
+    owns no t() keys) so every key is native chrome; ZERO hardcoded English in Swift (verbatim strings
+    only resolve through the facade or are non-translatable ARIA tokens status/polite/true).
+[x] Accessibility labels present on every interactive/element: live region card, history rows,
+    current-page card, freshness chip (button), retry button — RouteAnnouncerAccessibility builders
+    are unit-tested (regionLabel/historyLabel/landingLabel).
+[x] Tests: data-adapter unit test (RouteAnnouncerProjectorTests: cached changes → projection, incl.
+    first-render guard, empty-title clear, same-title ZWS de-dup) + per-state projection test
+    (RouteAnnouncerProjectionTests: loading/empty/error/data) + a11y label test
+    (RouteAnnouncerAccessibilityTests) + model/voicing/navigator/live-source tests.
+    RESULT: 45/45 passed on iOS Simulator (** TEST SUCCEEDED **, IOS_TEST_EXIT=0).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0, 0 opt-outs).
+[x] Telemetry: view.opened emitted with surface slug "RouteAnnouncer" (P1/S11), asserted by
+    RouteAnnouncerModelTests.testStartAppliesInitialAndEmitsTelemetryOnce.
+
+================================================================================
+PARITY NOTES (web components/a11y/RouteAnnouncer.tsx → native)
+================================================================================
+The four REAL behaviours of the web utility are reproduced verbatim (no fabricated states):
+  1. first-render guard  — the landing route is recorded but NEVER announced (the OS/browser
+     already speaks the page on load); RouteAnnouncerProjector skips changes[0].
+  2. deferred title read — web DEFAULT_ANNOUNCE_DELAY_MS=100 pinned in RouteAnnouncerTiming
+     (native titles resolve synchronously from the route table; the navigator emission is the
+     settle boundary — documented divergence, not a shortcut).
+  3. empty-title clear   — a navigation with an empty title wipes the region (web setMessage(''))
+     and does NOT advance the rotation counter.
+  4. zero-width rotation — counter%4 ZERO WIDTH SPACE suffix so two consecutive routes resolving
+     to the SAME document.title (e.g. /charging/1 → /charging/2) are BOTH announced.
+Sibling to AnnouncerRegion (0001) + VisuallyHidden (0003): identical visible-inspector +
+presenter-voicing architecture; the surface wraps a polite live region exactly as the web source
+renders <VisuallyHidden liveRegion priority="polite"> (role=status, aria-live=polite, aria-atomic=true).
+
+================================================================================
+BLOCKER  (sole reason the unmodified `build test` acceptance gate is non-zero)
+================================================================================
+The iOS/macOS XCTest BUNDLE fails to COMPILE due to a PRE-EXISTING, committed, OUT-OF-SCOPE
+duplicate XCTestCase subclass `RecentActivityFeedProjectionTests` declared in TWO OTHER surfaces:
+    - apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift:103
+    - apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Tests.swift:106
+Both are committed at HEAD (commits 1b2fbf00d / 4480b55ca) and neither is in this prompt's
+allowed scope. This is the SAME parallel-merge-collision class already tracked for
+ScheduledExportsPanel / SignalCatalogPanel / EnergyChargingPanel / PowertrainPanel / VehicleHeader /
+selectedVehicle / withAiFeature in apps/macos-pending-verifications.md (RecentDrives*/StateTimeline*/
+ChargingProjection redeclarations). Prompt "Out of Scope: Other surfaces in the same feature (each has
+its own prompt)" forbids editing them, so it is deferred to p4-apple/P99-0001-apple-acceptance-gate
+(macos-latest, after the cross-surface collisions are resolved + signing identities present).
+
+PROOF the blocker is unrelated to this surface:
+  - git status: only the 10 RouteAnnouncer.* files are new; nothing else modified.
+  - iOS full-app `build`: all 7 RouteAnnouncer source files compiled, 0 RouteAnnouncer errors;
+    the run's ONLY error is the RecentActivityFeedProjectionTests redeclaration.
+  - macOS app-target `build`: 0 errors, 0 RouteAnnouncer errors, ** BUILD SUCCEEDED ** (MAC_BUILD_EXIT=0).
+  - 45/45 RouteAnnouncer XCTest pass once the pre-existing collision is removed (a LOCAL-ONLY 1-line
+    rename of the other surface's class, reverted via `git checkout` and NOT committed).
+
+SUMMARY OF GATE STEPS:
+  FORMAT_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  KMP_EXIT=0
+  iOS RouteAnnouncer build: 0 errors      macOS app build: MAC_BUILD_EXIT=0
+  RouteAnnouncer XCTest: 45/45 pass (IOS_TEST_EXIT=0)
+  Combined `xcodebuild build test` (committed tree): IOS_EXIT=65 — blocked by the pre-existing,
+  out-of-scope RecentActivityFeedProjectionTests duplicate ONLY.
+
+EXIT=65
+STATUS=BLOCKED

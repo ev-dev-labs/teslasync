@@ -1,0 +1,133 @@
+=== P4 Feature view 0054 ChargingTab (Apple) ===
+Date: 2026-06-09
+Runner: macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2, xcodegen 2.45.4,
+        swiftlint + swiftformat (Homebrew), pwsh available, JDK 17 (KMP toolchain).
+Web source (binding spec): web/src/features/analytics/components/analytics/ChargingTab.tsx
+Native output: apps/apple/TeslaSync/feature-views/ChargingTab.{swift,Model,Adapter,Charts,Views,Previews,Tests}.swift + ChargingTab.strings
+Allowed scope: apps/apple/TeslaSync/feature-views/ChargingTab.* + this log (honored — git status shows ONLY ChargingTab.* changed).
+
+--------------------------------------------------------------------------------
+WHAT WAS SHIPPED (parity with the web source — no stubs, no skeleton-only)
+--------------------------------------------------------------------------------
+ChargingTab.swift          — composable surface; switches phase (loading/empty/error/content),
+                             freshness header chip + stale/offline connectivity banner, FadeIn body.
+ChargingTab.Model.swift    — P1/S8 state-holder seam (ChargingTabSource + InMemory*), P1/S11
+                             telemetry seam (view.opened), P1/S10 i18n facade, @Observable model
+                             with stale auto-refresh; SwiftUI-free (Foundation/Observation/OSLog).
+ChargingTab.Adapter.swift  — pure projection: 6 MetricCards (Sessions/Total Energy/Total Cost/Avg
+                             Power/Avg Duration/Charge Efficiency) + donut + histogram + composed
+                             datasets; fmtNumber/fmtInt/formatCurrency parity; em-dash avg guard;
+                             accessibility summaries. SwiftUI-free (Foundation only).
+ChargingTab.Charts.swift   — Swift Charts: Charger Types donut (TSPieChart), Start Battery
+                             Distribution bar histogram, Hourly Charging Pattern composed bars+line.
+ChargingTab.Views.swift    — GlassPanel chrome, freshness chip, connectivity banner, MetricCard
+                             grid (×6), per-chart empty rows, loading skeleton, surface empty,
+                             QueryError-equivalent error state. Tokens only, no Tailwind ports.
+ChargingTab.Previews.swift — content / empty / loading / error / stale / offline previews.
+ChargingTab.Tests.swift    — 25 tests (format / projection / model phases / accessibility).
+ChargingTab.strings        — P1/S10 keys: every web t() key (analytics.charging.sessions /
+                             totalEnergy / totalCost / avgPower / avgDuration / min / chargeEff /
+                             chargerTypes / startBattery / hourlyPattern / charges / energykWh /
+                             noTypes / noBatDist / noHourly) + native chrome + a11y nouns.
+
+Composition note: the web component also renders <ChargingDetailSection data={data}/> below these
+panels. That is sibling surface P4/0053 (already ported: ChargingDetailSection.*) with its own
+prompt + i18n table; per the DrivingTab precedent it slots in at integration, so this surface owns
+only the panels this prompt enumerates.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (raw, honest)
+--------------------------------------------------------------------------------
+[1] iOS  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      • App target 'TeslaSync' .................................. ** BUILD SUCCEEDED **
+        ChargingTab.{swift,Model,Adapter,Charts,Views,Previews}.o all produced. ZERO ChargingTab errors.
+      • Test bundle 'TeslaSyncTests' ............................ ** TEST FAILED ** (build of bundle)
+        Cause (PRE-EXISTING, OUT-OF-ALLOWED-SCOPE): 3 errors in
+          TeslaSync/dashboard-widgets/SafetyFeaturesWidget.ModelTests.swift
+          "invalid redeclaration of 'SafetyModelTests' / 'SafetyRegistryTests' / 'SafetyAccessibilityTests'"
+        because those XCTestCase classes are ALSO declared in
+          TeslaSync/dashboard-widgets/SafetyHistoryWidget.ModelTests.swift
+        Both files are git-tracked sibling dashboard-widgets (NOT ChargingTab). The shared test bundle
+        compiles every *.Tests.swift together, so this duplicate aborts the whole bundle build before
+        any test runs. ChargingTab.Tests.swift itself COMPILED cleanly in this bundle (zero errors).
+      IOS_EXIT=65
+
+[2] macOS  xcodebuild -scheme TeslaSync-macOS build test
+      • TEST FAILED — two blockers, both OUT-OF-ALLOWED-SCOPE / environment:
+        (a) Code signing: "TeslaSync-macOS has entitlements that require signing with a development
+            certificate" (project DEVELOPMENT_TEAM=""; no signing identity on this runner — a runner
+            capability limit per the prompt's capability clause).
+        (b) Same pre-existing SafetyFeaturesWidget/SafetyHistoryWidget ModelTests duplicate (shared
+            *.Tests.swift sources).
+      • Compile-parity confirmation (signing factored out):
+        xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" ... ** BUILD SUCCEEDED **
+        The macOS app target compiles ChargingTab cleanly (zero ChargingTab/compile errors).
+      MAC_EXIT=65   (MAC_APP_BUILD_NO_SIGN_EXIT=0)
+
+[3] swiftlint --strict   (whole apps/apple, as the gate runs it)
+      Found 1 violation, 1 serious in 2711 files:
+        TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9 opening_brace
+        (PRE-EXISTING, OUT-OF-ALLOWED-SCOPE sibling widget — NOT ChargingTab).
+      Scoped to the 7 ChargingTab.* files: 0 violations, 0 serious.
+      LINT_EXIT=2   (CHARGINGTAB_LINT_EXIT=0)
+
+[4] swiftformat --lint apps/apple
+      0/2715 files require formatting (ChargingTab included).
+      FORMAT_EXIT=0
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ChargingTab  (via pwsh)
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+ISOLATED / HOST-RUNNABLE VERIFICATION (ChargingTab in isolation — all GREEN)
+--------------------------------------------------------------------------------
+[a] Swift 6 strict-concurrency typecheck of the 6 ChargingTab source files against the REAL
+    Shared-free design+component layer (Sources/Components + Sources/Design + generated Tokens):
+      swiftc -typecheck -swift-version 6 ...  -> EXIT 0, 0 errors.
+[b] Isolated XCTest run of the surface's own tests (ChargingTab.Model + ChargingTab.Adapter are
+    SwiftUI-free, so a minimal SwiftPM package runs the real ChargingTab.Tests.swift):
+      swift test  ->  Executed 25 tests, with 0 failures (0 unexpected).
+        ChargingTabFormatTests (4) + ChargingTabProjectionTests (8) + ChargingTabModelTests (8)
+        + ChargingTabAccessibilityTests (5).
+[c] Module-collision audit: my 4 originally-generic types/views (ChargingLoadStatus,
+    ChargingConnection, ChargingFreshnessChip, ChargingConnectivityBanner) collided with the
+    pre-existing ChargingSection surface; ALL were namespaced to ChargingTab* (ChargingTabLoadStatus,
+    ChargingTabConnection, ChargingTabFreshnessChip, ChargingTabConnectivityBanner). Cross-referenced
+    every ChargingTab-declared type against all other feature-views: 0 remaining collisions.
+    A strict-concurrency Sendable gap (ChargingMetric stored in Sendable ChargingTabProjection) was
+    caught by the full build and fixed (ChargingMetric: Sendable).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all states from the web source (loading / empty / error / stale / offline /
+    content) — #Preview per state + per-panel self-empties (panels never hide).
+[x] Hooks bind to the shared P1/S8 state-holder seam (ChargingTabSource); no direct HTTP in the view.
+[x] Every i18n key from the web source has a matching key in the P1/S10 catalog (ChargingTab.strings).
+[x] Accessibility labels on every chart + each metric card + the surface group; Dynamic Type via
+    tokens; Reduce Motion honored through shared TSFadeIn / TSSkeleton.
+[x] Tests: adapter unit tests + model per-state tests + a11y label tests = 25 passing (isolated run).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (check-placeholders EXIT=0).
+[~] EXIT=0 / STATUS=DONE: NOT reachable on this runner. The fixed gate (full-scheme `build test` +
+    whole-repo `swiftlint --strict`) is blocked ONLY by pre-existing, OUT-OF-ALLOWED-SCOPE artifacts
+    I am forbidden to edit (SafetyFeaturesWidget/SafetyHistoryWidget ModelTests duplicate;
+    LiveSignalSparklinesWidget.Builder.swift lint) plus the macOS signing-certificate environment
+    limit. Per the prompt's capability clause and the documented predecessor precedent this is
+    recorded BLOCKED — the surface itself is COMPLETE and GREEN on every host-runnable + isolated
+    gate, with ZERO ChargingTab errors in the iOS AND macOS full-app builds.
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+ChargingTab surface = COMPLETE + GREEN on all host-runnable + isolated gates:
+  - iOS app build SUCCEEDED, macOS app build SUCCEEDED (signing factored out), 0 ChargingTab errors.
+  - 25 ChargingTab tests pass; Swift-6 strict-concurrency typecheck clean; swiftformat clean;
+    ChargingTab swiftlint clean; placeholder clean.
+Full-scheme `build test` (iOS + macOS) and whole-repo `swiftlint --strict` = BLOCKED by pre-existing,
+out-of-allowed-scope parallel-merge collisions in sibling surfaces + macOS signing — deferred to the
+P4 Apple acceptance gate (P99 apple-acceptance-gate, macos-latest), per apps/macos-pending-verifications.md.
+
+EXIT=65
+STATUS=BLOCKED

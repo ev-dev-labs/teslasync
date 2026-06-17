@@ -1,0 +1,152 @@
+=== P4 Shared surface 0039 AIPredictiveMaintenance (Apple) ===
+Date: 2026-06-10
+Host: macOS (Darwin, arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint/swiftformat/xcodegen/pwsh present.
+Web source: web/src/components/ai/AIPredictiveMaintenance.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/AIPredictiveMaintenance.*  (10 files)
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+The AIPredictiveMaintenance shared surface is implemented to production parity with the web
+source and is GREEN on every surface-scoped gate: real iOS-18 + macOS-15 swiftc -typecheck
+(0 errors / 0 warnings, Swift 6 strict-concurrency=complete), an isolated SwiftPM harness of
+the REAL sources (72/72 tests), swiftlint --strict (0), swiftformat --lint (0), the placeholder
+gate (PLACEHOLDER_COUNT=0, 0 opt-outs), full i18n parity, and xcodegen enumeration. A REAL
+app-target compile of both the iOS and macOS targets (DEBUG Shared.xcframework staged,
+CODE_SIGNING_ALLOWED=NO) produced ZERO AIPredictiveMaintenance/PredictiveMaintenance errors and
+ZERO symbol collisions.
+
+The two full-app `xcodebuild build test` gate steps cannot reach EXIT=0 in this environment,
+blocked exclusively by PRE-EXISTING, UNRELATED, PLATFORM factors OUTSIDE this prompt's allowed
+files:
+  (1) 54 pre-existing parallel-merge symbol collisions in OTHER agents' surfaces
+      (ambiguous StateTimelineUpdate/Connection/LoadStatus/Model across
+       feature-views/StateTimeline.* + dashboard-widgets/StateTimelineWidget.*, and the same for
+       RecentDrives* across feature-views/RecentDrivesSection.* + dashboard-widgets/
+       RecentDrivesListWidget.*). NONE are in AIPredictiveMaintenance.
+  (2) the KMP RELEASE Shared.xcframework Kotlin/Native link long-pole (the scheme pre-action
+      Scripts/build-shared-xcframework.sh stages the RELEASE variant; the DEBUG variant assembled,
+      the RELEASE link did not finish in this slot — the documented long-pole).
+  (3) macOS development signing: `security find-identity -p codesigning` -> 0 valid identities.
+
+This matches the established precedent for ~15 prior P4-apple surfaces in
+apps/macos-pending-verifications.md (surface verified green in isolation; full-app build+test
+deferred to p4-apple/P99-0001-apple-acceptance-gate on macos-latest with signing identities).
+Per the prompt's Acceptance Criteria, this is recorded as STATUS=BLOCKED with platform-capability
+evidence. Note: macos-pending-verifications.md is NOT in this prompt's allowed file set and was
+therefore NOT edited.
+
+--------------------------------------------------------------------------------
+FILES (10) — apps/apple/TeslaSync/shared-surfaces/
+--------------------------------------------------------------------------------
+AIPredictiveMaintenance.swift            public View: withAiFeature gate + card chrome + state switch
+AIPredictiveMaintenance.Model.swift      P1/S10 strings facade, P1/S11 telemetry, P1/S8 source + @Observable model
+AIPredictiveMaintenance.Adapter.swift    Foundation core: request, SSE parse, reducer, output/action derive
+AIPredictiveMaintenance.Projection.swift pure input->resolved projection (localized)
+AIPredictiveMaintenance.Views.swift      Helix badge, Ask-Helix button, thinking indicator, output panel, ready view
+AIPredictiveMaintenance.Chrome.swift     freshness chip, refresh, stale/offline banner, loading, gate-error
+AIPredictiveMaintenance.Previews.swift   #Preview per state (DEBUG)
+AIPredictiveMaintenance.Tests.swift      projection/model/accessibility tests (co-located -> test bundle)
+AIPredictiveMaintenance.AdapterTests.swift request/SSE/reducer/output/action tests
+AIPredictiveMaintenance.strings          P1/S10 i18n catalog (20 keys)
+LOC: 1530 non-test + 674 test.
+
+--------------------------------------------------------------------------------
+PARITY (web AIPredictiveMaintenance.tsx)
+--------------------------------------------------------------------------------
+- withAiFeature('predictive-maintenance', InnerSection) -> native availability tri-state
+  (loading/failed/resolved(enabled:)) + .gated phase (off => renders nothing; view.opened deferred).
+- useAiStream({ url: '/ai/maintenance/predict', body }) -> PredictiveMaintenanceRequest.
+  body = haveScope ? { vehicle_id: vehicleId } : { vehicle_id: 0 }; haveScope = vehicleId>0.
+  (nil / 0 / negative scope coerces vehicle_id to 0 — verified by adapter tests.)
+- AIFeatureCard props reproduced: title "Helix maintenance advisor", the full description,
+  buttonLabel "Predict maintenance", badge "Helix", emptyHint "Select a vehicle first." rendered
+  under the description when !canStart, the universal Ask-Helix / "Helix is thinking…" action.
+- AiOutputPanel branches reproduced: empty (friendly hint, P4 never-a-blank-box) / thinking /
+  prose / "Helix error: {message}".
+- States rendered: gated, loading (skeleton), error (retryable QueryError peer), ready idle/
+  thinking/prose/stream-error/no-vehicle, plus the P4 leaf connectivity axis live/stale/offline
+  (freshness chip + banner + one-shot stale auto-refresh).
+- Telemetry: view.opened with surface slug "AIPredictiveMaintenance" (deferred past the gate).
+
+i18n parity — web t() keys present in AIPredictiveMaintenance.strings (1 each):
+  maintenance.aiPredictive.title / .description / .button / .badge / .emptyHint  => 5/5, 0 missing.
+  (+ shared helix.askHelix/thinking/errorLabel, ai.common.errorUnknown, + native P4 chrome keys.)
+
+--------------------------------------------------------------------------------
+GATE STEPS
+--------------------------------------------------------------------------------
+
+[1] swiftc -typecheck — iOS 18 simulator (arm64-apple-ios18.0-simulator), Swift 6,
+    -strict-concurrency=complete, -D DEBUG, real Tokens.swift + full Sources/Components +
+    Sources/Design (minus SharedFacade-coupled UnitFormatters.swift, unused by this surface):
+    IOS_TYPECHECK_EXIT=0   (0 errors / 0 warnings)
+
+[2] swiftc -typecheck — macOS 15 (arm64-apple-macos15.0), same flags + closure:
+    MAC_TYPECHECK_EXIT=0   (0 errors / 0 warnings)
+
+[3] Isolated SwiftPM harness (/tmp/pmharness) — REAL surface sources (7 non-test) + Tokens +
+    design system compiled as a library under .swiftLanguageMode(.v6) + StrictConcurrency, the two
+    co-located test files run via @testable import:
+    swift test => Executed 72 tests, with 0 failures (0 unexpected).  SWIFT_TEST_EXIT=0
+    (covers adapter request/SSE-parse/reducer/output+action derive; projection gated/loading/error/
+     ready, canStart>0 incl. nil/0/negative, header empty hint, every output branch; model wiring,
+     view.opened-deferred-past-gate telemetry, stale one-shot auto-refresh + re-arm, generate/
+     cancel/refresh/stop delegation; accessibility label builders.)
+
+[4] swiftlint --strict — surface-scoped (9 .swift files): Found 0 violations, 0 serious.
+    swiftlint --strict — TREE-WIDE (exact gate cmd, cwd apps/apple): 0 violations in 3456 files.
+    LINT_EXIT=0
+
+[5] swiftformat --lint apps/apple (exact gate cmd): 0/3686 files require formatting, 3 skipped.
+    (surface-scoped: 0/9.)  FORMAT_EXIT=0
+
+[6] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AIPredictiveMaintenance:
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[7] xcodegen generate: Created project at apps/apple/TeslaSync.xcodeproj. XCODEGEN_EXIT=0
+    All 10 files enumerated by the path-based source globs (60 references across the iOS/macOS app
+    + iOS/macOS test targets; 6 per file).
+
+[8] REAL app-target compile (evidence that the surface compiles in the actual app module, isolated
+    from the release-framework scheme pre-action by using -target). DEBUG Shared.xcframework staged
+    (ios-arm64 + ios-arm64-simulator + macos-arm64), CODE_SIGNING_ALLOWED=NO:
+      iOS  : xcodebuild -project TeslaSync.xcodeproj -target TeslaSync     -sdk iphonesimulator … build
+             => IOS_BUILD_EXIT=65; PredictiveMaintenance errors = 0; 54 total errors, ALL in
+                StateTimeline*/RecentDrives* (other agents' surfaces). 0 collisions on my symbols.
+      macOS: xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -sdk macosx          … build
+             => MAC_BUILD_EXIT=65; PredictiveMaintenance errors = 0; identical 54 pre-existing
+                StateTimeline*/RecentDrives* errors.
+
+[9] Full-app gate steps (prompt's exact commands) — BLOCKED in this environment:
+      xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        => IOS_EXIT=BLOCKED: scheme pre-action builds the RELEASE Shared.xcframework (Kotlin/Native
+           link long-pole; DEBUG assembled, RELEASE did not finish this slot) + 54 pre-existing
+           StateTimeline*/RecentDrives* collisions in other agents' files.
+      xcodebuild -scheme TeslaSync-macOS build test
+        => MAC_EXIT=BLOCKED: same pre-existing collisions + macOS signing (0 valid identities).
+    Both blockers are PRE-EXISTING / UNRELATED / PLATFORM and lie OUTSIDE this prompt's allowed
+    files (apps/apple/TeslaSync/shared-surfaces/AIPredictiveMaintenance.*). No change to the
+    allowed files can make these steps green. Deferred to p4-apple/P99-0001-apple-acceptance-gate
+    (macos-latest + signing identities), consistent with apps/macos-pending-verifications.md.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all web states (gated/loading/error/ready idle·thinking·prose·stream-error·
+    no-vehicle) + P4 leaf live/stale/offline — see Previews + per-state tests.
+[x] Hooks bind to the shared P1/S8 state-holder seam (PredictiveMaintenanceSource); no direct HTTP
+    in the view.
+[x] Every web i18n key has a matching catalog key (5/5 parity; 0 missing).
+[x] Accessibility labels on every interactive element (action button aria-label "Ask Helix ·
+    Predict maintenance", refresh, badge, output panel, header) — a11y tests + VoiceOver labels.
+[x] Tests: adapter unit tests + per-state projection/model tests + a11y label tests (72/72).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0, 0 opt-outs).
+[~] EXIT=0 / STATUS=DONE — the two full-app xcodebuild build test steps are BLOCKED by
+    pre-existing/unrelated/platform factors; recorded as STATUS=BLOCKED with evidence (sanctioned
+    alternative). The surface itself is green on every surface-scoped gate.
+
+EXIT=1
+STATUS=BLOCKED

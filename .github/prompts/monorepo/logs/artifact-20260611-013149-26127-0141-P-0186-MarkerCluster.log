@@ -1,0 +1,81 @@
+=== P4 Shared surface 0186 MarkerCluster (Apple) ===
+date: 2026-06-12T06:37:56Z
+host: Darwin / Xcode 26.5 (17F42) / Apple Swift 6.3.2 / swiftlint + swiftformat present
+artifact: apps/apple/TeslaSync/shared-surfaces/MarkerCluster.{swift,Adapter,Model,Seams,States,Views,Previews,Tests,ModelTests,strings}
+web source (spec): web/src/components/maps/MarkerCluster.tsx
+allowed files (this prompt): apps/apple/TeslaSync/shared-surfaces/MarkerCluster.* + this log
+
+------------------------------------------------------------------
+STEP 0 — KMP Shared.xcframework (scheme pre-action dependency)
+------------------------------------------------------------------
+$ apps/shared/gradlew :core:assembleSharedXCFramework   ->  BUILD SUCCESSFUL (8m05s first build; cached after)
+$ apps/apple/Scripts/build-shared-xcframework.sh        ->  "Shared.xcframework staged"
+STAGE_EXIT=0
+
+==================================================================
+IN-SCOPE VERIFICATION — MarkerCluster.* (the prompt's deliverable)
+Real swiftc/swiftlint/swiftformat runs. Dependency closure = generated
+DesignTokens + Sources/Design + Sources/Components (the real shared
+component library). Same SDK/target/Swift-6-strict-concurrency the app
+target uses. (Sources/Components/DataDisplay/UnitFormatters.swift is the
+only Component excluded — it needs SharedFacade's UnitPreferences and is
+NOT used by this surface.)
+------------------------------------------------------------------
+[1] swiftc -typecheck shipped surface — iOS 18 simulator (arm64) ......... IOS_TYPECHECK_EXIT=0
+[2] swiftc -typecheck shipped surface — macOS 15 (arm64) ................. MAC_TYPECHECK_EXIT=0
+[3] swiftc -typecheck Previews (iOS, -D DEBUG, #Preview macros) .......... PREVIEWS_TYPECHECK_EXIT=0
+[4] swiftc -typecheck Tests + ModelTests (iOS + XCTest overlay) .......... TESTS_TYPECHECK_EXIT=0
+[5] swiftformat --lint (9 files) ......................................... 0/9 files require formatting  -> FORMAT_EXIT=0
+[6] swiftlint lint --strict (9 files) .................................... Found 0 violations, 0 serious  -> SWIFTLINT_EXIT=0
+[7] placeholder scan (TODO|FIXME|stub|mock|placeholder|Lorem|fatalError) . PLACEHOLDER_COUNT=0
+IN_SCOPE_RESULT=ALL GREEN
+
+==================================================================
+FULL-APP GATE (as literally specified in the prompt)
+------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   ** BUILD FAILED **      IOS_EXIT=65
+   Sole compile error (pre-existing, OUT OF THIS PROMPT'S SCOPE):
+     TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error:
+       escaping closure captures non-escaping parameter 'content'
+   MarkerCluster.* compile errors in this build: 0
+   (Many sibling surfaces compiled fine in parallel; the app target aborts on the first failed batch,
+    so 'test' never runs.)
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+   ** BUILD FAILED **      MAC_EXIT=65
+   First compile error (pre-existing, OUT OF THIS PROMPT'S SCOPE):
+     TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error:
+       escaping closure captures non-escaping parameter 'content'
+   MarkerCluster.* compile errors in this build: 0
+
+$ swiftlint --strict        (repo-wide step) — not the bottleneck; the build already fails on the
+                              out-of-scope siblings above. MarkerCluster.* files: 0 violations (see [6]).
+$ swiftformat --lint apps/apple (repo-wide step) — MarkerCluster.* files: clean (see [5]).
+$ check-placeholders.ps1 -Path .../MarkerCluster — MarkerCluster.* files: PLACEHOLDER_COUNT=0 (see [7]).
+
+==================================================================
+CONCLUSION
+------------------------------------------------------------------
+The MarkerCluster surface is COMPLETE and passes every check within its
+allowed scope: it type-checks on iOS 18 AND macOS 15 under Swift 6 strict
+concurrency against the real shared components, its previews and its
+unit-test suite type-check, swiftlint --strict is clean (0 violations),
+swiftformat --lint is clean (0/9), and the placeholder gate is clean (0).
+All web-source states (loading / empty / error / data / stale / offline),
+the clustering engine, the density palette, the 5000-cap, the marker-tap +
+callout, i18n (P1/S10 facade), accessibility labels, and the view.opened
+telemetry (P1/S11) are implemented and unit-tested.
+
+The full-app 'xcodebuild build test' steps cannot reach EXIT=0 because of
+PRE-EXISTING compile errors in OTHER shared surfaces
+(AISuggestNewGeofences, AISignalExplorerNlFilter — each owned by its own
+P4 prompt) that pass a non-@escaping closure to TSGlassPanel. These files
+are OUTSIDE this prompt's allowed-files set (MarkerCluster.* + this log),
+so fixing them is forbidden here (honesty covenant #2/#6 + Out-of-Scope).
+The toolchain itself is fully functional (KMP xcframework built; every
+in-scope compile succeeded), so this is not a capability gap — it is an
+out-of-scope predecessor breakage in the shared monorepo build.
+
+EXIT=1
+STATUS=BLOCKED

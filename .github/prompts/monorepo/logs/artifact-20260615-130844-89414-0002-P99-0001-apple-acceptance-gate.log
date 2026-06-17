@@ -1,0 +1,356 @@
+================================================================================
+P4 · P99 · 0001 — APPLE macOS + iOS/iPadOS ACCEPTANCE GATE
+================================================================================
+Prompt:   .github/prompts/monorepo/p4-apple/P99-0001-apple-acceptance-gate.prompt.md
+Log:      .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+Date:     2026-06-15T20:17:35Z
+Host:     Atuls-Mac-Studio.local / Darwin 25.5.0 arm64
+Mode:     ACCEPTANCE GATE — RUN ONLY. No code fixes. No scope change. No delegation.
+Covenant: 1 no red-as-green | 2 no scope narrowing | 3 no skip-and-assume |
+          4 no stubs-as-final | 5 no parity shortcuts | 6 no delegation |
+          7 no predecessor bypass | 8 no commit on red | 9 no silent drift |
+          10 log ends with EXIT=<int> + STATUS=<DONE|BLOCKED>
+ADR refs: ADR-002, ADR-004, ADR-005, ADR-008, ADR-009, ADR-010, ADR-011,
+          ADR-013, ADR-014, ADR-015, ADR-016 (+ ADR-012 runner/version lock)
+
+================================================================================
+=== PREFLIGHT ===
+================================================================================
+
+-- Host / OS --
+$ sw_vers
+ProductName:		macOS
+ProductVersion:		26.5.1
+BuildVersion:		25F80
+$ uname -a
+Darwin Atuls-Mac-Studio.local 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:38:56 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6000 arm64
+
+-- Toolchain --
+$ xcode-select -p
+/Applications/Xcode.app/Contents/Developer
+$ xcodebuild -version
+Xcode 26.5
+Build version 17F42
+$ swiftlint version
+0.63.3
+$ swiftformat --version
+0.61.1
+$ pwsh --version
+PowerShell 7.6.2
+$ swift --version 2>&1 | head -2
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+$ xcodegen --version
+Version: 2.45.4
+
+-- Capabilities --
+$ xcrun simctl list devices available | grep -i 'iPhone 16'
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+CAP: XCODEBUILD_AVAILABLE=YES   (active dir is full Xcode at /Applications/Xcode.app/Contents/Developer)
+CAP: IOS_SIMULATORS_AVAILABLE=YES (iPhone 16 + iOS 26.5 runtime present)
+
+-- Code-signing identities (archive prerequisite per prompt capability mandate) --
+$ security find-identity -v -p codesigning
+     0 valid identities found
+CAP: SIGNING_IDENTITIES=0      (signed iOS/macOS archives require >=1 valid identity + DEVELOPMENT_TEAM)
+
+-- Xcode project generation (build prerequisite; .xcodeproj is a generated artifact) --
+$ (cd apps/apple && xcodegen generate 2>&1 | tail -2)
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync.xcodeproj
+$ xcodebuild -list -project apps/apple/TeslaSync.xcodeproj 2>&1 | sed -n '/Schemes/,$p'
+    Schemes:
+        TeslaSync
+        TeslaSync-macOS
+        TeslaSyncActivities
+        TeslaSyncWatch
+        TeslaSyncWatchWidgets
+        TeslaSyncWidgets
+        TeslaSyncWidgets-macOS
+
+
+-- Predecessor verification (Covenant 7: no predecessor bypass) --
+   Dependency: P4/P0..P9 all STATUS=DONE + all generated P7 page prompts DONE.
+
+   P4 phase numbered prompts P0..P9 (STATUS tail):
+     p4-p0-0001-apple-scaffold.log                STATUS=DONE
+     p4-p1-0001-shared-facade.log                 STATUS=DONE
+     p4-p2-0001-design-tokens.log                 STATUS=DONE
+     p4-p3-0001-ui-components.log                 STATUS=DONE
+     p4-p3-0002-charts-components.log             STATUS=DONE
+     p4-p3-0003-data-display-components.log       STATUS=DONE
+     p4-p3-0004-feedback-forms-components.log     STATUS=DONE
+     p4-p3-0005-maps-motion-components.log        STATUS=DONE
+     p4-p4-0001-app-structure-navigation.log      STATUS=DONE
+     p4-p5-0001-auth-onboarding.log               STATUS=DONE
+     p4-p6-0001-live-data-sse.log                 STATUS=DONE
+     p4-p6-0002-push-notifications.log            STATUS=DONE
+     p4-p8-0001-widgetkit-widgets.log             STATUS=DONE
+     p4-p8-0002-intents-handoff-menus.log         STATUS=DONE
+     p4-p8-0003-watchos-companion-settings.log    STATUS=DONE
+     p4-p9-0001-xctest-unit.log                   STATUS=DONE
+     (p4-p99-0001-apple-acceptance-gate.log = THIS gate's own output — self, in-progress, not a predecessor)
+     p4-p9-0002-xcuitest-ui.log               MISSING (P9-0002 XCUITest acceptance prompt never produced a log)
+
+   KMP shared-core scaffold (producer of Frameworks/Shared.xcframework that BOTH Apple targets link):
+     p1-s3-0001-kmp-scaffold.log              STATUS=BLOCKED
+
+   Generated P4/P7 page+widget+surface prompt logs: total=720  STATUS=DONE=716  NOT-DONE=4
+   NOT-DONE generated logs (firsthand):
+     p4-apple-dashboard-widgets-0001-AlertFeedWidget.log        -> IOS_EXIT=143
+     p4-apple-shared-surfaces-0019-AIFeedbackQueueTriage.log    -> STATUS=BLOCKED  (surface green in isolation + real app-module compile — 0 errors/0 warnings mine,
+     p4-apple-shared-surfaces-0027-AIMLChargingCurveClustering.log -> STATUS=BLOCKED  (surface green in isolation + real app-module compile; full-app gate blocked by
+     p4-apple-shared-surfaces-0043-AIRangePrediction.log        -> STATUS=BLOCKED  (surface green in isolation + real app-module compile; full-app gate blocked by
+
+-- Required gate artifacts (Gate steps 6-7 + acceptance 'both ledgers 100%') --
+   MISSING : apps/parity/apple-macos-ledger.json
+   MISSING : apps/parity/apple-ios-ledger.json
+   MISSING : apps/tools/check-parity-ledger.ps1
+   NOTE: only apps/parity/apple-ledger.json (single combined file) exists; the gate
+         requires the two split per-idiom ledgers + the check-parity-ledger.ps1 verifier.
+
+-- Working-tree hygiene at entry --
+   git status --porcelain (excluding generated build prereqs):
+?? .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+   => source working tree CLEAN at entry (untracked generated build prereqs excluded): non-prereq changes=1
+
+================================================================================
+=== GATE EXECUTION (firsthand on this host) ===
+================================================================================
+Note: fast/decisive steps executed first; expensive iOS-Simulator build+test runs last.
+      Full xcodebuild output captured to temp; the failing tail is inlined below.
+
+----- [2/9] macOS build+test:  xcodebuild -scheme TeslaSync-macOS build test -----
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-dvdmlonxhgqxfdcnozbzwxhesiwp/Build/Intermediates.noindex/TeslaSync.build/Debug/TeslaSync-macOS.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Localization/Localizable.xcstrings
+
+Build description signature: 9a0312b8f36dfa30371e580a471dcb87
+Build description path: /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-dvdmlonxhgqxfdcnozbzwxhesiwp/Build/Intermediates.noindex/XCBuildData/9a0312b8f36dfa30371e580a471dcb87.xcbuilddata
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+
+Test session results, code coverage, and logs:
+	/Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-dvdmlonxhgqxfdcnozbzwxhesiwp/Logs/Test/Run-TeslaSync-macOS-2026.06.15_13-19-15--0700.xcresult
+
+Testing failed:
+	"TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	"TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	Testing cancelled because the build failed.
+
+** TEST FAILED **
+
+
+The following build commands failed:
+	Testing project TeslaSync with scheme TeslaSync-macOS
+(1 failure)
+MAC_EXIT=65
+
+----- [3/9] SwiftLint strict:  (cd apps/apple && swiftlint --strict) -----
+Linting 'WatchGlanceData.swift' (5954/5967)
+Linting 'WatchModel.swift' (5955/5967)
+Linting 'WatchCacheStore.swift' (5956/5967)
+Linting 'WatchActionsView.swift' (5957/5967)
+Linting 'WatchSettingsView.swift' (5958/5967)
+Linting 'WatchGlanceView.swift' (5959/5967)
+Linting 'WatchBatteryRing.swift' (5960/5967)
+Linting 'WatchStatusRow.swift' (5961/5967)
+Linting 'WatchStateViews.swift' (5962/5967)
+Linting 'TeslaSyncWatchWidgetsBundle.swift' (5963/5967)
+Linting 'WatchComplications.swift' (5964/5967)
+Linting 'WatchComplicationProvider.swift' (5965/5967)
+Linting 'WatchComplicationViews.swift' (5966/5967)
+Linting 'WatchDesignTokens.swift' (5967/5967)
+Done linting! Found 0 violations, 0 serious in 5967 files.
+LINT_EXIT=0
+
+----- [4/9] SwiftFormat lint:  swiftformat --lint apps/apple -----
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:223:1: error: (noForceUnwrapInTests) Use XCTUnwrap or #require in test cases, rather than force unwrapping.
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Tests/Unit/Features/Dashboard/GlancePageModelTests.swift:57:1: error: (wrapFunctionBodies) Wrap single-line function, init, and subscript bodies onto multiple lines.
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Tests/Unit/Features/Dashboard/GlancePageModelTests.swift:58:1: error: (wrapFunctionBodies) Wrap single-line function, init, and subscript bodies onto multiple lines.
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Tests/Unit/Features/Dashboard/GlancePageModelTests.swift:59:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Tests/Unit/Features/Dashboard/GlancePageModelTests.swift:59:1: error: (wrapFunctionBodies) Wrap single-line function, init, and subscript bodies onto multiple lines.
+SwiftFormat completed in 62.82s.
+Source input did not pass lint check.
+9/6274 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+
+----- [5/9] Placeholder scan:  pwsh apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift -----
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Projector.swift:144: TODO
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Strings.swift:53: TODO
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Strings.swift:200: TODO
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Tests.swift:260: TODO
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Views.swift:68: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Views.swift:70: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Views.swift:72: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.Views.swift:88: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync/feature-views/TelemetryGrid.Tests.swift:142: TODO
+PLACEHOLDER_ALLOWED=247
+PLACEHOLDER_COUNT=66
+EXIT=1            (<- check-placeholders.ps1 self-report for THIS step only; NOT the gate verdict — see AGG_EXIT and final EXIT/STATUS below)
+PLACEHOLDER_EXIT=1
+
+----- [6/9] macOS parity ledger:  pwsh apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-macos-ledger.json -RequiredPercent 100 -----
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+MAC_LEDGER_EXIT=64
+
+----- [7/9] iOS parity ledger:  pwsh apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-ios-ledger.json -RequiredPercent 100 -----
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+IOS_LEDGER_EXIT=64
+
+----- [8/9] iOS archive:  xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS' archive -----
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-dvdmlonxhgqxfdcnozbzwxhesiwp/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync/IntermediateBuildFilesPath/TeslaSync.build/Release-iphoneos/TeslaSyncActivities.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Localization/Localizable.xcstrings
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-dvdmlonxhgqxfdcnozbzwxhesiwp/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync/IntermediateBuildFilesPath/TeslaSync.build/Release-iphoneos/TeslaSync.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Localization/Localizable.xcstrings
+
+Build description signature: 9ecb8011decf4bef5135a2c4e05926e8
+Build description path: /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-dvdmlonxhgqxfdcnozbzwxhesiwp/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync/IntermediateBuildFilesPath/XCBuildData/9ecb8011decf4bef5135a2c4e05926e8.xcbuilddata
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSync" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSync' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSyncWidgets" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSyncActivities" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSyncActivities' from project 'TeslaSync')
+** ARCHIVE FAILED **
+
+
+The following build commands failed:
+	Archiving project TeslaSync with scheme TeslaSync
+(1 failure)
+IOS_ARCHIVE_EXIT=65
+
+----- [9/9] macOS archive:  xcodebuild -scheme TeslaSync-macOS archive -----
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-dvdmlonxhgqxfdcnozbzwxhesiwp/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync-macOS/IntermediateBuildFilesPath/TeslaSync.build/Release/TeslaSync-macOS.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Localization/Localizable.xcstrings
+
+Build description signature: 6b9bd69ecd76628c40f2447de61c1a0f
+Build description path: /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-dvdmlonxhgqxfdcnozbzwxhesiwp/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync-macOS/IntermediateBuildFilesPath/XCBuildData/6b9bd69ecd76628c40f2447de61c1a0f.xcbuilddata
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+note: '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+note: '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+** ARCHIVE FAILED **
+
+
+The following build commands failed:
+	Archiving project TeslaSync with scheme TeslaSync-macOS
+(1 failure)
+MAC_ARCHIVE_EXIT=65
+
+
+----- [1/9] iOS Simulator build+test (executed LAST — expensive; KMP Shared.xcframework
+          assembled via Gradle pre-build Run Script, FROM-CACHE):
+          xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test -----
+   App + app-extensions (TeslaSync.app, TeslaSyncWidgets.appex, TeslaSyncActivities.appex)
+   COMPILED and simulator-codesigned OK (0 app-target compile errors). Failure is the XCTest bundle:
+   28941:EmitSwiftModule normal arm64 (in target 'TeslaSyncTests' from project 'TeslaSync')
+   28956:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260615-130844-89414/slot-2/apps/apple/Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10:13: error: main actor-isolated default value in a nonisolated context
+   32318:Testing failed:
+   32319:	Main actor-isolated default value in a nonisolated context
+   32320:	Testing cancelled because the build failed.
+   32322:** TEST FAILED **
+   32326:	EmitSwiftModule normal arm64 (in target 'TeslaSyncTests' from project 'TeslaSync')
+   32328:	Testing project TeslaSync with scheme TeslaSync
+   32329:(3 failures)
+IOS_EXIT=65
+
+================================================================================
+=== AGGREGATION (Gate formula: EXIT=0 only if all nine == 0) ===
+================================================================================
+  IOS_EXIT          65   (iOS app+extensions build+simulator-sign OK; TeslaSyncTests bundle
+                         FAILS to compile -> Swift6 'main actor-isolated default value in a
+                         nonisolated context' @ Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10)
+  MAC_EXIT          65   (TeslaSync-macOS + TeslaSyncWidgets-macOS entitlements require a
+                         development signing certificate -> BUILD FAILED -> TEST FAILED)
+  LINT_EXIT          0   (swiftlint --strict PASS — 0 violations on this host/slot)
+  FORMAT_EXIT        1   (swiftformat --lint: 9/6274 files require formatting — e.g.
+                         Tests/Unit/Features/Dashboard/GlancePageModelTests.swift)
+  PLACEHOLDER_EXIT   1   (PLACEHOLDER_ALLOWED=247  PLACEHOLDER_COUNT=66 (>0 -> fail);
+                         e.g. VehicleHeroCard.{Projector,Strings,Views}.swift TODO/Placeholder)
+  MAC_LEDGER_EXIT   64   (apps/tools/check-parity-ledger.ps1 + apps/parity/apple-macos-ledger.json MISSING)
+  IOS_LEDGER_EXIT   64   (apps/tools/check-parity-ledger.ps1 + apps/parity/apple-ios-ledger.json MISSING)
+  IOS_ARCHIVE_EXIT  65   (Signing for TeslaSync/TeslaSyncWidgets/TeslaSyncActivities requires a
+                         development team -> ARCHIVE FAILED)
+  MAC_ARCHIVE_EXIT  65   (TeslaSync-macOS/TeslaSyncWidgets-macOS require a development signing
+                         certificate -> ARCHIVE FAILED)
+  => 8 of 9 markers nonzero (only LINT_EXIT==0).
+AGG_EXIT=1
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+Firsthand evidence only (this run, this host: Atuls-Mac-Studio.local, Xcode 26.5, iPhone 16 / iOS 26.5 sim).
+STATUS=BLOCKED on five independent, evidence-backed grounds — NONE remediated (run-only; Out of Scope:
+'Fixing code, creating missing pages/components, modifying parity definitions, changing signing config'):
+
+A. CAPABILITY — code signing (prompt mandate: 'requires macOS + Xcode, simulators, signing
+   identities, and archive credentials; if the gate can't run -> STATUS=BLOCKED'):
+   - security find-identity -v -p codesigning => 0 valid identities; DEVELOPMENT_TEAM empty.
+   - MAC_EXIT=65, IOS_ARCHIVE_EXIT=65, MAC_ARCHIVE_EXIT=65 all fail on signing/entitlements.
+   => signed iOS/iPadOS + macOS archives are NOT producible here. (Xcode + iPhone 16 sim ARE
+      present; the build-toolchain capability gap is resolved — signing credentials remain absent.)
+
+B. REQUIRED GATE ARTIFACTS MISSING (acceptance 'both ledgers 100%' is UNVERIFIABLE; Gate steps 6-7
+   cannot run as written) — MAC_LEDGER_EXIT=64 / IOS_LEDGER_EXIT=64:
+   - apps/parity/apple-macos-ledger.json : MISSING
+   - apps/parity/apple-ios-ledger.json   : MISSING
+   - apps/tools/check-parity-ledger.ps1  : MISSING (pwsh: 'not recognized as the name of a script file')
+   (Only the combined apps/parity/apple-ledger.json exists; producing the split ledgers/verifier is
+    Out of Scope — 'modifying parity definitions' / 'creating missing ...'.)
+
+C. PREDECESSORS not all STATUS=DONE (Covenant 7: no predecessor bypass):
+   - p4-p9-0002-xcuitest-ui.log : MISSING — 'P4/P0..P9 all STATUS=DONE' UNSATISFIED (XCUITest
+     acceptance prompt produced no canonical log).
+   - p1-s3-0001-kmp-scaffold.log = STATUS=BLOCKED — canonical producer of the Shared.xcframework
+     both Apple targets link (the recorded predecessor status governs even though it assembles here).
+   - 4 of 720 generated P4/P7 surface logs are NOT STATUS=DONE:
+       p4-apple-dashboard-widgets-0001-AlertFeedWidget.log        (IOS_EXIT=143 — BUILD INTERRUPTED, no STATUS)
+       p4-apple-shared-surfaces-0019-AIFeedbackQueueTriage.log    (STATUS=BLOCKED)
+       p4-apple-shared-surfaces-0027-AIMLChargingCurveClustering.log (STATUS=BLOCKED)
+       p4-apple-shared-surfaces-0043-AIRangePrediction.log        (STATUS=BLOCKED)
+
+D. BUILD / CODE-QUALITY gates RED (Out of Scope to remediate — 'Do NOT fix code'):
+   - IOS_EXIT=65        : XCTest bundle TeslaSyncTests fails to compile (Swift 6 main-actor
+                          isolation) -> tests never run. The iOS app + extensions DO build+sign on sim.
+   - FORMAT_EXIT=1      : swiftformat --lint — 9/6274 files require formatting.
+   - PLACEHOLDER_EXIT=1 : PLACEHOLDER_COUNT=66 disallowed TODO/Placeholder markers (> 0).
+
+E. PREFLIGHT hygiene: source working tree CLEAN at entry (no pre-existing uncommitted source edits).
+   The build prerequisites generated for this run (apps/apple/TeslaSync.xcodeproj via xcodegen;
+   apps/apple/Frameworks/Shared.xcframework via the Gradle pre-build script) plus Xcode DerivedData are
+   transient, regenerable artifacts; they were removed after the gate so the only working-tree change
+   left is THIS untracked acceptance log. No source was modified, staged, reverted, or fixed by this
+   run-only gate. (E is NOT a blocking ground this run.)
+
+Per Covenant 8 ('no commit on red') and Implementation step 6 (commit only on STATUS=DONE), this
+BLOCKED acceptance log is recorded but NOT git-committed. (Empirically, the canonical
+p4-p99-0001-apple-acceptance-gate.log was never committed across the 3 prior BLOCKED runs, whereas the
+one DONE phase gate p1-s99-0001-shared-gate.log WAS committed.)
+
+Promotion path to STATUS=DONE: re-run on a macOS runner WITH a valid Apple development signing
+identity + DEVELOPMENT_TEAM + archive credentials (ADR-012 macos-latest), AFTER (1) p1-s3-0001 and the
+P9-0001/P9-0002 acceptance prompts reach STATUS=DONE, (2) the Apple macOS/iOS split parity ledgers +
+apps/tools/check-parity-ledger.ps1 are produced by their owning prompts, and (3) the iOS TeslaSyncTests
+compile error, SwiftFormat, and placeholder defects are remediated by their owning surface prompts.
+
+EXIT=1
+STATUS=BLOCKED

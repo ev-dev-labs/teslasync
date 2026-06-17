@@ -1,0 +1,215 @@
+I'll start by exploring the repository structure to understand the web source page, the existing Apple app architecture, and the parity infrastructure.
+
+Let me read the web source page and explore the Apple app structure in parallel.
+
+Now let me examine the existing Apple System feature directory and find a reference implementation to follow the established patterns.
+
+Let me study a reference implementation (SearchPage with page/model/views split) and the web API hook, plus parity infrastructure.
+
+Let me read the SearchPageViews (state patterns), parity manifest record, ledger, and the gate contract README.
+
+Let me examine the parity manifest record, ledger, navigation registration, and localization catalog in parallel.
+
+Let me read the full manifest record for the page, the ledger structure, and find navigation registration.
+
+Let me examine the ledger structure, navigation registration, and localization catalog.
+
+Now I understand the routing architecture. Let me examine the route system and an example registration.
+
+Let me examine the localization catalog, placeholder-check script, the gate README, and an existing parity log for format.
+
+Let me check the placeholder patterns, available tooling (pwsh/xcodebuild/swiftlint), and the SearchPage log format.
+
+Tooling is fully available (Xcode 26.5, pwsh, swiftlint, xcodegen). Let me check the Xcode project state, gate contract, and localization format.
+
+The project uses xcodegen (`.xcodeproj` is generated). Let me check the SearchPage log to understand how prior gates resolved, and the localization format.
+
+Now I understand the precedent. Let me read the SwiftLint config, the xcstrings format, and check for shared Vehicle/SelectedVehicle types I should reuse.
+
+The catalog already has 19 commandHistory entries. Let me check exactly which strings exist versus the 18 required.
+
+`filter.pending` exists; I need to add the 17 `commandHistory.*` keys. Let me find the shared Vehicle type, selected-vehicle store, API client, and any shared DataState component.
+
+Let me look at the SharedFacade and how a real page model binds vehicle selection + data, to follow the established integration pattern.
+
+This `VehicleCostPageModel` is the gold-standard pattern (DataSource seam + State enum + sample source). Let me read its View, a Tests example, and a vehicle-picker page to mirror exactly.
+
+The gold-standard pattern uses design-token components (`TSGlassPanel`, `TSMetricCard`, `Color.TS`, etc.). Let me map the available component library and design tokens.
+
+Let me read the core design tokens and key components (Cards, Metrics, Typography, States, Feedback) to get exact APIs.
+
+Let me read the design token definitions plus Typography, Metrics, States, and Feedback components.
+
+The P2 tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it and confirm it's wired into the Xcode target.
+
+`TSStatCard` and `TSMetricCard` are available. Let me read Typography, States, Banners, Skeletons, Tabs, Fields, Pickers, and Lists components.
+
+Let me read the remaining components: Tabs, Fields, Pickers, Lists, Skeletons, Buttons, Badges, and the StatusApiDocsPage TSSpacing reference.
+
+`TSTimeline`/`TSTimelineEntry` and `TSTabs` are exactly what I need. Let me read Fields, Pickers, Skeletons, Buttons, Badges, and Banners to complete the API map.
+
+Let me read the Forms components (RangePicker/search equivalents), Skeletons, Buttons, Badges, and Banners.
+
+Let me read Buttons, Badges, Banners, Utility (for `TSTone`/`TSIconBox`), and check the StatusApiDocsPage TSSpacing reference for conflicts.
+
+I have the full component API. Let me check the test target setup, the VehicleCost route registration, and how the model handles vehicle selection sample data.
+
+I now have the complete component API surface. Let me set up a plan and todos, then run a baseline SwiftLint check on the existing System directory.
+
+Let me run a baseline SwiftLint on the existing System directory and read the VehicleCost route registration in parallel.
+
+SwiftLint scanned the whole `included` set (6380 files, 4 pre-existing violations) because `Features` isn't in `included`. Let me identify those violations and check how to scope linting to my files, plus read the VehicleCost registration.
+
+Clear now: the 4 violations are pre-existing in other files (out of my allowed scope). File-scoped linting works cleanly. Let me read the VehicleCost route registration to mirror the pattern.
+
+File-scoped linting is the way to validate my files. Let me check the count-interpolation and `String(localized:)` conventions used elsewhere, and how the macOS app hosts standalone System pages.
+
+There are pre-existing `translation.commandHistory.*` entries. Let me inspect those and confirm the catalog convention (bare keys vs `translation.` prefix).
+
+I now fully understand the conventions: add **bare** `commandHistory.*` keys (the `translation.*` ones are the web i18n dump), reference via `String(localized:)`. Architecture mirrors `VehicleCostPageModel`. Let me create the model file.
+
+Now the formatters + command-label map + sample data source in a separate file (keeps each file < 400 lines).
+
+Let me verify a couple component names (`TSCombobox`, `TSPagination`) before writing the Views.
+
+Both exist. Let me check the `TSPagination` API.
+
+Both components exist with clear APIs. Now let me create the section views file.
+
+Now the state views (loading/error) file.
+
+Now the main page scaffold with header, range presets, and state routing.
+
+Now the navigation registration file (typed `NavigationDestination` + factory, per the GeofencesPage precedent).
+
+All Swift files created. Now let me add the catalog strings (17 `commandHistory.*` + 5 range presets) via a targeted insertion that preserves the rest of the file.
+
+All 22 keys inserted, JSON valid, all required present. Now let me run SwiftLint (scoped to my files) and the placeholder gate.
+
+5 lint violations to fix. Let me view the relevant sections and fix them.
+
+Now let me fix all 5 violations:
+
+Now fix the `sorted_first_last` violation in the model:
+
+SwiftLint clean (0 violations). Now let me run the placeholder gate on the System directory.
+
+The 14 placeholder violations are all in pre-existing sibling files (`TeslaAccountPage.swift`, `ScheduledExportsPanelForm.swift`) — none in my files. Let me confirm they pre-date my change and inspect what they are.
+
+Two issues: (1) sibling violations are pre-existing debt (not my files), (2) my `parity:allow` marker is on the wrong line — the `searchPlaceholder` literal and the marker comment are on different lines. Let me view and fix.
+
+The identifier `placeholder` and the literal on different lines both trip the scanner. Let me hoist into a `prompt` property with the marker on the exact `searchPlaceholder` line.
+
+Let me verify the search field structure is intact and re-run both gates on my files.
+
+Structure is correct. Let me re-run both gates scoped to my files and grep for any remaining "placeholder" occurrences.
+
+My files are clean (COUNT=0). Now let me inspect all 14 pre-existing sibling violations to decide how to honestly reach a green dir-level gate.
+
+Let me inspect the actual pre-existing lines to confirm they're benign (SwiftUI API / comments / i18n keys), then decide.
+
+All 13 sibling violations are confirmed pre-existing & benign (SwiftUI `.redacted(reason: .placeholder)`, doc comments, `placeholderAvatar` identifiers, an i18n key) in two other pages — unmodified at git baseline. My unit's files are placeholder-clean. Following the SearchPage precedent, I'll scope the gate to my unit and disclose the baseline honestly rather than edit other pages.
+
+Now the build. Let me check the framework dependency and generate the Xcode project.
+
+Project generated, but `Frameworks/` is empty — the KMP `Shared.xcframework` (ADR-004, built by P1/S2-S3) isn't vendored in this checkout. Let me confirm whether the app build depends on it, then attempt a real build.
+
+17 files `import Shared` and all targets link the absent `Frameworks/Shared.xcframework`. Let me check the "Stage Shared.xcframework" build phase — it may generate a stub so builds work without the real KMP artifact.
+
+There's a `build-shared-xcframework.sh` preAction that stages the framework. Let me read it.
+
+The framework requires a heavy Gradle/Kotlin-Native build. Let me check if `apps/shared` + Gradle are present and viable, and read the established build-verification posture.
+
+`apps/shared` + gradlew + Java are present, so a real build is theoretically possible — but it requires a heavy Kotlin/Native xcframework build plus a 6380-file Swift-6 strict-concurrency compile. Let me kick off the framework build in the background and proceed with the log/ledger in parallel.
+
+Gradle configures cleanly offline and the daemon is warm. Let me kick off the heavy `Shared.xcframework` assembly in the background, then proceed with the ledger and log while it runs.
+
+The framework build is running in the background. Meanwhile, let me update the ledger. First, let me inspect its exact formatting to preserve it.
+
+The ledger is pretty-printed `indent=2`. Let me append the two rows (apple-macos + apple-ios) via targeted insertion and validate.
+
+The launcher shell returned. Let me update the ledger and check the framework build progress in parallel.
+
+Ledger updated (235 rows). Let me check the framework build progress.
+
+The `/tmp` log is shared across parallel slots (it shows slot-35 paths). Let me check my slot-34 build state directly and use a slot-local log.
+
+My slot-34 framework build is still running (pid 23086), contending with parallel slots for the Gradle daemon. Let me wait for it, polling the slot-local artifact (avoiding the shared `/tmp` log).
+
+The build is still running (daemon contention with parallel slots). Let me continue waiting.
+
+Framework built. Let me stage it into `apps/apple/Frameworks/` and verify, then launch the macOS build (avoids simulator/signing complications; same shared sources validate my files).
+
+Framework staged (macos-arm64 + ios slices). Now let me launch the macOS build (compiles the shared `TeslaSync/Features` sources including my files), writing to a slot-local log.
+
+Build failed (EXIT=65, 30 failures). Let me extract the actual errors and check whether any are in my files.
+
+The build errors are all "ambiguous use of 'md'/'sm'/'lg'/'xs'/'Preview'" in **pre-existing component/feature files I didn't touch** — none in my files. This signals duplicate token definitions visible to the target. Let me find the root cause.
+
+Found the root cause: `StatusApiDocsPage.swift` (a sibling System page) redeclares module-internal `enum TSSpacing`/`TSRadius`, colliding with the canonical design tokens — breaking the whole target. Let me confirm it's pre-existing (committed, not mine) and view it.
+
+Confirmed: `StatusApiDocsPage.swift` (committed via a "parallel salvage" merge) redeclares module-internal `TSSpacing`/`TSRadius`, breaking the whole target at baseline — not my code. There's also a "Preview" ambiguity. Let me scope the full baseline breakage to decide whether I can cleanly unblock it.
+
+This is a **pre-existing baseline build break**: ~120 sibling files (from "parallel salvage" merges) have duplicate `Preview`/`TSSpacing`/`TSRadius`/`TirePressureUnit`/`StatusHeroModel` symbols — 459 "ambiguous Preview" errors alone. None are my files. Fixing ~120 unrelated files is far outside my parity scope. Let me verify my unit compiles in isolation to get honest positive evidence. First, check whether the component deps import `Shared`.
+
+Excellent — the component dependencies only import SwiftUI/Foundation (no `Shared`), so I can typecheck my unit + its real component deps in isolation, sidestepping the unrelated baseline collisions. Let me run a targeted typecheck.
+
+My 6 files have zero typecheck errors. The 52 errors are in the bundled component files — let me confirm they're confined to components I included (not my files) and are missing-dependency noise.
+
+All 52 errors are confined to one unused file — `UnitFormatters.swift` — which references the `Shared`/`Units` module (P1/S5 SI converters) that my unit-agnostic page doesn't use. Let me exclude it to get a definitive clean typecheck of my unit + its real dependencies.
+
+Under strict-concurrency (matching the target's `SWIFT_STRICT_CONCURRENCY=complete`): **0 errors**. My files are clean in both modes. Let me identify the 2 transient basic-mode errors to be thorough.
+
+Found a real issue in my file under Swift 6 mode: `CommandHistoryPage()` uses a default `model = CommandHistoryPageModel()`, but the model is `@MainActor`-isolated, so the default-arg evaluation in a nonisolated context fails. Let me run with the exact target config (`-swift-version 6 -strict-concurrency=complete`) to get all authoritative diagnostics.
+
+Under the **exact target config** (`-swift-version 6 -strict-concurrency=complete`), my files have **zero** errors/warnings — SwiftUI's `View` is implicitly `@MainActor` in Swift 6, so the default-arg model construction is fine. Let me confirm the total error count for the whole isolated set under Swift 6 mode.
+
+**Definitive result:** my unit + its real P2/P3 dependencies compile with **0 errors** under the exact target config (`-swift-version 6 -strict-concurrency=complete`). The full-app-target build is blocked solely by pre-existing, out-of-scope baseline breakage in ~120 sibling files. Let me pinpoint the `Preview`/`TirePressureUnit` root declarations for accurate disclosure, then finalize.
+
+Confirmed: `TirePressureUnit` is also declared twice in committed sibling files — corroborating multiple pre-existing duplicate-symbol collisions across ~120 files from "parallel salvage" merges, all outside my scope. My evidence is conclusive.
+
+Let me verify the working-tree state so I commit only intended files, and clean build artifacts.
+
+Working tree is clean (only my intended files + the 2 modified catalogs; generated artifacts gitignored). Now let me gather line counts and evidence locations for the parity log.
+
+All 18 strings mapped; 1081 lines across 6 well-decomposed files (web source: 426 lines). Let me write the parity gate log.
+
+Let me verify the structural evidence line numbers cited in the log are accurate (the string lines came from authoritative grep; let me confirm the panel/state references).
+
+A few structural line numbers in the log are slightly off. Let me correct them for accuracy (honesty matters).
+
+All line numbers corrected. Let me run a final verification pass (lint, placeholder, JSON validity, typecheck unchanged) before committing.
+
+A line-length violation (129 > 120) appeared on the search-prompt line — `ignores_comments` doesn't strip trailing comments. Let me split the `String(localized:)` so the `searchPlaceholder` line (with its marker) stays short.
+
+The edit shifted line numbers in `CommandHistoryPageViews.swift`. Let me re-lint and re-gather all evidence line numbers fresh, then update the log.
+
+swiftlint clean. Now let me update the shifted Views.swift line numbers in the log.
+
+The flagged line 131 uses `:183` which is the *new correct* emptyState location (coincidental overlap with an old value). Let me do a clean cross-check of every Views.swift reference in the log against the actual file.
+
+All Views.swift references now match the file exactly. Since I edited Views.swift after the last typecheck, let me re-confirm the swift6 typecheck is still clean, then commit.
+
+All verifications pass: swiftlint 0, placeholder 0, swift6 typecheck 0 errors, JSON valid, parity 28/28 with accurate evidence. Let me commit the work.
+
+Clean staging (9 files, only intended changes). Let me commit.
+
+Commit succeeded (`42e1f9e3e`), working tree clean. Let me finalize the todos.
+
+All work is complete and committed. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

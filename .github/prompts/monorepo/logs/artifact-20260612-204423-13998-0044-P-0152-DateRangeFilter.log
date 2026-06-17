@@ -1,0 +1,150 @@
+=== P4 Shared surface 0152 DateRangeFilter (Apple) ===
+Date: 2026-06-13
+Runner: Darwin arm64 · Xcode 26.5 (Build 17F42) · Swift 6.3.2 · iPhone 16 simulator (iOS 18) booted
+Web source: web/src/components/forms/DateRangeFilter.tsx (+ DatePresetChips.tsx, lib/datePresets.ts)
+Native output: apps/apple/TeslaSync/shared-surfaces/DateRangeFilter.{Presets,Adapter,Model,Views,Previews}.swift,
+               DateRangeFilter.swift, DateRangeFilter.strings, DateRangeFilter.AdapterTests.swift,
+               DateRangeFilter.Tests.swift  (9 swift + 1 strings = 10 files, 1960 lines)
+
+--------------------------------------------------------------------------------
+GATE STEPS (as specified — bash transcription of the PowerShell gate)
+--------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Result: ** BUILD FAILED **      IOS_EXIT=65
+    Cause:  swift-frontend IRGen crash — report_at_maximum_capacity(unsigned long)
+            -> llvm::report_fatal_error(...)  while emitting IR SIL function
+            "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"  during IRGenRequest for the UNRELATED file
+            feature-views/AppearanceSettings.Controls.swift (line 122 Toggle("", isOn:
+            Binding(get:{isOn}, set: onChange)) where onChange: @MainActor (Bool) -> Void).
+            This is a whole-module IRGen capacity crash AFTER successful type-check + SILGen.
+            Compile-error lines in the whole build: 0.  DateRangeFilter-file error lines: 0.
+            Reproduced deterministically across two runs.
+    NOTE:   This is the SAME pre-existing, unrelated toolchain crash recorded for prior P4 Apple
+            surfaces in apps/macos-pending-verifications.md (0079-DataFreshness, 0143-TimeMachineBanner:
+            identical signature @$sSbScA_pSgIeAghyg_SbIeAghn_TR in AppearanceSettings.Controls.swift).
+            It is NOT caused by this surface and is deferred to p4-apple/P99-0001-apple-acceptance-gate
+            (macos-latest runner whose swift-frontend does not hit the whole-module IRGen capacity limit).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Result: ** BUILD FAILED ** / ** TEST FAILED **      MAC_EXIT=65
+    Cause:  Entitlements require development signing —
+            "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+            development certificate.  `security find-identity -p codesigning` => 0 valid identities found.
+            Fails at the entitlements gate before compiling this surface. Pre-existing environment blocker
+            (same as the documented prior P4 Apple surfaces).
+
+[3] swiftlint --strict            (tree-wide, 5131 files)
+    Result: Found 3 violations, 3 serious      LINT_EXIT=2
+    The 3 violations are ALL pre-existing in another prompt's file:
+        TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54 identifier_name ('a','b','c')
+    DateRangeFilter violations: 0.
+
+[4] swiftformat --lint apps/apple (tree-wide, 5429 files)
+    Result: 1/5429 files require formatting      FORMAT_EXIT=1
+    The 1 violation is pre-existing in another prompt's file:
+        TeslaSync/feature-views/RecentDrivesSection.Previews.swift:28 redundantType
+    DateRangeFilter violations: 0.
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/DateRangeFilter
+    Result: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0      PLACEHOLDER_EXIT=0
+    (Gate path is a prefix, not a literal dir, so the script's Test-Path short-circuits to a clean 0.
+     Honestly re-verified per-file below.)
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED VERIFICATION — DateRangeFilter is GREEN on every check in its scope
+(the precedent methodology used by 0079-DataFreshness / 0143-TimeMachineBanner to
+ prove a surface green around the whole-module IRGen capacity crash)
+--------------------------------------------------------------------------------
+
+A) Real Swift 6 strict-concurrency typecheck of the 6 surface source files compiled against the
+   real generated Tokens.swift + Sources/Design/{TSDesign,TSMaterial}.swift + Components/UI/Buttons.swift,
+   under -swift-version 6 -strict-concurrency=complete -D DEBUG (Views + #Previews included):
+       iOS  : xcrun -sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator ...
+              => 0 errors / 0 warnings   (IOS_TYPECHECK_EXIT=0)
+       macOS: xcrun -sdk macosx           swiftc -typecheck -target arm64-apple-macos15.0 ...
+              => 0 errors / 0 warnings   (MAC_TYPECHECK_EXIT=0)
+   IRGen is not run by -typecheck, so the capacity crash does not occur; type + concurrency
+   correctness is proven for both platforms.
+
+B) Executed logic harness — the REAL DateRangeFilter.Presets.swift + DateRangeFilter.Adapter.swift
+   compiled into an executable with an assertion main and RUN:
+       DRF_HARNESS_PASSED=48   DRF_HARNESS_FAILED=0   (exit 0)
+   Proves by execution: the surface slug; ISO YYYY-MM-DD format/parse round-trip + empty/malformed
+   fallbacks; every one of the 11 presets resolved to its exact range against a fixed UTC clock
+   (today/yesterday/7d/30d/90d/mtd/qtd/ytd/lastMonth/1y/all); matchPresetId; catalog order +
+   DEFAULT_PRESET_IDS; the projection's catalog-ordered chip subset, active/custom highlight, i18n
+   wiring (fallback + key resolvers), showsApply/showsPresets, the presets-disabled vs empty-subset
+   distinction, the picker-date parse + today fallback, and the accessibility identifiers.
+
+B2) Executed state-holder harness — the REAL DateRangeFilter.Model.swift (+ Adapter + Presets) compiled
+    into an executable with a @MainActor assertion main and RUN:
+       DRF_MODEL_PASSED=10   DRF_MODEL_FAILED=0   (exit 0)
+    Proves by execution of the @Observable DateRangeFilterModel (P1/S8): once-only view.opened
+    (idempotent across start/stop/start); projection reflects input; selectStartDate formats ISO and
+    routes WITHOUT auto-apply; selectPreset resolves at tap time and routes via the split setters +
+    fires onApply; the unknown-preset no-op; apply() routing; and the atomic onRangeChange path
+    (receives the resolved range, bypasses the split setters, fires onApply).
+
+C) In-module app build (gate step [1]) compiled all 7 DateRangeFilter app-target files INSIDE the real
+   TeslaSync module and reached the whole-module IRGen phase with 0 DateRangeFilter errors (the crash is
+   in the unrelated AppearanceSettings batch).
+
+D) swiftlint --strict on the 8 DateRangeFilter swift files:  0 violations, 0 serious.
+E) swiftformat --lint on the 8 DateRangeFilter swift files:  0/8 require formatting.
+F) Placeholder gate re-run per-file on all 8 swift files + grep of all 10 files (case-insensitive
+   TODO/FIXME/XXX/coming soon/placeholder/lorem ipsum/not implemented):  PLACEHOLDER_COUNT=0, 0 matches.
+G) xcodegen generate enumerates all 10 files (9 swift + 1 strings); 54 pbxproj references across the
+   iOS app, macOS app, and both XCTest bundles.
+H) i18n parity: 15/15 web t() keys present in DateRangeFilter.strings
+   (date.range.start|end|apply + date.preset.label + today|yesterday|last7|last30|last90|mtd|qtd|ytd|
+    lastMonth|last1y|all), 0 missing / 0 dead, + 1 native HIG empty-state key (dateRange.presets.empty).
+
+--------------------------------------------------------------------------------
+STATES REPRODUCED (faithful to the web source's REAL branches)
+--------------------------------------------------------------------------------
+DateRangeFilter is a PURE, CONTROLLED presentational component (its only hooks are useTranslation and
+the host-supplied useUrlBatch atomic setter, surfaced as the optional onRangeChange). It has no fetcher,
+React-Query cache, or Promise, hence no loading/error/stale/offline data state — inventing such chrome
+would fabricate states the source does not have (same finding + treatment as the sibling presentational
+surfaces SortControl 0159, DensityToggle 0153, ActiveFilterChips 0147). The REAL branches, all rendered:
+  - range bar with start + end DatePickers (calendar glyph + arrow separator)
+  - active-preset highlight (chip selected when the range matches a preset) vs custom range (no highlight)
+  - Apply button present (onApply != nil) vs absent
+  - preset chip row present (presets) vs disabled
+  - constrained presetIDs subset (catalog-ordered)
+  - atomic onRangeChange routing vs split onStartDateChange + onEndDateChange setters
+  - empty/malformed ISO date -> today fallback in the picker (a SwiftUI DatePicker cannot render "no date")
+  - degenerate empty-presets subset -> friendly empty chip (never a bare box, per HIG)
+Accessibility: VoiceOver labels on both pickers (aria-label parity), Apply, chip group, and each chip
+(.isSelected == aria-pressed); Dynamic Type via tokens; Reduce-Motion-gated highlight animation.
+Telemetry: view.opened emitted once per model instance with surface slug "DateRangeFilter" (P1/S11).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders on Apple with all REAL states from the web source reproduced (no fabricated chrome).
+[x] Hooks bind to the shared P1/S8 @Observable state-holder (DateRangeFilterModel); no direct HTTP.
+[x] Every web i18n key has a matching key in the P1/S10 catalog (15/15) + a native empty-state key.
+[x] Accessibility labels present on every interactive element (both pickers, Apply, each chip).
+[x] Tests: adapter unit tests (DateRangeFilter.AdapterTests.swift) + model/view/strings tests
+    (DateRangeFilter.Tests.swift) + per-state previews; pure logic executed 48/48.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[ ] EXIT=0 / STATUS=DONE — BLOCKED: the full iOS+macOS `build test` gate cannot go green on THIS runner
+    for two pre-existing, unrelated, documented reasons (whole-module IRGen report_at_maximum_capacity
+    crash in AppearanceSettings.Controls.swift; macOS development-signing with 0 valid identities), plus
+    pre-existing tree-wide lint/format reds in other prompts' files. The surface itself is verified green
+    by A–H above. Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signed, no IRGen
+    capacity limit), exactly as the prior P4 Apple surfaces in apps/macos-pending-verifications.md.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=1
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+HARNESS=48/48
+MODEL_HARNESS=10/10
+EXIT=1
+STATUS=BLOCKED

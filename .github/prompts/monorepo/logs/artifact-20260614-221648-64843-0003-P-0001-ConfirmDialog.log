@@ -1,0 +1,213 @@
+=== P4 Modal / dialog 0001 ConfirmDialog (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog.*   (see DEVIATIONS)
+Web spec: web/src/components/ai/ConfirmDialog.tsx  (AiConfirmDialog — AI tool-use approval dialog)
+Slug    : AiConfirmDialog   (P1/S11 view.opened — see DEVIATIONS)
+Runner  : Darwin (arm64), Xcode 26.5 (Build 17F42), Swift 6.3.2, iOS 26.5 + macOS 15 SDKs present
+Date    : 2026-06-14
+
+--------------------------------------------------------------------------------
+DEVIATIONS (honesty covenant rule 9 — surfaced, not silent)
+--------------------------------------------------------------------------------
+The prompt generator collided two DISTINCT web components onto one native basename:
+
+  web components/ui/ConfirmDialog.tsx  -> P-0012 -> native ConfirmDialog.*   (destructive dialog)
+  web components/ai/ConfirmDialog.tsx  -> P-0001 -> native ConfirmDialog.*   (THIS task, AI dialog)
+
+HEAD already ships the 0012 (ui, destructive) implementation at ConfirmDialog.* (10 files,
+self-identified "P4 modal/dialog · 0012", parity of components/ui/ConfirmDialog.tsx — typed
+confirmation + "Don't ask again" + severity variants). The 0001 (ai) surface is ABSENT from HEAD
+(it was clobbered by 0012 in the original parallel merge — see the prior BLOCKED run logs
+parallel/artifact-…-0199-P-0001 and -0210-P-0012).
+
+Overwriting ConfirmDialog.* with the AI dialog would DESTROY the completed 0012 sibling surface
+(violates honesty covenant rule 2 "No scope narrowing" + the repo integrity standards). The two are
+different dialogs that both exist in the app. Resolution, to ship the AI parity WITHOUT regressing
+the sibling:
+
+  • Filename: AiConfirmDialog.*  (the web component is literally exported as `AiConfirmDialog`; the
+    repo already uses descriptive dialog prefixes — CommandConfirmDialog.*, AcknowledgeAlertDialog.*).
+  • Slug:     AiConfirmDialog   (the prompt's literal `ConfirmDialog` slug is already owned by 0012;
+    a unique slug keeps the two surfaces unambiguous in diagnostics).
+  • i18n keys are UNCHANGED from the web source (ai.confirm.* — already namespaced, no 0012 clash).
+
+These two name changes are forced by the generator collision; everything else follows the prompt.
+
+--------------------------------------------------------------------------------
+ARTIFACT (all under TeslaSync/modals-dialogs/AiConfirmDialog.*, mirroring the sibling 0012 split)
+--------------------------------------------------------------------------------
+AiConfirmDialog.Adapter.swift     361  pure core: surface slug, AiToolPreview, AiArgsValue (typed
+                                       JSON tree) + prettyPrinted()/formatNumber()/escape() — the
+                                       verbatim port of JSON.stringify(args ?? {}, null, 2) — plus
+                                       AiArgsValue(jsonString:) decode (sorted keys), the
+                                       load/connection/visibility/phase enums, AiConfirmRequest, and
+                                       AiConfirmDialogProjection (intro selection, hasArguments,
+                                       phase/visibility/inlineFailure, label keys+fallbacks).
+AiConfirmDialog.Seams.swift       187  P1/S11 telemetry protocol + os_log sink; the approve/cancel
+                                       controller seam (web onConfirm/onCancel); the source snapshot
+                                       + P1/S8 source protocol + InMemory source; the P1/S10 i18n
+                                       facade (table "AiConfirmDialog"); the VoiceOver builders.
+AiConfirmDialog.States.swift      188  loading / empty / error(+retry) / inline-error envelopes +
+                                       the Live/Stale/Offline freshness chip + cached-data banner.
+AiConfirmDialog.Model.swift       230  @MainActor @Observable state holder (P1/S8): subscribes to the
+                                       source, derives visibility/phase, exposes intro/tool/args/label
+                                       copy + the confirm-disabled gate, drives approve/cancel/dismiss,
+                                       emits view.opened once, one-shot stale auto-refresh.
+AiConfirmDialog.Views.swift       268  panel shell (TSGlassPanel), header (title + freshness + close),
+                                       content (intro, Tool section w/ monospaced name + description,
+                                       Arguments <pre> monospaced scroll block, Cancel/Approve footer).
+AiConfirmDialog.swift              54   View entry: visibility switch (hidden vs faded-in panel),
+                                       onAppear/onDisappear -> model.start()/stop().
+AiConfirmDialog.Previews.swift    129  9 #Preview: mutating+args+desc, read-only, no-arguments,
+                                       submitting, loading, empty, error, stale, offline.
+AiConfirmDialog.Tests.swift       212  XCTest (5 classes, 19 funcs): JSON printer (empty/nesting/
+                                       2.0->2/escaping/bool/null), decode sorts+types, intro/
+                                       hasArguments, phase/visibility/inlineFailure, a11y, slug.
+AiConfirmDialog.ModelTests.swift  308  XCTest (2 classes, 15 funcs): telemetry-once, phase/visibility,
+                                       derived copy, busy/loading guards, submitting+delegation+
+                                       re-entrancy, cancel/dismiss, stale/offline freshness.
+AiConfirmDialog.strings           47   P1/S10 catalog: 7 web-parity ai.confirm.* keys + native chrome
+                                       + the no-arguments a11y key.
+                                  ----
+                                  1984  total (sibling 0012 = 2293; 86.5%, appropriately leaner — the
+                                        AI dialog has no typed-confirmation / silence / severity).
+
+State / branch mapping (web AiConfirmDialog binds only useTranslation = P1/S10; it fetches nothing.
+The native surface wraps it in the repo's standard source/freshness model — identical to sibling
+0012 — so every prompt-required state renders real chrome, never a blank box):
+  loading  -> request still resolving: ProgressView + "Preparing…" (pinned dialogs).
+  empty    -> resolved with no request: ContentUnavailableView "Nothing to approve"; AND within
+              content, args == {} renders the <pre> "{}" verbatim (web JSON.stringify({},null,2))
+              plus a VoiceOver "No arguments" hint.
+  error    -> delivery failed: QueryError-equivalent w/ Retry; inline error kept above content when a
+              cached request survives a failed reload.
+  stale    -> freshness chip "Stale" + one-shot auto-refresh + cached-data banner.
+  offline  -> freshness chip "Offline" + cached request retained, no refetch.
+  content branches reproduced + tested: mutates vs read intro, description present/absent, arguments
+              present/empty, in-flight (loading prop OR submitting -> both buttons disabled, Approve
+              spinner, dismiss locked — web onClose={loading ? noop : onCancel}).
+
+================================================================================
+GATE STEPS (prompt order)
+================================================================================
+
+[1/5] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      STATUS: BLOCKED — the documented gate cannot exercise this surface, for two independent
+      structural reasons, both OUTSIDE this surface's allowed-files scope:
+
+      (a) modals-dialogs is NOT wired into the Xcode project. project.yml lists only
+          widget-primitives / dashboard-widgets / feature-views / misc-surfaces / shared-surfaces as
+          app-target sources — `modals-dialogs` appears NOWHERE. Proof after `xcodegen generate`:
+            $ grep -c AiConfirmDialog TeslaSync.xcodeproj/project.pbxproj   -> 0
+            $ grep -c modals-dialogs  TeslaSync.xcodeproj/project.pbxproj   -> 0
+          So `xcodebuild -scheme TeslaSync build test` compiles/tests NEITHER this surface NOR the
+          already-shipped 0012 sibling. Wiring modals-dialogs in requires editing project.yml +
+          .swiftlint.yml `included:` (the deferred P4 integration step, outside allowed files) AND
+          would drag in 324 never-compiled sibling files — i.e. it would turn the gate RED for
+          reasons wholly unrelated to AiConfirmDialog. Not done (honesty covenant rule 2/8).
+
+      (b) The app scheme's pre-action stages the KMP Shared.xcframework via Gradle Kotlin/Native,
+          which is absent on this runner and takes minutes to build. Captured live during the attempt:
+            $ ls apps/apple/Frameworks                 -> .gitkeep only (Shared.xcframework ABSENT)
+            $ ps … (pre-action chain, mid-build)
+                Scripts/build-shared-xcframework.sh
+                gradlew -p apps/shared :core:assembleSharedXCFramework
+                org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.14.5
+                ~/.konan/dependencies/llvm-21-aarch64-macos-essentials-97/bin/clang++ -cc1 -emit-obj
+                  -triple arm64-apple-ios15.0-simulator … Shared.framework.o
+          The attempt was stopped after ~4 min (still cross-compiling the Kotlin/Native core).
+          AiConfirmDialog itself imports no Shared (parity with the web source — it fetches nothing).
+      IOS_EXIT=1 (BLOCKED: surface not in project + KMP Shared.xcframework not staged)
+
+[2/5] xcodebuild -scheme TeslaSync-macOS build test
+      STATUS: BLOCKED — same two reasons as [1/5] (modals-dialogs absent from the macOS target's
+      sources; same Shared.xcframework KMP pre-action).
+      MAC_EXIT=1 (BLOCKED)
+
+[3/5] swiftlint --strict
+      modals-dialogs is not in the config's `included:` set, so the bare invocation does not scan this
+      surface (and reports a pre-existing, unrelated serious violation in
+      dashboard-widgets/LifetimeStatsWidget.Adapter.swift — outside allowed files). Linted the 9 new
+      files explicitly with the repo config:
+        $ swiftlint lint --strict --no-cache --config apps/apple/.swiftlint.yml \
+            TeslaSync/modals-dialogs/AiConfirmDialog.swift TeslaSync/modals-dialogs/AiConfirmDialog.*.swift
+          Done linting! Found 0 violations, 0 serious in 9 files.
+      LINT_EXIT=0  (the 9 AiConfirmDialog files are clean under --strict)
+
+[4/5] swiftformat --lint apps/apple   (scoped to the surface, repo .swiftformat config)
+        $ swiftformat --lint TeslaSync/modals-dialogs/AiConfirmDialog.*  (9 swift files)
+          SwiftFormat completed. 0/9 files require formatting.
+      FORMAT_EXIT=0
+
+[5/5] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog
+        $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/AiConfirmDialog
+          PLACEHOLDER_ALLOWED=0
+          PLACEHOLDER_COUNT=0
+          EXIT=0
+        $ grep -rniE 'TODO|FIXME|XXX|Coming soon|placeholder|Lorem ipsum|not implemented|fatalError|stub|mock' \
+            TeslaSync/modals-dialogs/AiConfirmDialog.*   ->   (no matches)
+      PLACEHOLDER_EXIT=0
+
+================================================================================
+COMPENSATING VERIFICATION (run because the xcodebuild gate is structurally BLOCKED for this surface;
+the production code depends on NO KMP Shared core, so it is compiled + executed directly with the
+full Xcode 26.5 toolchain — real SwiftUI, real XCTest, Swift 6 language mode).
+================================================================================
+
+A) swiftc -typecheck — the 6 production sources against the REAL design tokens + REAL shared
+   components (not shims), Swift 6, macOS 15 SDK:
+     $ swiftc -sdk $(xcrun --show-sdk-path --sdk macosx) -target arm64-apple-macos15 -swift-version 6 \
+         -typecheck design/generated/apple/Tokens.swift Sources/Design/TSDesign.swift \
+         Sources/Design/TSMaterial.swift Sources/Components/UI/Typography.swift \
+         Sources/Components/UI/Cards.swift Sources/Components/UI/Buttons.swift \
+         Sources/Components/Motion/Motion.swift \
+         TeslaSync/modals-dialogs/AiConfirmDialog.{Adapter,Seams,States,Model,Views}.swift \
+         TeslaSync/modals-dialogs/AiConfirmDialog.swift
+     TYPECHECK_EXIT=0   (the Views bind the REAL TSGlassPanel / TSButton / TSFadeIn / Color.TS /
+                         Font.TS / TSSpacing / TSRadius signatures — no errors, no warnings)
+
+B) SwiftPM `swift test` — a harness compiling the surface (real Tokens.swift + signature-identical
+   component stand-ins, so the components' own #Preview example cascades don't pull in unrelated
+   files) + the two XCTest files, Swift 6 language mode, run on the host:
+     Test Suite 'All tests' passed.  Executed 34 tests, with 0 failures.
+     (covers: JSON printer empty/nesting/2-space/2.0->"2"/21.5/-0->"0"/NaN->null/escaping; decode
+      sorts keys + types numbers/bools/null; intro mutates/read; hasArguments; phase/visibility/
+      inlineFailure; a11y summary/tool/arguments; surface slug; model telemetry-once, phase machine,
+      derived copy, busy/loading guards, submitting+delegation+re-entrancy, cancel/dismiss, stale
+      auto-refresh-once, offline-no-refresh.)
+     SWIFT_TEST_EXIT=0   HARNESS_FAILURES=0
+
+C) `swift build` with AiConfirmDialog.Previews.swift included (DEBUG) — verifies all 9 #Preview
+   bodies type-check through the SwiftUI `#Preview` macro plugin (the prior 0001 run could not do
+   this — that runner had Command Line Tools only):
+     Build complete!  PREVIEW_BUILD_EXIT=0
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+[x] Surface renders all web-source branches (intro mutates/read, description present/absent,
+    arguments present/empty, in-flight) + the loading/empty/error/stale/offline chrome — type-checked
+    against real components, exercised by 34 tests, previews compiled.
+[x] No direct HTTP from the view; binds the P1/S8 source + P1/S10 i18n + P1/S11 telemetry only,
+    matching the web source (its sole data binding is useTranslation).
+[x] Every web i18n key (ai.confirm.title / intro.mutates / intro.read / toolLabel / argsLabel / run /
+    cancel) has a matching key in AiConfirmDialog.strings (P1/S10).
+[x] Accessibility: VoiceOver labels on the dialog + every interactive control (Approve/Cancel/Close/
+    Retry), the tool header combined, the arguments value + no-arguments hint; Dynamic Type via the
+    design-system ramp; reduce-motion respected via TSFadeIn.
+[x] Tests: JSON adapter + projection unit tests + per-state model tests + a11y label tests +
+    telemetry slug — 34 funcs, all green via the real toolchain.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+[ ] iOS + macOS `xcodebuild build test` — BLOCKED: the surface's directory (modals-dialogs) is not
+    wired into project.yml (0 refs in the generated project), and the app scheme requires a
+    multi-minute KMP Kotlin/Native Gradle pre-action to stage Shared.xcframework. Both are outside
+    this surface's allowed files; wiring modals-dialogs in would import 324 never-built siblings and
+    turn the gate red. Evidence captured above.
+
+The deliverable is production-complete and every locally-runnable verification is green (typecheck
+vs real components, 34/34 XCTest, previews, swiftlint --strict, swiftformat --lint, placeholder). The
+only non-green steps are the two xcodebuild build/test invocations, which the documented gate cannot
+direct at this surface (directory not in the project) without an out-of-scope project.yml change plus
+the KMP framework build.
+
+EXIT=1
+STATUS=BLOCKED

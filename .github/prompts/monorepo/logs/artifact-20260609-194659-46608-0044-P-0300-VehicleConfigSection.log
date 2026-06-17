@@ -1,0 +1,142 @@
+=== P4 Feature view 0300 VehicleConfigSection (Apple) ===
+Host: Darwin (macOS), Xcode 26.5 (17F42), Swift 6.3.2
+Toolchain present: xcodebuild, xcodegen, swiftlint, swiftformat, JDK 17, iPhone 16 sim (booted)
+KMP Shared.xcframework: built OK via apps/shared/gradlew :core:assembleSharedXCFramework (BUILD SUCCESSFUL), staged to apps/apple/Frameworks/Shared.xcframework
+Xcode project: generated via `xcodegen generate` (the .xcodeproj is git-ignored per project.yml)
+
+Surface shipped (apps/apple/TeslaSync/feature-views/VehicleConfigSection.*), 1387 lines total:
+  VehicleConfigSection.swift           — composable view; binds VehicleConfigSectionModel (P1/S8); switches phase → loading/error/empty/content
+  VehicleConfigSection.Model.swift     — P1/S8 state-holder seam (Source/Update/Phase/Model + InMemory source), P1/S11 view.opened telemetry seam, P1/S10 i18n facade
+  VehicleConfigSection.Adapter.swift   — pure cached→content projection (12 web rows; nullish `?? '—'`, boolean ternary, software fallback chain)
+  VehicleConfigSection.Views.swift     — header (gear + title + freshness chip), 2-col KV grid (web KVList columns={2}), loading skeleton, empty, QueryError+retry, stale/offline banner
+  VehicleConfigSection.Previews.swift  — loading / content-full / content-partial / empty / error / stale / offline
+  VehicleConfigSection.strings         — web parity keys (vehicles.detail.*, common.yes/no) + native chrome keys
+  VehicleConfigSection.Tests.swift     — adapter/projection (row order, nullish vs truthiness, boolean ternary, software fallback, a11y labels), phase resolution, model wiring + telemetry-once + freshness + stale one-shot auto-refresh
+
+Web source reproduced: features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx
+  - All 12 rows + titles + the `Vehicle Configuration` header + common.yes/no preserved as P1/S10 keys (no English literals in Swift).
+  - Two web render branches (configItems.length>0 ? KVList : Skeleton) reproduced and extended with the Apple HIG states contract (empty/error/stale/offline) per the prompt.
+
+------------------------------------------------------------------------------
+GATE STEP 1 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------------------------
+RESULT: ** TEST FAILED ** (build phase)
+IOS_EXIT=65
+
+Scope of failure: 54 compile errors, ALL of the form "'<T>' is ambiguous for type lookup".
+  errors mentioning VehicleConfigSection (this surface): 0
+  All 54 errors are in pre-existing, git-tracked sibling surfaces, NOT in the surface shipped here:
+    dashboard-widgets/RecentDrivesListWidget.{swift,Model,Previews}.swift
+    dashboard-widgets/StateTimelineWidget.{swift,Model,Previews}.swift
+    feature-views/RecentDrivesSection.{Previews,Seams}.swift
+    feature-views/StateTimeline.{Previews,Source}.swift
+
+Real excerpts (xcodebuild stdout):
+  RecentDrivesListWidget.Model.swift:146:17: error: 'RecentDrivesLoadStatus' is ambiguous for type lookup in this context
+  RecentDrivesListWidget.Previews.swift:14:76: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+  RecentDrivesSection.Previews.swift:37:21: error: 'RecentDrivesLoadStatus' is ambiguous for type lookup in this context
+  StateTimeline.Previews.swift:41:49: error: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+
+Root cause (pre-existing, OUT OF SCOPE for this prompt):
+  Two surface families each declare identical TOP-LEVEL type names across a "Widget" (dashboard-widgets)
+  and a "Section"/base (feature-views) variant, compiled into the one `TeslaSync` module:
+    RecentDrives* : 11 duplicated top-level type names  (RecentDrivesModel, RecentDrivesUpdate,
+                    RecentDrivesLoadStatus, RecentDrivesConnection, RecentDrivesConnectivityBanner,
+                    InMemoryRecentDrivesSource, …) defined by BOTH RecentDrivesListWidget.* and RecentDrivesSection.*
+    StateTimeline*: 10 duplicated top-level type names  defined by BOTH StateTimelineWidget.* and StateTimeline.*
+  These collide → "ambiguous for type lookup" at every use site. Both halves of each family are
+  git-tracked (committed) — verified:
+    git ls-files → apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift  (tracked)
+    git ls-files → apps/apple/TeslaSync/feature-views/RecentDrivesSection.Seams.swift          (tracked)
+  These families are wired into Sources/SharedFacade/AppContainer.swift and
+  dashboard-widgets/DashboardStatsWidget.Model.swift, so they cannot be excluded to obtain a clean
+  whole-module build without editing files outside this prompt's Allowed-files list.
+
+This prompt's Allowed files: apps/apple/TeslaSync/feature-views/VehicleConfigSection.*, the log file.
+Fixing RecentDrives*/StateTimeline* is FORBIDDEN here (Out of Scope: "Other surfaces … each has its own prompt";
+Honesty Covenant #2 No scope narrowing / #6 No delegation cut both ways — I must not expand scope either).
+
+NOTE (honesty): the whole-module build aborts on the pre-existing collisions before the compiler
+reaches this surface's "V"-ordered files, so the full-build log contains 0 VehicleConfigSection lines
+(neither errors nor a successful compile). I therefore verified this surface compiles INDEPENDENTLY —
+see GATE STEP 1b. Attempting to coerce the full build green via xcodebuild EXCLUDED_SOURCE_FILE_NAMES
+(no on-disk edits) only surfaces FURTHER pre-existing collisions in the same two families and their
+AppContainer/DashboardStatsWidget wiring — never once a VehicleConfigSection error.
+
+------------------------------------------------------------------------------
+GATE STEP 1b — Isolated compile verification of THIS surface (swiftc -typecheck, real design system)
+------------------------------------------------------------------------------
+This surface imports only Foundation/Observation/OSLog/SwiftUI and uses only the P1/S9 design system
+(TSGlassPanel, TSFadeIn, TSSkeleton, TSButton, Color.TS.*, Font.TS.*, TSSpacing/TSRadius). It does NOT
+import the KMP Shared framework, AppContainer, or any colliding family — so it can be compiled in
+isolation against the real Components/Design/token sources (the genuine shared library, not stubs).
+
+  Sources (5 files) + 41 real design-system source files
+    xcrun -sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 …
+    => RESULT: 0 errors,  TYPECHECK_SOURCES_EXIT=0
+
+  Tests (VehicleConfigSection.Tests.swift) + the 5 sources + design system + XCTest
+    (XCTest.swiftmodule via -I <platform>/Developer/usr/lib)
+    => RESULT: 0 errors,  TYPECHECK_TESTS_EXIT=0
+
+This is positive proof the shipped surface AND its XCTest suite type-check cleanly against the real
+shared library. The 0 VehicleConfigSection errors in the full builds is therefore "verified clean",
+not "not reached".
+
+------------------------------------------------------------------------------
+GATE STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------------------
+RESULT: ** BUILD FAILED **
+MAC_EXIT=65
+
+Scope of failure: code-signing / entitlements — a platform-capability gap on this runner, NOT a code defect:
+  "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+      Enable development signing in the Signing & Capabilities editor. (target 'TeslaSync-macOS')
+  "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+      Enable development signing in the Signing & Capabilities editor. (target 'TeslaSyncWidgets-macOS')
+  project.yml sets DEVELOPMENT_TEAM:"" and the macOS targets require hardened-runtime signing;
+  no development certificate/team is provisioned in this environment. errors mentioning
+  VehicleConfigSection: 0. (Even absent the iOS family collisions, the macOS gate cannot sign here.)
+
+------------------------------------------------------------------------------
+GATE STEP 3 — swiftlint --strict   (apps/apple, whole tree)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 3150 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEP 4 — swiftformat --lint apps/apple
+------------------------------------------------------------------------------
+0/3154 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEP 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/VehicleConfigSection
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(No TODO / stub / mock / placeholder / Lorem in the shipped surface.)
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+IOS_EXIT=65        (pre-existing committed sibling type collisions: RecentDrives*/StateTimeline*; 0 from this surface; out of scope)
+MAC_EXIT=65        (macOS code-signing/entitlements — no development certificate on this runner; 0 from this surface)
+LINT_EXIT=0        (swiftlint --strict green tree-wide, incl. all 6 VehicleConfigSection Swift files)
+FORMAT_EXIT=0      (swiftformat --lint green tree-wide)
+PLACEHOLDER_EXIT=0 (no placeholders in the shipped surface)
+TYPECHECK_SOURCES_EXIT=0  (this surface's 5 source files type-check clean vs the real 41-file design system)
+TYPECHECK_TESTS_EXIT=0    (this surface's XCTest suite type-checks clean vs the real types + XCTest)
+
+This surface (VehicleConfigSection.*) is complete and clean: it type-checks (EXIT=0) in isolation
+against the real shared design system AND its XCTest suite type-checks (EXIT=0), 0 swiftlint violations,
+0 swiftformat diffs, 0 placeholders, uniquely-named top-level types (0 of the 49 duplicate type names
+are VehicleConfig*), and purely additive (git status shows no modifications to any tracked file). The
+two `build test` steps are RED solely because of (a) pre-existing committed duplicate declarations in
+two OTHER surface families that this prompt is forbidden to edit, and (b) a macOS signing-capability gap
+on this runner. Per Honesty Covenant #1 (No red-as-green) and #8 (No commit on red), the surface is NOT
+committed and this is reported truthfully as BLOCKED rather than forced green.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,106 @@
+=== P4 Feature view 0257 TeslaApiUsageCard (Apple) ===
+Prompt: .github/prompts/monorepo/... p4-apple-feature-views-0257-TeslaApiUsageCard
+Web spec: web/src/features/system/components/status/TeslaApiUsageCard.tsx
+Branch: auto/20260608-211853-78201/138
+Runner: Darwin (arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat, pwsh 7
+Host: macOS — Apple toolchain AVAILABLE (SwiftUI + Swift Charts + MapKit present; iPhone 16 sim booted)
+
+The gate as written runs the *whole-app* iOS-Simulator + macOS `xcodebuild build test`.
+On this parallel-merge branch that whole-app build is RED for PRE-EXISTING, UNRELATED reasons
+(duplicate type definitions in OTHER dashboard-widget surfaces — see step 7). Those files are
+OUTSIDE this prompt's allowed scope (`TeslaApiUsageCard.*` + this log only), so they cannot be
+fixed here. The TeslaApiUsageCard surface itself is verified GREEN by every host-runnable,
+surface-isolating gate below. This is the same blocker class recorded in
+apps/macos-pending-verifications.md for the sibling P4 feature-view / dashboard-widget surfaces,
+deferred to p4-apple/P99-0001-apple-acceptance-gate.
+
+----------------------------------------------------------------------------------------
+Artifacts shipped (apps/apple/TeslaSync/feature-views/), all enumerated by xcodegen (step 6):
+  TeslaApiUsageCard.swift            — surface View (header/chip/refresh + content state switch)
+  TeslaApiUsageCard.Sections.swift   — view-model value types (Budget/Band/Detail/TopList/Banner/Footer) + Resolved
+  TeslaApiUsageCard.Adapter.swift    — pure logic: number/currency/percent fmt, dedupeMap, month window, intents
+  TeslaApiUsageCard.Model.swift      — i18n facade (P1/S10) + telemetry+navigator seams (P1/S11) + input + @Observable model (P1/S8)
+  TeslaApiUsageCard.Projection.swift — pure projection (budget+bands+details+top-lists+banner+footer)
+  TeslaApiUsageCard.Views.swift      — intent palette + budget bar + bands grid
+  TeslaApiUsageCard.Breakdown.swift  — details grid + top-lists + banner + footer + empty
+  TeslaApiUsageCard.Chrome.swift     — freshness chip, refresh, connectivity banner, loading skeleton, retry error
+  TeslaApiUsageCard.Previews.swift   — 9 #Preview states (DEBUG-only)
+  TeslaApiUsageCard.strings          — P1/S10 catalog contribution (every web literal promoted to a key)
+  TeslaApiUsageCard.Tests.swift      — projection phase/budget/bands/details tests
+  TeslaApiUsageCard.ModelTests.swift — projection list/banner/footer + state-holder wiring/telemetry/nav/freshness
+  TeslaApiUsageCard.AdapterTests.swift — formatters / dedupe / month-window / intents / a11y
+
+States reproduced (all render — no hidden surface): loading, empty, error(+retry), data, stale, offline.
+Web parity verified against the web vitest canonical fixture (2025-01-15T12:00Z):
+  pct 875.4999…% → aria-valuenow 875 + "875% of monthly credit"; over-budget banner "$77.55";
+  caption "Day 15 of 31 · resets in 16 days"; "185 ms"; "7.0%" danger; "2,800"; camelCase de-dup;
+  footer routes /api-logs + /tesla-account.
+
+========================================================================================
+STEP 1 — Isolated SwiftPM build + unit tests (Swift 6 language mode, strict concurrency=complete)
+  Harness: all 9 surface sources + design Tokens.swift + faithful TSButton/TSSkeleton/TSFadeIn
+  shims, compiled against real SwiftUI; all 3 test files run.
+  Result: Executed 64 tests, with 0 failures (0 unexpected).
+  TESTS_EXIT=0
+
+STEP 2 — swiftc -typecheck against real device SDKs (Swift 6, strict-concurrency=complete)
+  iOS 18 simulator  (arm64-apple-ios18.0-simulator)  → 0 errors / 0 warnings.  IOS_TYPECHECK_EXIT=0
+  macOS 15          (arm64-apple-macos15.0)           → 0 errors / 0 warnings.  MAC_TYPECHECK_EXIT=0
+
+STEP 3 — swiftlint --strict (apps/apple/.swiftlint.yml) over the 12 .swift surface files
+  Done linting! Found 0 violations.
+  LINT_EXIT=0
+
+STEP 4 — swiftformat --lint (apps/apple/.swiftformat) over the 12 .swift surface files
+  0/12 files require formatting.
+  FORMAT_EXIT=0
+
+STEP 5 — placeholder gate (apps/tools/check-placeholders.ps1 -Language swift) over all 13 artifacts
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  (No TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/stub markers; 0 opt-outs.)
+
+STEP 6 — xcodegen generate (project.yml → TeslaSync.xcodeproj)
+  Created project; all 13 TeslaApiUsageCard.* artifacts enumerated:
+  9 surface .swift in the TeslaSync + TeslaSync-macOS app targets, .strings in both,
+  *Tests.swift in the TeslaSyncTests + TeslaSync-macOSTests bundles.
+  XCODEGEN_EXIT=0
+
+STEP 7 — Whole-app `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build`
+  KMP Shared.xcframework assembled via Gradle (BUILD SUCCESSFUL, 9m35s) and staged.
+  Result: BUILD FAILED — 142 compile errors, ALL in PRE-EXISTING, UNRELATED dashboard-widget
+  surfaces; ZERO errors attributable to TeslaApiUsageCard.
+    grep -c 'TeslaApiUsageCard.*: error:'  →  0
+  Root cause = duplicate type definitions merged from parallel slots (NOT in scope here):
+    'ChargeSessionDTO' is ambiguous   — TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift:126
+                                         + TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Models.swift:22
+    'ChargeStatusProjection' is ambiguous — ChargeStatusLiveWidget.Adapter.swift + ChargeStatusWidget.Adapter.swift
+    (also ChargeStateDTO / ChargeUnitPrefs / ChargeDistanceUnit / ChargeLoadStatus / ChargeConnection /
+     ChargeStatusUpdate ambiguous, cascading "cannot infer contextual base" in the dependent Previews.)
+  Surfaces with errors (all owned by OTHER prompts, none editable here):
+    ChargeSessionChartWidget, ChargeStatusLiveWidget, ChargeStatusWidget, DrivingCoachSection,
+    DrivingCoachWidget, FleetStatsBarWidget, SafetyFeaturesWidget, SafetyHistoryWidget.
+  IOS_EXIT=65   (blocked by unrelated pre-existing collisions; TeslaApiUsageCard contributes 0 errors)
+  MAC_EXIT=65   (same app sources → same pre-existing collisions; not separately re-run)
+
+----------------------------------------------------------------------------------------
+CONCLUSION
+  The TeslaApiUsageCard surface is COMPLETE and verified GREEN by every host-runnable,
+  surface-isolating gate: isolated SwiftPM build + 64/64 tests under Swift 6 strict concurrency,
+  real iOS-18 + macOS-15 swiftc -typecheck (0/0), swiftlint --strict (0), swiftformat --lint (0),
+  placeholder gate (0), and xcodegen enumeration of all 13 files. It adds ZERO errors to the
+  whole-app build.
+
+  The whole-app `xcodebuild build test` cannot reach EXIT=0 on this branch because of 142
+  PRE-EXISTING, UNRELATED duplicate-type collisions in other dashboard-widget surfaces that are
+  outside this prompt's allowed file scope (and therefore unfixable here). Per the prompt's
+  explicit allowance and the documented apps/macos-pending-verifications.md methodology, this
+  whole-app verification is deferred to p4-apple/P99-0001-apple-acceptance-gate.
+
+  Re-run command once the unrelated dashboard-widget collisions are resolved (acceptance gate):
+    cd apps/apple && xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+EXIT=65
+STATUS=BLOCKED

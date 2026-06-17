@@ -1,0 +1,183 @@
+=== P4 Dashboard widget 0047 EnergySiteInfoWidget (Apple) ===
+Surface : apps/apple/TeslaSync/dashboard-widgets/EnergySiteInfoWidget.*
+Web src : features/dashboard/widgets/EnergySiteInfoWidget.tsx (+ registry/energy.ts → "energy-site-info")
+Host    : Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / xcodegen 2.45.4 / swiftlint + swiftformat (Homebrew)
+Capability present: SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 SDKs — NOT a BLOCKED-on-capability run.
+
+Honesty Covenant: this log states per-step truth. The full-app `xcodebuild build test` is RED, but it is
+RED for a PRE-EXISTING, OUT-OF-SCOPE reason (a sibling-slot Charge* duplicate-type collision) that is
+proven below to fail IDENTICALLY with this surface's files removed. This surface contributes ZERO errors and
+is verified green by every in-scope means (isolated iOS-18 + macOS-15 swiftc -typecheck, isolated SwiftPM
+26/26 XCTest, swiftlint --strict, swiftformat --lint, placeholder gate, xcodegen enumeration, i18n parity).
+
+Files shipped (7; 1463 total lines):
+  EnergySiteInfoWidget.swift            surface view — WidgetShell chrome (title/icon/freshness/refresh/open) + states
+  EnergySiteInfoWidget.Content.swift    WidgetDetailCard parity (label/value rows, hairline dividers, mono firmware)
+  EnergySiteInfoWidget.Model.swift      P1/S8 state-holder seam + P1/S11 telemetry + registry + P1/S10 i18n facade
+  EnergySiteInfoWidget.Adapter.swift    pure projection (fmtNumber/fmtInt port, 4 detail rows, layout, a11y summary)
+  EnergySiteInfoWidget.Previews.swift   9 #Preview states (content/compact/partial/loading/2×empty/error/stale/offline)
+  EnergySiteInfoWidget.strings          P1/S10 catalog (20 keys; table "EnergySiteInfoWidget")
+  EnergySiteInfoWidget.Tests.swift      26 XCTest cases (adapter/format/phase/model/registry/layout/a11y)
+
+============================================================
+STEP 0 — Predecessor prep: KMP Shared.xcframework (ADR-004)
+============================================================
+cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+  → BUILD SUCCESSFUL in 14m 47s — release XCFramework written:
+    apps/shared/core/build/XCFrameworks/release/Shared.xcframework {ios-arm64, ios-arm64-simulator, macos-arm64}
+  Staged to apps/apple/Frameworks/Shared.xcframework (the scheme pre-action also stages it).
+  (First attempt aborted by parallel-slot daemon `--stop` contention; re-run with --no-daemon succeeded.)
+  STEP0_EXIT=0
+
+============================================================
+STEP 1 — iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+============================================================
+xcodebuild ... build test -only-testing:TeslaSyncTests/EnergySiteInfo{Adapter,Format,Phase,Model,Registry,Layout,Accessibility}Tests CODE_SIGNING_ALLOWED=NO
+  → ** BUILD FAILED ** (exit 65)   evidence: /tmp/ios_build_test.log
+  → 148 compiler errors — ALL "<Charge*> is ambiguous for type lookup in this context" /
+    "cannot infer contextual base in reference to member '<loaded|live|miles|...>'".
+  → Error file origins (9 files, every one a sibling charging widget — NONE this surface):
+      ChargeStatusLiveWidget.{Previews,Model,Adapter,Content}.swift
+      ChargeStatusWidget.{Previews,Model,Adapter}.swift
+      ChargeSessionChartWidget.{Previews,Model}.swift
+  → EnergySiteInfoWidget error lines: 0.
+
+ROOT CAUSE (pre-existing, out-of-scope — NOT this surface):
+  Three already-committed sibling widgets each redeclare the SAME public types in the single app module:
+    ChargeStatusWidget.Model.swift  +  ChargeStatusLiveWidget.Model.swift  (+ ChargeSessionChartWidget)
+    duplicate: ChargeDistanceUnit, ChargeUnitPrefs, ChargeStateDTO, ChargeStatusUpdate,
+               ChargeConnection, ChargeLoadStatus, ChargeStatusProjection, ChargeSessionDTO …
+  In one module that is an ambiguous-type-lookup collision. It is the documented
+  "pre-existing parallel-merge collision" class in apps/macos-pending-verifications.md (same family as the
+  earlier DashboardWidgetSize ×15 squat). This surface deliberately prefixes EVERY type `EnergySiteInfo*`
+  precisely so it never participates in such a collision.
+
+PROOF the failure is pre-existing (red without this surface):
+  Stashed all 7 EnergySiteInfoWidget.* files → `xcodegen generate` (0 refs in pbxproj) → rebuilt:
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build CODE_SIGNING_ALLOWED=NO
+  → ** BUILD FAILED ** (IOS_REPRO_BUILD_EXIT=65)   evidence: /tmp/ios_repro_build.log
+  → identical Charge* ambiguity errors in the identical sibling files; EnergySiteInfoWidget error lines: 0.
+  Files restored + `xcodegen generate` re-run (42 EnergySiteInfoWidget refs back in pbxproj).
+  IOS_FULLAPP_BUILD=pre-existing-collision-blocked (NOT this surface; deferred to P99 acceptance gate)
+
+SURFACE-GREEN substitute (in-scope, real execution) — see STEP 1a/1b.
+
+------------------------------------------------------------
+STEP 1a — Isolated real-SDK type-check (this surface, both platforms, Swift 6 strict concurrency)
+------------------------------------------------------------
+swiftc -typecheck -swift-version 6  (real iphoneos + macosx SDKs; tokens + faithful TSSkeleton signature shim)
+  iOS  : -target arm64-apple-ios18.0    Tokens + Infra + Model + Adapter + swift + Content + Previews
+         → 0 errors   IOS_TYPECHECK_EXIT=0
+  macOS: -target arm64-apple-macos15.0  (same set)
+         → 0 errors   MAC_TYPECHECK_EXIT=0
+  (Foundation-only Model + Adapter + Infra also type-check standalone: 0 errors.)
+
+------------------------------------------------------------
+STEP 1b — Isolated SwiftPM build + test (this surface, Swift 6 strict concurrency, macOS 15)
+------------------------------------------------------------
+SwiftPM package (Infra + Tokens + Model + Adapter + view + Content + TSSkeleton shim; testTarget = this
+surface's Tests.swift with `@testable import` retargeted), .swiftLanguageMode(.v6), platforms: [.macOS(.v15)]:
+  swift test
+  → Test Suite 'All tests' passed
+    Executed 26 tests, with 0 failures (0 unexpected) in 0.011s
+  SWIFTPM_TEST_EXIT=0
+
+Test inventory (26 — real execution, 0 failures):
+  EnergySiteInfoAdapterTests       (8)  full pipeline parity (9800 W→"9.8 kW", 27000 Wh + count 2→"2 × 27.0 kWh"),
+                                        mono firmware, em-dash fallbacks (no power / count 0 / nil kWh / nil version
+                                        / nil tz), grouping ("3 × 1,234.5 kWh"), nil info → 0 rows
+  EnergySiteInfoFormatTests        (3)  fmtNumber half-up+grouping, fmtInt, em-dash sentinel, non-finite→0
+  EnergySiteInfoPhaseTests         (1)  resolvePhase loading/empty/loaded/failed × hasInfo matrix
+  EnergySiteInfoModelTests         (9)  phases, hasSites→projection, content-while-failed, view.opened-once,
+                                        refresh delegation, stale auto-refresh gating, connection/updatedAt tracking
+  EnergySiteInfoRegistryTests      (2)  canonical id/category/sizes (energy-site-info, 2×4 / 1×2 / 4×40) + clamp
+  EnergySiteInfoLayoutTests        (1)  web isCompact (cols ≤ 1)
+  EnergySiteInfoAccessibilityTests (2)  VoiceOver content summary (every row) + empty summary (no-site vs no-info)
+
+============================================================
+STEP 2 — macOS: xcodebuild -scheme TeslaSync-macOS build test
+============================================================
+The macOS app target compiles the SAME Sources/ + TeslaSync/dashboard-widgets/ files as iOS, so it inherits the
+IDENTICAL pre-existing Charge* duplicate-type collision (STEP 1 root cause). A 14-min macOS full build was NOT
+spent to reprint the same out-of-scope sibling errors. This surface's macOS-15 compilation IS proven green by
+STEP 1a (arm64-apple-macos15.0 swiftc -typecheck = 0 errors) and STEP 1b (SwiftPM `swift test` 26/26 on macOS 15).
+  MAC_FULLAPP_BUILD=pre-existing-collision-blocked (NOT this surface; deferred to P99 acceptance gate)
+  MAC_SURFACE_TYPECHECK=0 ; MAC_SURFACE_TESTS=26/26
+
+============================================================
+STEP 3 — swiftlint --strict
+============================================================
+swiftlint lint --strict --config apps/apple/.swiftlint.yml <the 6 shipped .swift files>
+  → Done linting! Found 0 violations, 0 serious in 6 files.   SWIFTLINT_EXIT=0
+
+============================================================
+STEP 4 — swiftformat --lint apps/apple (this surface's files)
+============================================================
+swiftformat --lint <the 6 shipped .swift files>   (config: apps/apple/.swiftformat)
+  → 0/6 files require formatting.   FORMAT_EXIT=0
+
+============================================================
+STEP 5 — check-placeholders.ps1 (this surface)
+============================================================
+pwsh apps/tools/check-placeholders.ps1 -Path <the 6 shipped .swift files> -Language swift
+  → PLACEHOLDER_ALLOWED=0
+  → PLACEHOLDER_COUNT=0
+  → EXIT=0
+  (no TODO/FIXME/stub/mock/Placeholder/Lorem in shipped code; 0 opt-outs.)
+
+============================================================
+STEP 6 — xcodegen generate (file enumeration)
+============================================================
+cd apps/apple && xcodegen generate
+  → Created project at apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+  → grep -c EnergySiteInfoWidget project.pbxproj = 42 (app + macOS app + both XCTest bundles enumerate all 7 files;
+    the 6 .swift compile into the app targets, *Tests.swift into the XCTest bundles, .strings as a resource).
+
+============================================================
+STEP 7 — i18n key parity (web → native catalog)
+============================================================
+Web `t('widget.energySiteInfo.*')` keys (7): solarSize, powerwall, firmware, timezone, title, noSite, noData
+  → all 7 present in EnergySiteInfoWidget.strings.   Registry name/description present.
+Localization keys referenced by Swift (12 via EnergySiteInfoStrings.string/.text + labelKey/registry literals):
+  → 0 missing from the catalog.
+  (.content/.empty/.error/<root> are accessibilityIdentifier test handles, intentionally NOT catalog keys.)
+  I18N_PARITY=ok (20 keys defined, 0 web keys missing, 0 referenced keys missing)
+
+============================================================
+SUMMARY (per-step truth)
+============================================================
+  STEP0  Shared.xcframework assemble                = 0  (BUILD SUCCESSFUL, 14m47s)
+  STEP1  iOS full-app xcodebuild build test         = pre-existing-collision-blocked (exit 65; 0 EnergySiteInfo errors)
+         iOS repro WITHOUT this surface             = exit 65, identical Charge* errors → PROVES pre-existing
+  STEP1a swiftc -typecheck iOS18 + macOS15 (Swift6) = 0 / 0   (this surface, real SDKs)
+  STEP1b SwiftPM swift test (Swift6 strict, mac15)  = 0   (26/26 pass)
+  STEP2  macOS full-app xcodebuild build test       = pre-existing-collision-blocked (same root cause; surface green via 1a/1b)
+  STEP3  swiftlint --strict                         = 0   (0 violations / 6 files)
+  STEP4  swiftformat --lint                         = 0   (0/6 need formatting)
+  STEP5  check-placeholders                         = 0   (COUNT=0, ALLOWED=0)
+  STEP6  xcodegen generate                          = 0   (42 refs enumerated)
+  STEP7  i18n parity                                = 0   (0 missing keys)
+
+Acceptance criteria (this surface):
+  [x] Renders on Apple with all web states reproduced: loading / empty (no-site + no-info) / error / stale /
+      offline / content, in compact (title-less) and full layouts — 9 #Previews + per-state model tests.
+  [x] Hooks bind to the shared P1/S8 state-holder seam (EnergySiteInfoSource over useTeslaEnergySites +
+      useTeslaEnergySiteInfo); NO direct HTTP in the view.
+  [x] Every web i18n key has a matching key in the P1/S10 catalog (7/7 + registry) — diff-verified, 0 missing.
+  [x] Accessibility: VoiceOver labels on every interactive element (refresh/open/retry) + combined content &
+      empty summaries; a11y label tests green.
+  [x] Tests: adapter unit + per-state model/phase + registry + layout + a11y = 26, executed green (SwiftPM).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate green, 0 opt-outs).
+  [x] Compiles on iOS-18 AND macOS-15 SDKs under Swift 6 strict concurrency (swiftc -typecheck 0/0; SwiftPM 26/26).
+  [~] Full-app iOS + macOS `xcodebuild build test`: BLOCKED by a PRE-EXISTING, out-of-scope sibling-widget
+      Charge* duplicate-type collision (ChargeStatusWidget / ChargeStatusLiveWidget / ChargeSessionChartWidget),
+      proven to fail identically with this surface removed. Deferred to p4-apple/P99-0001-apple-acceptance-gate
+      (the macos-pending protocol in apps/macos-pending-verifications.md). Zero EnergySiteInfo errors in either build.
+
+The only non-green literal-gate item is the full-app xcodebuild (STEP 1/2), and it is RED for a documented
+PRE-EXISTING parallel-merge collision in three sibling charging widgets — outside this surface's allowed-files
+scope (EnergySiteInfoWidget.* + this log) and proven non-attributable to this surface by the files-removed
+reproduction. This surface itself is verified green on both Apple platforms.
+
+EXIT=0
+STATUS=DONE

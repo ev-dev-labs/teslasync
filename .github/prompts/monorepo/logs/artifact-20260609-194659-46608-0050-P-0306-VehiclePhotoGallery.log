@@ -1,0 +1,126 @@
+=== P4 Feature view 0306 VehiclePhotoGallery (Apple) ===
+Runner: Darwin (macOS 26.5.1, arm64) · Xcode 26.5 (17F42) · Swift 6.0 (strict concurrency: complete)
+Toolchain present: xcodebuild ✓  swiftlint ✓  swiftformat ✓  xcodegen ✓  pwsh ✓  JDK 17 ✓  iPhone 16 simulator ✓
+Shared.xcframework (KMP/ADR-004): assembled OK via ./gradlew :core:assembleSharedXCFramework (ios-arm64, ios-arm64-simulator, macos-arm64).
+
+Web source (spec): web/src/features/vehicles/components/VehiclePhotoGallery.tsx
+Native output: apps/apple/TeslaSync/feature-views/VehiclePhotoGallery.*  (10 files, 1892 LOC)
+  VehiclePhotoGallery.Adapter.swift     — Foundation-only core: LightboxImage model, input snapshot,
+                                          resolved phase, i18next {{var}} interpolation, zoom/index math,
+                                          a11y label builder, surface slug (P1/S11).
+  VehiclePhotoGallery.Model.swift       — P1/S8 source seam + @Observable model, P1/S11 telemetry,
+                                          P1/S10 i18n facade, connection axis + one-shot stale auto-refresh.
+  VehiclePhotoGallery.swift             — surface view; phase switch (loading/empty/error/data) + freshness chip.
+  VehiclePhotoGallery.Views.swift       — responsive square-thumbnail grid, async remote image (decode
+                                          skeleton + broken-image fallback), freshness chip.
+  VehiclePhotoGallery.States.swift      — loading skeleton grid, empty placeholder card (web dashed-border
+                                          "No photos uploaded yet."), error card + retry.
+  VehiclePhotoGallery.Lightbox.swift    — native counterpart of shared @/components/ui/Lightbox: paging
+                                          (←/→, clamp), zoom 1x–5x/0.5x (pinch + buttons), pan, counter,
+                                          caption, close, Esc/arrow/+/-/0 keyboard, VoiceOver labels.
+  VehiclePhotoGallery.strings           — P1/S10 catalog: all web keys + lightbox keys + native chrome.
+  VehiclePhotoGallery.Previews.swift    — every state + the lightbox.
+  VehiclePhotoGallery.Tests.swift       — adapter/projection/format/zoom/index/url/a11y unit tests.
+  VehiclePhotoGallery.ModelTests.swift  — state-holder: telemetry-once, stale auto-refresh, offline, labels.
+
+States reproduced (all render, none hidden): loading · empty · error(retry) · data · stale(chip+auto-refresh) · offline(cached+chip).
+i18n keys (all via P1/S10 facade, no English literals in Swift): vehicles.photos.empty / .emptyHelp /
+  .galleryNamed / .gallery / .openAt  +  lightbox.counter/.close/.previous/.next/.zoomOut/.zoomPercent/
+  .zoomIn/.zoomReset  +  native chrome (loadingA11y/errorTitle/retry/live/stale/offline/*A11y).
+
+================================================================================
+GATE STEPS (literal commands from the prompt)
+================================================================================
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Result: BUILD/TEST FAILED.  IOS_EXIT=65
+    Root cause = PRE-EXISTING breakage in the main app target, NOT VehiclePhotoGallery:
+      (a) Duplicate public type definitions across two OTHER surfaces compiled into the same module:
+            StateTimelineUpdate / StateTimelineConnection / StateTimelineLoadStatus / StateTimelineModel
+              defined in BOTH  feature-views/StateTimeline.Source.swift (+.Adapter/.Model)
+                          AND  dashboard-widgets/StateTimelineWidget.Model.swift
+            RecentDrivesModel / RecentDrivesUpdate / RecentDrivesConnection / RecentDrivesLoadStatus
+              defined in BOTH  feature-views/RecentDrivesSection.Model.swift (+.Seams)
+                          AND  dashboard-widgets/RecentDrivesListWidget.Model.swift
+            → 54 "ambiguous for type lookup" / redeclaration errors. ZERO are in VehiclePhotoGallery.
+      (b) After quarantining (a), the build progresses past whole-module type-check
+            ("EmitSwiftModule ... TeslaSync" SUCCEEDS *with VehiclePhotoGallery included*), then the
+            Swift 6 / Xcode 26.5 compiler CRASHES in the IR backend (not a type error — zero "error:"
+            lines):  "Please submit a bug report ... Stack dump ... 5. While emitting IR SIL function
+            \"@$sSbScA_pSgIeAghyg_SbIeAghn_TR\"" (a compiler-generated (Actor?, Bool)->Bool isolation
+            reabstraction thunk). The crash fires in a PRE-EXISTING batch (AnomalyInlineRow…AuditPanel +
+            Sources/App, Sources/Auth, Sources/Platform). No VehiclePhotoGallery file is in that batch.
+
+    [1b] BASELINE CONTROL — same command with VehiclePhotoGallery.* ENTIRELY REMOVED (10 files moved out,
+         project regenerated):  STILL FAILS, identical crash, identical thunk
+         "@$sSbScA_pSgIeAghyg_SbIeAghn_TR", zero "error:" lines, zero VehiclePhotoGallery references.
+         ⇒ The [1] failure is conclusively independent of this surface (pre-existing toolchain defect).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Result: BUILD/TEST FAILED.  MAC_EXIT=65
+    Root cause = the SAME pre-existing duplicate-type surfaces (platform-agnostic): 163 "ambiguous for
+    type lookup" errors, all in StateTimeline*/RecentDrives* (feature-views + dashboard-widgets).
+    ZERO VehiclePhotoGallery errors/failures.
+
+[3] swiftlint --strict            →  LINT_EXIT=0    (0 violations across the whole apps/apple tree)
+[4] swiftformat --lint apps/apple →  FORMAT_EXIT=0  (0/3180 files require formatting, 2 skipped)
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/VehiclePhotoGallery
+                                  →  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+
+================================================================================
+SUPPLEMENTARY VERIFICATION OF THIS SURFACE (isolated from the pre-existing breakage)
+================================================================================
+Because [1]/[2] cannot link the full app on this runner, the VehiclePhotoGallery surface was verified
+directly against the real SDK + Swift 6 strict concurrency:
+
+[V1] Adapter logic — `swiftc -Onone Adapter.swift main.swift` compiled + EXECUTED 30+ assertions:
+       projection (loading/empty/error/data), thumb key (web ${src}-${i}), {{var}} interpolation,
+       gallery/open/counter/zoom labels, zoom clamp/step/pannable, index clamp/edges, URL fallback,
+       a11y label join/drop  →  "ALL_ADAPTER_ASSERTIONS_PASSED"  (exit 0).
+[V2] State holder — `swiftc -Onone Adapter.swift Model.swift main.swift` (Foundation+Observation+OSLog)
+       compiled + EXECUTED: phase transitions, view.opened-once telemetry, one-shot stale auto-refresh +
+       re-arm after live, offline-keeps-cached (no refetch), derived labels, stop/restart, surface slug
+       →  "ALL_MODEL_ASSERTIONS_PASSED"  (exit 0).
+[V3] View layer codegen (the SwiftUI files) — `swiftc -swift-version 6 -strict-concurrency=complete
+       -emit-library` for BOTH SDKs:
+         iOS  (-target arm64-apple-ios18.0-simulator) → libVPG_ios.dylib  built  (IOS_CODEGEN_EXIT=0)
+         macOS(-target arm64-apple-macos15.0)         → libVPG_mac.dylib  built  (MAC_CODEGEN_EXIT=0)
+       ⇒ Both #if os(iOS) (fullScreenCover) and #if os(macOS) (sheet) branches compile + codegen;
+         VehiclePhotoGallery does NOT trigger the [1b] IR crash.
+[V4] Whole-module type-check ([1] log): "EmitSwiftModule normal arm64 (in target 'TeslaSync')" SUCCEEDED
+       with VehiclePhotoGallery present ⇒ the view files type-check against the REAL SwiftUI + REAL
+       P1/S9 design system + P1/S8 holders in the actual app module.
+Repo hygiene: after each control run all quarantined peers were restored byte-identical; generated
+  .xcodeproj / staged Shared.xcframework (both .gitignored) removed. `git status` = only the 10 new
+  VehiclePhotoGallery files; 0 other changes.
+
+================================================================================
+SUMMARY
+================================================================================
+Author-controlled gates: ALL GREEN
+  - swiftlint --strict 0 violations; swiftformat --lint 0/3180; check-placeholders 0.
+  - Adapter + state-holder compile AND execute green (V1, V2).
+  - View layer compiles + codegens on iOS AND macOS under Swift 6 strict concurrency (V3).
+  - Whole-module type-check succeeds with the surface present (V4). Zero VehiclePhotoGallery
+    errors/warnings in any build.
+  - Parity: every web data branch, state, i18n key, and the shared Lightbox are reproduced natively;
+    no stub/placeholder/TODO/mock/Lorem (gate [5]).
+
+Blocked gate steps (PRE-EXISTING defects in OTHER surfaces / toolchain, NOT this code, and OUT OF SCOPE
+per the prompt's "Other surfaces in the same feature — each has its own prompt"):
+  - [1] iOS  `build test`: IOS_EXIT=65 — duplicate public types in StateTimeline*/RecentDrives* + a
+        Swift 6/Xcode 26.5 IR-emission compiler crash; both reproduced with this surface fully removed [1b].
+  - [2] macOS `build test`: MAC_EXIT=65 — the same duplicate-type surfaces (163 errors), 0 from this surface.
+
+Per the acceptance criteria ("STATUS=BLOCKED with platform-capability evidence in the log") and the
+Honesty Covenant (1 no red-as-green · 2 no scope narrowing · 6 no delegation · 8 no commit on red):
+the literal `xcodebuild build test` gate cannot reach 0 on this runner because the main app target does
+not compile due to pre-existing duplicate-type peer surfaces and a pre-existing compiler crash — neither
+caused by, nor fixable within, this prompt's allowed files (VehiclePhotoGallery.* only). The
+VehiclePhotoGallery deliverable is complete and is verified green by every check that can be isolated
+from that pre-existing breakage; it is expected to pass [1]+[2] unchanged once the StateTimeline /
+RecentDrives duplicate definitions are resolved by their own surface prompts and the toolchain IR-crash
+is addressed. No commit performed (covenant rule 8).
+
+EXIT=65
+STATUS=BLOCKED

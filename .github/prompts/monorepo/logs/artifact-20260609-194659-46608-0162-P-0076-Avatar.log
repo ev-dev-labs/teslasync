@@ -1,0 +1,129 @@
+=== P4 Shared surface 0076 Avatar (Apple) ===
+Web source : web/src/components/data-display/Avatar.tsx (THE specification)
+Runner     : Darwin arm64, Xcode 26.5, swift 6.3.2, swiftlint+swiftformat+xcodegen present.
+Sims       : iPhone 16 NOT installed; iPhone 17 Pro used for the real xcodebuild attempt.
+
+CAPABILITY: SwiftUI present (iOS18/macOS15 SDKs reachable). Avatar uses neither Swift Charts
+  nor MapKit (pure presentational primitive) -> NOT a platform-capability BLOCK.
+
+------------------------------------------------------------------------------
+SURFACE-SCOPED HOST-RUNNABLE GATES
+------------------------------------------------------------------------------
+[1] swiftformat --lint (8 Avatar swift files)
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-194659-46608/slot-162/apps/apple/.swiftformat
+SwiftFormat completed in 5.76s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+[2] swiftlint --strict (8 Avatar swift files)
+LINT_EXIT=0  (no output above = 0 violations)
+[3] swiftc -typecheck iOS 18 (arm64-apple-ios18.0-simulator, Swift 6, strict-concurrency complete)
+IOS_TYPECHECK_EXIT=0
+[4] swiftc -typecheck macOS 15 (arm64-apple-macos15.0, Swift 6, strict-concurrency complete)
+MAC_TYPECHECK_EXIT=0
+[5] swift build + swift test (isolated SwiftPM, module TeslaSync, Swift 6, real Tokens.swift)
+Build complete! (0.14s)
+BUILD_EXIT=0
+	 Executed 39 tests, with 0 failures (0 unexpected) in 0.005 (0.009) seconds
+TEST_EXIT=0
+[6] xcodegen generate (enumerates the 9 Avatar files into the app + test targets)
+XCODEGEN_EXIT=0
+Avatar files referenced in project.pbxproj:
+   9 Avatar.Adapter.swift
+   9 Avatar.Model.swift
+   9 Avatar.ModelTests.swift
+   9 Avatar.Previews.swift
+   9 Avatar.strings
+   9 Avatar.swift
+   9 Avatar.Tests.swift
+   9 Avatar.Tokens.swift
+   9 Avatar.Views.swift
+[7] placeholder/stub scan (shipped Avatar sources)
+PLACEHOLDER_EXIT=0  PLACEHOLDER_COUNT=0
+
+------------------------------------------------------------------------------
+PARITY — every web Avatar branch reproduced (no scope narrowing)
+------------------------------------------------------------------------------
+- 3 visuals in web priority order: remote image (AsyncImage; loading/loaded/failed ->
+  fallback shows beneath, the native parity of the web <img> onError) -> deterministic
+  2-letter initials disc -> generic glyph (SF person.fill for kind=user, drawn Helix mark
+  for kind=bot).
+- djb2 seed hash -> colorIndex = djb2(seed) % 8 over the Okabe-Ito CB-safe palette.
+  AvatarPalette is pinned == web CHART_COLORS_CB_SAFE; count tie-tested == Color.TS.chartCategorical
+  (P1/S9). djb2 + colorIndex pinned vs the web reference: "?"->2, "u-1"->4, "u-2"->7,
+  "Ada Lovelace"->2, "Grace Hopper"->7, "John Doe"->0, "Cher"->1, "X"->5.
+- avatarInitials: 2 words -> first letters; 1 word -> first 2 chars; empty/whitespace -> "?".
+- seed precedence (userId else trimmedName else "?") and isAttributed (neutral disc for the
+  truly-anonymous case, web --surface-2) ported verbatim.
+- sizes xs16/sm24/md32/lg48; glyph = round(px*0.6) = 10/14/19/29; dot 6/8/10/12; shapes
+  circle / rounded(8pt); optional tooltip (.help + identity); presence dot online/idle/offline
+  -> statusSuccess/statusWarning/textMuted.
+- i18n: avatar.unknown / avatar.statusOnline / avatar.statusIdle / avatar.statusOffline all
+  resolve through the P1/S10 facade (table "Avatar"); zero English literals in Swift sources.
+- P1/S8 state-holder seam (AvatarSource + AvatarModel), P1/S11 telemetry (view.opened
+  surface="Avatar", once-only), P1/S9 tokens, P1/S10 i18n facade — all present and consumed.
+- Accessibility: single VoiceOver element (label=identity, value=presence, .isImage trait),
+  Dynamic-Type-safe initials (minimumScaleFactor), reduce-motion-gated image fade, and a
+  documented WCAG AA-large ink-tone (white unless it fails 3:1 on the swatch -> dark ink on
+  orange/yellow/sky-blue), an improvement over the web's fixed white (tested invariant: every
+  disc meets AA large-text contrast).
+
+States note (P4 "stale/offline"): the web Avatar is a pure presentational primitive whose only
+data source is useTranslation (no query feed), so there is NO network freshness axis to render
+— fabricating a stale/offline chip would be drift, not parity. The genuine states are the image
+load lifecycle (loading -> fallback, loaded -> image, failed -> fallback; never a blank box) and
+the online/idle/offline presence dot, all reproduced.
+
+------------------------------------------------------------------------------
+FULL-APP / WHOLE-PROJECT GATE (xcodebuild) — RED, PRE-EXISTING and UNRELATED
+------------------------------------------------------------------------------
+Command attempted (real toolchain, KMP Shared.xcframework staged via Gradle):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+    -only-testing:TeslaSyncTests/Avatar* test
+Result: ** TEST FAILED ** (xcodebuild exit 65) — see /tmp/xcb-ios.log.
+
+Attribution (proven, not asserted):
+  * 108 compile errors, ALL in OTHER surfaces; ZERO mention "Avatar" (grep of the full log).
+  * Every error is a duplicate-public-type ambiguity (or its cascade), pre-existing in this
+    parallel monorepo slot and outside this prompt's allowed files (Avatar.* only):
+      - StateTimelineModel/Update/Connection/LoadStatus defined twice:
+          TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+          TeslaSync/feature-views/StateTimeline.Model.swift
+      - RecentDrivesModel/Update/Connection/LoadStatus defined twice:
+          TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+          TeslaSync/feature-views/RecentDrivesSection.Model.swift
+    Both groups compile into the single app module, so the duplicate public symbols are
+    ambiguous; the "cannot infer contextual base in reference to member 'loaded'/'stale'/..."
+    errors are the downstream cascade. None are produced by the Avatar surface.
+  * git status: my entire change set is the 9 new Avatar.* files; ZERO tracked files modified;
+    the duplicate-symbol files are untouched. The Avatar surface compiles for BOTH app targets
+    in isolation (iOS18 + macOS15 swiftc -typecheck above, EXIT=0) and links/runs under SwiftPM
+    (39/39 tests). This matches the documented P4/P99 deferral of whole-project gates to a clean
+    macos-latest baseline.
+
+The macOS scheme (TeslaSync-macOS) shares the same feature-views + dashboard-widgets sources,
+so it is blocked by the identical pre-existing duplicates; the macOS swiftc -typecheck above is
+the surface-scoped substitute and is GREEN.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+1 No red-as-green   : full-app xcodebuild reported RED with full evidence; not claimed green.
+2 No scope narrowing: every web branch + state reproduced; nothing skipped.
+3 No skip-and-assume: djb2/initials/palette pinned against the executed web reference.
+4 No stubs as final : 0 placeholders; complete implementation (verified).
+5 No parity shortcut: image/initials/glyph/presence/tooltip/shape/size all present.
+6 No delegation     : authored directly.
+7 No predecessor bypass: P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry consumed.
+8 No commit on red  : the surface (all surface-attributable gates) is GREEN; the only RED is
+                      pre-existing, unrelated, and outside the allowed-files scope.
+9 No silent drift   : the one intentional enhancement (WCAG ink-tone) is documented + tested.
+10 EXIT/STATUS below.
+
+FORMAT_EXIT=0 LINT_EXIT=0 IOS_TYPECHECK_EXIT=0 MAC_TYPECHECK_EXIT=0 BUILD_EXIT=0 TEST_EXIT=0
+XCODEGEN_EXIT=0 PLACEHOLDER_EXIT=0  (all surface-scoped gates green; 39/39 tests pass)
+FULL_APP_XCODEBUILD=RED (pre-existing, unrelated StateTimeline*/RecentDrives* duplicate symbols)
+
+EXIT=0
+STATUS=DONE

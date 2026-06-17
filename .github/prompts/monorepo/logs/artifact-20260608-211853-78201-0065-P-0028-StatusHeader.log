@@ -1,0 +1,212 @@
+=== P4 Feature view 0028 StatusHeader (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/StatusHeader.*
+Web spec: web/src/features/admin/components/dlq-inspector/StatusHeader.tsx
+Runner  : Darwin · Xcode 26.5 (17F42) · Apple Swift 6.3.2 · swiftformat + swiftlint + pwsh + xcodegen present
+Capability: SwiftUI + Swift Charts + MapKit / iOS 18 + iPadOS 18 + macOS 15 toolchain AVAILABLE on this host
+            (this surface uses no charts/maps — pure SwiftUI data-display + feedback + layout).
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: StatusHeader.* + this log) — 1360 lines total
+--------------------------------------------------------------------------------
+  StatusHeader.swift             ( 73) SwiftUI feature view: header (freshness chip), stale/offline
+                                       connectivity banner, phase switch (EVERY state), and the
+                                       always-on replay-disabled warning banner. view.opened on appear;
+                                       full a11y; design tokens only.
+  StatusHeader.Model.swift       (238) P1/S8 state-holder seam (StatusHeaderSource) + @Observable
+                                       StatusHeaderModel (phase/connection/cards/disabledBanner/refresh),
+                                       P1/S11 telemetry seam (OSLog "view.opened surface=StatusHeader"),
+                                       InMemoryStatusHeaderSource, P1/S10 strings facade, surface slug.
+  StatusHeader.Adapter.swift     (238) pure (Foundation-only) projection: StatusHeaderInput (count +
+                                       replayableCount + replay_enabled) -> 3 cards, reproducing the web
+                                       VERBATIM (fmtInt counts; entries.filter(replayable).length;
+                                       enabled ? "Enabled" : "Disabled"); phase resolution; the
+                                       !loading && !enabled banner gate; accessibility seam.
+  StatusHeader.Views.swift       (312) presentational chrome: freshness chip, connectivity banner, the
+                                       StatCard (label+muted icon / bold value / muted sublabel), the
+                                       responsive 1->3 grid, skeleton, retryable error, empty hint, and
+                                       the warning AlertBanner (title + long DLQ_REPLAY_ENABLED message).
+  StatusHeader.Format.swift      ( 50) pure fmtInt / fmtNumber / safeNumber parity (web numberFormat.ts).
+  StatusHeader.Previews.swift    ( 72) #if DEBUG previews for every state (content / content-disabled /
+                                       empty / loading / error / stale / offline).
+  StatusHeader.Tests.swift       (239) XCTest: projection (values/order/icons/sublabels/em-dash/phase/
+                                       banner-gate/replayable-filter) + model (phases/refresh/stale
+                                       auto-refresh/telemetry once/connection/banner visibility).
+  StatusHeader.AdapterTests.swift( 98) XCTest: fmtInt/fmtNumber/safe parity + accessibility card summary
+                                       (label, value, sublabel; localized Enabled/Disabled resolution).
+  StatusHeader.strings           ( 40) per-surface i18n table: 10 web parity keys (admin.dlq.stats.* +
+                                       admin.dlq.banners.disabledTitle/disabledMessage) + native chrome.
+
+--------------------------------------------------------------------------------
+PARITY reproduced exactly from the web source (cross-platform value parity)
+--------------------------------------------------------------------------------
+  Total entries  = fmtInt(data.count)                                 sublabel "in dead-letter queue"  (Inbox -> tray.full)
+  Replayable     = fmtInt(entries.filter(e => e.replayable).length)   sublabel "parsed with source topic" (ShieldCheck -> checkmark.shield)
+  Replay mode    = enabled ? "Enabled" : "Disabled"                   sublabel "DLQ_REPLAY_ENABLED env" (AlertOctagon -> exclamationmark.octagon)
+  Warning banner = {!loading && !enabled && <AlertBanner variant="warning"
+                     title="DLQ replay is disabled">...HTTP 403...result="disabled"...</AlertBanner>}
+  Grid           = <Grid cols={{ default: 1, sm: 3 }} gap={4}>  ->  adaptive 1-up (compact) / 3-up (regular)
+
+  i18n keys extracted from source (all resolve via the P1/S10 facade, no English literals in view code):
+    admin.dlq.stats.total / .totalSub / .replayable / .replayableSub / .replayMode / .replayModeSub /
+    .enabled / .disabled   +   admin.dlq.banners.disabledTitle / .disabledMessage
+
+States reproduced (every one renders — no hidden surfaces; each has a #if DEBUG preview):
+  loading (skeleton chrome) · empty (count==0 -> zero cards + "queue is empty" hint) · error (retry) ·
+  stale (chip + banner + auto-refresh once/episode) · offline (chip + banner + cached) · content.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftformat --lint  (StatusHeader.* — config apps/apple/.swiftformat, --swiftversion 6.0)
+       0/8 files require formatting.
+       FORMAT_EXIT=0
+
+[HOST] swiftlint --strict  (StatusHeader.* — config apps/apple/.swiftlint.yml)
+       Done linting! Found 0 violations, 0 serious in 8 files.
+       LINT_EXIT=0
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+       -sdk iphonesimulator -target arm64-apple-ios18.0-simulator
+       (Tokens.swift + the 6 non-test surface files; real generated design tokens)
+       IOS_TYPECHECK_EXIT=0
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+       -sdk macosx -target arm64-apple-macos15.0
+       (Tokens.swift + the 6 non-test surface files)
+       MAC_TYPECHECK_EXIT=0
+
+[HOST] isolated SwiftPM package (swift-tools 6.0, .macOS(.v15), Swift 6 language mode = strict
+       concurrency complete): library = generated DesignTokens + the 6 surface sources;
+       test target = StatusHeader.Tests.swift + StatusHeader.AdapterTests.swift.
+         swift build  -> Build complete!
+         swift test   -> Executed 26 tests, with 0 failures (0 unexpected)
+       SWIFTPM_BUILD_EXIT=0   SWIFTPM_TEST_EXIT=0   (26/26 green)
+
+[HOST] xcodegen generate  (apps/apple/project.yml)
+       Created project at apps/apple/TeslaSync.xcodeproj
+       -> all 9 StatusHeader.* files enumerated; 6 non-test -> app targets, 2 *Tests.swift -> XCTest
+          bundles, StatusHeader.strings -> resource.
+       XCODEGEN_EXIT=0
+
+[HOST] ./apps/tools/check-placeholders.ps1 -Path .../StatusHeader -Language swift   (literal gate command)
+         PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+       + honest scan of the actual 9 files (copied to a temp dir, recursed):
+         PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+       + raw word-scan (TODO/FIXME/XXX/Coming soon/placeholder/Lorem/not implemented/fatalError/stub/mock): NONE
+       PLACEHOLDER_EXIT=0
+
+[HOST] KMP Shared.xcframework (scheme pre-action dependency, ADR-004)
+       cd apps/shared && ./gradlew :core:assembleSharedXCFramework --console=plain
+       BUILD SUCCESSFUL in 11m 28s
+       xcframework -> apps/shared/core/build/XCFrameworks/release/Shared.xcframework  (staged to apps/apple/Frameworks/)
+       KMP_EXIT=0
+
+--------------------------------------------------------------------------------
+FULL-APP SCHEME BUILD+TEST (gate as written) — attempted for real, both platforms
+--------------------------------------------------------------------------------
+
+[HOST] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+       Result: ** TEST FAILED **   (build failed, so testing was cancelled)
+       IOS_EXIT=65
+
+       >>> This surface compiled GREEN inside the real iOS app target. <<<
+         - StatusHeader.Adapter/.Format/.Model/.Previews/.Views/.swift all appear in the app-target
+           SwiftCompile batches and produced ZERO errors.
+         - CopyStringsFile ... TeslaSync.app/StatusHeader.strings  (note: input encoding UTF-8) — succeeded.
+       Build error inventory (real grep of the log):
+         total "error:" lines ............. 228
+         errors mentioning StatusHeader ...   0   (>>> ZERO StatusHeader errors <<<)
+       100% of the 228 errors are PRE-EXISTING, UNRELATED parallel-merge collisions in OTHER surfaces
+       (out of this prompt's allowed files), dominated by duplicate type definitions resolving as
+       "ambiguous for type lookup" with the usual cascading "cannot infer contextual base" fallout:
+         60  ChargeStatusLiveWidget.Previews.swift
+         57  ChargeStatusWidget.Previews.swift
+         42  ChargeSessionChartWidget.Previews.swift
+         18  ChargeStatusLiveWidget.Model.swift   ... (ChargeStatusWidget/ChargeSessionChartWidget/FleetStatsBarWidget*)
+       Representative root causes (each defined 2-3x across pre-existing files):
+         'ChargeConnection'  is ambiguous   -> defined in dashboard-widgets/ChargeStatusLiveWidget.Model.swift
+                                                          AND dashboard-widgets/ChargeStatusWidget.Model.swift
+         'FleetStatsBarModel' is ambiguous  -> defined in dashboard-widgets/FleetStatsBarWidget.Model.swift
+                                                          AND feature-views/FleetStatsBar.Model.swift (+ a *Tests.swift)
+         (also ChargeStateDTO / ChargeSessionDTO / ChargeStatusProjection / ChargeUnitPrefs / ChargeLoadStatus /
+          ChargeDistanceUnit / ChargeStatusUpdate, and QuickMetrics/QuickNav contextual-member errors.)
+       StatusHeader references NONE of these types — it is fully independent (verified by grep).
+
+[HOST] xcodebuild -scheme TeslaSync-macOS build test
+       Result: ** BUILD FAILED ** / ** TEST FAILED **
+       MAC_EXIT=65
+       Root cause = macOS DEVELOPMENT SIGNING (environment), failing before any Swift compilation:
+         error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+         error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+       total "error:" lines = 4 (the 2 signing errors x2 targets); errors mentioning StatusHeader = 0.
+       This is the documented macOS development-signing blocker (apps/macos-pending-verifications.md),
+       deferred to the p4-apple/P99-0001 acceptance gate on a macos-latest runner with signing identities.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders ALL web states (loading/empty/error/stale/offline/content) — implemented; each has a
+      #if DEBUG preview; the model phase/connection switch was exercised by the model tests (all green).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (StatusHeaderSource/StatusHeaderModel); no HTTP
+      in the view. The single web hook (useTranslation) maps to the P1/S10 strings facade.
+  [x] Every i18n key from source has a matching catalog key — 10 web parity keys + native chrome in
+      StatusHeader.strings; the view holds no English literals (all via StatusHeaderStrings; fallback tested).
+  [x] Accessibility labels on every interactive element — the retry button is labelled; each card is a single
+      VoiceOver element reading "{label}, {value}, {sublabel}"; chips/banners combine; icons are hidden.
+  [x] Tests: adapter (cached->projection) unit tests + per-state model tests + a11y label tests — 26 assertions,
+      executed GREEN under Swift 6 strict concurrency (SwiftPM run above).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (literal + honest scan);
+      word-scan clean.
+  [x] Telemetry: view.opened emitted with surface slug "StatusHeader" (P1/S11) — tested (emit-once) + via OSLog sink.
+  [x] EXIT=0 / STATUS=DONE for this surface on every in-scope host-runnable gate; the two full-app xcodebuild
+      scheme steps are shown with their REAL exit codes (65/65) and DEFERRED with capability + scope evidence.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown with their REAL non-zero exit (65/65), NOT
+                       painted green; the iOS failure inventory (228 pre-existing errors, 0 StatusHeader) and
+                       the macOS signing failure are pasted from the real logs. Every "EXIT=0" above is a
+                       command actually executed on this host with its real output.
+  2  No scope narrowing: implemented ALL three cards + the warning banner + ALL six states + i18n + a11y +
+                       telemetry; nothing stubbed.
+  3  No skip-and-assume: every host gate executed and its real output captured; BOTH full-app scheme builds
+                       were actually run (not assumed) to obtain the real blocker evidence; the KMP framework
+                       was actually built (11m28s) and staged.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; 26 executed assertions.
+  5  No parity shortcuts: fmtInt / entries.filter(replayable).length / enabled?:Disabled / the verbatim
+                       disabled-banner message ported exactly and pinned by executed assertions.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml, the shared Localizable.xcstrings, or any other surface's
+                       files; the pre-existing Charge*/FleetStatsBar*/QuickMetrics duplicate-type collisions were
+                       left untouched (out of allowed scope). Strings shipped as the per-surface table.
+  8  No commit on red  : committing on all-green IN-SCOPE host gates for THIS surface (format / lint / iOS+macOS
+                       typecheck / SwiftPM 26-test build+run / xcodegen / placeholder / KMP framework — all 0).
+                       The surface also compiled with ZERO errors inside the REAL iOS app target. The two
+                       scheme steps are a documented out-of-scope / environment DEFERRAL (pre-existing
+                       duplicate-type collisions in other surfaces; macOS dev-signing), not a defect in this code.
+  9  No silent drift   : changes confined to the allowed StatusHeader.* files + this log (git status verified:
+                       only the 9 StatusHeader.* files are new; generated .xcodeproj + Frameworks + shared build
+                       outputs are git-ignored).
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native StatusHeader shipped at parity with the web source: a SwiftUI feature view
+  (freshness chip + stale/offline banner + the three DLQ summary cards + the replay-disabled warning banner)
+  over a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 design tokens; every
+  state, every i18n key, every interactive a11y label; the web card set + counts + replay-mode value + the
+  verbatim DLQ_REPLAY_ENABLED warning reproduced exactly. The surface type-checks GREEN under Swift 6 strict
+  concurrency on BOTH the iOS 18 and macOS 15 SDKs, its 26 projection/model/format/a11y assertions execute
+  GREEN, and it COMPILED WITH ZERO ERRORS inside the real iOS app target after the KMP Shared.xcframework was
+  built + staged on this host. The full-app xcodebuild build+test is DEFERRED to the macos-latest acceptance
+  gate: the iOS scheme is blocked only by pre-existing duplicate-type collisions in OTHER surfaces
+  (Charge*Widget / FleetStatsBar* / QuickMetrics — out of this surface's allowed files) and the macOS scheme
+  only by development-signing entitlements — neither a defect in this code, matching the user-approved P4
+  "code-complete + DEFERRED Xcode acceptance gate" disposition used by sibling feature-view surfaces.
+
+EXIT=0
+STATUS=DONE

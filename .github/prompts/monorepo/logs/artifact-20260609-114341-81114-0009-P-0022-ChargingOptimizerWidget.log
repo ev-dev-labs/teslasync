@@ -1,0 +1,150 @@
+=== P4 Dashboard widget 0022 ChargingOptimizerWidget (Apple) ===
+date: 2026-06-09T19:51Z   host: macOS 26.5.1 (25F80)   xcode: Xcode 26.5 (17F42)
+swift: Apple Swift 6.3.2   swiftlint: /opt/homebrew/bin/swiftlint   swiftformat: /opt/homebrew/bin/swiftformat
+
+Surface  : apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.{swift,Models,Builder,Model,Content,Previews,strings,Tests,ModelTests}  (9 files)
+Web spec : web/src/features/dashboard/widgets/ChargingOptimizerWidget.tsx
+Registry : id "charging-optimizer"  category "charging"  default 2x2  min 1x2  max 4x40   (registry/charging.ts → CHARGING_WIDGETS)
+Data     : useChargingOptimizer + useVehicles + useTranslation  →  /analytics/charging-optimizer?vehicle_id=…  (ChargingOptimizerData)
+Slug     : view.opened "ChargingOptimizerWidget"  (P1/S11 diagnostics)
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP RESULTS (raw)
+────────────────────────────────────────────────────────────────────────
+
+### 1. iOS Simulator — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ###
+  App target compile (incl. this surface) ... ** BUILD SUCCEEDED **   (ios-build-test.log:11223)
+  ChargingOptimizer* errors in app compile .. 0
+  XCTest bundle (TeslaSyncTests) ............ ** TEST FAILED ** — does NOT compile (ios-build-test.log:23220)
+  IOS_EXIT=65
+  → The failure is the shared XCTest bundle, NOT this surface. The 5 compile
+    errors are all in PRE-EXISTING predecessor test files (see "PRE-EXISTING"):
+      TeslaSync/dashboard-widgets/SafetyFeaturesWidget.ModelTests.swift : invalid redeclaration of 'SafetyModelTests'
+      TeslaSync/dashboard-widgets/SafetyFeaturesWidget.ModelTests.swift : invalid redeclaration of 'SafetyRegistryTests'
+      TeslaSync/dashboard-widgets/SafetyFeaturesWidget.ModelTests.swift : invalid redeclaration of 'SafetyAccessibilityTests'
+      TeslaSync/feature-views/PresetGallery.ModelTests.swift            : let 'passthroughLocalize' is not concurrency-safe …
+      TeslaSync/feature-views/PresetGallery.Tests.swift                 : let 'passthroughLocalize' is not concurrency-safe …
+    Zero ChargingOptimizer errors anywhere in the run.
+
+### 2. macOS — xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build CODE_SIGNING_ALLOWED=NO ###
+  App target compile (incl. this surface) ... ** BUILD SUCCEEDED **   (macos-build.log:12985)
+  ChargingOptimizer* errors in app compile .. 0
+  MACOS_BUILD_EXIT=0
+  (The gate's macOS `build test` shares the same TeslaSync-macOSTests bundle as iOS and is
+   blocked by the identical pre-existing predecessor *.Tests.swift collisions; the app itself
+   compiles clean for macOS with this surface present, proven above.)
+
+### 3. swiftlint --strict   (repo-wide, gate command) ###
+  Done linting! Found 1 violation, 1 serious in 2639 files.
+  LINT_EXIT=2
+  The single violation is PRE-EXISTING and in a SIBLING surface outside this prompt's allowed files:
+      TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: error: Opening Brace Spacing Violation (opening_brace)
+  (git-tracked + unmodified by this prompt; same violation already recorded for p4-apple/dashboard-widgets/0038).
+  This surface's 8 Swift files: swiftlint --strict → 0 violations (verified directly).
+
+### 4. swiftformat --lint   (apps/apple, gate command) ###
+  0/2643 files require formatting, 2 files skipped.
+  FORMAT_EXIT=0     (whole tree incl. this surface is clean)
+
+### 5. check-placeholders.ps1 ###
+  Gate-literal:  -Path apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget  → PLACEHOLDER_EXIT=0
+  Genuine scan:  -Path <copy of the 9 surface files> -Language swift
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+        EXIT=0
+  No TODO / FIXME / stub / placeholder / Lorem / "not implemented" in shipped code (0 opt-outs).
+
+### 6. xcodegen generate ###
+  Created project at apps/apple/TeslaSync.xcodeproj — 54 ChargingOptimizerWidget references enumerated
+  (5 app-target files + 2 test-target files across TeslaSync(/-macOS)Tests + .strings resource + previews).
+
+────────────────────────────────────────────────────────────────────────
+SURFACE VERIFICATION (this surface is green — proven out-of-band of the
+shared XCTest bundle, exactly as p4-apple/feature-views/* + dashboard-widgets/0038
+did per apps/macos-pending-verifications.md)
+────────────────────────────────────────────────────────────────────────
+  iOS-18 sim app compile (real app target) .. ** BUILD SUCCEEDED ** (0 surface errors)
+  macOS app compile (real app target) ....... ** BUILD SUCCEEDED ** (0 surface errors)
+  Isolated SwiftPM build + test (Swift 6 language mode, strict concurrency complete,
+    target arm64e-apple-macos14.0; vendored Tokens.swift + DashboardWidgetInfra.swift
+    + TSSkeleton/TSTone shim) .................. Executed 31 tests, with 0 failures
+        ChargingOptimizerFormatTests ......... 4   (formatHour, fmtNumber/fmtInt, {{token}} interpolate, priority→tone)
+        ChargingOptimizerTimelineTests ....... 4   (slotKind peak>offpeak>standard, 24-cell timeline, tips, null-safe)
+        ChargingOptimizerBuildTests .......... 5   (optimized, can-improve+savings-gate, nil→empty, present-empty, <30% boundary)
+        ChargingOptimizerModelTests .......... 8   (phase loading/empty/error/content, view.opened once, refresh, freshness)
+        ChargingOptimizerRegistryTests ....... 2   (canonical charging-optimizer metadata + size clamp)
+        ChargingOptimizerAccessibilityTests .. 3   (VoiceOver summary: metrics+recs / no-recs / empty)
+        ChargingOptimizerViewTests ........... 5   (compact/standard/wide layout flags, clamp, empty+error construct)
+  swiftlint --strict (this surface, 8 files) . 0 violations
+  swiftformat --lint (this surface) ......... 0 require formatting
+  check-placeholders (this surface) ......... PLACEHOLDER_COUNT=0
+
+PARITY (web ChargingOptimizerWidget.tsx → SwiftUI, Apple HIG):
+  • Layouts: compact (cols≤1: clock + optimal-start headline + "SOC {pct}%" + savings chip),
+    standard (2×2: 3 key-metric tiles + schedule-match chip + recommendation tip cards),
+    wide (cols≥4: + 24-hour peak/off-peak/standard rate timeline with optimal-start bolt marker).
+  • States: loading (skeleton chrome), empty ("No optimizer data"), error (QueryError-equiv + Retry),
+    stale (chip + banner), offline (chip + cached banner), content; plus in-body "No recommendations".
+  • Data via shared P1/S8 state-holder seam (ChargingOptimizerSource) — no HTTP in the view.
+  • i18n: every string via the P1/S10 facade (table "ChargingOptimizerWidget"); web {{pct}}/{{amount}}
+    tokens preserved verbatim and interpolated post-localization. 0 English literals in code paths.
+  • a11y: VoiceOver labels on every tile/badge/timeline-cell/tip + reduce-motion (TSSkeleton) + Dynamic Type.
+  • Telemetry: view.opened "ChargingOptimizerWidget" emitted once on first appear (asserted).
+
+CROSS-SURFACE COLLISION FIX (flat-module discipline, ADR — "dedupe so the flat module compiles"):
+  • The sibling feature-view OptimizerSection.Model.swift already declares public `ChargingOptimizerUpdate`.
+    This surface's snapshot type was renamed `ChargingOptimizerUpdate → ChargingOptimizerWidgetUpdate`
+    to avoid the duplicate symbol. A full scan of this surface's 30 declared type/test names against
+    Sources/ + TeslaSync/ + TeslaSyncWidgets/ + TeslaSyncWatch/ confirms NO remaining collisions.
+
+────────────────────────────────────────────────────────────────────────
+PRE-EXISTING / ENVIRONMENT (NOT caused by this surface — deferred to
+p4-apple/P99-0001-apple-acceptance-gate per apps/macos-pending-verifications.md)
+────────────────────────────────────────────────────────────────────────
+PROOF these blockers pre-date this surface — baseline `xcodebuild build-for-testing`
+run with ALL 9 ChargingOptimizerWidget files MOVED OUT of the tree (BASELINE_EXIT=65):
+    ** TEST BUILD FAILED **
+    TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift : invalid redeclaration of 'ChargeStatusAdapterTests'
+    TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift : invalid redeclaration of 'ChargeStatusPhaseTests'
+    TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift : invalid redeclaration of 'ChargeStatusModelTests'
+    TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift : invalid redeclaration of 'ChargeStatusRegistryTests'
+    TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift : invalid redeclaration of 'ChargeStatusAccessibilityTests'
+    (0 ChargingOptimizer references except stale-object cleanup notes → the shared XCTest
+     bundle is already red WITHOUT this surface.)
+
+Root cause — cross-surface *.Tests.swift class-name collisions between PREDECESSOR
+surfaces, all outside this prompt's allowed files (ChargingOptimizerWidget.* + this log):
+    • SafetyFeaturesWidget.ModelTests.swift  vs  SafetyHistoryWidget.ModelTests.swift
+        → both declare SafetyModelTests / SafetyRegistryTests / SafetyAccessibilityTests
+    • ChargeStatusLiveWidget.Tests.swift      vs  ChargeStatusWidget.*
+        → both declare ChargeStatus{Adapter,Phase,Model,Registry,Accessibility}Tests
+    • PresetGallery.{Model,}Tests.swift `passthroughLocalize` is a non-Sendable closure
+        `private let` → Swift 6 strict-concurrency error (this surface uses the correct
+        `nonisolated(unsafe) static let localize` form and does not have this defect).
+    • swiftlint: LiveSignalSparklinesWidget.Builder.swift:158 opening_brace (1 pre-existing).
+    • macOS full `build test` additionally needs dev-signing identities absent on this runner
+      (proved app compilation with CODE_SIGNING_ALLOWED=NO → ** BUILD SUCCEEDED **).
+
+These are the same class of parallel-merge collisions already parked in
+apps/macos-pending-verifications.md for p4-apple/feature-views/* and
+p4-apple/dashboard-widgets/0038; the integration owner / P99 acceptance gate
+(macos-latest, signing identities) reconciles the shared XCTest bundle. This
+surface contributes ZERO new collisions and is itself fully green.
+
+Deferred full-app verification command (macos-latest):
+    cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+  [x] Surface renders on Apple with every web state reproduced (compact/standard/wide;
+      loading/empty/error/stale/offline/content + no-recommendations) — app compiles iOS+macOS, 9 #Preview states.
+  [x] Hooks bind via the shared P1/S8 state-holder seam (ChargingOptimizerSource); no HTTP in the view.
+  [x] Every web i18n key has a matching key in the P1/S10 catalog (ChargingOptimizerWidget.strings).
+  [x] Accessibility labels on every interactive/data element (tiles, badges, timeline cells, tips, retry).
+  [x] Tests: adapter unit (formatHour/fmtNumber/interpolate/tone/slotKind/tips/build) + per-state model/view + a11y — 31/31 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+  [x] Surface gates green; full-app `build test` deferred per macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

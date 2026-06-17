@@ -1,0 +1,99 @@
+=== P4 Dashboard widget 0053 GeofenceWidget (Apple) ===
+date            : 2026-06-09T16:30:22Z
+host            : Darwin 25.5.0 arm64
+cwd             : /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-082658-28134/slot-16/apps/apple
+web source spec : web/src/features/dashboard/widgets/GeofenceWidget.tsx
+registry id     : geofence-status (maps, default 2x4, min 1x2, max 4x40)
+
+--- [0] Platform capability probe -------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+$ swiftlint version
+0.63.3
+$ swiftformat --version
+0.61.1
+$ pwsh --version
+PowerShell 7.6.2
+
+--- [1] Gate step: xcodebuild iOS build test  (CAPABILITY-BLOCKED) -----------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+--- [2] Gate step: xcodebuild macOS build test  (CAPABILITY-BLOCKED) ---------
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+$ xcrun simctl list devices  (iOS simulator probe)
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+  -> evidence: no full Xcode (active dir = CommandLineTools); simctl absent;
+     XCTest module unavailable ('no such module XCTest'). The xcodebuild build+test
+     gate steps cannot run on this runner. Per the prompt capability clause => BLOCKED.
+
+--- [3] Gate step: swiftlint --strict ----------------------------------------
+$ swiftlint lint --strict <GeofenceWidget.* swift files>
+Linting 'GeofenceWidget.Tests.swift' (7/7)
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT(scoped to surface)=0
+note: whole-tree 'swiftlint --strict' reports exactly 1 PRE-EXISTING violation, NOT in
+      this surface and outside this prompt's allowed-files scope:
+      TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9 opening_brace
+
+--- [4] Gate step: swiftformat --lint apps/apple -----------------------------
+$ swiftformat --lint .
+SwiftFormat completed in 7.51s.
+0/2642 files require formatting, 2 files skipped.
+FORMAT_EXIT(whole-tree)=0
+
+--- [5] Gate step: placeholder / stub scan -----------------------------------
+  GeofenceWidget.Adapter.swift: PLACEHOLDER_EXIT=0
+  GeofenceWidget.Model.swift: PLACEHOLDER_EXIT=0
+  GeofenceWidget.Localization.swift: PLACEHOLDER_EXIT=0
+  GeofenceWidget.swift: PLACEHOLDER_EXIT=0
+  GeofenceWidget.Views.swift: PLACEHOLDER_EXIT=0
+  GeofenceWidget.Previews.swift: PLACEHOLDER_EXIT=0
+  GeofenceWidget.Tests.swift: PLACEHOLDER_EXIT=0
+  GeofenceWidget.strings: PLACEHOLDER_EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- [6] Best-effort compile verification (macOS SDK /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk) --------------------
+  (substitutes for the BLOCKED xcodebuild compile; real SwiftUI+MapKit+Observation deps)
+$ swiftc -typecheck <design-system + infra> <5 GeofenceWidget source files>
+SOURCE_TYPECHECK_EXIT=0
+$ swiftc -typecheck <sources + XCTest shim + GeofenceWidget.Tests.swift>
+TEST_LOGIC_TYPECHECK_EXIT=0  (real XCTest unavailable on CLT; shimmed to verify surface API usage)
+
+--- [7] i18n key coverage (P1/S10) -------------------------------------------
+  code keys=      18  strings keys=      18  missing=       0  orphans=       0
+  source keys (title,noZone,noFences,radius,disabled,inside,outside): all present
+
+--- [8] Files delivered ------------------------------------------------------
+     362 TeslaSync/dashboard-widgets/GeofenceWidget.swift
+     189 TeslaSync/dashboard-widgets/GeofenceWidget.Views.swift
+     340 TeslaSync/dashboard-widgets/GeofenceWidget.Model.swift
+      84 TeslaSync/dashboard-widgets/GeofenceWidget.Localization.swift
+     218 TeslaSync/dashboard-widgets/GeofenceWidget.Adapter.swift
+     138 TeslaSync/dashboard-widgets/GeofenceWidget.Previews.swift
+     387 TeslaSync/dashboard-widgets/GeofenceWidget.Tests.swift
+    1718 total
+  + TeslaSync/dashboard-widgets/GeofenceWidget.strings (i18n catalog)
+
+--- Summary ------------------------------------------------------------------
+  xcodebuild iOS  build test : BLOCKED (IOS_EXIT=1) — requires full Xcode + iOS simulator
+  xcodebuild macOS build test : BLOCKED (MAC_EXIT=1) — requires full Xcode
+  swiftlint --strict (surface): PASS (0 violations)
+  swiftformat --lint (tree)   : PASS (0)
+  placeholder scan            : PASS (0)
+  source typecheck (SDK)      : PASS (0)
+  test-logic typecheck (SDK)  : PASS (0)
+  i18n coverage               : PASS (18/18)
+
+  All runnable gates are green and the surface is complete (no stubs). The xcodebuild
+  build+test steps are the only un-runnable steps on this CommandLineTools-only runner,
+  so the canonical gate EXIT=0 cannot be truthfully asserted here.
+
+EXIT=1
+STATUS=BLOCKED

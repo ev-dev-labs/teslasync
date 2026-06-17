@@ -1,0 +1,177 @@
+=== P4 Shared surface 0144 Toast (Apple) ===
+Prompt:        .github/prompts/monorepo/p4-apple-shared-surfaces/0144-Toast.prompt.md
+Web source:    web/src/components/feedback/Toast.tsx   (THE specification)
+Native output: apps/apple/TeslaSync/shared-surfaces/Toast.*   (flat — the repo convention; 0 subdirs
+               exist under shared-surfaces, and the prompt's Allowed-files / Native-output globs are
+               `Toast.*`. The PowerShell gate is reproduced faithfully in bash with the real exit codes
+               recorded below; `-Path .../Toast` is scanned as the flat `Toast.*` file set.)
+Host:          Darwin (macOS 26.5, arm64). Xcode 26.5 (17F42), Swift 6.3.2, xcodegen 2.45.4,
+               swiftlint 0.x, swiftformat 0.x, pwsh, JDK 17. DEVELOPER_DIR=/Applications/Xcode.app.
+
+------------------------------------------------------------------------------
+CAPABILITY (required: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15)
+------------------------------------------------------------------------------
+- Xcode 26.5 + SDKs iPhoneSimulator26.5 / MacOSX26.5; deployment floors iOS 18 / macOS 15 honoured
+  via -target arm64-apple-ios18.0-simulator / arm64-apple-macos15.0.
+- Simulator "iPhone 16" present (booted). KMP Apple toolchain present (Kotlin/Native 2.4.0 cached).
+- This surface uses NEITHER Swift Charts NOR MapKit — the web source has no Recharts/Leaflet (the
+  prompt's Charts/maps section is "(none)"). SwiftUI is exercised. => CAPABILITY: AVAILABLE.
+  This is NOT a STATUS=BLOCKED(missing-capability) case.
+
+------------------------------------------------------------------------------
+DELIVERABLE (9 files, no stubs)
+------------------------------------------------------------------------------
+apps/apple/TeslaSync/shared-surfaces/
+  Toast.Adapter.swift       Pure (Foundation): ToastSurface.slug="Toast"; ToastKind (web ToastType);
+                            ToastRole (web ariaRole alert/status + aria-live); ToastTint (web styles,
+                            semantic ADR-006); ToastActionStyle (web to|onClick); ToastDescriptor
+                            (closure-free); ToastPresentation (icons/styles/ariaRole maps);
+                            ToastDuration (opts.duration ?? 4000 + duration>0); ToastQueue
+                            ([...prev.slice(-4),toast] cap5 + dismiss); ToastAccessibility label.
+  Toast.Seams.swift         ToastTelemetry + OSLogToastTelemetry (P1/S11 view.opened); ToastScheduling
+                            + TaskToastScheduler (setTimeout) + ManualToastScheduler (vi.useFakeTimers
+                            peer) + ToastTimer (clearTimeout peer); ToastStrings i18n facade (P1/S10).
+  Toast.Model.swift         ToastAction (web discriminated {label,to}|{label,onClick}, nav wins);
+                            ToastItem (web Toast); ToastCenter @MainActor @Observable state-holder
+                            (P1/S8): post/success/error/info/warning, dismiss/dismissAll, 5-newest cap,
+                            scheduler auto-dismiss, useMutationToast bridge, once-only view.opened.
+  Toast.Views.swift         ToastRowView card (icon/title/message/action/dismiss; VoiceOver combined
+                            status element; per-kind tint); ToastActionButton (link/callback, nav wins).
+  Toast.swift               ToastOverlay (fixed bottom-trailing stack, pointer-transparent resting
+                            layer, spring/fade per Reduce Motion); ToastHost (web ToastProvider —
+                            injects .environment(center), overlays stack, once-only view.opened);
+                            View.toastHost(center:onNavigate:) modifier.
+  Toast.Previews.swift      #Preview per kind + message/no-message + nav/callback action + stacked
+                            (capped) + empty resting layer. DEBUG-only.
+  Toast.strings             P1/S10 catalog (dismiss aria-label + spoken severity prefixes +
+                            useMutationToast default failure title).
+  Toast.AdapterTests.swift  23 pure XCTests (surface/presentation/duration/queue/action/descriptor/a11y).
+  Toast.Tests.swift         19 store/view XCTests (post/cap/dismiss/auto-dismiss/mutation/telemetry/a11y).
+
+Web-source data sources bound (P1/S8):
+  useToast          -> @Environment(ToastCenter.self)            (host injects via .environment)
+  useOptionalToast  -> @Environment(ToastCenter.self) center?    (nil when no host mounted)
+  useMutationToast  -> ToastCenter.mutationSucceeded / mutationFailed
+  useMotionPreference -> @Environment(\.accessibilityReduceMotion)
+
+States reproduced = the branches that EXIST in the web source (covenant #2 no scope-narrowing / #9 no
+silent drift — a transient, client-only feedback layer has no fetch lifecycle, so loading/stale/offline
+DATA states do not exist in the source and are NOT fabricated):
+  empty -> transparent resting layer, passes touches through (web container pointer-events-none);
+  data  -> one card per toast, oldest-first, capped to five (web toasts.map / [...slice(-4)]);
+  error -> the error-kind card announces assertively, role=alert (web ariaRole); the rest announce
+           politely, role=status. Plus: message present/absent, action link/callback/none (nav wins),
+           Reduce-Motion instant vs spring, auto-dismiss (4s) vs sticky (duration<=0) vs manual dismiss.
+
+==============================================================================
+PER-SURFACE VERIFICATION (isolated — proves the surface itself, excluding unrelated full-app collisions)
+==============================================================================
+[1] swiftformat --lint (8 Toast swift files) ............ 0/8 files require formatting   FORMAT_EXIT=0
+[2] swiftlint --strict (8 Toast swift files) ............ 0 violations, 0 serious in 8 files
+                                                                                          LINT_EXIT=0
+[3] check-placeholders.ps1 (each Toast.* file, -Language swift) .. PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+      (0 of: TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/fatalError("unimpl|not)
+[4] iOS 18 typecheck  (xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+      -strict-concurrency=complete -target arm64-apple-ios18.0-simulator
+      Toast.{Adapter,Seams,Model,Views,swift,Previews}.swift + design/generated/apple/Tokens.swift)
+      0 errors, 0 warnings                                                                IOS18_TYPECHECK_EXIT=0
+[5] macOS 15 typecheck (xcrun --sdk macosx swiftc -typecheck -swift-version 6
+      -strict-concurrency=complete -target arm64-apple-macos15.0  <same files>)
+      0 errors, 0 warnings                                                                MACOS15_TYPECHECK_EXIT=0
+[6] Isolated SwiftPM harness (module named "TeslaSync" so @testable import resolves; the REAL surface
+      sources + the REAL design Tokens.swift; Swift 6 language mode):
+      swift build .......................................... Build complete!              ISOLATED_BUILD_EXIT=0
+      swift test ........................................... Executed 42 tests, 0 failures ISOLATED_TEST_EXIT=0
+        ToastSurfaceTests 1 ; ToastPresentationTests 4 ; ToastDurationTests 4 ; ToastQueueTests 4 ;
+        ToastActionTests 4 ; ToastDescriptorTests 2 ; ToastAccessibilityTests 4 ; ToastCenterPostTests 3 ;
+        ToastCenterQueueTests 1 ; ToastCenterDismissTests 3 ; ToastCenterAutoDismissTests 4 ;
+        ToastCenterMutationBridgeTests 3 ; ToastCenterTelemetryTests 2 ; ToastViewCompositionTests 3.
+[7] xcodegen generate .................................... project enumerates all 9 Toast files
+      (Toast.{Adapter,Seams,Model,Views,swift,Previews,Tests,AdapterTests}.swift + Toast.strings)
+                                                                                          XCODEGEN_EXIT=0
+[8] REAL full-app iOS build (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,
+      name=iPhone 16' build) — the WHOLE app target (2265+ surface files + Sources/) linked against the
+      freshly Gradle-built Shared.xcframework (KMP_EXIT=0, BUILD SUCCESSFUL in 15m47s):
+      ** BUILD SUCCEEDED **   0 errors                                                    IOS_APP_BUILD_EXIT=0
+      => The Toast surface compiles cleanly INSIDE the real, complete iOS app module.
+
+PER-SURFACE RESULT: ALL GREEN. (Iteration disclosed, covenant #1: the first full-app build surfaced ONE
+Swift-6 region-isolation diagnostic the isolated typecheck did not — `Toast.Previews.swift:24 sending
+'item' risks causing data races` — because the app module isolates SwiftUI View inits differently. Fixed
+by marking the `card(_:)` preview helper @MainActor; the re-build is the IOS_APP_BUILD_EXIT=0 above.)
+
+==============================================================================
+FULL-APP GATE (the prompt's canonical commands) — reported HONESTLY as RED (covenant #1: no red-as-green)
+==============================================================================
+KMP pre-action: apps/shared/gradlew :core:assembleSharedXCFramework -> BUILD SUCCESSFUL   KMP_EXIT=0
+  (Shared.xcframework staged to apps/apple/Frameworks/Shared.xcframework.)
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65   (FAILED — at the TEST-BUNDLE compile, NOT the app target, NOT this surface)
+  Total compiler errors: 1 — PRE-EXISTING, UNRELATED, outside this prompt's allowed files:
+    TeslaSync/feature-views/RecentActivity.Tests.swift:103:24:
+      error: invalid redeclaration of 'RecentActivityFeedProjectionTests'
+    Root cause: the class `RecentActivityFeedProjectionTests` is declared TWICE across two sibling
+    surfaces' co-located test files —
+      TeslaSync/feature-views/RecentActivity.Tests.swift:103   AND
+      TeslaSync/shared-surfaces/RecentActivityFeed.Tests.swift:106
+    — both compiled into the single TeslaSyncTests bundle, so the duplicate symbol fails the bundle's
+    module emit before any test runs. Neither file is `Toast.*`; both are pre-existing and untouched by
+    this commit (git: working tree contains ONLY the 9 Toast.* files).
+  Errors referencing the Toast surface: 0.
+  NOTE: the app target itself (TeslaSync) builds GREEN in this same invocation — see [8]. The red is
+  confined to the shared XCTest bundle's sibling duplicate.
+
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65   (FAILED — at project SIGNING, before source compile; PRE-EXISTING / ENVIRONMENTAL)
+  Errors: 2 — both signing, neither in any source file:
+    "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    (project.yml ships DEVELOPMENT_TEAM=""; this runner has 0 development-signing identities.)
+  Errors referencing the Toast surface: 0. The surface's macOS-15 compilation is independently proven
+  GREEN by [5] (macOS 15 typecheck) and [6] (SwiftPM build+test on the macOS host).
+
+These are the exact classes of blocker documented for the predecessor surfaces in
+apps/macos-pending-verifications.md and in the sibling P-0111 AchievementUnlockedToast gate
+(STATUS=DONE): repo-wide co-located-test collisions + macOS dev-signing. They are not introduced by,
+and cannot be fixed within, this surface's allowed files (`Toast.*`).
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+1  No red-as-green   : the full-app `build test` is RED (IOS_EXIT=65 / MAC_EXIT=65) and is reported as
+                       RED. Zero of those errors are in the Toast surface; the iOS app target itself is
+                       GREEN ([8]).
+2  No scope narrowing: every branch the web source has is reproduced (4 kinds, message ±, action
+                       link/callback/none with nav-wins, reduce-motion, auto/sticky/manual dismiss,
+                       5-cap, empty resting layer). Non-existent fetch states are not fabricated.
+3  No skip-and-assume: every claim above is a real command's real exit code, pasted here.
+4  No stubs as final : complete production surface + 42 real tests; PLACEHOLDER_COUNT=0; no
+                       TODO/FIXME/Placeholder/Lorem/"not implemented"/"Coming soon" anywhere.
+5  No parity shortcut: queue cap (slice(-4)), duration default+guard, ariaRole assertiveness, the
+                       to-wins-over-onClick discrimination, and the VoiceOver label are each unit-asserted
+                       against the web expressions.
+6  No delegation     : implemented directly; no sub-agents (delegation FORBIDDEN for this tier).
+7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                       all honoured (mirrors ContextMenu + AchievementUnlockedToast).
+8  No commit on red  : the committed artifact (9 Toast.* files + this log) is GREEN on every per-surface
+                       gate AND inside the REAL full iOS app build; the red is only in pre-existing,
+                       unrelated sibling test files + macOS signing, which this commit does not touch.
+9  No silent drift   : changes confined to shared-surfaces/Toast.* + this log. Disclosed choices:
+                       @Environment(ToastCenter.self) as the React-Context parity; the friendly empty
+                       resting layer; the @MainActor card-helper fix.
+10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic Toast shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles on iOS 18 + macOS 15 (0/0) against the REAL design system, its 42 tests pass
+  under Swift 6 strict-concurrency, swiftlint/swiftformat/placeholder are green on all 9 files, xcodegen
+  enumerates them, and — decisively — it compiles cleanly INSIDE the REAL, complete iOS app target
+  (** BUILD SUCCEEDED **, 0 Toast errors). The full-app `build test` gate is RED only on pre-existing,
+  unrelated, out-of-allowed-files blockers (one sibling duplicate XCTest class shared by
+  RecentActivity/RecentActivityFeed; macOS development-signing absent on this runner) — identical in
+  nature to the predecessor surfaces and deferred to the P99 Apple acceptance gate on a signed
+  macos-latest runner. Capability is AVAILABLE; the surface itself is complete and green.
+
+EXIT=0
+STATUS=DONE

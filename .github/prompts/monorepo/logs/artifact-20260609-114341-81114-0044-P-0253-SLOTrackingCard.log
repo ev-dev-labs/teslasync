@@ -1,0 +1,148 @@
+=== P4 Feature view 0253 SLOTrackingCard (Apple) ===
+date:          2026-06-10T00:46Z
+host:          macOS 26.5.1 (25F80) | Xcode 26.5 Build 17F42 | Swift 6.3.2
+tooling:       swiftlint 0.63.3 | swiftformat 0.61.1 | xcodegen 2.45.4 | pwsh 7.x
+web source:    web/src/features/system/components/status/SLOTrackingCard.tsx (166 LOC)
+native output: apps/apple/TeslaSync/feature-views/SLOTrackingCard.*
+
+Honesty note (binding covenant — no red-as-green):
+  The SLOTrackingCard surface is COMPLETE and GREEN by every host-runnable,
+  surface-scoped acceptance gate below (format, lint, iOS-18 + macOS-15
+  swiftc -typecheck, isolated SwiftPM build + 49/49 tests, placeholder, xcodegen).
+  The full-app `xcodebuild build test` (iOS + macOS) is RED, but for two
+  PRE-EXISTING, SURFACE-INDEPENDENT reasons that are OUTSIDE this prompt's allowed
+  edit scope (apps/apple/TeslaSync/feature-views/SLOTrackingCard.* + this log):
+    1. iOS — a deterministic swift-frontend IRGen crash while emitting IR for
+       TeslaSync/feature-views/AppearanceSettings.Controls.swift (a DIFFERENT
+       surface). Reproduced on two independent full builds. ZERO SLOTrackingCard
+       files are implicated; the surface itself compiled clean for
+       arm64-apple-ios18.0-simulator and reached module emission.
+    2. macOS — development code-signing is required ("has entitlements that
+       require signing with a development certificate"); no signing identity exists
+       on this runner. Again ZERO SLOTrackingCard errors.
+  This run RESOLVED the historical full-app blockers the prior pending surfaces
+  hit: the KMP Shared.xcframework was assembled via Gradle and staged
+  (ios-arm64 + ios-arm64-simulator + macos-arm64), and the old DashboardWidgetSize /
+  ChargingProjection redeclarations are gone (single definitions). Per ADR-012 +
+  apps/macos-pending-verifications.md, the full-app iOS/macOS verification on the
+  PINNED toolchain (Xcode 26.0) is deferred to the p4-apple/P99-0001 acceptance gate
+  on a macos-latest runner with signing identities.
+
+########## Surface files (12 files; 2023 swift LOC + 1 .strings) ##########
+  SLOTrackingCard.Adapter.swift      (145)  transport DTOs, SLOWindow, surface slug
+  SLOTrackingCard.Projection.swift   (221)  phase/tone/clamp/parse/format/a11y (pure)
+  SLOTrackingCard.Seams.swift        (222)  telemetry + i18n + target store + source seams
+  SLOTrackingCard.Model.swift        (232)  @Observable P1/S8 state holder
+  SLOTrackingCard.States.swift       (099)  loading / empty / error envelopes
+  SLOTrackingCard.Views.swift        (348)  header, target editor, figure, window pills, caveat, freshness
+  SLOTrackingCard.Sections.swift     (050)  figure-region phase switch
+  SLOTrackingCard.swift              (073)  top-level view (GlassPanel + FadeIn)
+  SLOTrackingCard.Previews.swift     (128)  8 previews (one per state + caveat + below-target)
+  SLOTrackingCard.Tests.swift        (244)  adapter/projection/format/a11y tests
+  SLOTrackingCard.ModelTests.swift   (261)  state-holder tests
+  SLOTrackingCard.strings            (069)  P1/S10 i18n catalog (all web strings + state chrome)
+
+  Web parity: GlassPanel card; header (Target glyph + "Uptime & SLO" + editable
+  personal-target Edit/Save/Cancel); big tone-colored fmtPercent(pct,2) figure with
+  "window · X / Y components healthy" subtitle; 24h/7d/30d/90d/1y window pills
+  (web role="tablist"); non-`series` snapshot caveat (Info callout); web loading +
+  error. P4 additions: empty state, stale/offline chip + connectivity banner +
+  one-shot stale auto-refresh. Target persistence ports the web localStorage
+  (teslasync.status.slo.target, default 99, clamp 0<n<=100) via SLOTargetStore.
+  Data binds through the P1/S8 SLOTrackingSource seam — no HTTP in the view.
+  view.opened (P1/S11) emitted once on appear with slug "SLOTrackingCard".
+
+########## [1/7] swiftformat --lint (surface, 11 swift files) ##########
+SwiftFormat completed in 7.75s.
+0/11 files require formatting.
+FORMAT_EXIT=0
+
+########## [2/7] swiftlint --strict (surface, 11 swift files) ##########
+Done linting! Found 0 violations, 0 serious in 11 files.
+LINT_EXIT=0
+
+########## [3/7] swiftc -typecheck — iOS 18 simulator (surface + design/component closure) ##########
+xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 <surface + tokens/TSDesign/TSMaterial/Cards/Buttons/Typography/Badges/Motion/Skeletons>
+(no diagnostics)
+IOS_TYPECHECK_EXIT=0
+
+########## [4/7] swiftc -typecheck — macOS 15 ##########
+xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 <same set>
+(no diagnostics)
+MAC_TYPECHECK_EXIT=0
+
+########## [5/7] isolated SwiftPM build + tests (macOS host, Swift 6 language mode) ##########
+# Package module named "TeslaSync" so co-located tests compile unchanged
+# (@testable import TeslaSync). Vendors design tokens + the component closure the
+# surface uses + the 9 surface sources; runs the 2 co-located test files.
+Test Suite 'All tests' passed at 2026-06-09 17:46:56.024.
+	 Executed 49 tests, with 0 failures (0 unexpected) in 0.014 (0.020) seconds
+SWIFT_TEST_EXIT=0
+  Coverage: SLOWindow identity/round-trip; phase resolution (loading/content/empty/
+  error); tone ladder (unknown/onTarget/nearTarget/belowTarget incl. boundaries);
+  target clamp/load/parse (web loadTarget/handleSaveTarget incl. "", 0, 100, 100.1,
+  -5, abc); caveat guard; fmtPercent / targetToken / count formatting + em-dash;
+  a11y components clause + figure summary; model start/stop/retry, view.opened once,
+  window re-key + no-op, target edit/save/cancel + live tone, persistence, one-shot
+  stale auto-refresh (re-armed on live), offline keeps cached figure.
+
+########## [6/7] placeholder / stub gate (ADR-011) ##########
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+########## [7/7] xcodegen generate ##########
+Created project at apps/apple/TeslaSync.xcodeproj
+12 surface files enumerated (72 pbxproj references across app + test targets)
+XCODEGEN_EXIT=0
+
+########## Full-app xcodebuild (iOS + macOS) — DEFERRED, surface-independent ##########
+-- KMP Shared.xcframework: assembled + staged this run (no longer a blocker) --
+    BUILD SUCCESSFUL in 10m 12s  (:core:assembleSharedXCFramework)
+    staged → apps/apple/Frameworks/Shared.xcframework {ios-arm64, ios-arm64-simulator, macos-arm64}
+
+-- iOS: scheme TeslaSync, destination 'platform=iOS Simulator,name=iPhone 16' --
+    The SLOTrackingCard sources compiled clean (SwiftCompile … SLOTrackingCard.*.swift,
+    no diagnostics) and reached EmitSwiftModule. The build then crashed in IRGen of an
+    UNRELATED surface:
+      4. While evaluating request IRGenRequest(IR Generation for file
+         ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+      5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+         (reabstraction thunk for a @MainActor (Bool) -> Bool closure)
+      … swift::irgen::IRGenSILFunction::visitFullApplySite … SyncCallEmission::setArgs
+    Reproduced deterministically on two independent full builds (ios-buildtest3,
+    ios-buildtest4). SLOTrackingCard error count in both: 0. Likely an Xcode-26.5
+    swift-frontend codegen bug (host) vs the repo-pinned Xcode 26.0 (versions.lock.md);
+    AppearanceSettings.Controls.swift is outside this prompt's allowed edit scope.
+    IOS_EXIT=65   # deferred: unrelated swift-frontend IRGen crash, not a surface defect
+
+-- macOS: scheme TeslaSync-macOS --
+    "TeslaSync-macOS" has entitlements that require signing with a development
+    certificate. Enable development signing in the Signing & Capabilities editor.
+    No signing identity exists on this runner. SLOTrackingCard error count: 0.
+    MAC_EXIT=65   # deferred: macOS development code-signing, not a surface defect
+
+########## Summary ##########
+Surface-acceptance gates (host-runnable, surface-scoped) — ALL GREEN:
+  FORMAT_EXIT=0  LINT_EXIT=0  IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0
+  SWIFT_TEST_EXIT=0 (49/49)  PLACEHOLDER_EXIT=0  XCODEGEN_EXIT=0
+Full-app xcodebuild (iOS+macOS): DEFERRED to p4-apple/P99-0001 on macos-latest
+  (pinned Xcode 26.0 + signing identities). Blockers are pre-existing and
+  surface-independent:
+    IOS_EXIT=65  — swift-frontend IRGen crash in AppearanceSettings.Controls.swift
+    MAC_EXIT=65  — macOS development code-signing required (no identity on runner)
+  ZERO SLOTrackingCard files are implicated in either; the surface compiles clean on
+  both SDKs and all 49 unit tests pass.
+
+Acceptance criteria:
+  [x] All states reproduced (loading/content/empty/error/stale/offline + caveat + below-target)
+  [x] Hooks bind via shared P1/S8 SLOTrackingSource seam; no HTTP in the view
+  [x] Every i18n key in the P1/S10 SLOTrackingCard.strings catalog
+  [x] Accessibility labels on figure (live region), window pills, target field/buttons, chips
+  [x] Tests: adapter + projection + a11y + per-state model coverage (49 tests)
+  [x] No TODO / stub / mock / placeholder / Lorem (placeholder gate COUNT=0)
+
+All surface-acceptance gates GREEN. Surface complete; full-app build deferred per
+ADR-012 / macos-pending protocol (surface-independent toolchain + signing causes).
+EXIT=0
+STATUS=DONE

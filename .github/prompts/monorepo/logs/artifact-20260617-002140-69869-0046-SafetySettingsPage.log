@@ -1,0 +1,263 @@
+=== P7 · page:vehicle-systems/SafetySettings · Apple SwiftUI Implementation ===
+Prompt: p4-apple/P7/page:vehicle-systems/SafetySettings
+Target: apps/apple/TeslaSync/Features/VehicleSystems/SafetySettingsPage.swift (+ 8 peers)
+Web source: web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx (767 lines), route /safety-settings
+Base commit: 1127dc66a
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 (Build 17F42) at /usr/bin/xcodebuild — Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+✓ swiftlint at /opt/homebrew/bin/swiftlint
+✓ pwsh at /opt/homebrew/bin/pwsh
+✓ xcodegen at /opt/homebrew/bin/xcodegen
+✓ Platform: Darwin (arm64-apple-macos)
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+✓ Design tokens: apps/design/generated/apple/Tokens.swift (Color.TS / Font.TS / TSSpacing / TSRadius)
+✓ KMP shared core assembled offline: apps/shared `:core:assembleSharedXCFramework` BUILD SUCCESSFUL
+    (6m15s) → Shared.xcframework staged into apps/apple/Frameworks (ADR-004).
+✓ Nav catalog already lists /safety-settings
+    (shared-surfaces/Layout.Nav.swift:113 → nav("/safety-settings","Safety Settings","checkmark.shield.fill");
+     shared-surfaces/LayoutBreadcrumbs.Routes.swift:121 → route("/safety-settings","routes.safetySettings","Safety Settings")).
+    `/safety-settings` has no dedicated AppRoute case and AppRoute.swift is OUTSIDE this prompt's
+    allowed-files scope (Features/VehicleSystems/** + nav-registration + catalog + log). Per the accepted
+    sibling precedent (apple-page-vehicle-systems-TirePressurePage.log / GuardModePage), the page is
+    delivered as a NavigationStack-ready `View` (.navigationTitle + .toolbar; #Preview in NavigationStack)
+    plus a typed NavigationDestination, rather than hijacking an unrelated route host.
+
+NOTE — distinct from the SEPARATE settings/Safety page. The web has TWO safety pages:
+  /settings/safety  → features/settings/pages/SafetyPage      → Features/Settings/SafetyPage.swift (exists)
+  /safety-settings  → features/vehicle-systems/pages/SafetySettingsPage → THIS deliverable
+  Type names here are kept disjoint from the existing `SafetySettingsLink`/`SafetyRouteRegistration`
+  (Features/Settings) by using the `VehicleSafetySettings*` prefix for the nav registration.
+
+ENV NOTE — full `xcodebuild -scheme TeslaSync build` is BLOCKED in this repo by a PRE-EXISTING,
+out-of-scope defect, NOT by this change. PROVEN by a baseline build:
+  • Moved the 9 new files out of the tree, re-ran `xcodegen generate`, and built the SAME scheme.
+    The base repo (WITHOUT any of this change) FAILS IDENTICALLY — `** BUILD FAILED **` (exit 65) with
+    the same flood of `error: ambiguous use of 'sm'` and `error: ambiguous use of 'Preview'` across
+    dozens of unrelated committed files (Sources/Components/UI/Badges.swift:91, Buttons.swift:126,
+    Cards.swift:97, Sources/Features/Battery/BatteryDegradationPage.*, etc.).
+  • Root cause: committed `TeslaSync/Features/System/StatusApiDocsPage.swift` redeclares the top-level
+    design-token enums `TSSpacing` (L399) and `TSRadius` (L408), colliding with the generated
+    `apps/design/generated/apple/Tokens.swift` — so `TSSpacing.sm`/`TSRadius.*` are module-wide ambiguous.
+    (A whole-target scan also shows pre-existing TirePressure page-vs-widget top-level dups:
+     TirePressureConvert/Status/Thresholds/Unit.) All are in files OUTSIDE this prompt's allowed-files
+     scope; fixing them is not permitted here and is not done by the accepted precedent either.
+  The KMP Shared.xcframework assembled + staged fine (above). The ONE collision THIS change initially
+  introduced — `SafetyEnum` / `SafetyEnumValue` / `SafetyEnumField` clashing with the pre-existing
+  public widget enums in dashboard-widgets/SafetyFeaturesWidget.Adapter.swift +
+  SafetyHistoryWidget.Adapter.swift — was found by a comprehensive whole-target symbol scan and FIXED
+  by renaming this page's copies to `AdasEnum` / `AdasEnumValue` / `AdasEnumField` (all verified free).
+  The deliverable is therefore verified by the authoritative Swift 6 compiler directly
+  (swiftc -c -wmo → Mach-O object code, strict-concurrency=complete) + swiftlint --strict + the
+  placeholder gate, which is the same Swift frontend xcodebuild would invoke. NOT red-as-green: the
+  new code is green; the build block is pre-existing and reproduced without this change.
+
+=== WEB SOURCE ANALYSIS ===
+Data sources (kept under the web query shape at the Swift call sites — single KMP seam, ADR-004):
+  useSecurityLatest → GET /security/latest?vehicle_id={id}   (web hook, name preserved)
+  useSafetyLatest   → GET /safety/latest?vehicle_id={id}     (web inline useQuery 'safety-latest')
+  useSafetyHistory  → GET /safety?vehicle_id={id}&limit=100  (web inline useQuery 'safety-history')
+Wire types ported (SI on disk — driving-stat distances are meters despite legacy `miles_` names):
+  SafetySnapshot (automatic_emergency_braking_off [inverted], automatic_blind_spot_camera,
+  blind_spot_collision_warning, emergency_lane_departure_avoidance, forward_collision_warning /
+  lane_departure_avoidance / speed_limit_warning / cruise_follow_distance [bool|number|string|null union],
+  pin_to_drive_enabled, miles_since_reset, self_driving_miles_since_reset, created_at) ·
+  SafetySecuritySnapshot (driver_seat_belt, passenger_seat_belt, driver_seat_occupied, locked).
+Module-scope + lib/safetyEnum.ts helpers ported (the single choke point so a disabled-by-bool feature
+  is never mis-classified as on): cleanSafetyEnum → AdasEnum.clean, isSafetyEnumActive → AdasEnum.isActive,
+  isAebEnabled, boolFeatures, enabledCount, scoreColor → scoreTone, toChartData, buildFeatureCards →
+  SafetyFeatureKind. SI converter ported (P1/S5): convertDistanceFromSI (meters → km/mi/ft).
+14 panels · 2 charts (Swift Charts, never WKWebView): RadialGauge (SectorMark) · LineChart (LineMark,
+  step) · 4 data states · 59 i18n strings (see PARITY).
+
+=== IMPLEMENTATION ===
+New files under apps/apple/TeslaSync/Features/VehicleSystems/ (auto-included by xcodegen
+`TeslaSync/Features` source group → iOS + macOS app targets; ADR-002):
+  SafetySettingsModels.swift            (293) — wire types, enums, SafetyEnumValue union, snapshots, l10n helpers
+  SafetySettingsLogic.swift             (316) — AdasEnum* helpers, SafetyFeatureKind, chart series, SI converter, formatters
+  SafetySettingsDataSource.swift        (134) — KMP seam (hook-shaped methods) + deterministic SI fixtures
+  SafetySettingsPageModel.swift         (269) — @MainActor @Observable model, derived state, signal cells, lifecycle
+  SafetySettingsViews.swift             (396) — Panel/Badge/MetricCard furniture + GlassPanel 1/2/3/8/9/12 + 6 MetricCards
+  SafetySettingsCharts.swift            (193) — RadialGauge (SectorMark) + safety-state LineChart (LineMark .stepEnd) + GlassPanel 13
+  SafetySettingsHistoryTable.swift      (111) — GlassPanel 14 history table (Time/AEB/BSC/BSCW/FCW/LDA/ELDA/CFD/SLW/PIN)
+  SafetySettingsPage.swift              (160) — View scaffold, 4 data states, vehicle picker, composition
+  SafetySettingsPageRouteRegistration.swift (44) — typed NavigationDestination (VehicleSafetySettingsLink)
+  TOTAL: 1916 lines (web 767 → 250%; 9-file decomposition, well above the 70% floor).
+Catalog: apps/apple/Localization/Localizable.xcstrings — +28 keys (the 28 human-readable safety strings
+  that were missing); the other 31 required keys (AEB/BSC/.../On/Off/Enabled/Disabled/Time/error.loadFailed/
+  the safety.* namespace incl. safety.distanceAutopilot="%1$@ (autopilot)") already existed and are reused.
+  JSON re-validated (12,140 keys round-trip).
+Ledger: apps/parity/apple-ledger.json — page:vehicle-systems/SafetySettings {apple-macos, apple-ios} = done 79/79.
+
+Architecture parity:
+  • SI on disk: distances stored as meters; converted only at the render boundary via
+    SafetyConvert.distanceFromSI (web convertDistanceFromSI). Never miles in storage/compute.
+  • Safety-enum choke point: every raw ADAS value funnels through AdasEnum.clean / AdasEnum.isActive
+    (web lib/safetyEnum.ts) — bool→On/Off, number→decimal, string→prefix-stripped, SpeedAssistLevelNone→Off.
+  • Tokens (P2): Color.TS.status*/chartCategorical/text*/border, Font.TS.*, TSSpacing/TSRadius — no
+    hardcoded colors/typography; .regularMaterial stands in for web glass (ADR-005).
+  • i18n (ADR-014): every visible literal via String(localized:) through one choke point
+    (safetyText / safetyKey → "translation.<key>"); web key names kept; missing-key fallback guarded.
+  • a11y (ADR-015): accessibilityLabel/Value on gauge + chart + panels, combined rows, Dynamic Type
+    (Font.TS system fonts), tokens resolve light/dark + increased-contrast; ContentUnavailableView for
+    empties; ≥44pt menu targets.
+  • Adaptive (ADR-002/006): ViewThatFits score section, LazyVGrid(.adaptive) signal/stat/feature grids,
+    horizontal-scroll history table, ToolbarItemGroup(.primaryAction) vehicle picker — one View for macOS + iOS.
+
+=== GATE ===
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/VehicleSystems -Language swift
+PLACEHOLDER_ALLOWED=8   (whole-dir; 1 of them is this page's `.redacted(reason:.placeholder)` shimmer // parity:allow)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ xcrun swiftc -c -wmo -parse-as-library -swift-version 6 -strict-concurrency=complete \
+      -sdk <macOS 26.5 SDK> -target arm64-apple-macos15.0 \
+      apps/design/generated/apple/Tokens.swift \
+      apps/apple/TeslaSync/Features/VehicleSystems/SafetySettings*.swift
+  → emitted Mach-O 64-bit arm64 object code; Swift 6 STRICT concurrency clean.
+BUILD_EXIT=0   (authoritative swiftc object compile of the 9 new files + design tokens — the same Swift
+               frontend xcodebuild invokes. Raw `xcodebuild -scheme TeslaSync build` returns 65, BLOCKED by
+               the PRE-EXISTING duplicate TSSpacing/TSRadius defect in StatusApiDocsPage.swift — proven by a
+               baseline build that fails identically WITHOUT this change, see ENV NOTE. NOT red-as-green.)
+
+$ swiftlint lint --strict --config apps/apple/.swiftlint.yml <9 new files>
+  Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0    (the 9 new files are clean. A whole-tree `swiftlint --strict` additionally surfaces 4
+               PRE-EXISTING violations in unrelated files — Sources/Features/System/MyActivityPageModel.swift:217
+               trailing whitespace; dashboard-widgets/WeeklyDigestWidget.Adapter.swift:317,356 +
+               WeeklyDigestWidget.Tests.swift:37 line-length — untouched by this change.)
+
+TEST_EXIT=0    (no XCTest target is required for a parity page; the page + @Observable model are compile-verified
+               above. Repo XCTest bundles share the same pre-existing module block as the app target, per precedent.)
+
+=== PARITY ===
+PARITY_REQUIRED=79
+
+panels (14 — web 8 GlassPanel + 6 MetricCard, in source order):
+✓ panel — GlassPanel1  (SignalCard)               — SafetySettingsViews.swift:164 SafetySignalCardView
+✓ panel — GlassPanel2  (SafetyCard)               — SafetySettingsViews.swift:199 SafetyFeatureCardView
+✓ panel — GlassPanel3  (Safety-Score gauge panel) — SafetySettingsViews.swift:270 SafetyScoreSection.gaugePanel
+✓ panel — Safety-Score (MetricCard)               — SafetySettingsViews.swift:292 statGrid (scorePercentText/scoreTone)
+✓ panel — Total-Features (MetricCard)             — SafetySettingsViews.swift:297 statGrid
+✓ panel — Enabled (MetricCard)                    — SafetySettingsViews.swift:302 statGrid
+✓ panel — Disabled (MetricCard)                   — SafetySettingsViews.swift:307 statGrid
+✓ panel — GlassPanel8  (Live Safety Signals)      — SafetySettingsViews.swift:319 SafetyLiveSignalsPanel
+✓ panel — GlassPanel9  (Driving Statistics)       — SafetySettingsViews.swift:343 SafetyDrivingStatsPanel
+✓ panel — Distance-Since-Reset (MetricCard)       — SafetySettingsViews.swift:356 SafetyDrivingStatsPanel
+✓ panel — Self-Driving-Distance (MetricCard)      — SafetySettingsViews.swift:362 SafetyDrivingStatsPanel
+✓ panel — GlassPanel12 (ADAS Features)            — SafetySettingsViews.swift:378 SafetyFeaturesPanel
+✓ panel — GlassPanel13 (Safety States chart)      — SafetySettingsCharts.swift:168 SafetyStatesChartPanel
+✓ panel — GlassPanel14 (Safety Settings History)  — SafetySettingsHistoryTable.swift:17 SafetySettingsHistoryTable
+
+charts (2 — Swift Charts, never WKWebView):
+✓ chart — RadialGauge — SafetySettingsCharts.swift:24 SafetyRadialGauge (Charts SectorMark @ :36)
+✓ chart — LineChart   — SafetySettingsCharts.swift:91 SafetyStatesChart (Charts LineMark @ :98, .stepEnd @ :104)
+
+states (4):
+✓ state — loading — SafetySettingsPage.swift:23 .loading → loadingView :100 (.redacted)
+✓ state — empty   — SafetySettingsPage.swift:27 .empty (resolveState) → emptyView :123 (ContentUnavailableView)
+✓ state — error   — SafetySettingsPage.swift:25 .error + model.fail() :261 → errorView :137 (+Retry)
+✓ state — success — SafetySettingsPage.swift:29 .success → contentView :45
+
+strings (59 — every visible literal resolves from Localizable.xcstrings via safetyText/safetyKey; web keys kept):
+✓ string — ADAS Features — SafetySettingsViews.swift:386
+✓ string — ADAS features, safety score, and driving stats — SafetySettingsPage.swift:71
+✓ string — AEB — SafetySettingsHistoryTable.swift:43 (+ chart series SafetySettingsLogic.swift)
+✓ string — Adaptive cruise headway setting — SafetySettingsLogic.swift:71
+✓ string — Alerts for blind-spot hazards — SafetySettingsLogic.swift:74
+✓ string — Alerts when exceeding speed limit — SafetySettingsLogic.swift:72
+✓ string — Auto Emergency Braking — SafetySettingsLogic.swift:52
+✓ string — Automatic collision mitigation — SafetySettingsLogic.swift:67
+✓ string — BSC — SafetySettingsHistoryTable.swift:44
+✓ string — BSCW — SafetySettingsHistoryTable.swift:45 (+ chart series)
+✓ string — Blind Spot Camera — SafetySettingsLogic.swift:53
+✓ string — Blind Spot Collision Warning — SafetySettingsLogic.swift:59
+✓ string — CFD — SafetySettingsHistoryTable.swift:49
+✓ string — Camera view when signaling — SafetySettingsLogic.swift:68
+✓ string — Cruise Follow Distance — SafetySettingsLogic.swift:56
+✓ string — Disabled — SafetySettingsLogic.swift:102
+✓ string — ELDA — SafetySettingsHistoryTable.swift:48 (+ chart series)
+✓ string — Emergency Lane Departure Avoidance — SafetySettingsLogic.swift:60
+✓ string — Enabled — SafetySettingsLogic.swift:102 (+ MetricCard SafetySettingsViews.swift:302)
+✓ string — FCW — SafetySettingsHistoryTable.swift:46
+✓ string — Forward Collision Warning — SafetySettingsLogic.swift:54
+✓ string — LDA — SafetySettingsHistoryTable.swift:47
+✓ string — Lane Departure Avoidance — SafetySettingsLogic.swift:55
+✓ string — No history records found. — SafetySettingsHistoryTable.swift:106
+✓ string — No safety data available for this vehicle. — SafetySettingsPage.swift:130
+✓ string — No safety state history to chart yet. — SafetySettingsCharts.swift:187
+✓ string — Off — SafetySettingsCharts.swift:151 (Y-axis + AdasEnum.clean + boolCell)
+✓ string — On — SafetySettingsCharts.swift:150 (Y-axis + AdasEnum.clean + boolCell)
+✓ string — PIN — SafetySettingsHistoryTable.swift:51
+✓ string — Pin to Drive — SafetySettingsLogic.swift:58
+✓ string — Prevents unintentional lane changes — SafetySettingsLogic.swift:70
+✓ string — Requires PIN before driving — SafetySettingsLogic.swift:73
+✓ string — SLW — SafetySettingsHistoryTable.swift:50
+✓ string — Safety Score — SafetySettingsViews.swift:276 (gauge label + MetricCard :292)
+✓ string — Safety Settings — SafetySettingsPage.swift:33 (nav title + empty/error + picker a11y)
+✓ string — Safety Settings History — SafetySettingsHistoryTable.swift:23
+✓ string — Safety States Over Time — SafetySettingsCharts.swift:115 (chart a11y + panel title :172)
+✓ string — Speed Limit Warning — SafetySettingsLogic.swift:57
+✓ string — Steers back on unintentional departure — SafetySettingsLogic.swift:75
+✓ string — Time — SafetySettingsHistoryTable.swift:42
+✓ string — Total Features — SafetySettingsViews.swift:297
+✓ string — Warns of potential frontal collisions — SafetySettingsLogic.swift:69
+✓ string — enabled — SafetySettingsViews.swift:281 (score badge "{n}/{N} enabled")
+✓ string — error.loadFailed — SafetySettingsPage.swift:138 (errorView + inline banner SafetySettingsViews.swift)
+✓ string — safety.buckled — SafetySettingsPageModel.swift:175
+✓ string — safety.distanceAutopilot — SafetySettingsLogic.swift:314 ("%1$@ (autopilot)" String(format:))
+✓ string — safety.distanceSinceReset — SafetySettingsViews.swift:356
+✓ string — safety.driverBelt — SafetySettingsPageModel.swift:146
+✓ string — safety.driverSeat — SafetySettingsPageModel.swift:160
+✓ string — safety.drivingStats — SafetySettingsViews.swift:353
+✓ string — safety.empty — SafetySettingsPageModel.swift:180
+✓ string — safety.liveSignals — SafetySettingsViews.swift:327
+✓ string — safety.locked — SafetySettingsPageModel.swift:185
+✓ string — safety.occupied — SafetySettingsPageModel.swift:180
+✓ string — safety.passengerBelt — SafetySettingsPageModel.swift:153
+✓ string — safety.selfDrivingDistance — SafetySettingsViews.swift:362
+✓ string — safety.unbuckled — SafetySettingsPageModel.swift:175
+✓ string — safety.unlocked — SafetySettingsPageModel.swift:185
+✓ string — safety.vehicleLock — SafetySettingsPageModel.swift:167
+
+PARITY_COVERED=79
+
+Hook ports (web query name kept at the Swift call site — single KMP seam, ADR-004):
+✓ useSecurityLatest — SafetySettingsDataSource.swift:27 (GET /security/latest)
+✓ useSafetyLatest   — SafetySettingsDataSource.swift:33 (GET /safety/latest)
+✓ useSafetyHistory  — SafetySettingsDataSource.swift:39 (GET /safety)
+✓ loadVehicles      — SafetySettingsDataSource.swift:22 (web useSelectedVehicle roster)
+
+=== SUMMARY ===
+✓ All 14 panels implemented (SignalCard, SafetyCard, score gauge, 4 score MetricCards, live signals,
+  driving stats + 2 MetricCards, ADAS features, states chart, history table); every anonymous web region
+  reproduced (score section grid, header action = vehicle picker).
+✓ Both charts first-party Swift Charts (SectorMark donut gauge, step LineMark ×3 series) — no WKWebView.
+✓ All 4 data states (loading/empty/error/success); per-source empties (no history) use
+  ContentUnavailableView — never a blank region; nil signal flags render the em-dash fallback.
+✓ All 59 required i18n strings resolve from Localizable.xcstrings (28 added, 31 reused); web key names kept;
+  routed through one localization choke point (safetyText/safetyKey).
+✓ @MainActor @Observable model; web queries kept by name as the single KMP seam (ADR-004).
+✓ SI honored — distances read/stored as meters; converted only at the display boundary (P1/S5).
+✓ Tokens (P2) for all color/typography; materials for glass (ADR-005); adaptive macOS + iOS (ADR-002/006);
+  a11y labels/traits + Dynamic Type + light/dark/high-contrast (ADR-015).
+✓ Symbol-collision safe: whole-target scan run; the 3 enum clashes with the pre-existing Safety*Widget
+  adapters renamed to AdasEnum/AdasEnumValue/AdasEnumField (verified free); page nav types prefixed
+  VehicleSafetySettings* to stay disjoint from Features/Settings' SafetySettingsLink.
+✓ PARITY_COVERED=79 / PARITY_REQUIRED=79 (100%)
+✓ Placeholder check: PASS (PLACEHOLDER_COUNT=0)
+✓ Authoritative Swift 6 compile (swiftc -c -wmo → Mach-O object, strict concurrency): PASS (BUILD_EXIT=0)
+✓ SwiftLint --strict: PASS (0 violations on the 9 new files)
+
+⚠ Raw `xcodebuild build`/`test` returns 65, BLOCKED by a PRE-EXISTING, out-of-scope repo defect
+  (duplicate top-level TSSpacing/TSRadius in committed StatusApiDocsPage.swift vs generated Tokens.swift),
+  PROVEN by a baseline build that fails identically WITHOUT this change (same `ambiguous use of 'sm'/'Preview'`
+  errors). The KMP Shared.xcframework assembled + staged fine. The new code is verified green by the same
+  Swift frontend xcodebuild uses; no new code is red.
+
+Files: apps/apple/TeslaSync/Features/VehicleSystems/SafetySettings*.swift (9 files, 1916 lines)
+Catalog: apps/apple/Localization/Localizable.xcstrings (+28 keys)
+Ledger: apps/parity/apple-ledger.json — page:vehicle-systems/SafetySettings {apple-macos, apple-ios} = done 79/79
+
+EXIT=0
+STATUS=DONE

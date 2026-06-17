@@ -1,0 +1,128 @@
+=== P4 Feature view 0234 SnapshotInspector (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/SnapshotInspector.*
+Web spec: web/src/features/system/components/state-machine/SnapshotInspector.tsx
+Runner  : Darwin arm64 (Apple Mac Studio) — 2026-06-09
+
+------------------------------------------------------------------------------
+PLATFORM CAPABILITY (required: SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15)
+------------------------------------------------------------------------------
+PRESENT and exercised on this runner:
+  xcodebuild   : Xcode 26.5 (Build 17F42)            -> ran iOS + macOS scheme builds
+  swift        : Apple Swift 6.3.2                    -> ran `swift test` + `swift build`
+  simulators   : iPhone 16 (booted), iOS 18+ runtime -> used as the iOS destination
+  swiftlint    : /opt/homebrew/bin/swiftlint          -> ran --strict
+  swiftformat  : /opt/homebrew/bin/swiftformat        -> ran --lint
+  pwsh         : /opt/homebrew/bin/pwsh                -> ran check-placeholders.ps1
+  Shared.xcframework: built from apps/shared via Gradle (BUILD SUCCESSFUL, staged)
+This is NOT a capability block. The aggregate gate redness below is a pre-existing,
+cross-surface BASELINE defect outside this surface's allowed files.
+
+This surface (no Charts/Maps in the web source) uses SwiftUI primitives only; the
+Recharts/Leaflet mapping rows are N/A for SnapshotInspector.
+
+==============================================================================
+A. SURFACE-SCOPED VERIFICATION  (SnapshotInspector.* only) — ALL GREEN
+==============================================================================
+A1. swiftformat --lint  (9 swift files)                    -> 0/9 require formatting   EXIT=0
+A2. swiftlint lint --strict  (9 swift files)               -> 0 violations             EXIT=0
+A3. check-placeholders.ps1 -Path <copies of my 10 files>   -> PLACEHOLDER_COUNT=0      EXIT=0
+A4. Unit tests — `swift test` standalone runtime harness over the REAL
+    SnapshotInspector.Adapter.swift / .Signals.swift / .Model.swift +
+    SnapshotInspector.AdapterTests.swift / .Tests.swift:
+        Executed 50 tests, with 0 failures (0 unexpected)                              EXIT=0
+    Coverage: formatValue + canonical-JSON diff rule, rows projection (sort + changed),
+    copy payload (shape + validity), getStateColor port (vehicle/drive/charge/telemetry +
+    fallbacks), SourceLayerBadge style + formatAge buckets, formatRelative buckets,
+    accessibility row label, projection (error/detail/loading/outsideWindow/empty),
+    model wiring + view.opened telemetry + stale one-shot auto-refresh + jumpToLast.
+    NOTE: A4 also caught + fixed a real defect during development — five `T? ?? NSNull()`
+          sites in the copy-payload builder did not type-check; replaced with a generic
+          `anyOrNull(_:)` helper. Re-verified green.
+A5. View layer compile — `swift build` over the REAL SnapshotInspector.swift /
+    .Views.swift / .States.swift (+ Adapter/Signals/Model) against faithful stubs of the
+    P1/S9 tokens + P4 core components (TSGlassPanel/TSButton/TSFadeIn/TSClipboard/Color.TS/
+    Font.TS/TSSpacing/TSRadius), signatures mirrored from apps/apple/Sources:
+        Build complete!                                                                EXIT=0
+A6. Full-module compile (iOS + macOS, section C) reports ZERO errors in any
+    SnapshotInspector.* file:
+        SnapshotInspector error lines (iOS)  : 0
+        SnapshotInspector error lines (macOS): 0
+        SnapshotInspector swiftlint violations (full-repo run): 0
+
+==============================================================================
+B. PARITY / ACCEPTANCE  (vs web SnapshotInspector.tsx)
+==============================================================================
+[x] Surface renders all web states: loading, empty ("Select a transition"),
+    out-of-window ("Nothing in the current window…" + "Jump to last transition"),
+    detail (From/To/Trigger/Duration grid + signal list + "Diff vs previous" toggle +
+    per-row SourceLayerBadge + dim/highlight/struck-previous diff language),
+    no-signals ("No signals captured for this transition"). Plus P4 leaf states:
+    error (retry), stale + offline (freshness chip + banner + one-shot auto-refresh).
+[x] Hooks bind via the shared P1/S8 state-holder seam (SnapshotInspectorSource +
+    SnapshotInspectorModel); no direct HTTP in the view (web useTelemetry/useTranslation).
+[x] Every i18n key from source resolves through the P1/S10 facade (SnapshotInspectorStrings,
+    table "SnapshotInspector") — 13 parity keys + 6 inlined SourceLayerBadge keys +
+    8 native-chrome keys; no English literals in Swift (all via Text(verbatim:)).
+[x] Accessibility labels on every interactive/informational element (copy button, refresh,
+    diff toggle, jump button, retry, state badges, source badges, signal rows, freshness chip).
+[x] Tests: adapter unit tests + projection/model per-state + a11y label test (50 cases).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (A3 = 0).
+[x] Inlined StateBadge + SourceLayerBadge (no native shared counterpart yet — same approach
+    FSMSubFSMPanel/0230 took); decomposed into 9 files, each < 400 lines, swiftlint-clean.
+
+==============================================================================
+C. LITERAL AGGREGATE GATE  (xcodebuild build test, whole TeslaSync module)
+==============================================================================
+xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        ** BUILD FAILED **  /  ** TEST FAILED **                               IOS_EXIT=65
+xcodebuild -scheme TeslaSync-macOS build test
+        ** BUILD FAILED **  /  ** TEST FAILED **                               MAC_EXIT=65
+swiftlint --strict      -> Found 1 violation, 1 serious in 2437 files          LINT_EXIT=2
+swiftformat --lint apps/apple -> 0/2441 files require formatting               FORMAT_EXIT=0
+check-placeholders.ps1 -Path apps/apple/.../SnapshotInspector -> COUNT=0       PLACEHOLDER_EXIT=0
+
+ROOT CAUSE OF C-REDNESS — PRE-EXISTING, CROSS-SURFACE, OUT-OF-SCOPE (not SnapshotInspector):
+  * iOS/macOS BUILD FAILED: duplicate `public` type declarations across ~9 sibling surfaces
+    compiled into the single TeslaSync module, e.g. (each defined in 2 files):
+        ChargeSessionDTO   : ChargeSessionChartWidget.Models.swift + ChargeStatusLiveWidget.Model.swift
+        ChargeDistanceUnit / ChargeStatusUpdate / ChargeLoadStatus / ChargeConnection /
+        ChargeStateDTO / ChargeUnitPrefs : ChargeStatusWidget.Model.swift + ChargeStatusLiveWidget.Model.swift
+        SafetyModel / SafetyUpdate / SafetyLoadStatus / SafetyConnection, FleetStatsBarModel,
+        DrivingCoachLoadStatus / DrivingCoachConnection, ChargeStatusProjection, …
+    -> "'X' is ambiguous for type lookup in this context" (+ 168 cascading
+       "cannot infer contextual base in reference to member 'loaded'/'live'/…").
+    These files are committed baseline (git status: clean/unmodified) introduced by sibling
+    parallel merges (`merge(parallel): p4-apple/dashboard-widgets/…`), and live OUTSIDE this
+    prompt's Allowed files (apps/apple/TeslaSync/feature-views/SnapshotInspector.*).
+  * macOS additionally requires a development signing certificate (DEVELOPMENT_TEAM="" on
+    this runner) — an environment/signing precondition, not surface code.
+  * LINT_EXIT=2: the single violation is a sibling — dashboard-widgets/
+    LiveSignalSparklinesWidget.Builder.swift:158:9 (opening_brace). 0 in SnapshotInspector.
+  Verified isolation: moving the duplicate-source files aside let the module compile past
+  them and surfaced only the NEXT batch of sibling duplicates — never any SnapshotInspector
+  error. (Side files were restored; the working tree holds only the SnapshotInspector.* additions.)
+
+==============================================================================
+HONESTY COVENANT
+==============================================================================
+1 No red-as-green     : C reported RED (IOS/MAC=65, LINT=2); not claimed green.
+2 No scope narrowing  : full surface implemented (all web states + P4 leaf states).
+3 No skip-and-assume  : every state read from source and reproduced; 50 tests assert behaviour.
+4 No stubs as final   : 0 placeholders; complete implementations.
+5 No parity shortcuts : 27 i18n keys; inlined StateBadge + SourceLayerBadge at parity.
+6 No delegation       : authored directly.
+7 No predecessor bypass: depends only on shipped P1/P4 primitives.
+8 No commit on red    : aggregate gate is RED for out-of-scope baseline reasons -> NOT committed.
+9 No silent drift     : root cause documented above with evidence.
+10 EXIT + STATUS below.
+
+SnapshotInspector.* is COMPLETE and verified green on every surface-scoped dimension
+(format, lint, placeholders, 50 XCTest cases, view-layer compile, zero module errors).
+The literal aggregate `xcodebuild … build test` gate is RED SOLELY because of pre-existing
+duplicate-type declarations across ~9 sibling surfaces (committed baseline, outside the
+Allowed files) plus a macOS dev-signing precondition — an integration/runner block, not a
+capability block and not a SnapshotInspector defect. Per covenant rule 8 this surface is
+reported BLOCKED and is NOT committed.
+
+EXIT=1
+STATUS=BLOCKED

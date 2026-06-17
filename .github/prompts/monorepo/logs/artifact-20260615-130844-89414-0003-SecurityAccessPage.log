@@ -1,0 +1,103 @@
+# p4-apple · P7 · page:admin/SecurityAccess — execution log
+
+Artifact: `.github/prompts/monorepo/p4-apple/pages/admin/SecurityAccessPage.prompt.md`
+Target(s): apple (apple-macos + apple-ios; one adaptive SwiftUI codebase, ADR-002/006)
+Web source: `web/src/features/admin/pages/SecurityAccessPage.tsx`
+Output: `apps/apple/Sources/Features/Admin/SecurityAccess*.swift`
+       (the shipped feature layout; the prompt's `apps/apple/TeslaSync/Features/Admin/**`
+        is a generator path alias — the app target compiles `Sources/Features/Admin/**`
+        per `apps/apple/project.yml`, alongside every peer admin page.)
+
+## Approach — compose the shipped sub-component surfaces (no reimplementation)
+
+The eight web `security-access/*` leaves are ALREADY shipped as native P4 feature-view
+parity units under `apps/apple/TeslaSync/feature-views/` (each `*.swift` View + `*.Model.swift`
+`@Observable` model + `*.Adapter.swift` seam + `*.Previews/*.Tests/*.strings`):
+`SummaryStatsRow`, `SecurityStatusCards`, `WindowStatusDetail`, `LiveVehicleState`,
+`SentryModeChart`, `SecurityStatistics`, `EventHistoryTable`, `EventTimeline`.
+
+Per the `SystemPage` precedent (a page composes already-shipped panels, never duplicating
+their logic), `SecurityAccessPage` COMPOSES these surfaces. The page owns only the web
+page-level chrome + the two page-owned `GlassPanel`s, and binds the eight sub-models through
+`SecurityAccessPageModel`, each seeded from one cohesive sample dataset via the surfaces' OWN
+public in-memory sources (mirroring each surface's loaded preview). No sub-component types or
+logic are re-declared (an initial reimplementation collided with the shipped
+`SentryDayBucket` / `SecuritySignal` / `SecurityMetricTile` and was removed).
+
+Files (apps/apple/Sources/Features/Admin/):
+  - SecurityAccessPage.swift            — View: chrome + GlassPanel1 + GlassPanel2 + composition
+  - SecurityAccessPageModel.swift       — @Observable model (vehicles query + twin facts + 8 sub-models)
+  - SecurityAccessPageModel.Sample.swift— sample vehicle listing + the 8 sub-model factories
+  - SecurityAccessRouteRegistration.swift— `.securityAccess` route registration
+Navigation: `AppRoute.securityAccess` (+ pathSegment `security-access`, systemImage, `.vehicle`
+  group) in Sources/App/AppRoute.swift; wired into Sources/TeslaSyncApp.swift route registry.
+Strings: 108 `admin.security.*` + `route.securityAccess` + `range.*` keys added to
+  `apps/apple/Localization/Localizable.xcstrings` (79 reuse the existing `translation.admin.security.*`
+  localizations; 29 en + web defaults).
+Ledger: apps/parity/apple-ledger.json — `page:admin/SecurityAccess` rows added for
+  apple-macos + apple-ios (covered 9 / required 9).
+
+=== PARITY ===
+PARITY_REQUIRED=9
+
+[x] panel  — GlassPanel1 (not-secure alert)
+       evidence: `SecurityInsecureAlertPanel` (SecurityAccessPage.swift) — danger-tinted
+       `TSGlassPanel` rendered when `model.showsInsecureAlert`; web `GlassPanel` `!isSecure && latest`.
+[x] panel  — GlassPanel2 (live digital twin)
+       evidence: `SecurityDigitalTwinPanel(twin:)` (SecurityAccessPage.swift) — `TSGlassPanel`
+       vehicle glyph + four lock/sentry/door/window facets; web `<VehicleTwin>` GlassPanel.
+[x] state  — loading
+       evidence: `SecurityAccessPageModel.PageState.loading` → `content` `.loading` →
+       `TSSpinner(label: "admin.security.loading")` (SecurityAccessPage.swift). Each composed
+       sub-surface also renders its own loading branch.
+[x] state  — error
+       evidence: `PageState.failed` → `TSErrorDisplay(title: "error.loadFailed", onRetry:)`
+       (SecurityAccessPage.swift). `model.load()` catch → `.failed` (web `useVehicles` error).
+[x] state  — success
+       evidence: `PageState.ready` → `sections` composing the eight shipped surfaces
+       (SecurityAccessPage.swift `sections`).
+[x] string — admin.security.alert
+       evidence: `Text("admin.security.alert")` in `SecurityInsecureAlertPanel` (SecurityAccessPage.swift).
+[x] string — admin.security.subtitle
+       evidence: `Text("admin.security.subtitle")` in `header` (SecurityAccessPage.swift).
+[x] string — admin.security.title
+       evidence: `TSPageTitle("admin.security.title")` in `header` (SecurityAccessPage.swift);
+       also `usePageTitle` parity via the route title key `route.securityAccess`.
+[x] string — error.loadFailed
+       evidence: `TSErrorDisplay(title: "error.loadFailed", …)` in `content` `.failed`
+       (SecurityAccessPage.swift).
+
+PARITY_COVERED=9
+
+Composed sub-surfaces (bonus fidelity beyond the 9 page-owned items; each its own parity unit):
+  SummaryStatsRow · SecurityStatusCards · WindowStatusDetail · LiveVehicleState ·
+  SentryModeChart · SecurityStatistics · EventHistoryTable · EventTimeline
+  — all eight rendered in `SecurityAccessPage.sections`, bound through `SecurityAccessPageModel`.
+
+## Gate results
+
+PLACEHOLDER scan — apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+  PLACEHOLDER_ALLOWED=11
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+BUILD (macOS) — xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build
+  ** BUILD SUCCEEDED **  (0 errors)
+  BUILD_EXIT=0
+
+LINT — swiftlint --strict (SecurityAccess*.swift + AppRoute.swift + TeslaSyncApp.swift)
+  Done linting! Found 0 violations, 0 serious.
+  LINT_EXIT=0
+
+BUILD (iOS Simulator, arm64) — xcodebuild -scheme TeslaSync -sdk iphonesimulator ARCHS=arm64 build
+  ** BUILD SUCCEEDED **  (0 errors)
+  Note: the vendored Shared.xcframework ships ios-arm64 + ios-arm64-simulator + macos-arm64
+  slices only (no x86_64 sim), so the simulator build pins arm64 (the Apple-silicon CI arch).
+  TEST_EXIT: not executed — headless environment has no booted Simulator/Xcode test host;
+  XCTest/XCUITest are the P9 phase. All compile/lint/placeholder gates are green on both idioms.
+  BUILD_EXIT=0
+
+PARITY_COVERED == PARITY_REQUIRED (9 == 9).
+
+EXIT=0
+STATUS=DONE

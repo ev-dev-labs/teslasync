@@ -1,0 +1,111 @@
+=== P4 Feature view 0263 LiveSignalTail (Apple) ===
+Date: 2026-06-10T01:05:57Z
+Runner: Darwin 25.5.0 arm64
+Toolchain (INSTALLED): Xcode 26.5 Build version 17F42   |  swift version 6.3.2
+Toolchain (LOCKED by ADR-012 apps/apple/versions.lock.md): Xcode 26 / Swift 6.0.1
+
+Deliverable files (apps/apple/TeslaSync/feature-views/LiveSignalTail.*):
+  - LiveSignalTail.Adapter.swift
+  - LiveSignalTail.Model.swift
+  - LiveSignalTail.Previews.swift
+  - LiveSignalTail.Rows.swift
+  - LiveSignalTail.strings
+  - LiveSignalTail.swift
+  - LiveSignalTail.Tests.swift
+  - LiveSignalTail.Views.swift
+
+================= STEP: swiftformat --lint (LiveSignalTail.*) =================
+SwiftFormat completed in 3.98s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+================= STEP: swiftlint --strict (LiveSignalTail.*) =================
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+================= STEP: check-placeholders.ps1 (gate command) =================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT(gate prefix path)=0
+--- direct scan of the 7 shipped .swift files (temp copy) ---
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+================= STEP: standalone unit tests (SwiftPM, strict concurrency) =================
+Adapter+Model+Tests compiled & executed as an isolated SwiftPM package to run the
+host-free suite independently of the app-target build (see BLOCKED root-cause below).
+Result: Executed 37 tests, with 0 failures (LiveSignalTailProjectionTests,
+  LiveSignalValueTypeTests, LiveSignalTailModelTests, LiveSignalTailTelemetryTests,
+  LiveSignalTailStringsTests, LiveSignalTailAccessibilityTests, LiveSignalTailStateProjectionTests).
+UNIT_TESTS=PASS (37/37)
+
+================= STEP: xcodebuild -scheme TeslaSync -destination 'iPhone 16' clean build test =================
+--- my 6 LiveSignalTail source files: compiler-error count ---
+LiveSignalTail.*.swift error: lines = 0 (0 = my code clean)
+--- my .strings validation ---
+  CopyStringsFile .../TeslaSync.app/LiveSignalTail.strings apps/apple/TeslaSync/feature-views/LiveSignalTail.strings (in target 'TeslaSync' from project 'TeslaSync')
+  builtin-copyStrings --validate ... LiveSignalTail.strings  => detected encoding Unicode (UTF-8), no errors.
+--- BUILD outcome: pre-existing Swift-frontend IRGen crash (NOT in my files) ---
+  ** BUILD FAILED **
+  ** TEST FAILED **
+  4.	While evaluating request IRGenRequest(IR Generation for file "/Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-114341-81114/slot-48/apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  5.	While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+  7  swift-frontend           0x00000001091bcb44 llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+  7  swift-frontend           0x000000010b788b44 llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+  8  swift-frontend           0x00000001091f41cc report_at_maximum_capacity(unsigned long) + 0
+  8  swift-frontend           0x000000010b7c01cc report_at_maximum_capacity(unsigned long) + 0
+IOS_EXIT=65
+
+================= CONTROL: identical build at HEAD with my 8 files REMOVED =================
+To prove the crash is pre-existing and independent of this surface, the 7 .swift +
+1 .strings files were stashed, the project regenerated, and the same build run:
+  ** BUILD FAILED **
+  4.	While evaluating request IRGenRequest(IR Generation for file "/Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-114341-81114/slot-48/apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  8  swift-frontend           0x00000001075181cc report_at_maximum_capacity(unsigned long) + 0
+=> Same crash, same file, WITHOUT any LiveSignalTail code present. Pre-existing.
+
+================= STEP: xcodebuild -scheme TeslaSync-macOS build test =================
+  ** BUILD FAILED **
+  ** TEST FAILED **
+  (Plus the same underlying AppearanceSettings.Controls.swift IRGen crash once signing is resolved.)
+MAC_EXIT=65
+
+============================== BLOCKED DETERMINATION ==============================
+ROOT CAUSE (two independent RUNNER/ENVIRONMENT blockers, neither in this surface's code):
+
+  1. iOS build+test — Swift frontend IRGen compiler CRASH (llvm report_at_maximum_capacity)
+     while emitting the reabstraction thunk for a @MainActor (Bool) -> Void closure
+     (SIL @$sSbScA_pSgIeAghyg_SbIeAghn_TR) in the PRE-EXISTING, out-of-scope file
+     apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift (L107:
+     `let onChange: @MainActor (Bool) -> Void`). Reproduced 4x: incremental (x2),
+     clean build, and at HEAD with ALL LiveSignalTail files removed.
+     The repo is LOCKED to Xcode 26 / Swift 6.0.1 (ADR-012 apps/apple/versions.lock.md);
+     the only toolchain installed on this runner is Xcode 26.5 / Swift 6.3.2, which carries
+     this IRGen regression. No Swift 6.0.x toolchain is available to switch to
+     (/Library/Developer/Toolchains and ~/Library/Developer/Toolchains are empty).
+     AppearanceSettings.Controls.swift is NOT an allowed file for this prompt, so the
+     compiler-crash trigger cannot be worked around in scope.
+
+  2. macOS build+test — code-signing failure: targets TeslaSync-macOS and
+     TeslaSyncWidgets-macOS "have entitlements that require signing with a development
+     certificate." project.yml pins DEVELOPMENT_TEAM:"" and this runner has no signing
+     identity. project.yml is NOT an allowed file for this prompt.
+
+WHY THIS SURFACE IS COMPLETE AND CORRECT REGARDLESS:
+  - swiftformat --lint .......... 0/7 require formatting (FORMAT_EXIT=0)
+  - swiftlint --strict .......... 0 violations in 7 files (LINT_EXIT=0)
+  - check-placeholders.ps1 ...... PLACEHOLDER_COUNT=0, ALLOWED=1 (EXIT=0)
+  - all 6 LiveSignalTail .swift files compiled in the app target with ZERO errors
+    (the crash is solely in AppearanceSettings.Controls.swift IRGen, an unrelated file).
+  - LiveSignalTail.strings validated (builtin-copyStrings, UTF-8).
+  - 37/37 host-free unit tests PASS under SWIFT_STRICT_CONCURRENCY=complete (SwiftPM).
+
+Per the Honesty Covenant (rule 1 no red-as-green; rule 8 no commit on red; rule 10 log
+ends with EXIT/STATUS) and the prompt's capability clause ("If unavailable on the runner
+-> STATUS=BLOCKED with API evidence"), the xcodebuild gate cannot be made green on this
+runner for reasons external to this surface. The commit step is intentionally NOT run.
+
+EXIT=65
+STATUS=BLOCKED

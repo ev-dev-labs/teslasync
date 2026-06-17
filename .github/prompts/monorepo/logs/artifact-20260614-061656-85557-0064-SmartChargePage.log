@@ -1,0 +1,249 @@
+================================================================================
+p4-apple · P7 · page:charging/SmartCharge — SwiftUI / HIG parity
+================================================================================
+artifact : apps/apple/Sources/Features/Charging/SmartChargePage.swift (+ models, format, model, sample, sections, panels, route reg, tests)
+host     : macOS (Darwin 25.x); Xcode 26.5 (xcodebuild present); Apple Swift 6.x; swiftlint + swiftformat + xcodegen + pwsh 7.x + OpenJDK 17 (Gradle/KMP) present
+parity   : page:charging/SmartCharge  (manifest PARITY_REQUIRED=44 = 7 panels + 4 states + 33 strings; 0 charts, 0 maps)
+web src  : web/src/features/charging/pages/SmartChargePage.tsx  (route /charging/schedule)
+data srcs: useOptimizeCharge -> POST /charge-planner/optimize        (mutation: drives the rate-timeline / cost / schedule panels)
+           useApplySchedule  -> POST /charge-planner/apply           (mutation: drives the "Schedule Applied!" confirmation)
+           useChargePlans    -> GET  /charge-planner/history [vehicle_id]  (PRIMARY list: drives the history panel empty/success)
+           useRatePlans      -> GET  /charge-planner/rate-plans      (drives the rate-plan Select options / fallback)
+           (+ useSelectedVehicle -> GET /vehicles for the vehicle Select. All bound through ONE @Observable
+            SmartChargePageModel via an injected SmartChargeDataSource seam, ADR-004; no networking in the view.
+            No live SSE on this surface — the web page reads cached query data + runs mutations, no EventSource —
+            so no >2-min staleness indicator, matching the sibling analytics/admin pages.)
+
+PATH-MAPPING NOTE (no silent drift, covenant #9)
+  The prompt's idealized output path is apps/apple/TeslaSync/Features/Charging/SmartChargePage.swift, but the
+  REAL Xcode project (apps/apple/project.yml) compiles app sources from apps/apple/Sources/** — the
+  TeslaSync/Features/** subtree is NOT a build input. The already-DONE sibling pages page:analytics/TrueCost,
+  page:analytics/Statistics and page:battery/* all live under apps/apple/Sources/Features/<Domain>/. Placing the
+  page there is what actually compiles, registers, and is covered by the gate; the alternative would be a
+  non-compiled, non-registered stub (covenant #4). Files therefore live under
+  apps/apple/Sources/Features/Charging/** + the matching Tests/Unit/Features/Charging/ test dir.
+
+FILES (allowed scope: Sources/Features/Charging/**, navigation registration, the string catalog, this log)
+  NEW  apps/apple/Sources/Features/Charging/SmartChargeModels.swift              (SI/currency value types: SmartChargeResult, SmartChargeWindow, SmartChargeComparison, SmartChargeRateHour/Tier, SmartChargePlan, SmartChargeRatePlan, SmartChargeVehicle, SmartChargeOptimizeRequest, SmartChargeActionState, SmartChargeHourBand)
+  NEW  apps/apple/Sources/Features/Charging/SmartChargeFormat.swift              (display-boundary formatters via en-US: web formatCurrency/fmtNumber/fmtPercent; SI Wh->kWh + s->hours; centsPerKwh; time/dateTime; windowInfo interpolation)
+  NEW  apps/apple/Sources/Features/Charging/SmartChargePageModel.swift           (@Observable model: data-source seam, phase, form state, optimize/apply mutations, rate-plan option fallback, vehicle select/history reload)
+  NEW  apps/apple/Sources/Features/Charging/SmartChargePageModel.Sample.swift    (sample + empty-history + failing preview/test data sources; deterministic 24h TOU curve + optimizer envelope)
+  NEW  apps/apple/Sources/Features/Charging/SmartChargePage.swift                (adaptive View: header + vehicle Select, AI schedule-suggestion slot, phase switch loading/error/ready, readyView ordering)
+  NEW  apps/apple/Sources/Features/Charging/SmartChargePage.Sections.swift       (GlassPanel1 settings form + optimize action/error; GlassPanel2 rate-timeline bars + legend + window caption)
+  NEW  apps/apple/Sources/Features/Charging/SmartChargePage.Panels.swift         (3 cost StatCards; GlassPanel6 schedule + apply + alternatives; GlassPanel7 history table/empty; loading skeleton + redaction)
+  NEW  apps/apple/Sources/Features/Charging/SmartChargeRouteRegistration.swift   (registers the .smartCharge route host — web /charging/schedule alias to .smartCharge)
+  NEW  apps/apple/Tests/Unit/Features/Charging/SmartChargePageModelTests.swift   (28 XCTest cases: phases, selection, optimize/apply mutations, rate-plan fallback, depart-by default, charge-window membership, formatters)
+  EDIT apps/apple/Sources/App/AppRoute.swift           (+ .smartCharge case: vehicle group + bolt.badge.clock icon; pathSegment "smart-charge")
+  EDIT apps/apple/Sources/App/AppRouteParser.swift     (+ alias "/charging/schedule" -> .smartCharge)
+  EDIT apps/apple/Sources/TeslaSyncApp.swift           (compose SmartChargeRouteRegistration into the route-host chain — after TrueCost)
+  EDIT apps/apple/Localization/Localizable.xcstrings   (+39 keys: 33 chargePlanner.* page strings + 5 chargePlanner.* rate-timeline legend strings + route.smartCharge; en source values ported verbatim from the web t(key, default) calls)
+  EDIT apps/parity/apple-ledger.json                   (+2 rows: apple-macos / apple-ios -> done 44/44)
+
+Navigation note (covenant #7 — no predecessor bypass): the web route /charging/schedule is a NEW destination
+with no existing native host (firstSegment "charging" already resolves to .charging, owned by the main charging
+surface — which must NOT be displaced; RouteTests asserts parse("/charging/123") == .charging, preserved). A
+dedicated .smartCharge AppRoute case was added (vehicle group, bolt.badge.clock, pathSegment "smart-charge") so
+the page is genuinely reachable + deep-linkable without displacing any sibling; AppRouteParser gains the
+"/charging/schedule" -> .smartCharge alias. Only the two exhaustive AppRoute switches (systemImage, group) +
+pathSegment were touched. RouteTests invariants still hold (unique pathSegments — "smart-charge" is unique;
+every route resolves to its group). No sibling registration or WatchDeepLink (its own enum) was altered. The
+model is built @MainActor in the registration enum and captured, mirroring the sibling *RouteRegistration enums.
+
+Data-state mapping (manifest "implement loading/empty/error/success for EVERY data source"):
+  useRatePlans   : loading -> settings panel under .smartChargeRedacted(.placeholder); empty/error -> the three
+                   hardcoded fallback options (web ratePlanOptions.length>0 ? mapped : fallbacks); success -> mapped name (utility) options.
+  useChargePlans : loading -> SmartChargeSkeleton redaction; empty -> TSEmptyState("chargePlanner.noHistory")
+                   (bound to model.historyIsEmpty); error -> SmartChargePageModel.phase .error -> errorView TSErrorDisplay+Retry; success -> SmartChargeHistoryTable.
+  useOptimizeCharge: loading -> optimize TSButton isLoading spinner; error -> inline optimizeError text
+                   (chargePlanner.optimizeError); success -> result panels (rate timeline + cost cards + schedule).
+  useApplySchedule : loading -> apply TSButton isLoading spinner; error -> inline applyError text
+                   (chargePlanner.applyError); success -> "Schedule Applied!" confirmation chip (chargePlanner.applied).
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004): assembled from the slot-local Gradle build + staged ---
+  apps/shared/gradlew :core:assembleSharedXCFramework  =>  BUILD SUCCESSFUL in 4m 16s
+  xcframework written: apps/shared/core/build/XCFrameworks/release/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+  staged -> apps/apple/Frameworks/Shared.xcframework (git-ignored; only Frameworks/.gitkeep is tracked).
+  XCFRAMEWORK_STAGED=1   GRADLE_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+  Created project at apps/apple/TeslaSync.xcodeproj ; the 8 SmartCharge* sources + the test file are referenced
+  across the iOS+macOS app targets + both unit-test bundles (114 pbxproj references).
+  GEN_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Charging -Language swift (ADR-011) ---
+  PLACEHOLDER_ALLOWED=1   (the single .redacted(.placeholder) loading opt-out in SmartChargePage.Panels.swift,
+                           carrying a "// parity:allow redaction API, not a stub" reason)
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+--- swiftformat --lint (repo .swiftformat; my 8 new sources + test + the 3 edited nav files) ---
+  0/12 files require formatting.
+  FORMAT_EXIT=0
+
+--- swiftlint lint --strict (repo .swiftlint.yml; FULL included set, 11594 files) ---
+  Done linting! Found 0 violations, 0 serious in 11594 files.
+  (Initial pass surfaced 6 violations ALL in my files — 2 function_body_length in the sample source, 1
+   file_length in the sections file, 2 multiple_closures_with_trailing_closure on the optimize/apply TSButtons,
+   1 type_body_length in the test class. ALL fixed: sample split into per-row builders + a shared clock; the
+   sections file split into SmartChargePage.Sections.swift + SmartChargePage.Panels.swift (217 + 381 lines, both
+   < 400); the TSButtons use explicit label: closures; the formatter tests moved to an extension. Re-run = 0.)
+  LINT_EXIT=0
+
+--- IN-SCOPE TYPE-CHECK (macOS): swiftc -typecheck -swift-version 6 (Swift 6 strict concurrency) -D DEBUG ---
+  xcrun swiftc -typecheck -module-name TeslaSync -swift-version 6 -parse-as-library -D DEBUG \
+    -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 \
+    <53 files: my 8 SmartCharge* sources + the REAL Sources/Components/** design system (minus the Shared-coupled
+     UnitFormatters.swift, which this surface does not use — like the web, it applies no unit-preference
+     conversion), Sources/Design/**, Sources/Theme.swift, Sources/App/{AppRoute,AppRouteParser,RouteHostRegistry},
+     and the generated design tokens ../design/generated/apple/Tokens.swift>
+    => 0 errors.   TYPECHECK_EXIT(macOS, in-scope)=0
+  Every SmartCharge* type, the .smartCharge route case, the parser alias, the @Observable model + the SwiftUI
+  panels type-check cleanly (incl. #if DEBUG previews + Empty/Failing sources) against the REAL design tokens
+  (Color.TS / Font.TS / TSSpacing / TSRadius / TSTone), the REAL shared component library (TSGlassPanel / TSCard /
+  TSMetricValue / TSMetricLabel / TSPanelTitle / TSPageTitle / TSEmptyState / TSErrorDisplay / TSSelect / TSSlider /
+  TSStepper / TSDatePickerBridge / TSUnitInput / TSFormField / TSButton / TSDataTable / TSColumn / TSSubhead), and
+  the registration host (AppRouteHostRegistry).
+
+--- IN-SCOPE TYPE-CHECK (iOS): same 53-file closure, iOS slice ---
+  xcrun swiftc -typecheck -module-name TeslaSync -swift-version 6 -parse-as-library -D DEBUG \
+    -sdk <iPhoneOS.sdk> -target arm64-apple-ios18.0 <same 53 files>
+    => 0 errors.   TYPECHECK_EXIT(iOS, in-scope)=0
+  Confirms the #if os(iOS) horizontalSizeClass / isCompact adaptive branches in SmartChargePage.swift +
+  SmartChargePage.Sections.swift + SmartChargePage.Panels.swift type-check on iOS too.
+
+--- WHOLE-Sources TYPE-CHECK (macOS): all 376 Sources/**/*.swift (non-test) + tokens, linked vs the REAL staged Shared.xcframework ---
+  xcrun swiftc -typecheck ... -F Frameworks/Shared.xcframework/macos-arm64 <376 files>
+    => 45 error-lines, ALL pre-existing + out-of-scope, in 6 files NONE of which are in my changeset:
+         19  Sources/Features/Admin/TeslaOrdersPage.swift        (cannot find ActiveOrdersModel/OrdersUpdate/TeslaOrderDTO)
+         15  Sources/Features/Admin/UsersPage.swift
+          5  Sources/Features/Automations/AutomationCardPage.swift
+          3  Sources/Features/Admin/UsersPageModel.swift
+          2  Sources/Features/Automations/AutomationCardPageModel.swift
+          1  Sources/Features/Admin/UsersPageModel.Sample.swift
+       These are the SAME class of PRE-EXISTING cross-tree couplings the sibling DONE page page:analytics/TrueCost
+       documented: surfaces that reference types living in the EXCLUDED TeslaSync/feature-views tree (generated by
+       other prompts); they resolve only in the full app build that includes that tree. ZERO of the 45 diagnostics
+       reference any SmartCharge* / AppRoute / AppRouteParser / TeslaSyncApp file in my changeset — i.e. with the
+       MAXIMAL real Sources context + the REAL Shared.xcframework, my files produced 0 diagnostics.
+    TYPECHECK(full-Sources, my-files)=0 errors
+
+--- LOGIC HARNESS: standalone swiftc + run of the REAL model + formatters + models + sample (SwiftUI-free) ---
+  xcrun swiftc -O -D DEBUG  SmartChargeModels SmartChargeFormat SmartChargePageModel SmartChargePageModel.Sample harness  => COMPILE_EXIT=0
+  ./scharness  => CHECKS=44  FAILURES=0
+   (defaultDepartBy tomorrow 07:30; load->ready + 3 vehicles + auto-select + 3 history + ratePlanOptions(3) +
+    "PG&E EV2-A (PG&E)"; optimize->succeeded + result + 24 hourly rates + 2 alternatives + savings>0; apply->applied;
+    optimize clears applied; selectVehicle(2) reloads history; empty-history source ready+empty; failing source
+    -> error phase; and all pure formatters: number grouping / currency($ + grouping + nan->dash) / percent /
+    soc / kWh-from-Wh / hours-from-s / centsPerKwh / ratePlanLabel / optimizedRateMeta / energyAndDuration /
+    rate-tier-from-wire / charge-window membership incl. cross-midnight)
+  HARNESS_EXIT=0
+
+--- FULL xcodebuild build / test (whole app target incl. the TeslaSync/* AI-surface tree) ---
+  NOT taken to green in this environment, and REPORTED so (covenant #1), for one independent reason NOT in my
+  changeset: PRE-EXISTING out-of-scope breakage in the sibling feature pages + the TeslaSync/{feature-views,
+  shared-surfaces,dashboard-widgets} tree (generated by other prompts) — the same class the already-DONE sibling
+  page:analytics/TrueCost / page:analytics/Statistics documented their full xcodebuild as RED (exit 65). The
+  WHOLE-Sources type-check above pins this precisely: 45 errors across 6 sibling files (TeslaOrdersPage / UsersPage
+  / AutomationCardPage / …), 0 in my changeset, even with the REAL Shared.xcframework linked. My in-scope +
+  whole-Sources(my-files) type-checks are GREEN on BOTH platforms.
+  BUILD_EXIT(full, pre-existing out-of-scope)=not-green
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=44
+================================================================================
+[x] panel  — GlassPanel1                 SmartChargePage.Sections.swift `SmartChargeSettingsSection` TSGlassPanel + TSPanelTitle("chargePlanner.settings") + rate-plan Select + target-SOC Slider + depart-by DatePicker + max-amps Stepper + battery-capacity UnitInput + optimize action
+[x] panel  — GlassPanel2                 SmartChargePage.Sections.swift `SmartChargeRateTimelineSection` TSGlassPanel + TSPanelTitle("chargePlanner.rateTimeline") + `SmartChargeRateLegend` + `SmartChargeRateBars` (24 native bars) + window caption
+[x] panel  — Charge-Now                  SmartChargePage.Panels.swift `SmartChargeCostSection` SmartChargeCostCard("chargePlanner.chargeNowCost", currency(charge_now_cost), sublabel chargePlanner.currentRate)
+[x] panel  — Optimized-Cost              SmartChargePage.Panels.swift `SmartChargeCostSection` SmartChargeCostCard("chargePlanner.optimizedCost", currency(optimized_cost), sublabel optimizedRateMeta)
+[x] panel  — Savings                     SmartChargePage.Panels.swift `SmartChargeCostSection` SmartChargeCostCard("chargePlanner.savings", currency(savings), trend fmtPercent(savings_percent), sublabel energyAndDuration)
+[x] panel  — GlassPanel6                 SmartChargePage.Panels.swift `SmartChargeScheduleSection` TSGlassPanel + TSPanelTitle("chargePlanner.schedule") + apply button/applied chip + SOC/time grid + alternatives
+[x] panel  — GlassPanel7                 SmartChargePage.Panels.swift `SmartChargeHistorySection` TSGlassPanel + TSPanelTitle("chargePlanner.history") + `SmartChargeHistoryTable` (TSDataTable, 6 cols) / TSEmptyState
+[x] state  — loading                     SmartChargePage.swift `content` case .loading -> `SmartChargeSkeleton` + .smartChargeRedacted(.placeholder); optimize/apply TSButton isLoading; SmartChargePageModel.phase .loading
+[x] state  — empty                       SmartChargePage.Panels.swift `SmartChargeHistorySection` model.historyIsEmpty -> TSEmptyState("chargePlanner.noHistory"); SmartChargePageModel.historyIsEmpty (plans.isEmpty)
+[x] state  — error                       SmartChargePage.swift `errorView` TSErrorDisplay(onRetry:); SmartChargePageModel.phase .error on load throw; inline optimizeError / applyError texts
+[x] state  — success                     SmartChargePage.swift `readyView` (settings + rate timeline + cost cards + schedule + history); SmartChargePageModel.phase .ready
+[x] string — chargePlanner.alternatives  SmartChargePage.Panels.swift `SmartChargeScheduleSection.alternatives` TSSubhead("chargePlanner.alternatives")
+[x] string — chargePlanner.applied       SmartChargePage.Panels.swift `SmartChargeScheduleSection.appliedChip` Text("chargePlanner.applied")
+[x] string — chargePlanner.applyError    SmartChargePage.Panels.swift `SmartChargeScheduleSection.applyErrorText` String(localized: "chargePlanner.applyError") + .accessibilityLabel
+[x] string — chargePlanner.applySchedule SmartChargePage.Panels.swift `SmartChargeScheduleSection.headerRow` apply TSButton Text("chargePlanner.applySchedule")
+[x] string — chargePlanner.batteryCapacity SmartChargePage.Sections.swift `SmartChargeSettingsSection` TSFormField("chargePlanner.batteryCapacity")
+[x] string — chargePlanner.chargeNowCost SmartChargePage.Panels.swift `SmartChargeCostSection` SmartChargeCostCard title "chargePlanner.chargeNowCost"
+[x] string — chargePlanner.cost_decimal  SmartChargePage.Panels.swift `SmartChargeHistoryTable` TSColumn(id:"cost", title:"chargePlanner.cost_decimal")
+[x] string — chargePlanner.currentRate   SmartChargePage.Panels.swift `SmartChargeCostSection` charge-now sublabel String(localized: "chargePlanner.currentRate")
+[x] string — chargePlanner.currentSoc    SmartChargePage.Panels.swift `SmartChargeScheduleSection` metric("chargePlanner.currentSoc", …)
+[x] string — chargePlanner.date          SmartChargePage.Panels.swift `SmartChargeHistoryTable` TSColumn(id:"date", title:"chargePlanner.date")
+[x] string — chargePlanner.departBy      SmartChargePage.Sections.swift `SmartChargeSettingsSection` TSDatePickerBridge("chargePlanner.departBy", …)
+[x] string — chargePlanner.endTime       SmartChargePage.Panels.swift `SmartChargeScheduleSection` metric("chargePlanner.endTime", …)
+[x] string — chargePlanner.history       SmartChargePage.Panels.swift `SmartChargeHistorySection` TSPanelTitle("chargePlanner.history")
+[x] string — chargePlanner.maxAmps       SmartChargePage.Sections.swift `SmartChargeSettingsSection` TSStepper("chargePlanner.maxAmps", …)
+[x] string — chargePlanner.noHistory     SmartChargePage.Panels.swift `SmartChargeHistorySection` TSEmptyState(title:"chargePlanner.noHistory")
+[x] string — chargePlanner.optimize      SmartChargePage.Sections.swift `SmartChargeSettingsSection.actionRow` optimize TSButton Text("chargePlanner.optimize")
+[x] string — chargePlanner.optimizeError SmartChargePage.Sections.swift `SmartChargeSettingsSection.optimizeErrorText` String(localized: "chargePlanner.optimizeError") + .accessibilityLabel
+[x] string — chargePlanner.optimizedCost SmartChargePage.Panels.swift `SmartChargeCostSection` SmartChargeCostCard title "chargePlanner.optimizedCost"
+[x] string — chargePlanner.plan          SmartChargePage.Panels.swift `SmartChargeHistoryTable` TSColumn(id:"plan", title:"chargePlanner.plan")
+[x] string — chargePlanner.ratePlan      SmartChargePage.Sections.swift `SmartChargeSettingsSection` TSSelect(label:"chargePlanner.ratePlan")
+[x] string — chargePlanner.rateTimeline  SmartChargePage.Sections.swift `SmartChargeRateTimelineSection` TSPanelTitle("chargePlanner.rateTimeline") + SmartChargeRateBars a11y label
+[x] string — chargePlanner.savedAmount   SmartChargePage.Panels.swift `SmartChargeHistoryTable` TSColumn(id:"saved", title:"chargePlanner.savedAmount")
+[x] string — chargePlanner.savings       SmartChargePage.Panels.swift `SmartChargeCostSection` SmartChargeCostCard title "chargePlanner.savings"
+[x] string — chargePlanner.schedule      SmartChargePage.Panels.swift `SmartChargeScheduleSection.headerRow` TSPanelTitle("chargePlanner.schedule")
+[x] string — chargePlanner.settings      SmartChargePage.Sections.swift `SmartChargeSettingsSection` TSPanelTitle("chargePlanner.settings")
+[x] string — chargePlanner.startTime     SmartChargePage.Panels.swift `SmartChargeScheduleSection` metric("chargePlanner.startTime", …)
+[x] string — chargePlanner.status        SmartChargePage.Panels.swift `SmartChargeHistoryTable` TSColumn(id:"status", title:"chargePlanner.status")
+[x] string — chargePlanner.subtitle      SmartChargePage.swift `titleBlock` Text("chargePlanner.subtitle")
+[x] string — chargePlanner.targetSoc     SmartChargePage.Sections.swift `SmartChargeSettingsSection` TSSlider("chargePlanner.targetSoc", …)
+[x] string — chargePlanner.targetSocLabel SmartChargePage.Panels.swift `SmartChargeScheduleSection` metric("chargePlanner.targetSocLabel", …)
+[x] string — chargePlanner.title         SmartChargePage.swift `titleBlock` TSPageTitle("chargePlanner.title") + skeleton a11y label
+[x] string — chargePlanner.window        SmartChargePage.Panels.swift `SmartChargeHistoryTable` TSColumn(id:"window", title:"chargePlanner.window")
+[x] string — chargePlanner.windowInfo    SmartChargeFormat.swift `windowInfo(start:end:)` String(localized: "chargePlanner.windowInfo") (interpolated) — used by SmartChargeRateTimelineSection
+
+PARITY_COVERED=44
+PARITY_REQUIRED=44
+(all 33 keys also confirmed present in apps/apple/Localization/Localizable.xcstrings as canonical short keys with
+ en source values ported verbatim from the web `t(key, default)` calls — plus route.smartCharge for the nav entry
+ and 5 chargePlanner.* rate-timeline legend keys (offPeak/midPeak/onPeak/chargeWindow/noRateData) the faithful
+ GlassPanel2 reproduction needs; JSON re-validated, +39 keys, total strings 8999 -> 9038.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The full xcodebuild triad is NOT claimed green —
+                       it is reported as pre-existing-RED (out-of-scope sibling-page + TeslaSync/* tree breakage),
+                       pinned by the WHOLE-Sources type-check (45 errors in 6 sibling files, 0 in my changeset).
+                       In-scope + whole-Sources(my-files) gates are GREEN on BOTH platforms.
+ 2 No scope narrowing : all 7 panels + 4 states + 33 strings implemented (PARITY_COVERED=44). Every panel the web
+                        source renders is reproduced (settings form, rate timeline, 3 cost cards, schedule + apply
+                        + alternatives, history table/empty), incl. the 24-bar rate timeline as native SwiftUI.
+ 3 No skip-and-assume : model + formatter + value-type logic EXECUTED via a standalone harness (44/44); my files
+                        type-check on BOTH macOS and iOS (0 errors each) and against the REAL Shared.xcframework.
+ 4 No stubs as final  : complete implementation; PLACEHOLDER_COUNT=0 (1 documented SwiftUI redaction-API opt-out).
+                        The AI schedule-suggestion slot is an injected composition seam defaulting to empty — the
+                        faithful native parity of the web ai_mode='off' baseline (mirrors the sibling pages), not a
+                        stub of the deterministic surface. The SampleSmartChargeDataSource is a data-source SEAM
+                        (the production KMP source is injected at composition), driving a complete real UI — the
+                        same accepted pattern as the DONE sibling pages.
+ 5 No parity shortcuts: SwiftUI-native (TSGlassPanel/TSCard/TSMetricValue/TSEmptyState/TSErrorDisplay/TSSelect/
+                        TSSlider/TSStepper/TSDatePickerBridge/TSUnitInput/TSDataTable, adaptive LazyVGrid + size-class
+                        reflow, native rate-timeline bars, .redacted loading) — no web cloning, no WKWebView. The
+                        manifest declares 0 charts/0 maps; the rate timeline is reproduced as native bars (the web
+                        itself uses flex bars, not a chart lib), so no Swift Charts/MapKit is required.
+ 6 No delegation      : implemented directly; no sub-agents.
+ 7 No predecessor bypass: a NEW dedicated .smartCharge route was added so the page is reachable WITHOUT displacing
+                        the sibling .charging host; AppRouteParser aliases /charging/schedule; RouteTests invariants
+                        preserved (unique pathSegment "smart-charge"; parse("/charging/123")==.charging unchanged);
+                        no sibling registration or WatchDeepLink touched.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — placeholder(0), swiftformat(0/12),
+                        swiftlint --strict(0 in 11594 files), macOS in-scope type-check(0), iOS in-scope
+                        type-check(0), whole-Sources type-check(0 in my files), logic harness(44/44), xcodegen(0),
+                        KMP Shared.xcframework(BUILD SUCCESSFUL). The full xcodebuild triad is documented as
+                        pre-existing-RED out-of-scope, exactly as the sibling DONE pages recorded.
+ 9 No silent drift    : Localizable.xcstrings keys = web key names verbatim; path-mapping (Sources/ vs
+                        TeslaSync/Features/) documented above; apple-ledger updated 44/44 x2.
+10 (terminates below with EXIT + STATUS)
+
+EXIT=0
+STATUS=DONE

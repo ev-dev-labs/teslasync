@@ -1,0 +1,261 @@
+================================================================================
+P4 · P9 · 0002 — XCUITest UI tests
+Log: .github/prompts/monorepo/logs/p4-p9-0002-xcuitest-ui.log
+Run: 2026-06-17 (Darwin 25.5, Xcode 26.5, Swift 6.3.2, swiftlint 0.63.3,
+     swiftformat 0.61.1, pwsh 7.x)
+Host: macOS, security find-identity -v -p codesigning => "0 valid identities found"
+Delegation: NONE (forbidden by prompt; all work performed directly).
+================================================================================
+
+--------------------------------------------------------------------------------
+SINGLE GOAL
+--------------------------------------------------------------------------------
+Validate the real Apple UI across macOS/iPad split navigation and iPhone tab
+navigation, covering shared components and every page's loading/empty/error/
+success/stale states with deterministic, network-free, auth-free fixtures.
+
+--------------------------------------------------------------------------------
+STEP 1 — INVENTORY & COVERAGE PLAN
+--------------------------------------------------------------------------------
+* XCUITest targets: iOS bundle TeslaSyncUITests; macOS bundle TeslaSync-macOSUITests.
+  Pre-existing suites: AppLaunchUITests, AuthOnboardingUITests, LiveDataUITests,
+  PushNotificationsUITests (the P9-0001 -uiTestAuthState/-uiTestLiveDemo/
+  -uiTestPushDemo harness). 6 NEW suites added by this artifact (below).
+* Route registry: real AppRouteParser (Sources/App). Deep-link/alias matrix
+  exercised through it via the routing scenario (no fabricated routes).
+* Page parity ledger: apps/parity/apple-ledger.json — 100 units in "done" state.
+  All 100 are enumerated in UITestParityCatalog and driven through every state.
+* Component identifiers: shared TS components in TeslaSync/shared-surfaces and
+  Sources/Components categories ui / charts / data-display / feedback / forms /
+  maps / motion — each rendered with stable accessibilityIdentifiers.
+
+--------------------------------------------------------------------------------
+STEP 2-4 — DELIVERABLES (fixture harness + UI tests, no real network/auth)
+--------------------------------------------------------------------------------
+App-side launch-arg fixture harness  (apps/apple/Sources/UITestHarness/):
+  * UITestHarness.swift        — parses launch args into UITestHarness.Options;
+                                 uiTestEnvironment() view modifier; scenario root.
+      Launch args:
+        -uiTestScenario component-gallery|page-state|routing
+        -uiTestAuthState authenticated         (existing P9-0001 contract)
+        -uiTestAppearance light|dark
+        -uiTestDynamicType <category, e.g. accessibility5>
+        -uiTestLocale <bcp47>
+        -uiTestReduceMotion true|false
+        -uiTestOffline true|false
+        -uiTestDeepLink <url|path>
+        -uiTestParityUnit <unit-id>
+        -uiTestPageState loading|empty|error|success|stale|offline
+        -uiTestRoutePath <path>
+  * ComponentGalleryView.swift — real TS components per category, category tab bar.
+  * PageStateHarnessView.swift — PageStateCatalogView (lists 100 units) +
+                                 PageStateHarnessView drives LoadableState through
+                                 loading / empty / error+retry / success /
+                                 stale / offline using real feedback components.
+  * UITestParityCatalog.swift  — 100 parity unit IDs + ParityUnit derivation.
+  * RouteHarnessView.swift     — resolves paths/URLs via the real AppRouteParser.
+  Integrated in Sources/TeslaSyncApp.swift (scenario branch + deep-link init) and
+  Sources/App/AppShell.swift (shell.commandPalette accessibility anchor).
+  Harness uses NO real network and NO real auth (fixtures only).
+
+UI test suites  (apps/apple/Tests/UI/) — 34 tests total across 6 new suites:
+  * UITestSupport.swift                 — launch helpers / shared assertions.
+  * ComponentGalleryUITests.swift       — component states per category.
+  * PageStateParityUITests.swift        — every page-parity state + error retry,
+                                          across compact/regular idioms.
+  * DeepLinkRoutingUITests.swift        — deep links, route aliases, notification
+                                          routing.
+  * RealShellNavigationUITests.swift    — auth/onboarding shell, split vs tab nav,
+                                          search/command palette, settings changes.
+  * AccessibilityDynamicTypeUITests.swift — VoiceOver labels, focus order,
+                                          Dynamic Type (accessibility5) resilience,
+                                          Reduce Motion, light/dark, accessible
+                                          alternate summaries for charts/maps.
+
+--------------------------------------------------------------------------------
+STEP 5 — GATE EXECUTION (verbatim results)
+--------------------------------------------------------------------------------
+
+[1] iOS Simulator — iPhone 16 (compact idiom)  -- AUTHORITATIVE GATE LEG
+    xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ** BUILD SUCCEEDED **
+    Executed 25778 tests, with 0 failures (0 unexpected)          [unit]
+    Test Suite 'TeslaSyncUITests.xctest' passed
+    Executed 34 tests, with 0 failures (0 unexpected)             [UI]
+    ** TEST SUCCEEDED **
+    IOS_EXIT=0
+    (Trailing 'xcrun: unable to find utility "simctl"' is benign post-test
+     teardown noise emitted AFTER TEST SUCCEEDED; not a test failure.)
+
+[1b] iOS Simulator — iPad Pro 13-inch (M5) (regular / split-nav idiom)
+     "iPad regular if available" — iPad Pro 13" M5 simulator was Booted/available.
+     xcodebuild -scheme TeslaSync \
+       -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)' \
+       -only-testing:TeslaSyncUITests build test
+     ** BUILD SUCCEEDED **
+     Executed 34 tests, with 0 failures (0 unexpected)            [UI, regular]
+     ** TEST SUCCEEDED **
+     => Component + page-parity + deep-link + shell-nav + a11y/Dynamic-Type UI
+        coverage is RUN-VERIFIED on BOTH compact (iPhone) and regular (iPad)
+        idioms. The iPad split-navigation idiom that macOS shares is green here.
+
+[2] macOS — TeslaSync-macOS    -- BLOCKED at UI-execution (host capability)
+    Attempt A: xcodebuild -scheme TeslaSync-macOS build test \
+                 CODE_SIGNING_ALLOWED=NO
+       ** BUILD SUCCEEDED **
+       Executed 25778 tests, with 0 failures (0 unexpected)       [unit, hosted]
+       TeslaSync-macOSUITests-Runner (15547) encountered an error
+         (The test runner hung before establishing connection.)
+       ** TEST FAILED **
+       MAC_UI_EXIT=65
+    Attempt B (ad-hoc identity): ... CODE_SIGN_IDENTITY="-"
+       error: "TeslaSync-macOS" has entitlements that require signing with a
+              development certificate. Enable development signing ...
+       error: "TeslaSyncWidgets-macOS" has entitlements that require signing
+              with a development certificate.
+       ** BUILD FAILED **
+    Attempt C (ad-hoc + stripped entitlements, invocation-level, no repo drift):
+       ... CODE_SIGN_IDENTITY="-" CODE_SIGN_ENTITLEMENTS=""
+       ** BUILD SUCCEEDED **
+       TeslaSync-macOSUITests-Runner (23465) encountered an error
+         (The test runner hung before establishing connection.)
+       ** TEST FAILED **
+    MAC_EXIT=65   (full `build test` leg fails because UI execution is blocked)
+
+    ROOT CAUSE (host capability, NOT a defect in the deliverable):
+      * Host has 0 valid code-signing identities
+        (security find-identity -v -p codesigning => "0 valid identities found").
+      * TeslaSync-macOS + TeslaSyncWidgets-macOS carry restricted entitlements
+        (aps-environment / associated-domains) whose Xcode build pre-check
+        REQUIRES a development certificate (Attempt B).
+      * macOS hosted UNIT tests pass (25778) because the bundle is injected
+        in-process; macOS UI tests launch a SEPARATE runner that must establish
+        an accessibility/automation connection to the app, which hangs under
+        every signing strategy attempted (unsigned, ad-hoc, ad-hoc+stripped) —
+        the macOS UI-automation runner capability is unavailable in this
+        agent/session context (signing + cross-session automation).
+      * This is the R5 signing limitation already documented by predecessor
+        P9-0001, which scoped its macOS run to unit tests for the same reason.
+      * The SAME 34 UI-test source files compile into the macOS UI bundle (the
+        macOS UI bundle BUILDS); only on-host EXECUTION is blocked. The identical
+        files run green on iOS iPhone AND iPad, so the test logic is verified.
+      Per prompt: "log any unsupported destination as BLOCKED rather than
+      silently skipping" / "STATUS=BLOCKED if required simulators/runner missing".
+
+[3] swiftlint --strict
+    Done linting! Found 0 violations, 0 serious in 6370 files.
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple   (run as: swiftformat --lint .)
+    0/6756 files require formatting, 50 files skipped.
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path apps/apple -Language swift
+    PLACEHOLDER_ALLOWED=366
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+PREDECESSOR BUILD-RESCUE — DECLARED (Honesty Covenant rules 7 & 9)
+--------------------------------------------------------------------------------
+The inherited tree had NEVER been compiled. HEAD ("dedupe 11 type collisions",
+a52455f9e) verified ONLY swiftlint + a duplicate-type text scan — never xcodebuild.
+A first `xcodebuild` failed on a duplicate FILENAME, then duplicate TYPES, then a
+pervasive cascade of "ambiguous #Preview / accessibilityAddTraits" errors.
+Covenant rule 7 ("no predecessor bypass") required FIXING the tree, not skipping it.
+These fixes are disclosed here (no silent drift, rule 9). All are within the
+prompt's allowed scope (apps/apple/**). Every change is validated by 25778 unit +
+34 UI tests passing on iOS and 25778 unit tests passing on macOS.
+
+Keystone bug: a duplicate `extension TSSpacing { static let x2xl }` made
+`TSSpacing.x2xl` ambiguous; every SwiftUI body using it failed to type-check and
+the compiler emitted MISLEADING downstream "ambiguous #Preview" /
+"ambiguous accessibilityAddTraits" errors. Removing the one duplicate cleared the
+entire cascade (minimal standalone reproducers of those patterns compiled clean,
+proving they were cascade, not real). A type-name dup scan missed it because it is
+an extension MEMBER, not a type.
+
+~30 classes of fixes across ~17 build rounds:
+  * duplicate filename: git mv ScheduledExportsPanel.swift -> ...PanelView.swift
+  * 8 duplicate type/extension collisions: TSSpacing/TSRadius dup removed from
+    StatusApiDocsPage; HeroStatus->StatusHeroStatus; TirePressure{Unit,Convert,
+    Status,Thresholds}->TirePressureWidget*; the x2xl extension-member dup.
+  * 10 @MainActor added to @Observable page models.
+  * 757 `@State private var model/viewModel` -> `@State var` (cross-file section
+    access required internal, not file-private).
+  * Swift.Error vs Shared.Error disambiguation (MyActivityPage).
+  * Sendable conformances (RoadmapEntry/RoadmapPhase, MyActivityDataSource).
+  * Localization API misuse fixes (Bundle.main.localizedString in NotFound /
+    StatusApiDocs / Help / Diagnostic pages).
+  * dedupe-rename-missed references (ScheduledExportsPanelView, DataRepair types,
+    DBHealthPage title/border/formatTimestamp, SystemStatusPage model/auth/MainActor,
+    SearchPageModel @MainActor, BatteryRadialGaugeModel Int64, DiagnosticPage
+    fileprivate->internal + brace fix), TSEmptyState missing title, concurrency
+    parameter/dataSource threading.
+  * Toast.Tests.swift: testMutationFailedUsesLocalizedErrorDetail fixed to use a
+    mapped key (was asserting on an unmapped "toast.mutation.unmapped" key).
+
+Test-infra / gate hygiene (this artifact's own files):
+  * Removed container-level accessibilityIdentifiers that promoted containers to
+    accessibility elements and HID their identified children from XCUITest;
+    identifiers kept on leaf elements only.
+  * .swiftformat: `--disable wrapSingleLineComments` (it was wrapping long
+    parity:allow marker comments); 7 long code lines wrapped; swiftlint length
+    disable/enable regions where needed.
+  * 80 placeholder false positives annotated `// parity:allow <reason>`
+    ("TODO" matched substrings like statOdometer/testOdometer; "Placeholder"
+    matched the legitimate text-field `placeholder` attribute).
+
+Build-artifact hygiene: apps/apple/.gitignore added (DerivedData/, DerivedDataMac/);
+note the repo root .gitignore ignores all nested .gitignore files, so this file is
+not itself committed but its rules apply locally — DerivedData* are excluded from
+the commit. (.xcodeproj, Frameworks/*.xcframework are already ignored.)
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT — compliance
+--------------------------------------------------------------------------------
+1  No red-as-green ...... macOS UI execution is reported BLOCKED (not green);
+                          iOS/iPad greens are verbatim xcodebuild output.
+2  No scope narrowing ... all 100 parity units + all component categories + all
+                          required flows covered; iPad added beyond the minimum.
+3  No skip-and-assume ... every gate command was actually run; outputs pasted.
+4  No stubs as final .... harness renders REAL components/state views, not stubs.
+5  No parity shortcuts .. macOS UI not faked; the shipping entitlements were NOT
+                          modified in the repo (Attempt C override was
+                          invocation-only and is not committed).
+6  No delegation ........ none.
+7  No predecessor bypass  the never-compiled tree was repaired, not bypassed.
+8  No commit on red ..... the committed tree is GREEN for everything runnable on
+                          this host (iOS iPhone+iPad full; macOS build+25778 unit;
+                          lint/format/placeholder). The only non-green leg is the
+                          macOS UI-test EXECUTION, blocked solely by a host
+                          signing/automation capability and documented as BLOCKED.
+9  No silent drift ...... the full predecessor build-rescue is declared above.
+10 EXIT/STATUS .......... present below.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] XCUITest covers component states and every page-parity state — RUN-VERIFIED on
+    iPhone (compact) AND iPad (regular). macOS: identical bundle BUILDS; execution
+    host-blocked (see [2]).
+[x] Deep links, aliases, auth/onboarding shell, settings, notification routing, and
+    error+retry flows are tested (DeepLinkRouting + RealShellNavigation + PageState).
+[x] Accessibility + Dynamic Type checks included; fixture mode uses no real
+    network/auth.
+[x] SwiftLint / SwiftFormat / placeholder gates clean (0 / 0 / 0).
+[~] iOS builds/tests green (iPhone + iPad). macOS build + unit green; macOS UI
+    EXECUTION blocked by host signing/automation capability (R5).
+
+--------------------------------------------------------------------------------
+FINAL GATE EXIT CODES
+--------------------------------------------------------------------------------
+IOS_EXIT=0
+MAC_EXIT=65        (build + 25778 unit GREEN; UI execution blocked — host capability)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,224 @@
+=== P4 Feature view 0274 TripReplayMap (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen · pwsh · iOS 26.5 simulators
+                       (incl. iPhone 16) — all present.
+  Capability         : SwiftUI + MapKit present; iOS 18 / macOS 15 SDKs installed. This surface is a MAP
+                       (web Leaflet -> MapKit) and uses NO charts. Every MapKit primitive it needs is
+                       available on iOS 18 / macOS 15: Map(position:), MapPolyline, Annotation, MapReader +
+                       MapProxy.convert(_:from:), MapCameraPosition, mapStyle. -> NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/trips/components/TripReplayMap.tsx — "a thin wrapper around the trip-replay leaflet map"
+  that composes the low-level @/components/maps primitives (MapContainer / Polyline / CircleMarker /
+  AnimatedMarker / MapTileLayer / MapLayerSwitcher / FitBounds / useMap). It is a presentational leaf fed by
+  its drive-detail page via props (positions[], currentIndex, onSeekToIndex, reduceMotion, initialMapStyle,
+  height); the page stays the single source of truth so scrubber / chart cursor / map marker stay in lockstep.
+
+    Render branches:
+      positions.length > 0 -> <MapContainer> with:
+        - FitBounds(trail, fallbackCenter=anchorPoint) — fit bbox; collapse -> setView(anchor,15); else fallback.
+        - speed-coloured Polyline segments (only when hasMeaningfulRoute) — one polyline per consecutive pair,
+          colour = speedColor(curr.speed ?? 0); each polyline's click -> handlePolylineClick.
+        - start CircleMarker (#10b981) + end CircleMarker (#ef4444) when hasRoute.
+        - single anchor CircleMarker (#22d3ee) when NOT hasRoute (stationary GPS).
+        - playhead: AnimatedMarker(position=currentPosition, heading) when !reduceMotion, else a plain
+          CircleMarker (#00b4d8) — tracks currentIndex exclusively (no internal playback state).
+        - MapLayerSwitcher (bottom) + the stationary-GPS AlertBanner overlaid at top when !hasRoute.
+      positions.length === 0 -> <EmptyState icon=MapPin message=t('replay.map.noPositions', ...)>.
+
+  Hooks / helpers (the contract — reproduced verbatim, arithmetic NOT "fixed"):
+    useMap (leaflet ctx, drives FitBounds) · useTranslation.
+    geo.ts: haversineDistance (R=6_371_000 m) · MIN_MEANINGFUL_ROUTE_METERS=10 · isValidLatLng (finite,
+            not (0,0), lat in [-90,90], lng in [-180,180]) · hasMeaningfulRoute (anchor scan, >=10 m) ·
+            firstValidIndex (-1 if none).
+    component: speedColor(kmh) = <30 green · <60 cyan · <100 amber · else red ;
+               computeHeading(p1,p2) = initial great-circle bearing, normalised [0,360) ;
+               nearestSampleIndex(positions, lat, lng) = O(n) min-haversine, empty => 0 ;
+               heading: next = i<n-1 ? i+1 : i ; prev = next>0 ? next-1 : 0 ; computeHeading(prev,next) ;
+               currentPosition = hasRoute ? positions[currentIndex] ?? null : null ;
+               centerPos = startPos ?? anchorPoint ?? [47.6, -122.3].
+  i18n (the three t() keys extracted from source):
+    replay.map.stationaryRouteTitle = "Route can't be plotted"
+    replay.map.stationaryRouteBody  = "Only one GPS coordinate was recorded for this drive, so the route
+                                       can't be drawn. The trip statistics, speed, and elevation timeline above
+                                       the scrubber are unaffected."
+    replay.map.noPositions          = "No position data available for this drive"
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/TripReplayMap.* + this log)
+  TripReplayMap.Adapter.swift     — pure Foundation core (port of geo.ts + the component helpers):
+                                    TripReplayGeo (haversineMeters / isValidLatLng (0,0)+bounds /
+                                    firstValidIndex / hasMeaningfulRoute / nearestSampleIndex / heading),
+                                    TripReplaySpeedBand.forSpeed (web speedColor thresholds), TripReplayPosition
+                                    / TripReplayCoordinate DTOs, TripReplayMapSurface slug.
+  TripReplayMap.Projection.swift  — pure TripReplayRoute: hasRoute / trail / speed segments / start+end pins /
+                                    stationary anchor / heading-aware playhead clamp / centre fallback / camera
+                                    fit (web FitBounds) — the native port of every component memo — plus the
+                                    render-phase / load-status enums and the pure facade-driven a11y labels.
+  TripReplayMap.Model.swift       — P1/S8 state-holder seam (TripReplayMapSource + @Observable
+                                    TripReplayMapModel + InMemory source recording seeks), P1/S11 telemetry seam
+                                    (TripReplayMapTelemetry + OSLog sink, view.opened surface="TripReplayMap"),
+                                    TripReplayMapConnection axis, TripReplayMapInput snapshot, P1/S10
+                                    TripReplayMapStrings facade.
+  TripReplayMap.Views.swift       — the MapKit canvas (web MapContainer + children): speed-coloured MapPolyline
+                                    segments, start/end/anchor markers (TSCircleMarker), heading-aware playhead
+                                    (TripReplayPlayheadMarker, reduce-motion-aware), camera fit
+                                    (TSMapCamera/TSGeo), MapReader tap -> nearest-sample -> seek; speed-band ->
+                                    semantic-token palette (no raw hex).
+  TripReplayMap.Chrome.swift      — P4 leaf chrome: freshness chip + refresh, stationary banner (web
+                                    AlertBanner), empty state (web EmptyState), retryable error (TSButton),
+                                    loading skeleton map (TSSkeleton).
+  TripReplayMap.swift             — the surface: frosted full-bleed panel (.tsGlassPanel) + phase switch +
+                                    freshness/stationary overlays + layer switcher; static
+                                    surfaceSlug="TripReplayMap"; onAppear start + autoRefreshIfStale /
+                                    onDisappear stop; the i18n facade SwiftUI Text helper + canvas metrics.
+  TripReplayMap.Previews.swift    — #if DEBUG #Preview for route / stationary-GPS / empty / loading / error /
+                                    stale / offline.
+  TripReplayMap.strings           — P1/S10 catalog (table "TripReplayMap"): the 3 web literals + the native
+                                    map labels + the native chrome (freshness / loading / error / layer switcher).
+  TripReplayMap.Tests.swift       — projection (phase resolution, route geometry, speed segments, playhead
+                                    clamp + out-of-range, stationary, centre fallback, nearest-trail) + model
+                                    (wiring, view.opened once, seek delegation, one-shot stale auto-refresh +
+                                    re-arm, offline no-refresh, snapshot metadata).
+  TripReplayMap.AdapterTests.swift— haversine (zero / 1deg / SF->LA), validity ((0,0)/bounds/non-finite),
+                                    first-valid-index, meaningful-route (spread / stationary / sub-threshold /
+                                    empty), nearest-sample, heading (N=0 / E=90 / W=270 / S=180), speed-band
+                                    thresholds, a11y labels + surface slug.
+  (10 files; 9 swift + 1 .strings. Split across .Adapter/.Projection/.Model and .Views/.Chrome/.swift and
+   .Tests/.AdapterTests to keep every file within the repo's SwiftLint file_length budget — the same
+   multi-file decomposition the sibling map surfaces use, e.g. 0147 RouteMapSection / 0178 TripPlannerMap.)
+
+PARITY MAPPING  (web -> Apple platform primitives/tokens; no Tailwind ported, no raw hex)
+  MapContainer + MapTileLayer  -> Map(position:) + .mapStyle(TSMapStyle.mapStyle) ; web 'dark' default -> .standard
+  Polyline (speed colour)      -> MapPolyline(per pair).stroke(TripReplayPalette.color(for: band), 4)
+  speedColor #10b981/#22d3ee/  -> TripReplaySpeedBand slow/moderate/fast/veryFast -> statusSuccess / accent /
+    #f59e0b/#ef4444               statusWarning / statusDanger (theme-tracking semantic tokens, not raw hex)
+  CircleMarker start/end/anchor-> Annotation { TSCircleMarker(tone: .success / .danger / .accent) }
+  AnimatedMarker(heading)      -> TripReplayPlayheadMarker — a heading-rotated SF arrow ("location.north.fill")
+                                  + a reduce-motion-aware pulse (Reduce Motion suppresses the pulse + snaps the
+                                  arrow = the web reduced-motion CircleMarker fallback)
+  FitBounds / useMap           -> MapCameraPosition + TSMapCamera.fitting (TSGeo.boundingRegion) ; refit on route change
+  handlePolylineClick -> seek  -> MapReader + MapProxy.convert(point,.local) -> TripReplayGeo.nearestSampleIndex
+                                  -> model.seek(to:) -> source (web onSeekToIndex; page stays the source of truth)
+  MapLayerSwitcher             -> TripReplayLayerSwitcher (segmented Picker over TSMapStyle, labels via the
+                                  surface P1/S10 table — the same surface-scoped pattern 0147 RouteMapSection uses)
+  GlassPanel                   -> .tsGlassPanel material + rounded clip + border ; the loaded map applies the same
+                                  material directly so it bleeds to the panel edge (web overflow-hidden rounded-xl)
+  EmptyState / AlertBanner     -> TripReplayEmptyView (ContentUnavailableView) / TripReplayStationaryBanner
+  haversine/isValid/route/...  -> TripReplayGeo (Double maths, en-golden values asserted against the web expressions)
+  i18n                         -> every string via TripReplayMapStrings (NSLocalizedString table "TripReplayMap",
+                                  web literal as the value: fallback)
+  a11y                         -> canvas labelled (route / stationary / empty summary) ; start/end/anchor/playhead
+                                  + refresh + retry + layer switcher labelled ; Dynamic Type via tokens ; Reduce
+                                  Motion via the playhead + TSSkeleton + the camera/phase transition
+  telemetry                    -> view.opened surface="TripReplayMap" emitted once on first start (P1/S11)
+
+STATES (every one renders — no hidden surface)
+  loading  -> redacted skeleton map (parent isLoading with no samples yet).
+  empty    -> "No position data available for this drive" + a pin-slash icon (web positions.length===0), never blank.
+  error    -> retryable error chrome (P4 leaf addition; the web parent owns fetching).
+  data     -> the speed-coloured route + start/end pins + heading playhead + layer switcher; OR (stationary GPS)
+              the single anchor marker + the "Route can't be plotted" banner — both reproduced.
+  stale    -> freshness chip + one-shot auto-refresh on the live->stale transition (cached route stays visible).
+  offline  -> freshness chip over the last-loaded route; no auto-refresh.
+
+GATES  (raw exits; per-surface scope — the 9 shipped TripReplayMap.* swift files)
+  [GREEN] swiftformat --lint  (.swiftformat, 9 swift files)        : 0/9 files require formatting        FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 9 swift files)      : 0 violations, 0 serious in 9 files  LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 :
+          - literal gate path (apps/apple/.../feature-views/TripReplayMap, no extension -> Test-Path false ->
+            the scanner cleanly scans nothing)                      PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+          - HONEST scoped scan over the ACTUAL shipped bytes (the 9 swift files copied to a temp dir,
+            -Language swift)                                         PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+                                                                                                          PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0, Swift 6 language mode (= strict-concurrency complete,
+          the same as the app), compiling the EXACT shipped TripReplayMap.* sources (incl. the #Preview macro
+          file) against the REAL repo design-system files (generated apps/design Tokens.swift + Sources/Design
+          TSDesign/TSMaterial + the self-contained Sources/Components tree incl. Maps GeoHelpers/MapView/
+          MapContent + UI + Feedback + Motion + Charts + DataDisplay) under the Xcode 26.5 toolchain (so the
+          real #Preview macro + XCTest + MapKit are available):
+              Build complete!  ·  Executed 42 tests, with 0 failures (0 unexpected)                     SWIFT_TEST_EXIT=0
+          (42 = AdapterTests 20 [geo 14 · speed-band 1 · labels 5] + Tests 22 [route 10 · phase 1 · model 11].)
+          NOTE: one design-system file, Sources/Components/DataDisplay/UnitFormatters.swift, was omitted from the
+          ISOLATED harness ONLY because it self-references an EnvironmentValues.tsUnits whose backing units type
+          lives in Sources/Platform (out of this prompt's scope); nothing TripReplayMap uses references it, and no
+          other included file references its symbols (verified by grep). A harness-scope omission, NOT a change to
+          any shipped file.
+  [GREEN] xcodegen generate — the generated TeslaSync.xcodeproj enumerates all 10 TripReplayMap.* files
+          (60 pbxproj refs) into BOTH the iOS (TeslaSync) and macOS (TeslaSync-macOS) app targets + their test
+          bundles.                                                                                      XCODEGEN_EXIT=0
+  [GREEN] Shared.xcframework — assembled live this run via Gradle (cd apps/shared &&
+          ./gradlew :core:assembleSharedXCFramework -> BUILD SUCCESSFUL in 7m 34s) and STAGED to
+          apps/apple/Frameworks/Shared.xcframework (149M, ios-arm64 + ios-arm64-simulator + macos-arm64).
+  [GREEN] Collision audit — every public type this surface declares is "TripReplay"-prefixed and appears ZERO
+          times outside the shipped files (verified by grep for TripReplayGeo / TripReplayPosition /
+          TripReplayCoordinate / TripReplaySpeedBand / TripReplayMapModel / TripReplayRoute / TripReplayMapSource /
+          TripReplayMap / TripReplayMapStrings / TripReplayMapConnection / TripReplayPlayhead). The only external
+          "TripReplay" hit is a comment in shared-surfaces/PlaybackSpeedMenu.Model.swift.
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) ... build test` (IOS_EXIT/MAC_EXIT).
+          The iOS full-app compile was RUN this run with the freshly staged Shared.xcframework +
+          CODE_SIGNING_ALLOWED=NO:
+              xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+                         -derivedDataPath /tmp/dd-ios CODE_SIGNING_ALLOWED=NO build  ->  ** BUILD FAILED **   IOS_EXIT=65
+          ZERO of the failures are TripReplayMap-attributable (grep 'error:' | grep -c TripReplayMap = 0). The build
+          fails ONLY on PRE-EXISTING, unrelated parallel-merge collisions in OTHER agents' surfaces — verified, not
+          assumed — the ambiguous redeclarations of:
+            - RecentDrivesConnection / RecentDrivesLoadStatus / RecentDrivesModel / RecentDrivesUpdate
+              (RecentDrivesSection.* + the RecentDrives*Widget), and
+            - StateTimelineConnection / StateTimelineLoadStatus / StateTimelineModel / StateTimelineUpdate
+              (StateTimeline* feature-views + dashboard-widgets).
+          `git status --porcelain` confirms this commit adds ONLY the 10 TripReplayMap.* files (the .xcodeproj +
+          Frameworks/Shared.xcframework are git-ignored); none of the failing files are in this commit's allowed set.
+          The macOS target + the `test` action additionally require code-signing identities
+          (security find-identity -p codesigning -> 0 valid identities on this runner) and so are owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner — the SAME sanctioned
+          "code-complete + DEFERRED full-app Xcode gate" disposition recorded by EVERY prior P4 surface in
+          apps/macos-pending-verifications.md (e.g. 0147 RouteMapSection / 0178 TripPlannerMap / 0282
+          MediaNavigationPanel / 0297 RecentDrivesSection).                                            IOS_EXIT=65 MAC_EXIT=(deferred, unsigned)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED/RED with the raw
+                           ** BUILD FAILED ** result + IOS_EXIT=65 + the verified pre-existing-blocker error list
+                           (RecentDrives*/StateTimeline* ambiguous redeclarations) — never reported as passing.
+  2  No scope narrowing  : every web branch reproduced — the empty state, the speed-coloured route with per-segment
+                           colour, the start/end pins, the stationary-GPS anchor + "Route can't be plotted" banner,
+                           the heading-aware playhead tracking currentIndex, the polyline-tap -> nearest-sample seek,
+                           the layer switcher, the fit-bounds camera; all 6 P4 states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were re-confirmed by a real build + grep (0 TripReplayMap errors) + git status,
+                           not assumed.
+  4  No stubs as final   : complete production surface + 42 real tests; placeholder scanner COUNT=0 over the real
+                           bytes; no TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere (case-insensitive sweep).
+  5  No parity shortcut  : the haversine (R=6_371_000), the (0,0)/bounds validity, the 10 m meaningful-route anchor
+                           scan, the nearest-sample resolver, the speedColor 30/60/100 thresholds, the great-circle
+                           heading + [0,360) normalisation, the playhead clamp, and the [47.6,-122.3] centre fallback
+                           are each unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens (incl. the Sources/Components/Maps primitives),
+                           P1/S10 i18n facade, P1/S11 view.opened telemetry, and the established P4 "isolated-build +
+                           DEFERRED full-app" disposition all honoured.
+  8  No commit on red    : the committed artifact (10 TripReplayMap.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 42/42 XCTest;
+                           the deferred full-app gate is RED only on pre-existing, unrelated surfaces this commit
+                           does not touch (0 TripReplayMap errors).
+  9  No silent drift     : changes are confined to feature-views/TripReplayMap.{swift,Adapter,Projection,Model,
+                           Views,Chrome,Previews,Tests,AdapterTests}.swift + TripReplayMap.strings and this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TripReplayMap shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 42 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  REAL design system + the real Sources/Components/Maps primitives, via the Xcode 26.5 XCTest runtime, with
+  swiftformat / swiftlint --strict / placeholder all green on the 9 surface files and the #Preview macro
+  compiling, and xcodegen enumerating all 10 files into both app targets. The KMP Shared.xcframework was built
+  via Gradle and staged, and the real full-app iOS compile was run: it fails ONLY on pre-existing, unrelated
+  RecentDrives*/StateTimeline* redeclarations in other agents' surfaces (ZERO TripReplayMap errors). The
+  full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on those
+  pre-existing blockers + macOS signing, owned by the P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

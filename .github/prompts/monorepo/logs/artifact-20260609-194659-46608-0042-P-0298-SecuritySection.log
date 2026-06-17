@@ -1,0 +1,152 @@
+=== P4 Feature view 0298 SecuritySection (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/SecuritySection.{swift,Model,Adapter,Views,Previews,Tests}.swift + .strings
+Web spec : web/src/features/vehicles/components/vehicle-detail/SecuritySection.tsx
+Template : sibling vehicle-detail leaf ClimateSection/0291 (same P4 leaf contract)
+Toolchain: Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.4 · pwsh
+Host     : Darwin arm64 · iPhone 16 simulator available · KMP Shared.xcframework built+staged OK
+
+------------------------------------------------------------------------
+SURFACE SCOPE (allowed files only: SecuritySection.* + this log)
+------------------------------------------------------------------------
+Created (git status --porcelain, excluding generated .xcodeproj / Frameworks / build):
+  ?? apps/apple/TeslaSync/feature-views/SecuritySection.Adapter.swift
+  ?? apps/apple/TeslaSync/feature-views/SecuritySection.Model.swift
+  ?? apps/apple/TeslaSync/feature-views/SecuritySection.Previews.swift
+  ?? apps/apple/TeslaSync/feature-views/SecuritySection.Tests.swift
+  ?? apps/apple/TeslaSync/feature-views/SecuritySection.Views.swift
+  ?? apps/apple/TeslaSync/feature-views/SecuritySection.strings
+  ?? apps/apple/TeslaSync/feature-views/SecuritySection.swift
+All public type names unique across the module (1 defining file each) — no new collisions introduced.
+
+------------------------------------------------------------------------
+STEP 1 — swiftlint --strict        →  LINT_EXIT=0   (PASS)
+------------------------------------------------------------------------
+$ cd apps/apple && swiftlint lint --strict --quiet
+whole-repo swiftlint violations: 0
+SecuritySection violations      : 0
+
+------------------------------------------------------------------------
+STEP 2 — swiftformat --lint apps/apple  →  FORMAT_EXIT=0   (PASS)
+------------------------------------------------------------------------
+$ swiftformat --lint apps/apple
+whole-repo format issues : 0
+SecuritySection format issues: 0
+(SecuritySection.* formatted to project style: wrapPropertyBodies + redundantReturn switch
+ expressions applied; final lint clean.)
+
+------------------------------------------------------------------------
+STEP 3 — check-placeholders.ps1 (SecuritySection)  →  PLACEHOLDER_EXIT=0   (PASS)
+------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SecuritySection
+PLACEHOLDER_EXIT=0
+Explicit per-file scan of the 6 shipped Swift files (-Language swift):
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+No TODO / FIXME / XXX / Placeholder / Lorem ipsum / stub / mock / "not implemented".
+
+------------------------------------------------------------------------
+STEP 4 — xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build test
+         →  IOS_EXIT=65   (BLOCKED — pre-existing sibling-surface collisions, OUT OF SCOPE)
+------------------------------------------------------------------------
+xcodegen generate ......................................... OK (TeslaSync.xcodeproj created)
+Stage Shared.xcframework (Gradle :core:assembleSharedXCFramework) ... BUILD SUCCESSFUL (staged)
+SwiftCompile (target 'TeslaSync') ......................... FAILED (exit 65)
+
+Root cause = duplicate type declarations across TWO pairs of UNRELATED sibling surfaces
+(feature-view ⨯ its dashboard-widget twin), all in COMMITTED files this prompt is NOT
+allowed to modify (allowed files = SecuritySection.* only):
+
+  'RecentDrivesConnection'  is ambiguous for type lookup
+  'RecentDrivesLoadStatus'  is ambiguous for type lookup
+  'RecentDrivesModel'       is ambiguous for type lookup
+  'RecentDrivesUpdate'      is ambiguous for type lookup
+      defined in BOTH (tracked / not mine):
+        TeslaSync/feature-views/RecentDrivesSection.Adapter.swift
+        TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+  'StateTimelineConnection' is ambiguous for type lookup
+  'StateTimelineLoadStatus' is ambiguous for type lookup
+  'StateTimelineModel'      is ambiguous for type lookup
+  'StateTimelineUpdate'     is ambiguous for type lookup
+      defined in BOTH (tracked / not mine):
+        TeslaSync/feature-views/StateTimeline.Adapter.swift
+        TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+
+Attribution to THIS surface:
+  $ grep -cE "SecuritySection.*error:|error:.*SecuritySection" ios-build.log  ->  0
+  Zero compiler diagnostics reference any SecuritySection file. The baseline TeslaSync app
+  target is red independent of this surface; per the prompt these siblings each have their
+  own prompt and are explicitly Out of Scope.
+
+------------------------------------------------------------------------
+STEP 5 — xcodebuild -scheme TeslaSync-macOS build test
+         →  MAC_EXIT=65   (BLOCKED — code-signing capability unavailable on runner)
+------------------------------------------------------------------------
+TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing
+  with a development certificate. Enable development signing in the Signing & Capabilities editor.
+TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+  development certificate. Enable development signing in the Signing & Capabilities editor.
+
+The macOS app + widget targets carry entitlements (App Groups / Hardened Runtime) that require
+a development signing identity; none is provisioned in this headless environment
+(project.yml DEVELOPMENT_TEAM=""). This is a platform-capability blocker, and the macOS target
+also shares the Step-4 sibling sources, so it is doubly blocked by causes outside this surface.
+
+------------------------------------------------------------------------
+INDEPENDENT VERIFICATION OF THIS SURFACE (isolated from the broken siblings)
+------------------------------------------------------------------------
+Because the shared app module cannot link due to the out-of-scope blockers above, the surface
+was verified against the REAL design system (P1/S9 tokens + shared components — NOT stubs),
+excluding only the unrelated broken sibling files.
+
+(a) Compilation — swiftc -typecheck (swift 6, iphonesimulator26.5 SDK, arm64 ios18.0 sim):
+    closure = generated Tokens.swift + Sources/Theme + Sources/Design/{TSDesign,TSMaterial}
+            + Sources/Components/UI/{Typography,Badges,Buttons,Cards}
+            + Sources/Components/Motion/Motion + Sources/Components/Feedback/Skeletons
+    inputs  = SecuritySection.{swift,Model,Adapter,Views,Previews}.swift
+    result  = SRC_TYPECHECK_EXIT=0  (clean, 0 errors)
+
+(b) Tests — assembled a SwiftPM package (same real design closure + SecuritySection sources +
+    SecuritySection.Tests.swift) and ran `swift test` on the host:
+    Test Suite 'SecSurfacePackageTests.xctest' passed
+        Executed 32 tests, with 0 failures (0 unexpected)
+    Coverage:
+      - Adapter parity: Number()-coercion, windowOpenCount (finite & >0; bool/string/absent),
+        door-state label (String()/ '' guard), 4-card projection (value+accent+glyph+order).
+      - Value-text resolver: Yes/No · Active/Off · literal · Closed · "{count} open".
+      - Projector phases: error > loading > empty(no reading) > data; empty-error-string fallthrough.
+      - State holder: start-once telemetry (view.opened=SecuritySection), refresh delegation,
+        push updates phase+connection, one-shot stale auto-refresh.
+      - Accessibility: VoiceOver tile-summary composition (drops empty fragments).
+      - Render smoke: ImageRenderer lays out EVERY state (loading/data/empty/error/stale/offline).
+
+------------------------------------------------------------------------
+ACCEPTANCE CRITERIA (this surface)
+------------------------------------------------------------------------
+[x] All web states reproduced: data(4 tiles) + empty(EmptyState) + the P4 leaf
+    loading/error/stale/offline chrome — each renders (render smoke + 8 previews).
+[x] Binds via shared P1/S8 state-holder seam (SecuritySectionSource); no direct HTTP in the view.
+[x] Every web i18n key present in P1/S10 catalog (SecuritySection.strings):
+    vehicles.detail.security, common.locked, common.yes, common.no, common.sentry,
+    common.active, common.off, vehicles.detail.doors, common.closed, vehicles.detail.windows,
+    vehicles.detail.windowsOpen ("{{count}} open" -> "%lld open"), vehicles.detail.noSecurityData.
+[x] Accessibility labels on every interactive element (header isHeader trait, freshness chip,
+    refresh button, each tile label+value, retry button); Dynamic Type + Reduce Motion honored.
+[x] Tests: adapter unit + per-state render + a11y label (32 passing).
+[x] No TODO/stub/mock/placeholder/Lorem (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened emitted with surface slug "SecuritySection" (P1/S11).
+[~] Full-app xcodebuild gate not green — BLOCKED by out-of-scope sibling collisions (iOS) and
+    missing code-signing capability (macOS); neither is attributable to this surface.
+
+------------------------------------------------------------------------
+GATE STEP EXIT CODES
+------------------------------------------------------------------------
+IOS_EXIT=65          (pre-existing sibling duplicate-type collisions; not this surface)
+MAC_EXIT=65          (code-signing capability unavailable; + shared sibling sources)
+LINT_EXIT=0          (swiftlint --strict, whole repo, 0 violations)
+FORMAT_EXIT=0        (swiftformat --lint apps/apple, 0 issues)
+PLACEHOLDER_EXIT=0   (SecuritySection clean)
+SURFACE_TYPECHECK=0  (isolated, real design system)
+SURFACE_TESTS=PASS   (32/32)
+
+EXIT=65
+STATUS=BLOCKED

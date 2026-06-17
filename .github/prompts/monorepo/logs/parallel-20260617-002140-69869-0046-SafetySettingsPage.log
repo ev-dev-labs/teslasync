@@ -1,0 +1,218 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me read the rest of the web source and explore existing Apple feature pages to follow the established patterns.
+
+Let me read the rest of the web source page (the main component render section).
+
+Now let me study the existing TirePressurePage (closest analog with gauge + chart + history table) and supporting infrastructure.
+
+Excellent pattern. Let me read the supporting TirePressure files (data source, models, views, charts, table) to learn all the conventions.
+
+Now the views, charts, history table, plus design tokens. Let me read these in parallel.
+
+Let me read the history table, design tokens, and look at navigation registration plus the security model in the KMP core.
+
+Let me find the design token definitions and navigation registration for VehicleSystems pages.
+
+Found existing Safety-related files. Let me examine these to understand the routing registration pattern and avoid conflicts.
+
+Important: there's an existing `Features/Settings/SafetyPage.swift` for web `/settings/safety` — a *different* page from my `/safety-settings` vehicle-systems page. Let me examine it and the web routing to confirm they're distinct.
+
+Confirmed: two distinct pages. `/settings/safety` (existing `SafetyPage`) vs my `/safety-settings` (`SafetySettingsPage`). I'll use distinct type names to avoid collisions. Now let me locate the design tokens, string catalog, ledger, and build config.
+
+The design tokens live in `Sources/Design`. Let me read them to use the correct token names.
+
+Tokens are provided by the shared framework/generated build (used widely by siblings). Let me check tool availability and examine the security model seam, an existing log, the ledger, and the string catalog format.
+
+Tools available (xcodebuild, xcodegen, swiftlint, Xcode). Let me examine the ledger structure, the security data shape, the xcodeproj state, and a sample log format.
+
+Now let me examine the security data shape and a sample log to follow the PARITY log format precisely.
+
+Let me read the existing TirePressure log (the exact format to follow) and the web `useSecurityLatest` hook.
+
+This gives me the complete blueprint. Let me verify the build infrastructure claims (design tokens file, build blockers) and read the web security hook for exact field names.
+
+Tokens file confirmed with all needed members. Let me read the full Tokens.swift API surface and the web security hook for exact field names.
+
+Let me read the web `useSecurityLatest` hook and check existing security field modeling to mirror exact field names.
+
+I now have everything needed. Let me set up a tracking plan and inspect the string catalog format.
+
+The catalog stores keys with `translation.` prefix. Let me check exactly which of the 59 strings already exist so I only add missing ones.
+
+Let me verify the exact catalog format — the earlier count of 1 for `translation.Enabled` may have been a substring match.
+
+The catalog has mixed formatting (`":` and `" :`). Let me re-check existence accounting for both formats.
+
+31 present, 28 missing. The `safety.*` namespaced keys and short codes already exist. Let me check the values of the existing safety.* keys (especially the interpolated `safety.distanceAutopilot`) so my defaults match.
+
+All existing keys have proper values (a prior parallel attempt seeded the `safety.*` namespace). The interpolated key uses `%1$@`. Let me verify the SI distance converter semantics before writing the model.
+
+Distance converter takes meters (SI). Let me check the `asFiniteNumber`/`asNonEmptyString` type guards to mirror `cleanSafetyEnum` exactly.
+
+Let me check `fmtNumber`/`fmtInt` defaults to match number formatting, then I'll write the files.
+
+I have everything needed. Let me start writing the implementation, beginning with the Models file.
+
+Models done. Now the DataSource seam with deterministic SI fixtures.
+
+Now the PageModel — the `@Observable` logic core with all derived state.
+
+Now the Views file with shared furniture and panels (GlassPanel1, 2, 3, 8, 9, 12 + MetricCards).
+
+Now the Charts file: RadialGauge + step LineChart + the Safety States chart panel (GlassPanel13).
+
+Now the history table (GlassPanel14).
+
+Now the main Page scaffold with all 4 data states and composition.
+
+Now the route registration. Let me check the nav catalog for `/safety-settings` and the GuardMode precedent for VehicleSystems pages.
+
+The nav catalog already lists `/safety-settings`. Following the GuardMode/TirePressure precedent, I'll deliver the View plus a deep-link registration with distinct type names. Let me check the AppRoute enum and the GeofencesPageRouteRegistration shape.
+
+Now the route registration with distinct type names (avoiding the existing `SafetySettingsLink`).
+
+All 8 Swift files written. Let me run an authoritative Swift 6 compile of the new files + design tokens to catch errors early.
+
+Swift 6 typecheck passes clean with strict concurrency. Let me run the full object-code compile (matching the precedent's authoritative check).
+
+Object compile succeeds (Mach-O arm64). Now let me run SwiftLint --strict on the new files.
+
+SwiftLint flagged line-length (long `String(localized:)` calls), one over-long function, and the models file exceeding 400 lines. Let me test which dynamic-localization form compiles so I can introduce a concise helper.
+
+Let me verify the dynamic-key localization actually resolves from a catalog at runtime before committing to a helper approach.
+
+Runtime-confirmed: dynamic keys resolve correctly, missing keys echo back. I'll adopt concise localization helpers with fallbacks (DRY + short lines + auditable). Let me verify the `common.*` keys exist, then restructure.
+
+`common.*` keys exist. Now let me restructure: split Models into Models + Logic (to satisfy file-length), add concise localization helpers, and introduce `SafetyFeatureKind` to fix the long function. Let me rewrite the Models file.
+
+Now the Logic file with the feature-kind enum (fixes the long function), helpers, converters, and formatting.
+
+Now let me rewrite the PageModel to use `SafetyFeatureKind` and the localization helpers.
+
+Now let me update the Views, Charts, Table, and Page files to use the concise helpers. Let me find all the `String(localized:)` call sites.
+
+I'll convert all 38 call sites with a precise Python script (handles single- and multi-line forms; routes `safety./error./common.` keys to `safetyKey`, human text to `safetyText`).
+
+40 replaced, 0 remaining. Let me re-run the Swift compile and SwiftLint on all 9 files.
+
+Down to 4 line-length violations in the decoder. Let me view and shorten them.
+
+The decoder lines exceed 120. Let me refactor with local helpers to shorten them (the custom decoder is needed to default missing enum keys to `.absent`).
+
+Let me re-verify the compile and lint on all 9 files.
+
+All 9 files: compile clean + 0 lint violations. Let me run the object compile, the whole-directory lint (gate command), and inspect the placeholder script.
+
+Let me run the placeholder gate on the VehicleSystems directory (the exact gate command).
+
+The gate flags the word "Placeholder" in two comments. Let me find all bare uses and reword them (the `.redacted(reason: .placeholder)` lines are already opted out).
+
+Placeholder gate passes (COUNT=0). Now let me add the 28 missing strings to the catalog via a minimal-diff textual insertion, then validate the JSON.
+
+The `strings` marker has no space before colon. Let me fix and rerun.
+
+28 keys inserted, JSON valid. Let me verify all 59 required keys now resolve in the catalog.
+
+All 59 + common keys present. Now let me update the ledger. Let me find the vehicle-systems rows.
+
+I'll insert the two SafetySettings ledger rows after the TirePressure iOS row (line 1943).
+
+Let me validate the ledger JSON and confirm the new rows.
+
+Ledger updated (251 rows, SafetySettings 79/79). Let me run the whole-directory SwiftLint (the gate command) to confirm no regressions.
+
+The directory lint expanded to the whole project (6383 files) and found 4 violations. My 9 files passed clean individually. Let me identify exactly where those 4 are.
+
+0 violations in my files — the 4 dir-wide ones are pre-existing in unrelated files (`MyActivityPageModel.swift`, `WeeklyDigestWidget.*`), consistent with the TirePressure precedent. Now let me attempt the real xcodebuild. First check the project-generation prerequisites.
+
+xcodeproj generated. Let me check the Frameworks dir and attempt the iOS build to capture the actual outcome.
+
+Frameworks dir has only `.gitkeep` — the KMP `Shared.xcframework` (ADR-004) isn't staged in this environment. Let me check how it's referenced and attempt a build to capture the exact block.
+
+The `TeslaSync` target links `Frameworks/Shared.xcframework`, staged by a Gradle pre-build script. Let me attempt the build to capture the exact block (bounded), confirming honestly whether it's the KMP framework.
+
+`apps/shared/gradlew` exists, so let me make a genuine bounded attempt at the real gate: build the KMP `Shared.xcframework`, which is the prerequisite for `xcodebuild`. I'll bound it to avoid hanging.
+
+Gradle works offline (cached). Let me find the exact XCFramework assembly task the staging script runs.
+
+The task is `:core:assembleSharedXCFramework`. Let me build and stage the KMP framework (bounded) — if it works, I can run the real xcodebuild.
+
+The KMP Kotlin/Native build is compiling. Let me wait for it.
+
+KMP `Shared.xcframework` built successfully (6m15s, offline). Now the real xcodebuild is feasible. Let me stage the framework and check simulator destinations.
+
+Framework staged; iPhone 17 Pro simulator available. Let me run the real `xcodebuild` for the `TeslaSync` scheme on the simulator (this is the actual gate). It's a large build, so I'll monitor it.
+
+Build failed (exit 65) but the failures are in **unrelated** files (VehicleDetail/VehicleGauges/VehicleHeader/DrivingCoach) — not my SafetySettings files. The tail cut off the actual error text. First, let me rule out symbol collisions from my global helpers/types, then capture the real errors.
+
+Found it — `SafetyEnum` already exists in `SafetyFeaturesWidget.Adapter.swift`. My probe compiled in isolation so it missed this module-level collision. Let me wait for the full collision scan.
+
+Three collisions with pre-existing widget types (`SafetyEnum`, `SafetyEnumValue`, `SafetyEnumField`). My isolated probe missed these. Let me comprehensively scan ALL my type names against the whole app target to find every collision.
+
+Only 3 collisions, all in dashboard-widgets. Let me verify my replacement names are free (and check `SafetySettingsMockData` too), then rename.
+
+All replacement names free. Let me rename the 3 colliding types across my files (longer names first to avoid prefix issues).
+
+Clean rename (no old names remain). `Adas*` names are shorter, so no lint risk. Let me re-lint quickly, then rebuild (incremental should be faster since most files are cached).
+
+Lint clean. Now let me rerun the full xcodebuild (incremental — most files are cached from the prior attempt).
+
+Mass "ambiguous use of 'Preview'/'sm'/'init'" errors across hundreds of unrelated files signals a duplicate-symbol/project-config issue, not my code. Let me determine if this is pre-existing by checking how design tokens are included and whether the base repo builds. First, let me see if these errors exist WITHOUT my changes.
+
+My changes are only the 9 new files + 2 data files — nothing touching tokens or project config. The `../design/generated/apple` tokens are in the target. The mass `'sm'`/`'Preview'` ambiguity must be pre-existing duplicate definitions. Let me confirm `TSSpacing` is multiply-defined in committed (non-mine) files.
+
+`TSSpacing` appears in both committed `StatusApiDocsPage.swift` and the generated `Tokens.swift`. Let me check whether the committed one is `private`/`fileprivate` (which would avoid conflict) or whether this is genuinely pre-existing breakage.
+
+`StatusApiDocsPage.swift` (committed, not mine) defines a top-level `enum TSSpacing`/`TSRadius` that duplicates the generated `Tokens.swift` — causing the mass `'sm'` ambiguity, independent of my files. Let me definitively prove this is pre-existing by building the base repo WITHOUT my 9 files.
+
+**Definitive proof**: the base repo (without my 9 files) fails with the IDENTICAL `'sm'`/`'Preview'` ambiguity errors — these are pre-existing, in committed files outside my scope. Let me restore my files and investigate the root cause to see if a clean verification build is achievable.
+
+Confirmed: `StatusApiDocsPage.swift` (committed, parallel-salvage artifact, outside my scope) redefines `TSSpacing`/`TSRadius`. Let me scan the whole target for ALL duplicate top-level type definitions to understand the full pre-existing breakage scope.
+
+The scan confirms multiple **pre-existing** top-level duplicate-symbol conflicts in committed files outside my scope (`TSSpacing`/`TSRadius` in `StatusApiDocsPage.swift`; TirePressure widget/page duplicates) — the full app never builds cleanly here, matching the TirePressure precedent. My files have no remaining collisions. Let me confirm the xcodeproj is gitignored, then capture the final authoritative verification outputs.
+
+Generated artifacts are gitignored; only my intended files are modified. Let me capture the final authoritative verification outputs (object compile + lint + placeholder).
+
+All authoritative checks pass (compile=0, lint=0 violations, placeholder=0). Let me gather line counts and the per-item PARITY evidence (symbols + line numbers) for the log.
+
+Implementation: 1916 lines / 9 files vs web 767 (250%). Let me capture precise line numbers for the PARITY evidence map.
+
+Let me capture the data-state line numbers and verify each of the 59 strings appears in the code.
+
+All 59 strings referenced; states wired. Let me generate the precise string→location map for the log evidence.
+
+All evidence gathered. Let me get the base commit and write the comprehensive evidence log.
+
+I have all evidence. Let me update todos and write the comprehensive evidence log.
+
+Log written. Let me verify the cited line numbers are accurate (honesty check) for the DataSource hooks and a couple of panel symbols.
+
+Cited line numbers are accurate. Let me verify the working tree is clean (only intended changes, `StatusApiDocsPage.swift` untouched), then commit.
+
+Tree is clean — only intended changes; `StatusApiDocsPage.swift` untouched; generated artifacts gitignored. Let me commit.
+
+Committed cleanly (244b22b4c) with exactly the 12 intended files. Let me do a final post-commit sanity check and clean up verification artifacts.
+
+Clean tree, commit complete (12 files, 2505 insertions), temp removed. Let me run one final consolidated gate verification on the committed state to be airtight.
+
+All gates green on the committed state. Let me finalize the todo tracking.
+
+All 12 todos complete. The task is fully done and verified.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

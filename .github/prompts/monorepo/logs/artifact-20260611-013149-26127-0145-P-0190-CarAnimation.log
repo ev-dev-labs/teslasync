@@ -1,0 +1,129 @@
+=== P4 Shared surface 0190 CarAnimation (Apple) ===
+Date        : 2026-06-12 (local)
+Host        : Darwin, Xcode 26.5 (17F42), Apple Swift 6.3.2, swiftlint + swiftformat + pwsh 7.6
+Project     : apps/apple (XcodeGen-generated TeslaSync.xcodeproj), shared core via Gradle KMP XCFramework
+Surface     : apps/apple/TeslaSync/shared-surfaces/CarAnimation.*  (web source: components/motion/CarAnimation.tsx)
+Allowed     : CarAnimation.* + this log only (other surfaces out of scope; delegation forbidden)
+
+--------------------------------------------------------------------------------
+STEP 1 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+--------------------------------------------------------------------------------
+(verbatim excerpt — full transcript captured to /tmp/ca-gate-ios.raw.log)
+/Users/.../apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures non-escaping parameter 'content'
+/Users/.../apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'
+** BUILD FAILED **
+The following build commands failed:
+(3 failures)
+** TEST FAILED **
+IOS_EXIT=65
+
+  NOTE: 0 (zero) errors in any CarAnimation.* file. The failures are genuine Swift Sema errors in
+  PRE-EXISTING, UNMODIFIED, out-of-scope files (e.g. AISignalExplorerNlFilter.swift:142,
+  AIAutoNameUnnamedLocations.swift:123 — different files surface per run as batch scheduling varies).
+  Root cause: a copy-pasted `private func glass(@ViewBuilder _ content: () -> some View)` helper that
+  invokes the NON-escaping `content` inside `TSGlassPanel { content() }`; TSGlassPanel stores an
+  `@escaping () -> Content` (Sources/Components/UI/Cards.swift:7), so the call captures a non-escaping
+  parameter. 51 committed shared-surfaces/feature-views files use this helper pattern. They are outside
+  this prompt's allowed-files scope (CarAnimation.* + this log) and MUST NOT be edited here.
+  See SURFACE VERIFICATION [A]/[D] below for proof this is independent of CarAnimation.
+
+--------------------------------------------------------------------------------
+STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+--------------------------------------------------------------------------------
+(verbatim excerpt — full transcript captured to /tmp/ca-gate-mac.raw.log)
+TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS')
+TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. (in target 'TeslaSyncWidgets-macOS')
+** BUILD FAILED **
+** TEST FAILED **
+MAC_EXIT=65
+
+  NOTE: macOS fails at code-signing — no development signing certificate is available on this headless
+  runner (platform-capability blocker), and the shared sources carry the same pre-existing STEP-1
+  compile errors. 0 (zero) errors in any CarAnimation.* file. Both causes are outside surface scope.
+
+--------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict   (gate scope: Sources, TeslaSync/*, Tests, Watch* — 4576 files)
+--------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 4576 files.
+LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple
+--------------------------------------------------------------------------------
+0/4874 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/CarAnimation
+--------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  (The gate's literal extension-less -Path matches no file via -LiteralPath, so it is a no-op scan.
+   Substantive check: each of the 9 real CarAnimation.* swift files scanned individually -> 0 each.
+   Direct grep of all banned patterns [TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/
+   not implemented/fatalError-unimpl] across CarAnimation.* -> 0 matches.)
+
+================================================================================
+SURFACE VERIFICATION — CarAnimation is COMPLETE and CORRECT (blockers are pre-existing / out-of-scope)
+================================================================================
+
+[A] My sources COMPILE CLEAN inside the real Xcode app build (iOS, dedicated -jobs 6 run,
+    /tmp/ca-ios-build.attempt1.log). All 8 app-target sources compiled, zero errors:
+      SwiftCompile … CarAnimation.swift, CarAnimation.Adapter.swift, CarAnimation.Projection.swift,
+                     CarAnimation.Model.swift, CarAnimation.Shapes.swift, CarAnimation.Motion.swift,
+                     CarAnimation.Views.swift, CarAnimation.Previews.swift
+      grep "CarAnimation.*error:" across every iOS + macOS build run -> 0
+
+[B] Surface tests EXECUTED and PASSED. The app's XCTest bundle cannot link because the app target
+    fails to build for the pre-existing reason in [D], so the same sources + the Tests file + a P1/S9
+    token stub were compiled and run in an isolated SwiftPM package (module name "TeslaSync" so
+    `@testable import TeslaSync` resolves unchanged):
+      swift test  ->  Executed 28 tests, with 0 failures (0 unexpected)   [EXIT=0]
+      coverage: CarBatteryProjection tiers+clamp (×8), Meta slug/keys, Accessibility image-label,
+                Model (resolver wiring, view.opened-once idempotent, stop no-op), Strings fallback,
+                Shape geometry (body/windshield/rear-window/bolt/spokes/oval/bar — non-empty, within
+                viewBox, scales; empty-battery zero-width) (×9), View composition (content + public ×2).
+
+[C] Lint / format / placeholder gates: all GREEN (STEPS 3–5 above).
+
+[D] The build blocker is PROVEN independent of this surface. Removed all CarAnimation.* files,
+    regenerated the project (0 CarAnimation refs), rebuilt iOS (/tmp/ca-nofiles-build.log):
+      (CarAnimation.* ABSENT)  NOFILES_BUILD_EXIT=65
+      AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures non-escaping parameter 'content'
+    -> identical failure with my surface entirely removed. The red build pre-dates and is unaffected by
+       this surface. Restored CarAnimation.* afterward (60 project refs).
+
+================================================================================
+SURFACE DELIVERY SUMMARY
+================================================================================
+Reproduced all 4 web exports at parity, native SwiftUI (no Tailwind ports, no raw hex, tokens only):
+  • CarAnimation        — animated Tesla silhouette: body draw-in, glass fade-in, spring-scaled wheels,
+                          pulsing head/tail lights, settling shadow; ported SVG paths (viewBox 240×96).
+  • ChargingBolt        — entry fade+lift + forever fill-opacity pulse (viewBox 24×24).
+  • BatteryFillAnimation— outline+nub+tier-coloured growing fill; level→tier(≥60/≥30)+clamped fraction.
+  • WheelSpin           — static rim/hub + 5 spokes spinning forever (viewBox 24×24).
+States/branches reproduced (this purely-presentational source has no fetch/error/empty/stale/offline —
+reproducing such chrome would invent state it lacks; same finding as the committed AIThinkingIndicator):
+  motion vs Reduce Motion on every glyph (entry/draw/pulse/spin rest under Reduce Motion — final static
+  glyph, never a blank box); battery level→tier/fraction (incl. clamp + empty).
+Bindings: P1/S8 state-holder (CarAnimationModel); P1/S9 tokens (Color.TS/TSSpacing); P1/S10 i18n facade
+  (carAnimation.tesla / .charging / .loading — 3 keys, no English literals in code); P1/S11 diagnostics
+  (view.opened surface="CarAnimation", once, on first appearance; decorative siblings emit none).
+A11y: role="img" glyphs carry their localized VoiceOver name + .isImage; decorative battery gauge hidden
+  (matches the web markup which gives it no role/label); reduce-motion respected; Dynamic Type via tokens.
+Files: CarAnimation.{swift,Adapter,Projection,Model,Shapes,Motion,Views,Previews,Tests}.swift + .strings
+  (each ≤ 400 lines; no edit to the pre-existing Sources/Components/Motion/Motion.swift TSCarAnimation).
+
+================================================================================
+CONCLUSION
+================================================================================
+Gate STEPS 3,4,5 = 0. STEPS 1,2 (full-app build+test) are RED solely due to (a) pre-existing
+escaping-closure compile errors in 51 out-of-scope, unmodified files, and (b) macOS development-signing
+unavailable on this runner — both proven independent of the CarAnimation surface, both unfixable within
+this prompt's allowed-files scope. The CarAnimation surface itself is complete, compiles clean, passes
+28 tests, and is lint/format/placeholder clean. Per the Honesty Covenant ("No red-as-green") the build
+steps are reported truthfully rather than masked.
+
+EXIT=1
+STATUS=BLOCKED

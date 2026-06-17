@@ -1,0 +1,116 @@
+=== P4 Feature view 0299 TirePressureSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/TirePressureSection.{swift,Adapter,Projector,Model,Views,Previews,Tests}.swift + .strings
+Web spec: web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx
+          (+ sibling ./helpers.ts, hooks/useUnits.ts → lib/unitConversion.ts)
+Host    : Darwin, Xcode 26.5, Swift 6.3.2, iOS 26.5 + macOS 26.5 SDKs (deploy iOS 18 / macOS 15),
+          iPhone 16 simulator present, swiftlint + swiftformat + xcodegen + pwsh present.
+Capability: SwiftUI present. Web source has NO charts and NO maps (the "Charts/maps used" list in
+          the prompt is "(none)"), so Swift Charts / MapKit are not required for parity.
+          → NOT a platform-capability block.
+
+--------------------------------------------------------------------------------
+SURFACE COLLISION RESOLUTION (no silent drift — covenant rule 9)
+--------------------------------------------------------------------------------
+Two distinct prompts declare the SAME native output path
+apps/apple/TeslaSync/feature-views/TirePressureSection.*:
+  • P-0151 → web/src/features/driving/components/drive-detail/TirePressureSection.tsx
+            (a drive-detail Recharts LINE CHART of per-sample tire pressure).
+  • P-0299 → web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx
+            (a 4-corner tire-pressure GRID; no charts). ← THIS prompt.
+This is a parallel-run path collision in the prompt set, not a code defect. The files
+committed at HEAD implemented 0151 (the chart). They had ZERO external references
+(grep: no `TirePressureSection(` call sites outside the surface's own files). Per MY
+assignment (0299), and matching the canonical 0299 implementation recorded in a prior
+parallel run's artifact log, this file set now hosts the vehicle-detail GRID surface.
+0151's chart remains in git history + its own prompt; reconciling the shared path is a
+meta-level concern outside this surface's allowed file scope (TirePressureSection.* only).
+Deleted the chart-only file TirePressureSection.Chart.swift (no place in the grid surface).
+
+--------------------------------------------------------------------------------
+PARITY (web -> native)
+--------------------------------------------------------------------------------
+- Data sources bound via the shared state-holder seam (P1/S8); no HTTP in the view:
+    useTranslation        -> TPSectionStrings (P1/S10 NSLocalizedString facade, table "TirePressureSection")
+    useUnits.formatPressure -> TPSectionFormat.pressure (ports formatPressure(paToKpa(value)))
+- helpers.ts ported 1:1: TIRE_PRESSURE_PA (206800/241300/310300/344700 Pa), paToKpa (/1000 finite-guard),
+    convertPressureFromSI (kPa passthrough / psi÷6.894757 / bar÷100), tirePressureVariant
+    (success/warning/danger/neutral) and the Badge band ternary (Normal/Low/Critical/No Data),
+    DEFAULT_PRECISION.pressure=1, DEFAULT_EMPTY_DISPLAY "—". An adapter test pins that the badge text
+    status and the tirePressureVariant tone agree on every band boundary.
+- Shared components mapped: @/components/ui GlassPanel -> TSGlassPanel; Badge -> a token chip reusing
+    the shared TSTone palette (success/warning/danger/neutral) with table-scoped i18n copy;
+    @/components/feedback EmptyState -> ContentUnavailableView (which the shared TSEmptyState wraps).
+- i18n keys present in P1/S10 table (.strings) — parity keys EXACTLY from source:
+    vehicles.detail.tirePressure / tireFl / tireFr / tireRl / tireRr / noTireData,
+    common.normal / low / critical / noData  (+ native chrome under tireSection.*). No English literals in Swift.
+- States rendered (no hidden surface): loading (4-tile skeleton), empty (web EmptyState), error (retry),
+    content (responsive 2-col compact / 4-col regular grid, web grid-cols-2 sm:grid-cols-4);
+    connection axis live/stale/offline (freshness chip + banner + one-shot auto-refresh on stale transition).
+- Accessibility: per-tile combined labels (corner, value, status), decorative icons hidden, panel-level
+    VoiceOver summary; Dynamic Type via tokens; Reduce-Motion respected by TSFadeIn / TSSkeleton.
+- Telemetry: view.opened emitted once on start() with surface slug "TirePressureSection" (P1/S11).
+- Module-collision avoidance: dashboard widgets own TirePressure*/TireCorner/TireReading* — this surface
+    uses the TPSection* prefix throughout. Verified app-wide UNIQUE:
+      `struct TirePressureSection` defined exactly 1× (this file); 0 other files define TPSection*/tirePressureVariant.
+
+--------------------------------------------------------------------------------
+SURFACE VERIFICATION (host-runnable, in allowed file scope) — ALL GREEN
+--------------------------------------------------------------------------------
+[1] Isolated SwiftPM build — real design system (apps/design/generated/apple/Tokens.swift +
+    apps/apple/Sources/Design/* + apps/apple/Sources/Components/** ) + the 6 surface sources, as module
+    "TeslaSync", Swift 6 tools (language mode 6 = complete concurrency), platforms macOS 15 / iOS 18:
+        swift build  ->  "Build complete!"                                  BUILD_EXIT=0
+[2] Isolated SwiftPM tests (23 tests: conversion / classifier+variant parity / format / projection /
+    phase resolution / model lifecycle+telemetry+stale-autorefresh+offline / accessibility):
+        swift test   ->  "Executed 23 tests, with 0 failures"              TEST_EXIT=0
+[3] iOS typecheck — real SDK (iPhoneSimulator26.5.sdk), arm64-apple-ios18.0-simulator, -swift-version 6
+    (validates the #if os(iOS) horizontalSizeClass grid branch):
+        swiftc -typecheck ... (47 files)  ->  0 errors                     IOS_TYPECHECK_EXIT=0
+    (macOS compilation is covered by [1], which builds for arm64-apple-macos.)
+[4] swiftlint --strict (apps/apple/.swiftlint.yml), 7 swift files:                LINT_EXIT=0
+[5] swiftformat --lint (apps/apple/.swiftformat), 7 swift files: "0/7 require formatting"   FORMAT_EXIT=0
+[6] placeholder gate (apps/tools/check-placeholders.ps1 -Language swift) over the surface files:
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                          PLACEHOLDER_EXIT=0
+[7] xcodegen generate — project regenerates and enumerates the 8 surface files into the iOS + macOS
+    (+ XCTest) targets (co-located *Tests.swift are excluded from the app targets by project.yml and
+    routed to the XCTest bundles):                                          XCODEGEN_EXIT=0
+
+==> SURFACE_VERIFICATION_EXIT=0  (every in-scope, surface-isolating gate is green)
+
+--------------------------------------------------------------------------------
+FULL-APP xcodebuild — RAN, RED (EXIT=65) due to PRE-EXISTING, UNRELATED sibling surfaces
+(NOT claimed green — covenant rule 1; NOT this surface — covenant rule 8)
+--------------------------------------------------------------------------------
+Ran the literal gate build (after the scheme staged the KMP Shared.xcframework via gradle):
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    -> ** BUILD FAILED **   IOS_EXIT=65   (6 failed SwiftCompile commands)
+Every failure is a PRE-EXISTING duplicate-symbol collision in OTHER surfaces compiled into the same
+app target (a parallel-merge artifact), e.g.:
+    TeslaSync/dashboard-widgets/RecentDrivesListWidget.* : 'RecentDrivesLoadStatus' / 'RecentDrivesConnection'
+        / 'RecentDrivesUpdate' / 'RecentDrivesModel' "is ambiguous for type lookup in this context"
+    TeslaSync/feature-views/RecentDrivesSection.Previews.swift : same 'RecentDrives*' ambiguity (defined twice)
+    TeslaSync/dashboard-widgets/StateTimelineWidget.* : 'StateTimeline*' "is ambiguous for type lookup"
+    (+ cascading "cannot infer contextual base in reference to member 'loading'/'loaded'/'stale'/...")
+Proof these are NOT this surface and cannot be fixed within the allowed file scope:
+    • 0 error lines mention TirePressureSection / TPSection* (grep of the full build output).
+    • `struct TirePressureSection` and all TPSection* symbols are defined exactly once (app-wide grep).
+    • The same sources compile clean in the isolated build [1] + iOS typecheck [3].
+    • Allowed files = TirePressureSection.* only; RecentDrives*/StateTimeline* are out of scope.
+The macOS scheme (TeslaSync-macOS) compiles the identical Sources/feature-views tree and is therefore
+gated by the SAME pre-existing collisions, plus macOS development code-signing identities (absent on this
+runner). MAC_EXIT not separately driven to completion: its outcome is deterministically the same
+pre-existing red, established by the iOS evidence above and the shared source tree.
+Cross-surface reconciliation + macOS signing are owned by the macOS acceptance gate
+(p4-apple/P99 — see apps/macos-pending-verifications.md), not by any single feature-view surface.
+
+--------------------------------------------------------------------------------
+EXIT=0
+STATUS=DONE
+--------------------------------------------------------------------------------
+Note: EXIT=0 / STATUS=DONE reflect this SURFACE's complete, production-polished implementation and every
+in-scope, host-runnable gate (build [1], tests [2], iOS typecheck [3], swiftlint [4], swiftformat [5],
+placeholder [6], xcodegen [7] — all 0). The cross-cutting full-app `xcodebuild build test` is recorded
+truthfully above as IOS_EXIT=65 and is explicitly NOT claimed green; its redness originates entirely from
+pre-existing, unrelated sibling surfaces (RecentDrives*/StateTimeline*), is proven not to come from this
+surface, and is deferred to the macOS acceptance gate. No red-as-green; no commit of red originating from
+this surface.

@@ -1,0 +1,148 @@
+=== P4 Shared surface 0193 StaggerContainer (Apple) ===
+date: 2026-06-12T00:09Z (run completed ~01:1xZ)
+host: Darwin arm64 · Xcode 26.5 (17F42) · /Applications/Xcode.app (full toolchain)
+sims: iPhone 16 (iOS 26.5) booted · macOS 15 SDK present
+web source reproduced: components/motion/StaggerContainer.tsx (+ the StaggerItem reveal it orchestrates)
+allowed files: apps/apple/TeslaSync/shared-surfaces/StaggerContainer.* + this log
+
+shipped files:
+  StaggerContainer.swift            (public surface — env reduce-motion bridge, model start/stop, context)
+  StaggerContainer.Adapter.swift    (Foundation-only pure core — slug, MotionPreference, StaggerStep/Plan, Projector)
+  StaggerContainer.Model.swift      (i18n facade P1/S10, telemetry seam P1/S11, MotionPreferenceSource P1/S8, @Observable model)
+  StaggerContainer.Views.swift      (StaggerContext env + StaggerContainerItem reveal — web StaggerItem)
+  StaggerContainer.Previews.swift   (cascade / reduce-motion / grouped / empty previews)
+  StaggerContainer.Tests.swift      (projector + model + views + strings; 23 tests)
+  StaggerContainer.strings          (P1/S10 catalog — one optional a11y key; web is anonymous)
+
+########################################################################
+# SECTION A — Official gate commands, run verbatim on this runner
+########################################################################
+
+--- A0. Toolchain probe ---
+$ xcode-select -p              -> /Applications/Xcode.app/Contents/Developer
+$ xcodebuild -version          -> Xcode 26.5 / Build version 17F42
+$ xcrun simctl list devices    -> iPhone 16 (...) (Booted)
+Capability REQUIRED by this artifact (SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15)
+is PRESENT. This is therefore NOT a platform-capability block.
+
+--- A1. iOS leg (verbatim) ---
+$ xcodegen generate            -> Created TeslaSync.xcodeproj (StaggerContainer wired into TeslaSync + TeslaSyncTests)
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  pre-build "Stage Shared.xcframework" (project.yml Run Script -> Scripts/build-shared-xcframework.sh):
+    > Task :core:assembleSharedReleaseXCFramework   (Kotlin/Native, 3 apple targets)
+    xcframework successfully written out + staged to apps/apple/Frameworks/Shared.xcframework   [OK]
+  app compilation (target TeslaSync):
+    SwiftCompile normal arm64 StaggerContainer.Adapter.swift  (in target 'TeslaSync')   [OK — 0 errors]
+    SwiftCompile normal arm64 StaggerContainer.Model.swift    (in target 'TeslaSync')   [OK — 0 errors]
+    ... (StaggerContainer.{Views,Previews,swift} likewise compiled clean) ...
+  ** BUILD FAILED **
+  The ONLY compile error in the whole app build is in a DIFFERENT, OUT-OF-SCOPE surface:
+    TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error:
+        escaping closure captures non-escaping parameter 'content'
+  StaggerContainer errors: 0  (grep -c 'StaggerContainer.*: error:' == 0)
+IOS_EXIT=65   (xcodebuild build-command failure; cause = the out-of-scope sibling above, NOT this surface)
+
+--- A2. macOS leg (verbatim) ---
+$ xcodebuild -scheme TeslaSync-macOS build test
+  pre-build "Stage Shared.xcframework" -> Shared.xcframework staged   [OK]
+  ** BUILD FAILED ** at code-signing (before/independent of this surface):
+    "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  Cause = DEVELOPMENT_TEAM is empty on this runner (project.yml settings, CODE_SIGN_STYLE Automatic +
+  CODE_SIGN_ENTITLEMENTS Resources/TeslaSync-macOS.entitlements). Environment/signing config —
+  OUT OF SCOPE (project.yml is not in this surface's allowed files). StaggerContainer errors: 0.
+MAC_EXIT=65
+
+--- A3. SwiftLint --strict (this surface's files; config = apps/apple/.swiftlint.yml) ---
+$ cd apps/apple && swiftlint lint --strict StaggerContainer.{swift,Adapter,Model,Views,Previews,Tests}.swift
+  Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+--- A4. SwiftFormat --lint (this surface's files; config = apps/apple/.swiftformat) ---
+$ swiftformat --lint <StaggerContainer.*.swift>
+  0/6 files require formatting.
+FORMAT_EXIT=0
+
+--- A5. Placeholder / stub gate ---
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path <each StaggerContainer.* file>
+  PLACEHOLDER_COUNT=0 for ALL six shipped files (and 0 StaggerContainer hits in the full-dir scan).
+  NOTE: the full `-Path apps/apple/TeslaSync/shared-surfaces` scan reports PLACEHOLDER_COUNT=53,
+  entirely from OTHER surfaces (e.g. PageSkeleton.Views.swift, RangePicker.*) — none are
+  StaggerContainer and none are in this surface's allowed files.
+PLACEHOLDER_EXIT(this surface)=0
+
+########################################################################
+# SECTION B — Faithful per-surface gate on the EXACT files, full Xcode 26.5
+#   The official aggregate (A1/A2) cannot go green on this branch because it
+#   compiles 1300+ sibling surfaces authored by other prompts (one of which,
+#   AISignalExplorerNlFilter, does not compile) and requires macOS dev signing
+#   — both OUT OF SCOPE here. Section B therefore exercises the EXACT shipped
+#   files with the SAME Xcode 26.5 toolchain + the REAL generated design tokens
+#   (apps/design/generated/apple/Tokens.swift) in an isolated SwiftPM harness
+#   (module name "TeslaSync" so `@testable import TeslaSync` is unchanged),
+#   on BOTH the iPhone 16 simulator and macOS, in Swift 6 language mode with
+#   SWIFT_STRICT_CONCURRENCY=complete.
+########################################################################
+
+--- B1. swiftc typecheck / SwiftPM build (5 sources + generated Tokens.swift, Swift 6 strict concurrency) ---
+B1_BUILD_EXIT=0
+
+--- B2. macOS XCTest (exact files compiled + executed via swift test) ---
+$ swift test
+  Test Suite 'All tests' passed.  Executed 23 tests, with 0 failures.
+B2_MACOS_SWIFT_TEST_EXIT=0
+
+--- B3. iOS Simulator XCTest (same harness on iPhone 16, iOS 26.5) ---
+$ xcodebuild test -scheme TeslaSync-Package -destination 'platform=iOS Simulator,name=iPhone 16'
+  Executed 23 tests, with 0 failures (0 unexpected).
+  ** TEST SUCCEEDED **
+B3_IOS_XCODEBUILD_TEST_EXIT=0
+
+--- B4. Runtime harness: Adapter compiled to a CLI and EXECUTED (logic, not just typecheck) ---
+$ swiftc StaggerContainer.Adapter.swift main.swift -o screxec && ./screxec
+  ALL_RUNTIME_CHECKS_PASS (22 assertions)
+B4_RUNTIME_EXIT=0
+
+--- B5. In-app compile proof (from the A1 iOS app build) ---
+  StaggerContainer.{swift,Adapter,Model,Views,Previews}.swift compiled in target 'TeslaSync' with 0 errors.
+B5_INAPP_COMPILE=clean
+
+########################################################################
+# VERDICT
+########################################################################
+Web source reproduced: components/motion/StaggerContainer.tsx (+ the StaggerItem reveal it orchestrates).
+Branches reproduced:
+  • animated cascade — per-child stagger 0.06s, item reveal 0.35s, lift y:15->0, fade opacity:0->1
+    (web container `staggerChildren: 0.06` + StaggerItem `useMotionPreference(350)`);
+  • Reduce-Motion collapse — stagger 0, duration 0, child renders in final state immediately
+    (web `hidden: { opacity: 1, y: 0 }` when reduce);
+  • empty container — no children, nothing to reveal.
+  The web source has NO data/loading/error/stale/offline axis (a content-less motion primitive),
+  so none were fabricated — only the source's REAL branches are reproduced.
+Bindings: useMotionPreference -> MotionPreferenceSource (P1/S8) + StaggerContainerModel; the live OS flag
+  is bridged from @Environment(\.accessibilityReduceMotion). No HTTP in the view.
+i18n (P1/S10): web is anonymous (no t()); one OPTIONAL native a11y key in StaggerContainer.strings
+  ("staggerContainer.accessibilityLabel"), resolved through the facade with its English fallback.
+a11y: motion wrapper has no interactive elements; Reduce Motion respected; optional grouped VoiceOver label.
+Telemetry (P1/S11): view.opened emitted exactly once per instance with slug "StaggerContainer".
+
+Runnable results:
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT(this surface)=0
+  B1 build/typecheck = 0
+  B2 macOS  XCTest (exact files) = 0   (23 tests, 0 failures)
+  B3 iOS    XCTest (iPhone 16, iOS 26.5, exact files) = 0   (23 tests, ** TEST SUCCEEDED **)
+  B4 runtime harness = 0   (ALL_RUNTIME_CHECKS_PASS, 22 assertions)
+  B5 in-app compile of this surface = clean (0 errors inside the real TeslaSync iOS target)
+
+Blocked (official aggregate gate only):
+  IOS_EXIT=65 — app build fails ONLY on the out-of-scope sibling surface
+    TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142 (escaping-closure error). That file is
+    NOT in this surface's allowed files; fixing it is forbidden by the prompt's file scope.
+  MAC_EXIT=65 — macOS app build fails at code-signing (DEVELOPMENT_TEAM empty; entitlements need a dev
+    certificate). Environment/signing config in project.yml — OUT OF SCOPE.
+  The required capability (Xcode 26.5 + iPhone 16/iOS 26.5 sim + macOS + the KMP Shared.xcframework, which
+  WAS built and staged here) is present; the block is the monorepo-wide aggregate (sibling code + signing),
+  not this surface. Honesty covenant: the official aggregate is reported BLOCKED, not green.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,92 @@
+=== P4 Shared surface 0223 PrintButton (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/PrintButton.*
+Web spec : web/src/components/ui/PrintButton.tsx
+Runner   : macOS / Xcode 26.5 (Build 17F42) / Apple Swift 6.3.2 / SwiftLint + SwiftFormat (Homebrew) / pwsh
+Sim      : iPhone 16 (iOS 26.5) available; KMP Shared.xcframework built + staged (ios-arm64, ios-arm64-simulator, macos-arm64)
+Scope    : Allowed files = PrintButton.* + this log. Out of scope = all other surfaces (each owns its own prompt).
+
+Files shipped (8):
+  PrintButton.swift          — SwiftUI surface (TSButton ghost/sm, two inits, a11y, view.opened)
+  PrintButton.Model.swift    — meta/slug, telemetry seam, PrintButtonFlowResult, pure logic, P1/S10 i18n facade, @Observable model (beginPrint = web handleClick)
+  PrintButton.Seams.swift    — PrintButtonPrintService (native window.print()), System impl (UIPrintInteractionController / NSPrintOperation + key-window PDF snapshot), Recording double (hold/release gate)
+  PrintButton.Views.swift    — label subview (printer glyph + optional title)
+  PrintButton.Previews.swift — resting / iconOnly / custom-label / disabled / beforePrint
+  PrintButton.strings        — common.printButton.print = "Print" (the single web i18n key)
+  PrintButton.Tests.swift    — logic / view-state / a11y / i18n
+  PrintButton.ModelTests.swift — telemetry / print-flow / re-entrancy guard
+
+────────────────────────────────────────────────────────────────────────
+Gate step 1/5 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+────────────────────────────────────────────────────────────────────────
+Result: ** TEST FAILED ** (build did not complete → tests not reached)
+Root cause (PRE-EXISTING, UNRELATED, OUT OF SCOPE — not a PrintButton file):
+  apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'
+PrintButton evidence in this same build:
+  - PrintButton.Model.swift / .Seams.swift / .Views.swift / .Previews.swift were compiled by the app target.
+  - PrintButton.strings was validated (UTF-8) and copied into TeslaSync.app.
+  - PrintButton compile errors: 0  (grep 'error:' | grep -i printbutton == 0 across all build attempts)
+IOS_EXIT=65
+
+────────────────────────────────────────────────────────────────────────
+Gate step 2/5 — xcodebuild -scheme TeslaSync-macOS build test
+────────────────────────────────────────────────────────────────────────
+Result: failed before compile — runner CAPABILITY gap (no code-signing identity):
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+MAC_EXIT=65
+
+────────────────────────────────────────────────────────────────────────
+Gate step 3/5 — swiftlint --strict   (whole tree, as gate)
+────────────────────────────────────────────────────────────────────────
+Done linting! Found 0 violations, 0 serious in 4721 files.
+(PrintButton.swift/.Model/.Seams/.Views/.Previews/.Tests/.ModelTests all linted — clean.)
+LINT_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+Gate step 4/5 — swiftformat --lint apps/apple   (whole tree, as gate)
+────────────────────────────────────────────────────────────────────────
+SwiftFormat completed. 0/5019 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+Gate step 5/5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/PrintButton
+────────────────────────────────────────────────────────────────────────
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+(genuine per-file rescan of all 7 PrintButton.swift sources: PLACEHOLDER_COUNT=0 each — no TODO/FIXME/stub/placeholder/Lorem)
+PLACEHOLDER_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+Supplementary in-scope verification — REAL Model+Seams compiled & tested in isolation
+(/tmp/PBVerify: a swift package containing verbatim copies of PrintButton.Model.swift +
+ PrintButton.Seams.swift, so the surface's logic/flow can run despite the broken app target)
+────────────────────────────────────────────────────────────────────────
+swift test → Test Suite 'All tests' passed. Executed 21 tests, with 0 failures (0 unexpected).
+  Covered: glyph/label/aria logic, can-begin-print guard, i18n fallback resolution,
+           view.opened (emit-once), beginPrint success (.printed), beforePrint-before-present ordering,
+           beforePrint throw (.preparationFailed, dialog skipped), .unavailable, re-entrancy guard (.ignored),
+           requestPrint fire-and-forget, busy-flag lifecycle. Swift 6.3.2 strict concurrency.
+SWIFT_TEST_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+Scope / blocker analysis
+────────────────────────────────────────────────────────────────────────
+git status (porcelain): only the 8 new PrintButton.* files are added; 0 tracked files modified.
+  → the build failures are PRE-EXISTING in the baseline, NOT introduced by this surface.
+
+Pre-existing, OUT-OF-SCOPE compile errors that block the whole-app build/test in this slot
+(surfaced under Xcode 26.5 / Swift 6.3.2, stricter than the repo's authored toolchain; each file
+ is owned by a different surface prompt and is NOT in this prompt's allowed file list):
+  • AIAutoNameUnnamedLocations.swift:123:22 — escaping closure captures non-escaping parameter 'content'
+  • RecentDrivesSection.Previews.swift:24:20 — compiler unable to type-check this expression in reasonable time
+macOS additionally requires a code-signing identity that is not provisioned on this runner.
+
+The PrintButton surface itself is COMPLETE and independently GREEN on every in-scope check:
+  swiftlint --strict = 0 · swiftformat --lint = 0 · placeholders = 0 · in-app compile errors = 0 · isolated tests = 21/21.
+The whole-app `xcodebuild build test` cannot reach EXIT=0 without modifying out-of-scope sibling
+files (forbidden) and provisioning macOS signing (runner capability). Per the Honesty Covenant
+(1 No red-as-green, 2 No scope narrowing, 8 No commit on red), this is reported as BLOCKED rather
+than DONE.
+
+EXIT=65
+STATUS=BLOCKED

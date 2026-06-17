@@ -1,0 +1,128 @@
+=== P4 Feature view 0277 RecentActivity (Apple) ===
+Web source : web/src/features/vehicles/components/RecentActivity.tsx
+Native out : apps/apple/TeslaSync/feature-views/RecentActivity.Vehicles.*
+Runner     : macOS (Darwin), Xcode 26.5 (17F42), iPhone 16 simulator booted,
+             swiftlint 0.63.3, swiftformat 0.61.1, xcodegen, pwsh 7 — FULL toolchain.
+Date       : 2026-06-09
+
+---------------------------------------------------------------------------
+NAMING COEXISTENCE (no predecessor bypass)
+---------------------------------------------------------------------------
+A sibling P4 surface (prompt 0130, committed at 681c0bcf8) already owns the plain
+`RecentActivity.*` file + `RecentActivity*` Swift-type namespace for the DASHBOARD
+RecentActivity (web/src/features/dashboard/components/RecentActivity.tsx — a three-panel
+charted surface). THIS prompt (0277) ships the distinct VEHICLES RecentActivity
+(web/src/features/vehicles/components/RecentActivity.tsx — two list panels, no charts).
+Both web files are real and different (confirmed: dashboard 7,673 B vs vehicles 6,314 B).
+
+To coexist in the single `TeslaSync` Swift module WITHOUT clobbering the committed 0130
+surface (which would break its types/tests and violate "no predecessor bypass"), this
+surface uses the `VehicleRecentActivity*` type prefix and the `RecentActivity.Vehicles.*`
+file prefix — still strictly within the prompt's allowed `RecentActivity.*` scope. The
+diagnostics slug is "RecentActivity" exactly as the prompt mandates.
+
+Files shipped (8):
+  RecentActivity.Vehicles.swift          (surface View)
+  RecentActivity.Vehicles.Model.swift    (P1/S8 state-holder seam, P1/S11 telemetry, P1/S10 facade)
+  RecentActivity.Vehicles.Adapter.swift  (pure projection: SI conversion, formatting, rows, a11y)
+  RecentActivity.Vehicles.Views.swift    (panels + header + states: loading/empty/error/stale/offline)
+  RecentActivity.Vehicles.Rows.swift     (drive/charge rows, IconBox, InlineMetric, AnimatedNumber)
+  RecentActivity.Vehicles.Previews.swift (7 state previews)
+  RecentActivity.Vehicles.Tests.swift    (24 unit tests: adapter, projection, model, a11y)
+  RecentActivity.Vehicles.strings        (P1/S10 i18n: 5 source keys + native chrome)
+
+Parity (web → native), every t() key + every conditional branch reproduced:
+  common.recentDrives / common.recentCharges / common.viewAll / common.noDrives /
+  common.noCharges. Drive distance = convertDistanceFromSI(distance_m ?? 0, unit) → fmt(1)+unit;
+  drive duration = "{h}h {fmtInt(m)}m"; drive SoC shown only when BOTH present.
+  Charge energy = convertEnergyFromSI(total_energy_added_wh,'kWh') → fmt(1)+" kWh";
+  charge duration uses duration_min (MINUTES); charge SoC gated on end_soc_pct. slice(0,5) cap.
+  States (loading/empty/error/stale/offline) all render — never a blank box. VoiceOver labels +
+  Dynamic Type + reduce-motion respected. view.opened emitted with slug "RecentActivity".
+
+===========================================================================
+GATE — literal commands + real exit codes
+===========================================================================
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (RED)
+    Cause: PRE-EXISTING peer duplicate-type collision — a dashboard-widget defines bare
+    `StateTimeline*` types colliding with the `StateTimeline` feature-view. Representative:
+      StateTimelineWidget.Model.swift:70:17: error: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+    All 26 errors are in StateTimeline.* / StateTimelineWidget.* peer files.
+    Errors in this surface's files (RecentActivity.Vehicles.*): 0.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (RED)
+    Cause: ENVIRONMENTAL code-signing — the runner has no development certificate
+    (project.yml DEVELOPMENT_TEAM=""). Fails before compiling any source:
+      TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing
+      with a development certificate. Enable development signing in the Signing & Capabilities editor.
+    Errors in this surface's files (RecentActivity.Vehicles.*): 0.
+    (Matches the user-approved peer disposition cited in the 0130 log: macOS signing.)
+
+[3] swiftlint --strict
+    LINT_EXIT=0   (GREEN) — "Found 0 violations, 0 serious in 3054 files." (whole tree, incl. mine)
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=0 (GREEN) — "0/3058 files require formatting, 3 files skipped." (whole tree, incl. mine)
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/RecentActivity
+    PLACEHOLDER_EXIT=0 (GREEN)
+
+Aggregate: not every step is 0 → EXIT != 0. Steps [1]/[2] are RED for reasons entirely
+OUTSIDE this surface and OUTSIDE the prompt's allowed file scope (RecentActivity.* + log):
+a pre-existing peer type collision and an environmental signing gap. They cannot be fixed
+without editing peer files (StateTimelineWidget.*) or runner signing config.
+
+===========================================================================
+SURFACE VERIFICATION — this surface is COMPLETE and GREEN in isolation
+===========================================================================
+
+A. In-module type-check (the authoritative compile check for this surface):
+   Both the iOS gate [1] and a control build with the unrelated colliding peer excluded
+   (EXCLUDED_SOURCE_FILE_NAMES='StateTimelineWidget.*') type-checked the whole TeslaSync
+   module and reached IRGen with ZERO errors in RecentActivity.Vehicles.* — i.e. this
+   surface's 8 files compile cleanly inside the real app module.
+
+   With the peer collision excluded, the build proceeds past this surface and then hits a
+   SEPARATE pre-existing blocker: a swift-frontend IRGen capacity crash on the assembled
+   ~4,600-file mega-module, while generating IR for a PEER file (AppearanceSettings*):
+     5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+     8   swift-frontend  report_at_maximum_capacity(unsigned long) + 0
+         (llvm::report_fatal_error — a compiler scaling limit, not a source defect; not in
+          this surface's files.)
+
+B. Isolated unit tests — 24/24 PASS (Swift 6 strict concurrency, macOS 15):
+   Adapter (conversion km/mi/ft + Wh→kWh, fmtNumber/fmtInt, drive/charge duration, SoC
+   gating, slice(0,5) cap), Projection (loading/error/content gating + independent rows),
+   Model (start/telemetry-once, refresh, push, stale single auto-refresh, offline), and
+   Accessibility (drive + charge VoiceOver summaries).
+     Test Suite 'All tests' passed — Executed 24 tests, with 0 failures.
+
+C. Isolated SwiftUI compile — Views + Rows + surface + Previews compile + link clean
+   (Swift 6, macOS 15) against token-accurate shims of TSGlassPanel/TSFadeIn/TSSkeleton:
+     Build complete!  (UI_BUILD_EXIT=0)
+
+D. Lint / format / placeholder on THIS surface's files only:
+   swiftlint --strict (7 files)            : 0 violations
+   swiftformat --lint (7 files)            : 0/7 require formatting
+   check-placeholders.ps1 (my files only)  : PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=0
+   (No TODO/FIXME/stub/placeholder/mock/Lorem/fatalError-unimpl in shipped code.)
+
+===========================================================================
+DISPOSITION
+===========================================================================
+The 0277 vehicles RecentActivity surface is implemented to full parity with its web source
+and is verified GREEN in isolation (type-check in the real module, 24/24 unit tests, clean
+standalone SwiftUI build, 0 lint / 0 format / 0 placeholder). The app-wide build+test gate
+steps [1]/[2] are RED ONLY due to pre-existing, out-of-scope conditions — a peer surface's
+duplicate-type collision (StateTimelineWidget.*), a Swift-compiler IRGen capacity crash on
+the assembled mega-module, and environmental macOS code-signing — none of which are defects
+in this surface and none of which are fixable within the prompt's allowed file scope.
+
+Per the Honesty Covenant (no red-as-green), the literal app-wide gate is not all-green, so
+this log does not claim DONE. The surface deliverable itself is complete and committed.
+
+EXIT=1
+STATUS=BLOCKED

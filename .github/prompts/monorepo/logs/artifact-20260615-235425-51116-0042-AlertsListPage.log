@@ -1,0 +1,288 @@
+================================================================================
+p4-apple · P7 · page:notifications/AlertsList — SwiftUI / HIG parity
+  web source : web/src/features/notifications/pages/AlertsListPage.tsx
+               (route /notifications/alerts)
+  output     : apps/apple/Sources/Features/Notifications/*.swift
+               (the live Xcode project — like every sibling P7 page, e.g.
+                ExportsPage / AuditLogPage / ChargingListPage — hosts feature
+                pages under Sources/Features/<Domain>/. The prompt's nominal
+                apps/apple/TeslaSync/Features/Notifications/** is the
+                allowed-files alias, reconciled here: `Sources/` is the only
+                hand-written group compiled by the iOS + macOS app targets in
+                project.yml; the generated TeslaSync.xcodeproj is git-ignored and
+                rebuilt via `xcodegen generate`.)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI AlertsList page at web parity: a pure @Observable
+state holder (ADR-004 — no networking in the view) over an injectable
+AlertsListDataSource seam whose value types mirror the web `Alert` / `AlertRule`
+/ `PinnedItem` / `AlertEvent` / `AlertDetail` 1:1. Production binds the KMP
+endpoints behind the seam (GET /alerts, GET /alerts/rules, GET /pinned,
+GET /alerts/{id}, POST /alerts/{id}/read, acknowledge/reopen). The list is
+control-plane data (no SI units), so the ADR display-boundary conversion is N/A
+here (like the sibling Exports / Audit Log pages) — time-ago / counts only.
+
+The page reproduces the web chrome (PageContainer title + subtitle, the header
+RangePicker + DataFreshnessAuto refresh + the quiet-hours Badge) and every web
+region, each rendering its OWN data state in place rather than gating the surface:
+
+  Overview (web KpiOverviewCard / no-data GlassPanel) — when the window has
+    alerts (or a prior period did), a glass card with SIX KPI tiles each carrying
+    its prior-period delta (Total / Critical / Warnings / Info / Unread /
+    Read-rate), a secondary breakdown line (Active Rules enabled/total · Most
+    Common type · Last 7 Days count · "Quiet hours active"), and the danger
+    critical callout ("N critical alert needs attention" + "View critical" CTA
+    that jumps to the Critical tab). When the window is empty, the web no-data
+    GlassPanel with the "No alerts" / alerts.noAlertsInRange EmptyState.
+
+  Alert Trend (7 Days) — the web stacked BarChart of alert counts by severity
+    over the trailing 7 days, via the P3 native Swift Charts wrapper TSBarChart
+    (stacked critical/warning/info series), with a weekday caption axis + a
+    severity legend. Its own empty state when the window has no alerts.
+
+  Alerts by Type — the web donut PieChart via the P3 wrapper TSPieChart, with the
+    per-category legend list (color dot + type label + count) the web renders
+    beside it. Its own empty state.
+
+  Watching (web pinnedRules GlassPanel) — shown only when alert rules are pinned:
+    a "Watching (n)" header and one row per pinned rule (name or "Rule #id"
+    fallback) with an enabled/disabled Badge, ordered by pin position.
+
+  Filter bar (web FilterBar + SearchInput + TabNav + ActiveFilterChips) — the
+    search field (title/message), the All / Unread / Critical status tabs with
+    live counts, and the removable active-filter chips.
+
+  Alert list (web pagedAlerts + AlertCard + pagination) — the paginated alert
+    rows (severity-tinted type icon, title + message, unread status dot, time-ago
+    / severity / type / acknowledged meta, and the audit-timeline / acknowledge-
+    or-reopen / mark-read actions), the "Showing m–n of total" footer + paging,
+    and its own EmptyState (no-search / search-miss / fleet-healthy variants).
+
+  Acknowledge dialog (web AcknowledgeAlertDialog) + Audit-timeline sheet (web
+    detail Modal + AlertDetailTimeline) — adaptive sheets; the timeline shows the
+    loading skeleton / event rail / no-events empty the web detailQuery drives.
+    Mutations surface the web toasts ("Alert marked as read", acknowledge success
+    + Undo→reopen).
+
+Files (all under apps/apple/Sources/Features/Notifications/, + the test):
+  AlertsListModels.swift          — AlertsSeverity (normalize), AlertsAlert,
+                                    AlertsRule, AlertsPin, AlertsEvent,
+                                    AlertsDetail, AlertsQuietHours (isActive),
+                                    AlertsFilter, AlertsRange, AlertsTabCounts,
+                                    AlertsFilterChip.
+  AlertsListAggregation.swift     — pure web useMemo pipeline: overview counts,
+                                    readRate, range/prior windows, byType, the
+                                    7-day byDay stacked trend, weekCount,
+                                    pinnedRules, tab/search filters, percent/
+                                    absolute deltas + AlertsListFormat.
+  AlertsListPageModel.swift       — @MainActor @Observable model: phases, derived
+                                    list pipeline, mark-read/acknowledge/reopen,
+                                    audit-timeline load, filter/range/page state.
+  AlertsListPageModel.Sample.swift— SampleAlertsListDataSource + Empty/Failing/
+                                    QuietHours preview seams.
+  AlertsListPage.swift            — the View: chrome, phase switch, ready
+                                    scaffold, single-sheet router, action toast.
+  AlertsListPage.Overview.swift   — KPI overview card / no-data panel + KPI tile +
+                                    secondary line.
+  AlertsListPage.Charts.swift     — TSBarChart trend + TSPieChart by-type + legend.
+  AlertsListPage.Sections.swift   — Watching panel + filter bar + status tabs.
+  AlertsListPage.List.swift       — alert rows + pagination + list empties +
+                                    loading skeleton + type-icon map.
+  AlertsListPage.Dialogs.swift    — acknowledge dialog + timeline sheet + toast.
+  AlertsListRouteRegistration.swift — registers `.alerts` into the shell registry.
+  Tests/Unit/Features/Notifications/AlertsListPageModelTests.swift — 24 unit tests.
+
+Navigation: AppRoute gains `.alerts` (pathSegment "alerts", group .operations,
+bell.badge icon, titleKey route.alerts). AppRouteParser maps the web
+/notifications/alerts AND the legacy /alerts redirect to `.alerts`.
+AlertsListRouteRegistration is threaded into TeslaSyncApp.routeHostRegistry.
+
+--------------------------------------------------------------------------------
+UNITS (ADR-005)
+--------------------------------------------------------------------------------
+N/A — alert-log entities carry no SI quantities; the page renders counts, a
+read-rate %, and relative time-ago only. No unit conversion is required, exactly
+like the sibling Exports / Audit Log control-plane pages.
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=52
+
+panels (10) — each renders from the bound @Observable AlertsListPageModel state:
+[x] panel  — Total
+             AlertsListPage.Overview.swift · AlertsKpiCard(panel:.total) ("Total")
+[x] panel  — Critical
+             AlertsListPage.Overview.swift · AlertsKpiCard(panel:.critical)
+[x] panel  — Warnings
+             AlertsListPage.Overview.swift · AlertsKpiCard(panel:.warnings)
+[x] panel  — Info
+             AlertsListPage.Overview.swift · AlertsKpiCard(panel:.info)
+[x] panel  — Unread
+             AlertsListPage.Overview.swift · AlertsKpiCard(panel:.unread)
+[x] panel  — Read-rate
+             AlertsListPage.Overview.swift · AlertsKpiCard(panel:.readRate)
+[x] panel  — GlassPanel7  (web no-data GlassPanel, AlertsListPage.tsx L410)
+             AlertsListPage.Overview.swift · AlertsOverviewSection no-data branch
+             (TSGlassPanel { TSEmptyState "No alerts" / alerts.noAlertsInRange })
+[x] panel  — GlassPanel8  (web Alert Trend GlassPanel, AlertsListPage.tsx L424)
+             AlertsListPage.Charts.swift · AlertsTrendChart (TSGlassPanel)
+[x] panel  — GlassPanel9  (web Alerts-by-Type GlassPanel, AlertsListPage.tsx L445)
+             AlertsListPage.Charts.swift · AlertsByTypeChart (TSGlassPanel)
+[x] panel  — GlassPanel10 (web pinnedRules GlassPanel, AlertsListPage.tsx L475)
+             AlertsListPage.Sections.swift · AlertsWatchingSection (TSGlassPanel)
+
+charts (2) — P3 native Swift Charts wrappers (never a WKWebView):
+[x] chart  — BarChart
+             AlertsListPage.Charts.swift · AlertsTrendChart → TSBarChart(stacked)
+[x] chart  — PieChart
+             AlertsListPage.Charts.swift · AlertsByTypeChart → TSPieChart
+
+states (4) — implemented for the bound data sources:
+[x] state  — loading data state
+             AlertsListPage.swift · content .loading → AlertsListSkeleton;
+             AlertsListPage.Dialogs.swift · detail .loading skeleton
+[x] state  — empty data state
+             AlertsListPage.Overview.swift no-data EmptyState; AlertsListPage.
+             List.swift · AlertsListSection.emptyState; detail .empty
+[x] state  — error data state
+             AlertsListPage.swift · errorView (TSErrorDisplay + Retry)
+[x] state  — success data state
+             AlertsListPage.swift · readyView (overview + charts + list rows)
+
+strings (36) — every visible literal resolves from Localizable.xcstrings; web
+key names preserved (Critical / Warning / common.enabled / common.disabled were
+already in the catalog; the other 32 + page-specific keys were added):
+[x] string — Active Rules            (AlertsListPage.Overview.swift)
+[x] string — Alert Trend (7 Days)    (AlertsListPage.Charts.swift)
+[x] string — Alert marked as read    (AlertsListPageModel.swift · markRead toast)
+[x] string — Alerts                  (AlertsListPage.swift · TSPageTitle)
+[x] string — Alerts by Type          (AlertsListPage.Charts.swift)
+[x] string — All                     (AlertsListPage.Sections.swift · status tab)
+[x] string — Critical                (Overview KPI + status tab + row badge)
+[x] string — Info                    (Overview KPI + row badge)
+[x] string — Last 7 Days             (AlertsListPage.Overview.swift)
+[x] string — Most Common             (AlertsListPage.Overview.swift)
+[x] string — No alerts               (Overview empty + list empty)
+[x] string — No alerts match your search. (AlertsListPage.List.swift)
+[x] string — Quiet hours             (AlertsListPage.swift · header Badge)
+[x] string — Quiet hours active      (AlertsListPage.Overview.swift secondary)
+[x] string — Total                   (AlertsListPage.Overview.swift KPI)
+[x] string — Unread                  (Overview KPI + status tab + status dot)
+[x] string — Warning                 (AlertsListPage.Charts.swift legend + badge)
+[x] string — Warnings                (AlertsListPage.Overview.swift KPI)
+[x] string — Your fleet is running smoothly. Alerts will appear here.
+                                      (AlertsListPage.List.swift empty)
+[x] string — alerts.ack.success      (AlertsListPageModel.swift · ack toast)
+[x] string — alerts.ack.undo         (AlertsListPage.Dialogs.swift · toast Undo)
+[x] string — alerts.criticalCallout  (AlertsListPage.Overview.swift callout)
+[x] string — alerts.filterLabel.search (AlertsListPageModel/Sections chips)
+[x] string — alerts.filterLabel.status  (AlertsListPageModel/Sections chips)
+[x] string — alerts.noAlertsInRange  (AlertsListPage.Overview.swift no-data)
+[x] string — alerts.overview         (AlertsListPage.Overview.swift title)
+[x] string — alerts.readRate         (AlertsListPage.Overview.swift KPI)
+[x] string — alerts.rule             (AlertsListPage.Sections.swift rule fallback)
+[x] string — alerts.searchPlaceholder (AlertsListPage.Sections.swift search)
+[x] string — alerts.subtitle         (AlertsListPage.swift subtitle)
+[x] string — alerts.timeline.empty   (AlertsListPage.Dialogs.swift + chart empty)
+[x] string — alerts.timeline.title   (AlertsListPage.Dialogs.swift + row action)
+[x] string — alerts.viewCritical     (AlertsListPage.Overview.swift CTA)
+[x] string — common.disabled         (AlertsListPage.Sections.swift rule badge)
+[x] string — common.enabled          (AlertsListPage.Sections.swift rule badge)
+[x] string — pinned.section.watching (AlertsListPage.Sections.swift header)
+
+PARITY_COVERED=52
+
+================================================================================
+GATE  (apple triad: placeholder scan + build + swiftlint --strict + test)
+================================================================================
+Toolchain: Xcode 26.5 (17F42), Swift 6.3.2, xcodegen, swiftlint, swiftformat,
+pwsh — all present. Shared.xcframework built from the KMP core via the project
+pre-build script (apps/shared/gradlew :core:assembleSharedXCFramework).
+
+  PLACEHOLDER:
+    ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Notifications -Language swift
+      PLACEHOLDER_ALLOWED=1   (the alerts.searchPlaceholder i18n key, opted out
+                               with `// parity:allow i18n key`, as the sibling
+                               ChargingListPage does for charging.searchPlaceholder)
+      PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   ✔
+
+  BUILD (iOS, scheme TeslaSync, iPhone 17 Pro simulator):
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+      ** BUILD SUCCEEDED **   (0 errors)
+    BUILD_EXIT=0   ✔
+  BUILD (macOS, scheme TeslaSync-macOS, CODE_SIGNING_ALLOWED=NO):
+    The shared `Sources/` group compiles into BOTH app targets. The full macOS
+    build (every declaration incl. all AlertsList* files, then link) reported:
+      ** BUILD SUCCEEDED **   (0 errors)
+    The page is platform-adaptive (#if os(iOS) horizontalSizeClass guards,
+    cross-platform sheets/charts). The only macOS gap is code SIGNING (empty
+    DEVELOPMENT_TEAM → entitlements-require-cert), a pre-existing environment
+    limitation tracked in apps/macos-pending-verifications.md — NOT this change,
+    hence CODE_SIGNING_ALLOWED=NO for the macOS compile gate.
+    BUILD_EXIT(macOS, my change)=0 ✔
+
+  LINT (swiftlint --strict):
+    All 15 changed files (Sources/Features/Notifications/*.swift + the test +
+    AppRoute.swift + AppRouteParser.swift + TeslaSyncApp.swift):
+      "Found 0 violations, 0 serious in 15 files."
+    swiftformat --lint: "0/15 files require formatting."
+    (The repo-wide `swiftlint --strict` also reports 2 PRE-EXISTING line-length
+     violations in TeslaSync/feature-views/AnomalyInlineRow.Previews.swift, an
+     untouched legacy file — out of scope, exactly as the sibling P7 logs note.)
+    LINT_EXIT(my change)=0   ✔
+
+  TEST (scheme TeslaSync, iPhone 17 Pro simulator):
+    xcodebuild ... -only-testing:TeslaSyncTests/AlertsListPageModelTests test
+      Test Suite 'AlertsListPageModelTests' passed.
+      Executed 24 tests, with 0 failures (0 unexpected).
+      ** TEST SUCCEEDED **
+    (State machine loading/empty/error/ready; overview counts incl. the unread-
+     scoped critical; byType ordering + colors; the 7-day byDay buckets;
+     pinnedRules ordering; tab + search filtering; pagination slice/clamp; range
+     window + prior-period deltas; mark-read/acknowledge/reopen; audit-timeline
+     loaded/empty; quiet hours; time-ago/type-label formatting; route + alias +
+     registration.) The full committed test target carries pre-existing Swift-6
+     test breakage unrelated to this change (same situation the sibling P7 logs
+     record), so the change is verified in isolation.
+    TEST_EXIT(my change, isolation)=0   ✔
+
+  PARITY_COVERED == PARITY_REQUIRED == 52.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE
+--------------------------------------------------------------------------------
+[x] Every named panel implemented; every web region reproduced (overview KPIs +
+    no-data panel, trend bar, by-type donut, watching, filter bar, list +
+    pagination, acknowledge dialog, audit-timeline sheet, toasts).
+[x] All 52 parity items render from the bound @Observable AlertsListPageModel.
+[x] loading / empty / error / success implemented for every data source listed.
+[x] All visible strings from Localizable.xcstrings; key names match web; 0
+    hardcoded literals.
+[x] Dark mode + Dynamic Type + accessibility (labels/traits, ≥44pt targets) +
+    SI N/A honored; SwiftUI-native only (Swift Charts, sheets, materials) — no
+    web pixel-cloning.
+[x] placeholder + build + lint + test green for the change;
+    PARITY_COVERED==PARITY_REQUIRED.
+[x] apple ledger rows for page:notifications/AlertsList (apple-macos + apple-ios)
+    set covered 52/52.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Notifications \
+          apps/apple/Tests/Unit/Features/Notifications/AlertsListPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift \
+          apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-notifications-AlertsListPage.log
+  git commit -m "feat(apps/apple): AlertsListPage at web parity (P7 notifications)"
+
+EXIT=0
+STATUS=DONE

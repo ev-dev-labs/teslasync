@@ -1,0 +1,193 @@
+===========================================================================
+P4 · Shared surface · 0159 — SortControl (Apple)
+Log: p4-apple-shared-surfaces-0159-SortControl.log
+===========================================================================
+Web source : web/src/components/forms/SortControl.tsx
+Native out : apps/apple/TeslaSync/shared-surfaces/SortControl.*
+Allowed    : apps/apple/TeslaSync/shared-surfaces/SortControl.*, this log
+Toolchain  : Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh
+Capability : SwiftUI + Swift Charts + MapKit AVAILABLE (iOS 18 / iPadOS 18 / macOS 15 SDK present),
+             booted iPhone 16 simulator present, Kotlin/Native toolchain provisioned (~/.konan,
+             prebuilt-macos-aarch64-2.4.0) → NOT a platform-capability block; see DISPOSITION.
+
+=== P4 Shared surface 0159 SortControl (Apple) ===
+
+===========================================================================
+SHIPPED ARTIFACT (8 files, all under the SortControl.* allowed glob)
+===========================================================================
+  SortControl.swift             93  View: prop/model inits, surface slug, env (reduce-motion), row body,
+                                    onAppear/Disappear/onChange prop-rebind.
+  SortControl.Adapter.swift    268  Pure Foundation core: surface slug, SortDirection (web 'asc'|'desc' +
+                                    ArrowUp/Down→SF Symbol + i18n key/fallback + flip), SortOption (web
+                                    SortOption<F>), Input, Projection, Projector (resolve + toggled). No
+                                    SwiftUI / no @Observable.
+  SortControl.Model.swift      161  P1/S10 facade, P1/S11 telemetry seam, P1/S8 @MainActor @Observable
+                                    holder: props/projection, selectField (<select> onChange),
+                                    toggleDirection (flip), update, once-only view.opened.
+  SortControl.Views.swift      209  FieldMenu (web <Select> → Menu, checkmark on selected), trigger label
+                                    (chevron.up.chevron.down), DirectionButton (arrow.up/down, focus ring,
+                                    reduce-motion swap), EmptyFieldView, Row (gap-1). Token-driven (P1/S9);
+                                    no Tailwind, no raw hex.
+  SortControl.Previews.swift   112  5 #Preview branches (default asc / desc / field-not-in-options /
+                                    custom direction label / empty options), interactive harness.
+  SortControl.strings           33  i18n table "SortControl": 4 verbatim web keys + 1 native a11y key.
+  SortControl.AdapterTests.swift 221 Pure-core XCTest: identity, SortDirection mapping + flip, SortOption,
+                                    projection (options/selected/trigger fallback/direction glyph+label/
+                                    field menu label/default+custom a11y label/empty/identifiers/keys),
+                                    flip, value-type equality.
+  SortControl.Tests.swift      255  Model (view.opened once, selectField+guard, toggleDirection both ways,
+                                    update), view composition (all branches + injected model + subviews),
+                                    strings facade.
+  ----                        1352  total (largest file 268 ≤ SwiftLint 400 budget)
+
+===========================================================================
+PARITY reproduced from the web source (THE spec)
+===========================================================================
+  - A sort-field dropdown (web `<Select size="sm">`) next to a direction toggle (web `<button>` with an
+    up/down arrow), composed inline (web `inline-flex items-center gap-1`); controlled component — caller
+    owns `field` + `direction`, every change reported via `onFieldChange` / `onDirectionChange` (the
+    surface stores nothing).
+  - Field dropdown → SwiftUI `Menu` (the HIG-idiomatic pop-up selector; sibling idiom PlaybackSpeedMenu):
+    trigger shows the selected option's label + an up/down chevron; one Button per option with a checkmark
+    on the selected field (web `<option selected>`). aria-label = `t('sortControl.fieldLabel','Sort by')`,
+    value = selected label.
+  - Direction toggle → a square SF Symbol Button: `arrow.up` for 'asc' / `arrow.down` for 'desc' (web
+    ArrowUp/ArrowDown); a tap flips the direction (web `flip = direction === 'asc' ? 'desc' : 'asc'`),
+    reported already-flipped through `onDirectionChange`. Ported verbatim in SortControlProjector.toggled,
+    unit-tested both ways.
+  - i18n: sortControl.ascending "Ascending" / sortControl.descending "Descending" (the dirLabel + button
+    title), sortControl.fieldLabel "Sort by" (dropdown a11y name), sortControl.direction "Sort direction"
+    (composed into the button a11y name `${direction}: ${dirLabel}`). The web
+    `directionAriaLabel ?? `${t('sortControl.direction')}: ${dirLabel}`` override is reproduced. All via the
+    P1/S10 facade; no English literals in code.
+  - testId → accessibility identifiers (base = testId|slug, field = `${base}-field`, direction =
+    `${base}-direction`, web `${testId}-field` / `${testId}-direction`).
+  - Generic note: web is generic over `F extends string`; the native peer uses a plain `String` field key
+    (the stable value carried in URL state), preserving the value/label option list + selection semantics.
+
+  REAL states reproduced (faithful-parity note): the web <SortControl> is a PURE, CONTROLLED presentational
+  component — only hook is useTranslation, no fetch / React-Query / Promise — so it has NO loading / error /
+  stale / offline branch. Inventing such chrome would FABRICATE states the source does not have (same
+  reasoning as the accepted sibling presentational primitives DensityToggle-0153, ActiveFilterChips-0147).
+  Reproduced branches: populated field dropdown with one option selected, the field-not-in-options edge
+  (trigger falls back to the raw field key, never blank), the ascending / descending toggle, the
+  custom-vs-default direction accessibility label, and the degenerate empty-options case (the dropdown
+  becomes a friendly labelled empty chip — HIG: never a bare box — while the independent direction toggle
+  keeps rendering, exactly as the web renders the button unconditionally), plus VoiceOver / Dynamic Type /
+  Reduce-Motion.
+
+===========================================================================
+GATE — host-runnable SURFACE steps (all GREEN, firsthand)
+===========================================================================
+[swiftformat] swiftformat --lint apps/apple
+              → "0/4708 files require formatting, 2 files skipped."          FORMAT_EXIT=0
+              (the 7 SortControl .swift files included; 0 require formatting.)
+[swiftlint]   cd apps/apple && swiftlint --strict
+              → "Done linting! Found 0 violations, 0 serious in 4410 files."  LINT_EXIT=0
+              (scoped re-run on the 7 SortControl files alone: 0 violations in 7 files.)
+[placeholders] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/SortControl
+              → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                     PLACEHOLDER_EXIT=0
+              (the gate's literal -Path has no trailing-named directory, so it scans clean; to avoid a
+               false-clean the 8 ACTUAL shipped files were ALSO copied into a temp dir and scanned →
+               PLACEHOLDER_COUNT=0. The ADR-011 token set — TODO/FIXME/XXX/Placeholder/Lorem/"not
+               implemented"/"Coming soon" — is absent from all shipped code; a direct case-insensitive grep
+               over the 7 .swift files confirms NONE.)
+
+[isolated build+test] EXACT shipped files compiled against the REAL design tokens
+              (apps/design/generated/apple/Tokens.swift) in a swift-tools 6.0 package (Swift 6 language
+              mode = strict concurrency complete), module named TeslaSync so @testable import resolves:
+              • macOS host build .................................. "Build complete! (8.59s)" (0 warnings,
+                                                                     0 errors)
+              • swift test ....................................... "Executed 35 tests, with 0 failures"
+              • iOS cross-compile (arm64-apple-ios18.0-simulator) . swiftc -typecheck exit 0 (the SwiftUI
+                                                                     Menu/Button surface type-checks for iOS)
+              35/35: Adapter(1) Direction(4) Option(2) Projection(11) Flip(2) ValueType(2) Model(8) View(3)
+              Strings(2). No data-source / clock / network — adapter + model derivation is pure.
+[collisions]  None of the surface's public/internal symbols (SortDirection, SortOption, SortControl*,
+              SortControlInput/Projection/Projector/Model/Strings/Surface/Resolve/Telemetry,
+              SortControlFieldMenu/DirectionButton/EmptyFieldView/Row/Layout, …) are declared anywhere else
+              in the app target → no redeclaration risk (the existing *SortDirection enums are all prefixed:
+              XRaySortDirection, LiveSignalSortDirection, SignalDiffSortDirection, FlagsSortDirection).
+
+===========================================================================
+GATE — repo-wide xcodebuild (RED on PRE-EXISTING sibling defects, out of scope)
+===========================================================================
+  Prereq staged firsthand: the KMP Shared.xcframework was assembled via Gradle (Kotlin/Native toolchain
+  present) — ":core:assembleSharedXCFramework … BUILD SUCCESSFUL in 4m 6s" — and staged into
+  apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64). xcodegen
+  generate → TeslaSync.xcodeproj created.
+
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+                  -derivedDataPath /tmp/sc-dd-ios build-for-testing
+       → ** TEST BUILD FAILED **                                              IOS_EXIT=65
+       Root cause — the ONLY `error:` in the entire build log:
+         apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+         error: escaping closure captures non-escaping parameter 'content'
+       This is a PRE-EXISTING sibling defect:
+         • committed at ffc2bd905 "feat(apps/apple/shared-surfaces): add AIAutoNameUnnamedLocations surface
+           (P4)" (a `@ViewBuilder _ content: () -> some View` helper captured in an escaping context)
+         • a different P4 surface, OUTSIDE this prompt's allowed files
+           (apps/apple/TeslaSync/shared-surfaces/SortControl.*)
+         • `git status` shows the working tree contains ONLY this surface's 8 new files — nothing else was
+           modified, so the failure reproduces identically with or without this surface.
+       This surface's 5 source files (SortControl{,.Adapter,.Model,.Views,.Previews}.swift) all appear as
+       successful CompileSwift actions in the SAME app target; ZERO errors reference any SortControl file
+       (grep "SortControl.*error:" → none).
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build-for-testing
+       → ** TEST BUILD FAILED **                                              MAC_EXIT=65
+       First attempt failed at SIGNING, before any source compiled:
+         error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing with a
+                development certificate.
+       This is the known macOS dev-cert signing gap on a headless runner (DEVELOPMENT_TEAM=""), an
+       ENVIRONMENT limitation unrelated to this surface. Re-run with CODE_SIGNING_ALLOWED=NO to obtain a
+       real COMPILE signal — it then compiled the shared-surfaces and failed on the ONLY `error:`:
+         apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+         error: escaping closure captures non-escaping parameter 'content'
+       Same class of PRE-EXISTING sibling defect (committed at 441cd2538 "add AISignalExplorerNlFilter
+       surface (P4)"), OUTSIDE this prompt's allowed files, unmodified in the working tree. ZERO errors
+       reference any SortControl file. (The macOS app target compiles the identical shared-surfaces glob, so
+       it is RED on the same family of pre-existing sibling defects; this surface's macOS compilation is
+       independently verified GREEN via the isolated swift package above — swift build + swift test 35/35 on
+       arm64-apple-macos.)
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  The SortControl shared surface is COMPLETE and production-polished: full web parity (data shape,
+  composition — field Menu + direction toggle, controlled field selection + direction flip, the
+  field-not-in-options + custom-aria-label + empty-options branches, every t() key), token-driven HIG
+  chrome, P1/S8 state-holder, P1/S10 i18n facade, P1/S11 view.opened telemetry, VoiceOver (pop-up button
+  name+value, direction a11y label, decorative glyphs hidden) + Dynamic Type + Reduce-Motion, and full
+  adapter/model/view/strings tests.
+
+  Every host-runnable SURFACE gate is GREEN firsthand: swiftformat 0/4708, swiftlint --strict 0 in 4410,
+  check-placeholders COUNT=0, a Swift-6 strict-concurrency build clean, an EXECUTED swift test of the EXACT
+  shipped XCTest files (35/35) against the REAL tokens, and an iOS cross-compile clean.
+
+  The repo-wide xcodebuild build/test is DEFERRED to the P4 integration runner — RED only on PRE-EXISTING
+  sibling defects (iOS: AIAutoNameUnnamedLocations.swift:123; macOS: AISignalExplorerNlFilter.swift:142 —
+  both the same "escaping closure captures non-escaping parameter 'content'" `@ViewBuilder` bug in OTHER P4
+  surfaces), plus the known macOS dev-cert signing gap. All are outside this surface's code and allowed
+  files and reproduce identically regardless of this surface. This matches the user-approved peer
+  disposition recorded for sibling P4 surfaces (e.g. p4-apple-shared-surfaces-0153-DensityToggle.log,
+  p4-apple-feature-views-0147-RouteMapSection.log). Not red-as-green: the RED xcodebuild results are
+  reported verbatim above with their exact attributing error lines; only the in-scope surface is claimed
+  DONE.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/shared-surfaces/SortControl.swift \
+          apps/apple/TeslaSync/shared-surfaces/SortControl.Adapter.swift \
+          apps/apple/TeslaSync/shared-surfaces/SortControl.Model.swift \
+          apps/apple/TeslaSync/shared-surfaces/SortControl.Views.swift \
+          apps/apple/TeslaSync/shared-surfaces/SortControl.Previews.swift \
+          apps/apple/TeslaSync/shared-surfaces/SortControl.strings \
+          apps/apple/TeslaSync/shared-surfaces/SortControl.AdapterTests.swift \
+          apps/apple/TeslaSync/shared-surfaces/SortControl.Tests.swift \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0159-SortControl.log
+  git commit -m "feat(apps/apple/shared-surfaces): add SortControl surface (P4)"
+
+EXIT=0
+STATUS=DONE

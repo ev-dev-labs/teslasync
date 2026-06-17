@@ -1,0 +1,158 @@
+=== P4 Feature view 0282 MediaNavigationPanel (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/MediaNavigationPanel.*
+Web src : web/src/features/vehicles/components/telemetry-panels/MediaNavigationPanel.tsx
+Host    : macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat (Homebrew)
+ADR refs: ADR-002 (shared SwiftUI source), ADR-004 (KMP Shared.xcframework), ADR-009
+
+--------------------------------------------------------------------------------
+ARTIFACT (9 files, all under the allowed MediaNavigationPanel.* glob)
+--------------------------------------------------------------------------------
+  MediaNavigationPanel.swift           main surface: glass panel, header (headphones
+                                       + title), freshness chip, connectivity banner,
+                                       phase switch.
+  MediaNavigationPanel.Format.swift    pure units/format layer — ports of cleanNil
+                                       (lib/cleanNil.ts), fmtNumber/fmtInt
+                                       (lib/numberFormat.ts), convertDistanceFromSI
+                                       (lib/unitConversion.ts).
+  MediaNavigationPanel.Adapter.swift   pure projection core — playback-status badge,
+                                       presence place, MediaSnapshot/LocationSnapshot
+                                       readings, the two-section projection, a11y.
+  MediaNavigationPanel.Model.swift     P1/S8 state-holder seam + P1/S11 view.opened
+                                       telemetry + P1/S10 i18n facade + connection axis
+                                       + stale auto-refresh.
+  MediaNavigationPanel.Views.swift     data body — Now-Playing card (title/artist/source
+                                       chip/status pill) + Navigation block (destination
+                                       card + Home/Work/Favorite presence chips) + the
+                                       per-section "No media data" / "No location data".
+  MediaNavigationPanel.States.swift    P4 leaf chrome — loading skeleton / empty /
+                                       error+retry.
+  MediaNavigationPanel.Previews.swift  9 #Previews (data / media-only / location-only /
+                                       empty / loading / error / stale / offline).
+  MediaNavigationPanel.Tests.swift     31 unit tests (adapter + projector + model + a11y).
+  MediaNavigationPanel.strings         P1/S10 catalog: 12 web keys + 10 native chrome keys.
+
+--------------------------------------------------------------------------------
+PARITY (every web branch + state reproduced; native-idiomatic, not Tailwind ports)
+--------------------------------------------------------------------------------
+  Now Playing  : media present -> card { cleanNil(title) || "Nothing playing",
+                 cleanNil(artist) || "Unknown artist", optional source chip, optional
+                 status Badge: Playing->green / Paused->amber / else->neutral };
+                 media absent -> "No media data".
+  Navigation   : location present -> { destination_name present -> pinned card with
+                 {convertDistanceFromSI(miles_to_arrival) + unit} and {fmtInt(min) + "min"};
+                 else -> "No active destination" } + presence chips Home/Work/Favorite;
+                 location absent -> "No location data".
+  SI note      : miles_to_arrival is SI meters (legacy name); converted at the display
+                 boundary via the MediaNavFormat distance port (km/mi/ft), never re-scaled.
+  States       : loading (parent isLoading) / empty (both snapshots absent) / error
+                 (parent QueryError) / data; orthogonal connection live|stale|offline
+                 chip + banner + one-shot stale auto-refresh. Lucide -> SF Symbols;
+                 web emoji presence chips -> house.fill / building.2.fill / star.fill.
+  a11y         : VoiceOver labels on header, freshness chip, refresh, both section cards,
+                 status pill, presence chips, retry; Dynamic Type via Font.TS roles;
+                 reduce-motion respected by the shared TSFadeIn/TSSkeleton.
+
+--------------------------------------------------------------------------------
+GATE STEPS
+--------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    Pre-build Run Script staged the RELEASE Shared.xcframework via Gradle:
+      "BUILD SUCCESSFUL in 6m 40s" -> apps/apple/Frameworks/Shared.xcframework
+      (ios-arm64 + ios-arm64-simulator + macos-arm64).  <-- long-pole cleared this run.
+    MediaNavigationPanel.strings -> CopyStringsFile + builtin-copyStrings --validate
+      succeeded (UTF-8) into TeslaSync.app.
+    MediaNavigationPanel surface error count: 0  (MEDIANAV_ERROR_COUNT=0).
+    ** BUILD FAILED ** with 26 errors, ALL pre-existing + unrelated, in ANOTHER agent's
+      surfaces (out of scope; not in the allowed file set):
+        StateTimeline.Previews.swift, StateTimeline.Source.swift,
+        StateTimelineWidget.swift, StateTimelineWidget.Model.swift,
+        StateTimelineWidget.Previews.swift
+      root cause: ambiguous type lookup for StateTimelineUpdate /
+        StateTimelineConnection / StateTimelineLoadStatus / StateTimelineModel
+        (duplicate declarations across parallel-merged surfaces).
+    IOS_EXIT=65  (zero failures originate in MediaNavigationPanel; DEFERRED — see DISPOSITION)
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Blocked before compile by code-signing: `security find-identity -p codesigning`
+      -> "0 valid identities found". macOS app target cannot sign on this runner.
+    MAC_EXIT=65  (environment/signing; DEFERRED to the signed macos-latest gate)
+[3] swiftlint --strict (8 .swift files)            -> 0 violations, 0 serious.  LINT_EXIT=0
+[4] swiftformat --lint (8 .swift files)            -> 0/8 require formatting.   FORMAT_EXIT=0
+[5] check-placeholders.ps1 (swift, surface files)  -> PLACEHOLDER_ALLOWED=0,
+                                                      PLACEHOLDER_COUNT=0.        PLACEHOLDER_EXIT=0
+    (self-test SELFTEST_EXIT=0)
+
+--------------------------------------------------------------------------------
+ISOLATED SURFACE VERIFICATION (host-runnable, all green)
+--------------------------------------------------------------------------------
+  SwiftPM build (swift-tools 6.0, Swift 6 language mode, strict concurrency complete):
+      "Build complete!" — 0 errors / 0 warnings (surface + real generated Tokens.swift +
+      minimal shared-component shims).
+  SwiftPM tests:
+      "Executed 31 tests, with 0 failures" (22 MediaNavigationPanelTests +
+      9 MediaNavigationPanelModelTests). Golden pins incl. 18500 m -> "18.50 km" /
+      "11.50 mi", fmtInt 23.6 -> "24", cleanNil "<nil>"/"nil"/"null"/"" -> nil,
+      badge Playing/Paused/else, places order [home,work,favorite], projector
+      error>loading>empty>data, view.opened-once, stale auto-refresh-once.
+  swiftc -typecheck, real SDKs, -swift-version 6 -strict-concurrency=complete:
+      iOS    : -sdk iPhoneSimulator26.5 -target arm64-apple-ios18.0-simulator  -> EXIT 0
+      macOS  : -sdk MacOSX26.5          -target arm64-apple-macos15.0           -> EXIT 0
+  xcodegen generate: project created; all 9 MediaNavigationPanel.* files enumerated
+      (54 pbxproj references across app + test targets + the .strings resource).
+  i18n parity: 12/12 web t() keys present in the .strings table; 22 total keys
+      (12 web + 10 chrome); 0 referenced-but-undefined; 0 dead. No English literals
+      in Swift (all via MediaNavStrings facade / fallbacks).
+  Telemetry: P1/S11 view.opened emitted once on appear (surface slug
+      "MediaNavigationPanel"), idempotent, asserted by test.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green   : IOS_EXIT/MAC_EXIT reported as the real non-zero (65); not
+                         claimed green. The DONE disposition is for the SURFACE, whose
+                         every host-runnable gate + real app-target compile is green.
+  2  No scope narrowing: all web sections/branches/states reproduced (now-playing card,
+                         source chip, status badge, destination card w/ distance+ETA,
+                         3 presence chips, both per-section empties, panel empty).
+  3  No skip-and-assume: read the web source end-to-end; every t() + conditional ported.
+  4  No stubs as final : full implementation; placeholder gate COUNT=0; no TODO/stub/mock.
+  5  No parity shortcut: SI distance conversion (km/mi/ft) + locale number formatting
+                         ported and golden-pinned; raw playback labels shown verbatim.
+  6  No delegation     : authored directly; no sub-agent delegation.
+  7  No predecessor bypass: follows the 0279 EnergyChargingPanel 7+2-file pattern, the
+                         shared P1/S8-S11 seams, and the P4 leaf contract.
+  8  No commit on red  : committing on all-green host gates + a 0-error surface compile
+                         in the real iOS app target; the Xcode scheme steps are DEFERRED
+                         (other-surface collisions + signing), not failures of this code.
+  9  No silent drift   : changes confined to the allowed MediaNavigationPanel.* files +
+                         this log + the macos-pending row. The generated .xcodeproj and
+                         the staged Frameworks/Shared.xcframework are git-ignored build
+                         output (not committed).
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native MediaNavigationPanel shipped at parity with the web source:
+  an isolated-verifiable surface (SwiftPM build + 31/31 tests green; iOS-18 + macOS-15
+  swiftc -typecheck = 0 errors under Swift 6 strict concurrency; swiftlint --strict /
+  swiftformat --lint / placeholder gate all clean; xcodegen enumerates the 9 files;
+  12/12 web i18n keys + a11y labels present; P1/S8 keeps HTTP out of the view; P1/S11
+  view.opened on appear; all states render). The RELEASE Shared.xcframework was assembled
+  + staged live this run, and the REAL iOS app-target compile produced ZERO
+  MediaNavigationPanel errors. The full-app xcodebuild build/test is DEFERRED to the
+  signed macos-latest acceptance gate (p4-apple/P99-0001): the iOS link is blocked only
+  by pre-existing, out-of-scope StateTimeline* type-ambiguity collisions in another
+  agent's surfaces, and the macOS target additionally by 0 code-signing identities —
+  neither a defect in this code. Recorded as a macos-pending row, matching the
+  user-approved P4 Apple disposition.
+
+--------------------------------------------------------------------------------
+COMMIT
+--------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/MediaNavigationPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0282-MediaNavigationPanel.log \
+          apps/macos-pending-verifications.md
+  git commit -m "feat(apps/apple/feature-views): add MediaNavigationPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

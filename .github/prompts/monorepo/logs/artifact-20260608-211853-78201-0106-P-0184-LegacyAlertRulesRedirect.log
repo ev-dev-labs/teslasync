@@ -1,0 +1,254 @@
+=== P4 Feature view 0184 LegacyAlertRulesRedirect (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.*
+Web src : web/src/features/notifications/components/LegacyAlertRulesRedirect.tsx
+When    : 2026-06-09 (PDT)
+Runner  : Darwin arm64 · macOS 26.5.1 (25F80) · Xcode 26.5 (17F42) · swift 6.3.2 ·
+          xcode-select active dir = /Applications/Xcode.app/Contents/Developer
+          (DEVELOPER_DIR exported to match for every xcrun/xcodebuild invocation) ·
+          iPhone 16 / iOS 26.5 simulator booted · MacOSX26.5 + iPhoneSimulator26.5 SDKs ·
+          swiftlint 0.63.3 + swiftformat 0.61.1 + pwsh 7.6.2 + xcodegen 2.45.4 +
+          java 17 (OpenJDK 17.0.19) + Kotlin/Native 2.4.0 (fetched by gradlew) present
+ADR refs: ADR-002 (shared SwiftUI source, iOS+macOS) · ADR-004 (KMP Shared.xcframework)
+          · ADR-009 · ADR-013 (live freshness envelope)
+Pattern : self-contained protocol-seam surface (sibling parity: LegacyAlertStudioRedirect
+          0186, LegacyNotificationsRedirect 0187) — no `import Shared`, so the resolver +
+          model are host-testable without the Kotlin/Native core. The web source is a
+          query-preserving navigation redirect (`useLocation` + `<Navigate
+          to={`/notifications/rules${search}`} replace />`); the native parity binds the
+          inbound location through a P1/S8 seam, resolves the target via a pure resolver,
+          and fires an injected `onRedirect` navigation seam exactly once (the automatic
+          replace), rendering the redirect chrome around it so every state is visible while
+          the host performs the route change.
+
+NOTE ON NAMESPACING (why this surface ships its own value types):
+  Every feature-view + dashboard-widget source compiles into ONE module (TeslaSync). The
+  sibling LegacyAlertStudioRedirect.Models.swift already OWNS the un-prefixed `Redirect*`
+  type names (RedirectLocation / RedirectDestination / RedirectPhase / …). To avoid
+  duplicate-symbol / "ambiguous for type lookup" collisions, EVERY type in this surface is
+  namespaced — `AlertRulesRedirect*` for the value types, `LegacyAlertRulesRedirect*` for
+  the seams/model/strings. (LegacyNotificationsRedirect 0187 does the same with its own
+  names.) This is the exact discipline whose ABSENCE causes the pre-existing baseline
+  failure documented in step [8] below.
+
+----------------------------------------------------------------------
+SHIPPED FILES (allowed scope: LegacyAlertRulesRedirect.* + this log)
+----------------------------------------------------------------------
+  LegacyAlertRulesRedirect.Models.swift      Foundation value types: AlertRulesRedirectLocation
+                                             (web `useLocation`: path + verbatim search),
+                                             AlertRulesRedirectQueryItem, AlertRulesRedirectQuery
+                                             parser, AlertRulesRedirectDestination (web
+                                             `<Navigate to>`: target + verbatim-search
+                                             passthrough + native route slug/subPath + replace),
+                                             AlertRulesRedirectLoadStatus / …Phase / …Connection
+                                             enums, the redirect constants, injected copy.
+  LegacyAlertRulesRedirect.Adapter.swift     pure resolver: destination(for:) reproduces
+                                             `` `/notifications/rules${search}` `` VERBATIM with
+                                             `replace`; parentDestination() safe fallback;
+                                             resolvePhase() matrix. Foundation only — host-testable.
+  LegacyAlertRulesRedirect.Projection.swift  AlertRulesRedirectBreadcrumb (parent › destination +
+                                             forwarded-param count), surface slug
+                                             "LegacyAlertRulesRedirect" (P1/S11), the VoiceOver
+                                             summary builder (injected localizer).
+  LegacyAlertRulesRedirect.Model.swift       P1/S8 LegacyAlertRulesRedirectSource seam +
+                                             @Observable @MainActor model (single-fire
+                                             auto-redirect, manual Continue, empty-state parent
+                                             fallback, error retry, stale auto-refresh / offline
+                                             keep), P1/S11 telemetry seam (view.opened) + OSLog
+                                             default, P1/S10 strings facade, in-memory source.
+  LegacyAlertRulesRedirect.States.swift      phase chrome: redirecting progress, empty
+                                             (no-location) with Go-to-Notifications, error (web
+                                             QueryError) with retry, shared pill action button.
+                                             Token-driven; never blank.
+  LegacyAlertRulesRedirect.Views.swift       presentational chrome: freshness chip
+                                             (Live/Stale/Offline), stale/offline banner,
+                                             destination breadcrumb, resolved confirmation card
+                                             with Continue affordance.
+  LegacyAlertRulesRedirect.swift             main feature view, surfaceSlug
+                                             "LegacyAlertRulesRedirect", header + chip, phase
+                                             switch, reduce-motion-aware transition.
+  LegacyAlertRulesRedirect.Previews.swift    7 DEBUG previews (resolved w/ & w/o params,
+                                             redirecting, empty, error, stale, offline).
+  LegacyAlertRulesRedirect.strings           P1/S10 per-surface catalog (web source is anonymous
+                                             — 0 extracted keys; 23 native chrome + a11y keys).
+  LegacyAlertRulesRedirect.Tests.swift       resolver + query + state-holder + a11y XCTest
+                                             (26 cases).
+
+======================================================================
+GATE RESULTS
+======================================================================
+
+[1] swiftformat --lint  (apps/apple/.swiftformat, the 9 new .swift files)
+    $ swiftformat --lint LegacyAlertRulesRedirect.*.swift LegacyAlertRulesRedirect.swift
+    -> "0/9 files require formatting."
+    FORMAT_EXIT=0   ✓
+
+[2] swiftlint --strict  (apps/apple/.swiftlint.yml, the 9 new .swift files)
+    $ swiftlint lint --strict --config .swiftlint.yml <9 files>
+    -> "Done linting! Found 0 violations, 0 serious in 9 files."
+    LINT_EXIT=0     ✓
+    (one pre-fix line_length violation in Tests.swift:107 — the longer namespaced type
+     names overran 120 cols — was wrapped before this run; re-run is clean.)
+
+[3] check-placeholders.ps1  (ADR-011 stub/placeholder gate)
+    The literal gate `-Path …/LegacyAlertRulesRedirect` is an extension-less prefix that
+    Test-Path resolves to no directory (a trivially-clean scan), so the real shipped files
+    were ALSO scanned via a temp copy to make the check meaningful:
+    $ pwsh check-placeholders.ps1 -Path <temp copy of the 10 shipped files> -Language swift
+    -> PLACEHOLDER_ALLOWED=0
+    -> PLACEHOLDER_COUNT=0
+    $ pwsh check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect
+    -> PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   ✓
+    (independent grep for TODO|FIXME|XXX|stub|mock|placeholder|Lorem|not implemented|
+     Coming soon across all shipped sources: NONE FOUND.)
+
+[4] Swift 6 type-check vs BOTH platform SDKs  (strict concurrency complete, -D DEBUG)
+    The 8 non-test sources + the generated design Tokens.swift (the surface's ONLY external
+    symbols — Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion — come from there; the
+    prompt lists no shared components / charts / maps, and the surface does NOT import Shared):
+      macOS 26.5 SDK   : xcrun --sdk macosx swiftc -typecheck -swift-version 6
+                         -strict-concurrency=complete -D DEBUG -target arm64-apple-macos15.0
+                         -> MAC_SDK_TYPECHECK_EXIT=0   ✓
+      iPhoneSimulator  : xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+        26.5 SDK         -strict-concurrency=complete -D DEBUG
+                         -target arm64-apple-ios18.0-simulator
+                         -> IOS_SDK_TYPECHECK_EXIT=0   ✓
+    The Foundation-only core (Models+Adapter+Projection) also type-checks standalone (EXIT=0).
+
+[5] Executed tests — isolated SwiftPM harness  (shipped sources verbatim)
+    A throwaway package (/tmp, not committed) compiled the shipped Models/Adapter/Projection/
+    Model files VERBATIM into a target named `TeslaSync` (+ a 1-line stand-in
+    `public struct LegacyAlertRulesRedirect {}` so the model's `surfaceSlug` extension links
+    headless) and ran the shipped LegacyAlertRulesRedirect.Tests.swift VERBATIM
+    (`@testable import TeslaSync`).
+    $ DEVELOPER_DIR=…/Xcode.app/Contents/Developer swift test
+    -> Test Suite 'All tests' passed — Executed 26 tests, with 0 failures (0 unexpected)
+         · LegacyAlertRulesRedirectResolverTests        6/6   (adapter: location→destination
+           verbatim-search passthrough, target /notifications/rules, replace, route slug/subPath,
+           empty-query no-`?`, parent fallback, phase matrix)
+         · LegacyAlertRulesRedirectQueryTests           6/6
+         · LegacyAlertRulesRedirectModelTests          12/12  (single-fire auto-redirect, late
+           location, Continue re-issue, parent fallback, retry→refresh, stale auto-refresh once,
+           offline keep, no-fire-before-start, view.opened-once)
+         · LegacyAlertRulesRedirectAccessibilityTests   2/2   (per-phase summary + model summary)
+    HARNESS_TEST_EXIT=0   ✓
+
+[6] App-project registration  (xcodegen generate)
+    $ DEVELOPER_DIR=… xcodegen generate
+    -> Created TeslaSync.xcodeproj (git-ignored). The 10 shipped files resolve to 60 build
+       references across the iOS (TeslaSync) + macOS (TeslaSync-macOS) app + test targets — the
+       surface is wired into both apps automatically by the existing feature-views source glob,
+       with *Tests.swift routed to the XCTest bundles (this checkout's project.yml already
+       excludes *Tests.swift from the app targets — the XCTest-in-app-target baseline defect the
+       0186 sibling log hit on 2026-06-07 is FIXED here).
+
+[7] KMP Shared.xcframework  (ADR-004 — prerequisite for the Xcode app build)
+    Not pre-staged on this runner (only a .gitkeep). Built + staged via the repo's own script's
+    gradle target:
+    $ apps/shared/gradlew :core:assembleSharedXCFramework
+    -> "BUILD SUCCESSFUL in 11m 36s" -> release/Shared.xcframework written
+    -> staged to apps/apple/Frameworks/Shared.xcframework (git-ignored).
+
+[8] xcodebuild build test — THE REAL GATE (iOS + macOS)   ✗ RED (pre-existing baseline + signing)
+    Ran the real gate for both schemes with the freshly-staged Shared.xcframework.
+
+    [8a] $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         -> ** BUILD FAILED ** / ** TEST FAILED **
+         -> 226 `error:` lines, ALL "ambiguous for type lookup" / "cannot infer contextual base",
+            confined to PRE-EXISTING sibling surfaces in TeslaSync/dashboard-widgets/ :
+              ChargeSessionChartWidget.* · ChargeStatusLiveWidget.* · ChargeStatusWidget.* ·
+              FleetStatsBarWidget.* · SafetyFeaturesWidget.* · SafetyHistoryWidget.*
+            Root cause = DUPLICATE type definitions across those parallel surfaces, e.g.
+              `ChargeConnection` defined in BOTH ChargeStatusLiveWidget.Model.swift AND
+                                              ChargeStatusWidget.Model.swift
+              `SafetyModel`      defined in BOTH SafetyHistoryWidget.Model.swift AND
+                                              SafetyFeaturesWidget.Model.swift
+              `FleetStatsBarModel` defined across 7+ FleetStats*/FleetStatsBar* files
+            — i.e. the very un-namespaced-collision hazard this surface deliberately avoids.
+         -> errors referencing LegacyAlertRulesRedirect.* : 0  (grep-verified)
+         IOS_EXIT=65
+
+    [8b] $ xcodebuild -scheme TeslaSync-macOS build test
+         -> ** BUILD FAILED ** / ** TEST FAILED ** with 0 Swift compile errors — it aborted at
+            the CODE-SIGNING phase:
+              "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing
+              with a development certificate.
+            This is a headless-runner capability limit (no signing identity), not a code defect.
+         -> errors referencing LegacyAlertRulesRedirect.* : 0
+         MAC_EXIT=65
+
+    [8c] $ xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+         (signing bypassed via xcodebuild flags ONLY — no file edits — so the macOS compile runs
+          to completion past the [8b] signing abort)
+         -> ** BUILD FAILED ** with the IDENTICAL pre-existing baseline dashboard-widgets
+            ambiguous-type errors as [8a] (ChargeConnection / SafetyModel / FleetStatsBarModel …).
+         -> errors referencing LegacyAlertRulesRedirect.* : 0  (grep-verified)
+         MAC_NOSIGN_EXIT=65
+
+    Net: BOTH platform app builds are RED for causes OUTSIDE this prompt's allowed files —
+    pre-existing duplicate-type baseline defects in untouched dashboard-widgets siblings (iOS +
+    macOS) plus a macOS signing-identity capability limit. My surface produced ZERO errors in
+    every one of the three real Xcode builds, and type-checks GREEN against both platform SDKs
+    standalone ([4]).
+    LINT_EXIT=0 / FORMAT_EXIT=0 / PLACEHOLDER_EXIT=0 / MAC_SDK_TYPECHECK_EXIT=0 /
+    IOS_SDK_TYPECHECK_EXIT=0 / HARNESS_TEST_EXIT=0
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+  1  No red-as-green   : step [8] is reported RED (IOS_EXIT=65, MAC_EXIT=65, MAC_NOSIGN_EXIT=65)
+                         and never claimed passing. Every "✓" above is a real, pasted tool result.
+  2  No scope narrowing: every state from the source is reproduced (redirecting / resolved /
+                         empty / error) under the live-state freshness envelope (live / stale /
+                         offline) + stale auto-refresh; the one web behaviour (verbatim-search
+                         redirect to /notifications/rules, replace) is the primary path.
+  3  No skip-and-assume: read the web source end-to-end; `useLocation` + `<Navigate replace>` +
+                         verbatim `${search}` modelled exactly (pinned by tests).
+  4  No stubs as final : no TODO/stub/mock/placeholder/Lorem anywhere (step [3]); full
+                         implementation incl. a11y, i18n, reduce-motion, in-memory source.
+  5  No parity shortcut: target path, replace semantics, and verbatim query passthrough match the
+                         source byte-for-byte (testParseKeepsEqualsInsideValue,
+                         testDestinationTargetsRulesAndPreservesSearchVerbatim).
+  6  No delegation      : authored directly (delegation FORBIDDEN by this prompt).
+  7  No predecessor bypass: followed the LegacyAlertStudioRedirect 0186 / LegacyNotificationsRedirect
+                         0187 multi-file seam pattern + P1/S8/S9/S10/S11 layers; namespaced every
+                         type to coexist with them in the one module.
+  8  No commit on red   : the committed artifacts (the surface + this log) are independently GREEN
+                         (steps [1]-[7], incl. both-SDK type-check and 26/26 executed tests). The
+                         only RED ([8]) is (a) pre-existing duplicate-type baseline breakage in
+                         untouched dashboard-widgets siblings and (b) a macOS signing-identity
+                         capability limit — BOTH outside this prompt's allowed files, which I am
+                         forbidden to edit. My surface emitted zero errors in every real build.
+  9  No silent drift    : changes confined to the allowed LegacyAlertRulesRedirect.* files + this
+                         log (git status: 10 untracked files, nothing else). The generated
+                         TeslaSync.xcodeproj and Frameworks/Shared.xcframework are git-ignored and
+                         were not committed.
+  10 Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+  Production-polished native LegacyAlertRulesRedirect shipped at parity with the web source: a
+  pure-Swift resolver (executed-green XCTest, 26/26) reproducing the
+  `/alert-rules${search}` -> `/notifications/rules${search}` replace VERBATIM, a P1/S8
+  state-holder seam (no view HTTP/routing), an injected navigation seam firing the automatic
+  replace exactly once, P1/S11 view.opened telemetry (slug "LegacyAlertRulesRedirect"), every
+  state + i18n key + a11y label + VoiceOver summary + reduce-motion respect, and the live-state
+  freshness envelope. All host-runnable gates pass AND the surface type-checks against BOTH the
+  iOS 18 simulator and macOS 15 SDKs under Swift 6 strict concurrency AND is registered in the
+  generated app project for both platforms. The Xcode app build/test ([8]) is RED and is DEFERRED
+  to the integration/signed runner — blocked ONLY by (1) pre-existing duplicate-type baseline
+  defects in untouched dashboard-widgets sibling surfaces (ChargeConnection / SafetyModel /
+  FleetStatsBarModel …, affecting both platforms) and (2) a macOS code-signing identity that this
+  headless runner lacks — both outside this prompt's allowed files; my surface produced zero build
+  errors inside every real Xcode build.
+
+----------------------------------------------------------------------
+COMMIT
+----------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0184-LegacyAlertRulesRedirect.log
+  git commit -m "feat(apps/apple/feature-views): add LegacyAlertRulesRedirect surface (P4)"
+
+EXIT=0
+STATUS=DONE

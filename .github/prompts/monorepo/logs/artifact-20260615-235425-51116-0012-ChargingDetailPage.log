@@ -1,0 +1,219 @@
+# p4-apple · P7 · page:charging/ChargingDetail — SwiftUI / HIG — execution log
+
+Artifact: native SwiftUI parity of web `web/src/features/charging/pages/ChargingDetailPage.tsx`
+(route `/charging/:id`). Target(s): apple (apple-macos + apple-ios, one adaptive SwiftUI layer).
+Prompt: p4-apple/P7/page:charging/ChargingDetail. Delegation: FORBIDDEN (implemented directly).
+
+================================================================================
+PATH NOTE (no silent drift)
+================================================================================
+The generated prompt lists the output under `apps/apple/TeslaSync/Features/Charging/**`.
+The actual XcodeGen spec (`apps/apple/project.yml`) compiles app sources from `Sources/**`
+(plus the `TeslaSync/{feature-views,shared-surfaces,...}` surface trees). `TeslaSync/Features`
+is NOT a configured source root, so a file placed there would never compile. The real, build-
+wired convention -- where the sibling charging page `PowersharePage.swift` lives -- is
+`apps/apple/Sources/Features/Charging/**`. All new files were placed there so they actually
+compile into both app targets. This matches the accepted location of every existing P7 page.
+
+================================================================================
+FILES (all under apps/apple/Sources/Features/Charging/ unless noted)
+================================================================================
+ChargingDetailModels.swift            -- value types (session/telemetry/live/vehicle, SI) + pure
+                                         derivations (isDC, durationMinutes, addedDistanceM,
+                                         kwhPerHour, costPerKwh, chargeCurve/synthesizeCurve) +
+                                         ChargingStateTone + ChargingDetailPhase
+ChargingDetailFormat.swift            -- pure Foundation formatters (number/percent/socRange/...)
+ChargingDetailPageModel.swift         -- @Observable @MainActor model + ChargingDetailDataSource seam
+ChargingDetailPageModel.Sample.swift  -- Sample/Empty/Failing data sources (SI fixtures)
+ChargingDetailPage.swift              -- root View: scaffold, phase switch, ready body, previews
+ChargingDetailPage.Sections.swift     -- header, value badge, ChargingMetricGauge, ChargingStatCard,
+                                         hero gauges (GlassPanel1-5), battery progress (GlassPanel6)
+ChargingDetailPage.Stats.swift        -- the eight headline stat cards (Energy...kWh/h Avg)
+ChargingDetailPage.Panels.swift       -- more-details, location, advanced (live), timestamps, skeleton
+ChargingDetailPage.Charts.swift       -- charge-curve area chart + 3 multi-series time charts (TS wrappers)
+ChargingDetailRouteRegistration.swift -- ChargingDetailLink + .chargingDetailDestination() + make() factory
+Localization/Localizable.xcstrings    -- +55 keys (charging.detail.* + 2 help.*; common.noData pre-existed)
+Tests/Unit/Features/Charging/ChargingDetailPageModelTests.swift -- XCTest (phases/derivations/format/registration)
+
+Feature LOC (10 Swift files): 1667  (web source: 912 lines -> faithful native decomposition, >= 70%).
+
+================================================================================
+ARCHITECTURE / PARITY NOTES
+================================================================================
+* Data binds through the `@Observable ChargingDetailPageModel` (ADR-004 -- no networking in the
+  view); the four web hooks map 1:1 to the `ChargingDetailDataSource` seam:
+    useChargingSessionDetail   -> loadSession(sessionID)         GET /charging/{id}
+    useChargeTelemetry         -> loadTelemetry(sessionID)       GET /charging/{sessionId}/telemetry
+    useVehicle                 -> loadVehicle(vehicleID)         GET /vehicles/{id}
+    useChargingTelemetryLatest -> loadLatestTelemetry(vehicleID) GET /charging-telemetry/latest
+* Everything is stored SI (Wh/W/m/degC/V/A) and converted only at the render boundary via the
+  shared `Units` facade (P1/S5) + `TS*` SI formatters (ADR-005). No non-SI is stored/computed.
+* Charts use the P3 native Swift Charts wrappers only (TSAreaChart / TSLineChart) -- never a web
+  view. The 5 hero RadialGauges use a feature-local `ChargingMetricGauge` (token-built ring) so the
+  absolute value+unit render like the web gauge (the shared TSRadialGauge only shows a percentage).
+* Navigation: `/charging/:id` is modeled as a typed NavigationDestination
+  (`ChargingDetailLink(sessionID:)` + `.chargingDetailDestination()`), mirroring the accepted
+  unrouted/detail precedent `AutomationCard*` -- no widening of the value-less `AppRoute` enum.
+* Adaptive macOS + iOS (ADR-002/006): gauge/stat grids reflow (LazyVGrid adaptive columns), the
+  system back button replaces the web back link; light/dark + Dynamic Type + VoiceOver honored.
+* Three data states implemented for every source: loading -> redaction skeleton; empty ->
+  ContentUnavailableView per chart/panel (EmptyChargingDetailDataSource); error -> retry surface;
+  success -> SampleChargingDetailDataSource.
+
+================================================================================
+GATE (apple triad: placeholder + build + lint + test)  -- run on the real source path
+================================================================================
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Charging -Language swift
+  PLACEHOLDER_ALLOWED=2   PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS -destination platform=macOS,arch=arm64 \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- build
+  (Shared.xcframework built from the KMP core via gradlew :core:assembleSharedXCFramework, then staged)
+  ** BUILD SUCCEEDED **   (entire app target incl. all new files; 0 errors)
+BUILD_EXIT(macos)=0
+
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync -destination "platform=iOS Simulator,name=iPhone 17 Pro" \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- build
+  ** BUILD SUCCEEDED **   (entire iOS app target incl. all new files; 0 errors)
+BUILD_EXIT(ios)=0
+  NOTE: CODE_SIGNING_ALLOWED=NO is the standard headless/CI build flag -- this host has no
+  development signing identity (the only reason the un-flagged invocation stops at setup).
+
+$ swiftlint --strict --config apps/apple/.swiftlint.yml apps/apple/Sources/Features/Charging
+  Done linting! Found 0 violations, 0 serious in 6104 files.
+LINT_EXIT=0
+
+$ xcodebuild ... -scheme TeslaSync-macOS ... test
+  ** TEST FAILED **  -- the SHARED XCTest bundle (TeslaSync(-macOS)Tests, 1242 *Tests.swift) does
+  not compile under this Xcode 26.5 / Swift 6 strict-concurrency toolchain because of PRE-EXISTING,
+  unrelated main-actor isolation errors in ~22 sibling test files, e.g.:
+    Tests/Unit/Features/Analytics/TimelinePageModelTests.swift:318: call to main actor-isolated
+        static method 'utcDayKey' in a synchronous nonisolated context
+    Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20: call to main actor-isolated
+        static method 'artifact(...)' in a synchronous nonisolated context
+  These files are unmodified by this prompt and OUTSIDE its allowed-files scope; `-only-testing`
+  still compiles the whole bundle, so they block running my test class too. This is the same
+  pre-existing test-bundle limitation the sibling Powershare P7 log documents, and matches the
+  CI-deferred posture in apps/macos-pending-verifications.md. I did NOT edit unrelated test files
+  (scope + a 22+-file noisy diff would violate the allowed-files contract).
+TEST_EXIT=65  (pre-existing, out-of-scope -- see self-verification below)
+
+Self-verification of THIS prompt's test logic (independent of the broken bundle):
+  * swiftlint --strict parsed ChargingDetailPageModelTests.swift clean (0 violations).
+  * A standalone Swift program replicating the pure derivations + formatters ran the same 22
+    assertions the XCTest makes -> ALL LOGIC CHECKS PASSED.
+  * The test mirrors the proven sibling `PowersharePageModelTests` shape (actor stub + @MainActor).
+  * The model/derivations/format compile + type-check inside the real app module (BUILD SUCCEEDED).
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=90
+- [x] **panel** — GlassPanel1  → `ChargingHeroGaugeSection.energyGauge → ChargingMetricGauge` (ChargingDetailPage.Sections.swift)
+- [x] **panel** — GlassPanel2  → `ChargingHeroGaugeSection.endSocGauge` (ChargingDetailPage.Sections.swift)
+- [x] **panel** — GlassPanel3  → `ChargingHeroGaugeSection.peakPowerGauge` (ChargingDetailPage.Sections.swift)
+- [x] **panel** — GlassPanel4  → `ChargingHeroGaugeSection.durationGauge` (ChargingDetailPage.Sections.swift)
+- [x] **panel** — GlassPanel5  → `ChargingHeroGaugeSection.avgPowerGauge` (ChargingDetailPage.Sections.swift)
+- [x] **panel** — GlassPanel6  → `ChargingBatteryProgressSection` (ChargingDetailPage.Sections.swift)
+- [x] **panel** — Energy  → `ChargingStatGridSection.energyCard` (ChargingDetailPage.Stats.swift)
+- [x] **panel** — Duration  → `ChargingStatGridSection.durationCard` (ChargingDetailPage.Stats.swift)
+- [x] **panel** — Peak-Power  → `ChargingStatGridSection.peakPowerCard` (ChargingDetailPage.Stats.swift)
+- [x] **panel** — SoC-Range  → `ChargingStatGridSection.socRangeCard` (ChargingDetailPage.Stats.swift)
+- [x] **panel** — StatCard11  → `ChargingStatGridSection.costCard` (ChargingDetailPage.Stats.swift)
+- [x] **panel** — Per-kWh  → `ChargingStatGridSection.perKwhCard` (ChargingDetailPage.Stats.swift)
+- [x] **panel** — Miles-Added  → `ChargingStatGridSection.milesAddedCard` (ChargingDetailPage.Stats.swift)
+- [x] **panel** — kWh-h-Avg  → `ChargingStatGridSection.avgRateCard` (ChargingDetailPage.Stats.swift)
+- [x] **panel** — GlassPanel15  → `ChargingMoreDetailsSection` (ChargingDetailPage.Panels.swift)
+- [x] **panel** — GlassPanel16  → `ChargingLocationSection` (ChargingDetailPage.Panels.swift)
+- [x] **panel** — GlassPanel17  → `ChargingChargeCurveSection` (ChargingDetailPage.Charts.swift)
+- [x] **panel** — GlassPanel18  → `ChargingTimeSeriesSection` (ChargingDetailPage.Charts.swift)
+- [x] **panel** — GlassPanel19  → `ChargingTemperatureSection` (ChargingDetailPage.Charts.swift)
+- [x] **panel** — GlassPanel20  → `ChargingVoltageCurrentSection` (ChargingDetailPage.Charts.swift)
+- [x] **panel** — GlassPanel21  → `ChargingAdvancedSection` (ChargingDetailPage.Panels.swift)
+- [x] **panel** — GlassPanel22  → `ChargingTimestampsSection` (ChargingDetailPage.Panels.swift)
+- [x] **chart** — RadialGauge  → `ChargingMetricGauge (energy) in ChargingHeroGaugeSection.energyGauge` (ChargingDetailPage.Sections.swift)
+- [x] **chart** — RadialGauge  → `ChargingMetricGauge (endSoc) in ChargingHeroGaugeSection.endSocGauge` (ChargingDetailPage.Sections.swift)
+- [x] **chart** — RadialGauge  → `ChargingMetricGauge (peakPower) in ChargingHeroGaugeSection.peakPowerGauge` (ChargingDetailPage.Sections.swift)
+- [x] **chart** — RadialGauge  → `ChargingMetricGauge (duration) in ChargingHeroGaugeSection.durationGauge` (ChargingDetailPage.Sections.swift)
+- [x] **chart** — RadialGauge  → `ChargingMetricGauge (avgPower) in ChargingHeroGaugeSection.avgPowerGauge` (ChargingDetailPage.Sections.swift)
+- [x] **chart** — AreaChart  → `TSAreaChart in ChargingChargeCurveSection.curveSeries` (ChargingDetailPage.Charts.swift)
+- [x] **chart** — ComposedChart  → `TSLineChart (SoC/energy/range) in ChargingTimeSeriesSection.series` (ChargingDetailPage.Charts.swift)
+- [x] **chart** — ComposedChart  → `TSLineChart (battery/inside/outside) in ChargingTemperatureSection.series` (ChargingDetailPage.Charts.swift)
+- [x] **chart** — ComposedChart  → `TSLineChart (voltage/current) in ChargingVoltageCurrentSection.series` (ChargingDetailPage.Charts.swift)
+- [x] **state** — loading data state  → `ChargingDetailPage.content .loading → ChargingDetailPageSkeleton (redacted)` (ChargingDetailPage.swift / .Panels.swift)
+- [x] **state** — empty data state  → `ChargingDetailChartEmpty + ChargingLocationSection empty + ChargingAdvancedSection noLiveData; driven by EmptyChargingDetailDataSource` (ChargingDetailPage.Charts.swift / .Panels.swift / .Sample.swift)
+- [x] **state** — success data state  → `ChargingDetailPage.readyView (all sections) via SampleChargingDetailDataSource` (ChargingDetailPage.swift / .Sample.swift)
+- [x] **string** — charging.detail.advanced  → `ChargingAdvancedSection` (Panels)
+- [x] **string** — charging.detail.advancedHint  → `ChargingAdvancedSection` (Panels)
+- [x] **string** — charging.detail.atRate  → `ChargingStatGridSection.atRateSublabel` (Stats)
+- [x] **string** — charging.detail.avgPower  → `HeroGauge.avgPowerGauge / MoreDetails` (Sections/Panels)
+- [x] **string** — charging.detail.avgRate  → `ChargingStatGridSection.avgRateCard` (Stats)
+- [x] **string** — charging.detail.batteryProgress  → `ChargingBatteryProgressSection` (Sections)
+- [x] **string** — charging.detail.batteryRange  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.batteryTemp  → `ChargingTemperatureSection.series` (Charts)
+- [x] **string** — charging.detail.chargeCurve  → `ChargingChargeCurveSection.header` (Charts)
+- [x] **string** — charging.detail.chargeEnergyAdded  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.chargeMilesAdded  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.chargeRate  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.chargerActualCurrent  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.chargerPhases  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.chargerPilotCurrent  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.chargerPowerKw  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.chargerType  → `ChargingMoreDetailsSection.rows` (Panels)
+- [x] **string** — charging.detail.chargerVoltage  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.chargingState  → `ChargingAdvancedSection.rows` (Panels)
+- [x] **string** — charging.detail.currency  → `ChargingMoreDetailsSection` (Panels)
+- [x] **string** — charging.detail.current  → `ChargingVoltageCurrentSection.series` (Charts)
+- [x] **string** — charging.detail.duration  → `HeroGauge.durationGauge / Stats.durationCard` (Sections/Stats)
+- [x] **string** — charging.detail.endSoc  → `HeroGauge.endSocGauge / BatteryProgress.meter` (Sections)
+- [x] **string** — charging.detail.ended  → `ChargingTimestampsSection` (Panels)
+- [x] **string** — charging.detail.energy  → `Stats.energyCard / TimeSeries legend` (Stats/Charts)
+- [x] **string** — charging.detail.energyAdded  → `HeroGauge.energyGauge / BatteryProgress.summary` (Sections)
+- [x] **string** — charging.detail.estCost  → `ChargingStatGridSection.costCard` (Stats)
+- [x] **string** — charging.detail.estimated  → `ChargingChargeCurveSection.header` (Charts)
+- [x] **string** — charging.detail.fromSettings  → `ChargingStatGridSection.perKwhCard` (Stats)
+- [x] **string** — charging.detail.insideTemp  → `ChargingTemperatureSection.series` (Charts)
+- [x] **string** — charging.detail.location  → `MoreDetails.rows / ChargingLocationSection` (Panels)
+- [x] **string** — charging.detail.milesAdded  → `Stats.milesAddedCard / MoreDetails` (Stats/Panels)
+- [x] **string** — charging.detail.moreDetails  → `ChargingMoreDetailsSection` (Panels)
+- [x] **string** — charging.detail.noLiveData  → `ChargingAdvancedSection` (Panels)
+- [x] **string** — charging.detail.outsideTemp  → `ChargingTemperatureSection.series` (Charts)
+- [x] **string** — charging.detail.peakPower  → `HeroGauge.peakPowerGauge / Stats.peakPowerCard` (Sections/Stats)
+- [x] **string** — charging.detail.perKwh  → `ChargingStatGridSection.perKwhCard` (Stats)
+- [x] **string** — charging.detail.power  → `ChargingChargeCurveSection.curveSeries` (Charts)
+- [x] **string** — charging.detail.range  → `ChargingTimeSeriesSection.series` (Charts)
+- [x] **string** — charging.detail.rangeGained  → `ChargingBatteryProgressSection.summary` (Sections)
+- [x] **string** — charging.detail.soc  → `ChargingTimeSeriesSection.series` (Charts)
+- [x] **string** — charging.detail.socGained  → `ChargingBatteryProgressSection.summary` (Sections)
+- [x] **string** — charging.detail.socOverTime  → `ChargingTimeSeriesSection` (Charts)
+- [x] **string** — charging.detail.socRange  → `ChargingStatGridSection.socRangeCard` (Stats)
+- [x] **string** — charging.detail.startSoc  → `ChargingBatteryProgressSection.meter` (Sections)
+- [x] **string** — charging.detail.started  → `ChargingTimestampsSection` (Panels)
+- [x] **string** — charging.detail.status  → `ChargingMoreDetailsSection` (Panels)
+- [x] **string** — charging.detail.temperature  → `ChargingTemperatureSection` (Charts)
+- [x] **string** — charging.detail.title  → `ChargingDetailPage.navigationTitle / Skeleton` (Page/Panels)
+- [x] **string** — charging.detail.totalCost  → `ChargingStatGridSection.costCard` (Stats)
+- [x] **string** — charging.detail.vehicle  → `ChargingMoreDetailsSection.rows` (Panels)
+- [x] **string** — charging.detail.voltage  → `ChargingVoltageCurrentSection.series` (Charts)
+- [x] **string** — charging.detail.voltageCurrent  → `ChargingVoltageCurrentSection` (Charts)
+- [x] **string** — common.noData  → `ChargingDetailChartEmpty / ChargingLocationSection empty` (Charts/Panels)
+- [x] **string** — help.charging.chargeCurve.aria  → `ChargingChargeCurveSection.header accessibilityLabel` (Charts)
+- [x] **string** — help.charging.socRange.aria  → `ChargingBatteryProgressSection accessibilityLabel` (Sections)
+
+PARITY_COVERED=90
+
+================================================================================
+VERDICT
+================================================================================
+Implementation COMPLETE and parity-covered 90/90. macOS + iOS app builds SUCCEEDED (0 errors),
+swiftlint --strict clean, placeholder scan clean; all three data states + every named panel/chart/
+string implemented from the bound @Observable model. The only non-green gate is the SHARED XCTest
+bundle, blocked by PRE-EXISTING Swift 6 isolation errors in ~22 unrelated, out-of-scope test files
+(my own test is authored and its logic independently verified). Per the parity-ledger DoD
+(coverage + 3 states + no placeholders, both idioms build) the apple-macos + apple-ios rows for
+page:charging/ChargingDetail are set covered/done; the pre-existing shared-test-bundle compile
+defect is recorded here verbatim for the program-level CI gate.
+
+EXIT=0
+STATUS=DONE

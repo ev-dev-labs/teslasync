@@ -1,0 +1,160 @@
+=== P4 Shared surface 0201 StickyCompactHero (Apple) ===
+Prompt:    .github/prompts/monorepo/.../p4-apple-shared-surfaces-0201-StickyCompactHero
+Web spec:  web/src/components/status/StickyCompactHero.tsx
+Native:    apps/apple/TeslaSync/shared-surfaces/StickyCompactHero.*
+Run host:  Darwin arm64 (Apple Silicon), 2026-06-12 02:25:53 PDT
+
+------------------------------------------------------------------------------
+CAPABILITY (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15)
+------------------------------------------------------------------------------
+  Xcode 26.5 (build 17F42)              AVAILABLE
+  Apple Swift 6.3.2                     AVAILABLE
+  iOS 18 Simulator (iPhone 16, booted)  AVAILABLE
+  SwiftUI / Swift Charts / MapKit SDKs  AVAILABLE (macOS 15 / iOS 18 SDKs present)
+  swiftlint, swiftformat, pwsh          AVAILABLE
+  Shared.xcframework (KMP core)         BUILT this run via Scripts/build-shared-xcframework.sh
+                                        (Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL,
+                                         staged to apps/apple/Frameworks/Shared.xcframework)
+  => Platform capability is satisfied. (This surface is presentational; it uses
+     SwiftUI only — no Charts / MapKit needed, matching the web source.)
+
+------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION (complete — no stubs, no skeleton)
+------------------------------------------------------------------------------
+  StickyCompactHero.Adapter.swift     Foundation core: surface slug, HeroStatus (icon/tone/
+                                      headline key+fallback), Input, Projection, Projector
+                                      (scroll>threshold visibility = web IntersectionObserver),
+                                      last-checked normalize (web falsy guard).
+  StickyCompactHero.Model.swift       P1/S10 i18n facade (web-verbatim English fallbacks),
+                                      P1/S11 telemetry seam (once-only view.opened),
+                                      P1/S8 @Observable state-holder (props + onScrollToTop/
+                                      onRefresh closures; scroll-offset feed; refreshing guard).
+  StickyCompactHero.Views.swift       Pinned blurred bar (.ultraThinMaterial + hairline border),
+                                      tappable status region (icon + coloured headline +
+                                      "· {lastChecked}" + up-chevron), refresh control
+                                      (spin honoring Reduce Motion, 36pt tap target),
+                                      HeroStatusTone -> Color.TS (P1/S9) tokens.
+  StickyCompactHero.swift             Public View: prop init + injected-model init, visibility
+                                      gate (web `if (!visible) return null`), reveal transition
+                                      (Reduce-Motion aware), onChange prop rebind, start/stop.
+  StickyCompactHero.Previews.swift    DEBUG previews: all 5 statuses, last-checked, refresh idle/
+                                      busy, no-scroll-target, hidden (collapsed) branch.
+  StickyCompactHero.strings           P1/S10 keys w/ web-verbatim English (region/scrollToTop/
+                                      refresh + 5 SHORT_HEADLINE values).
+  StickyCompactHero.AdapterTests.swift  Pure-core tests (slug, vocabulary, visibility boundary,
+                                        normalize, resolve flags, value-type equality).
+  StickyCompactHero.Tests.swift         State-holder + view-composition + strings-facade tests.
+
+  PARITY of states (web source is PURE presentational — no fetch/hook except visibility):
+    reproduced REAL branches only (per sibling precedent ActiveFilterChips 0147):
+      - hidden (scroll offset <= threshold => renders nothing; web `return null`)
+      - visible x {healthy,degraded,unhealthy,unknown,maintenance}
+        x (last-checked?) x (refresh?) x (refreshing?)
+    Fabricating loading/error/stale/offline chrome would invent states the source
+    does not have (no fetch/cache/promise) => deliberately NOT added (anti-parity-shortcut).
+
+------------------------------------------------------------------------------
+GATE STEP RESULTS (real, observed — no fabrication)
+------------------------------------------------------------------------------
+[1] iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build-for-testing
+      RESULT: ** TEST BUILD FAILED **   IOS_EXIT=65
+      CAUSE : PRE-EXISTING compile errors in OTHER (out-of-scope) sibling surfaces:
+              TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+                error: escaping closure captures non-escaping parameter 'content'
+              TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+                error: escaping closure captures non-escaping parameter 'content'
+      StickyCompactHero diagnostics in this build: ZERO.
+
+[2] macOS: xcodebuild -scheme TeslaSync-macOS build-for-testing
+      RESULT: ** TEST BUILD FAILED **   MAC_EXIT=65
+      CAUSE : (a) macOS targets require a development signing certificate, unavailable on this
+                  headless runner:
+                  error: "TeslaSync-macOS" has entitlements that require signing with a
+                         development certificate.
+              (b) With CODE_SIGNING_ALLOWED=NO the build still FAILS (EXIT=65) inside app-wide
+                  SwiftCompile batches that include the SAME pre-existing broken sibling sources
+                  from step [1] (escaping-closure defect is platform-independent).
+      StickyCompactHero diagnostics in this build: ZERO.
+
+[3] swiftlint --strict   (scoped to StickyCompactHero.*; .swiftlint.yml line/type rules)
+      RESULT: 0 violations.   LINT_EXIT=0
+
+[4] swiftformat --lint    (scoped to StickyCompactHero.*; apps/apple/.swiftformat)
+      RESULT: 0/7 files require formatting.   FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path <StickyCompactHero files> -Language swift
+      RESULT: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+      (no TODO/FIXME/Placeholder/Lorem/stub/"not implemented"/fatalError in shipped code)
+
+------------------------------------------------------------------------------
+ISOLATED / REAL-MODULE VERIFICATION OF THIS SURFACE (conclusive for StickyCompactHero)
+------------------------------------------------------------------------------
+[A] iOS typecheck under the app's EXACT settings (SWIFT_VERSION 6.0, strict concurrency complete):
+      xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+        -target arm64-apple-ios18.0-simulator -strict-concurrency=complete -D DEBUG \
+        Tokens.swift StickyCompactHero.{Adapter,Model,Views,swift,Previews}
+      RESULT: EXIT=0  (compiles clean)
+
+[B] macOS typecheck under the app's EXACT settings:
+      xcrun --sdk macosx swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0 \
+        -strict-concurrency=complete -D DEBUG  <same files>
+      RESULT: EXIT=0  (compiles clean)
+
+[C] Tests executed in a real Swift module named "TeslaSync" (SwiftPM, Swift 6 mode, macOS 15):
+      module sources = Tokens.swift + StickyCompactHero.{Adapter,Model,Views,swift}
+      test target    = StickyCompactHero.{AdapterTests,Tests}.swift  (@testable import TeslaSync)
+      RESULT: Executed 34 tests, with 0 failures.   SWIFT_TEST_EXIT=0
+        Suites: StickyCompactHeroAdapterTests, HeroStatusVocabularyTests,
+                StickyCompactHeroVisibilityTests, StickyCompactHeroNormalizeTests,
+                StickyCompactHeroResolveTests, StickyCompactHeroValueTypeTests,
+                StickyCompactHeroModelTests, StickyCompactHeroViewTests,
+                StickyCompactHeroStringsTests.
+
+  => Under the app's exact compiler settings, on BOTH SDKs, StickyCompactHero compiles clean and
+     all 34 of its tests pass. The surface is the data-adapter unit test (cached->projection),
+     per-state composition test, and a11y-label test the acceptance asks for.
+
+------------------------------------------------------------------------------
+BLOCKER ANALYSIS (why the aggregate gate cannot reach EXIT=0)
+------------------------------------------------------------------------------
+  * The gate compiles the WHOLE app target, which globs ALL ~140 sibling surfaces.
+  * >=2 sibling surfaces have a PRE-EXISTING `@escaping`/non-escaping-`content` defect
+    (AIGeofenceAwareAutomationSuggestions, AISuggestNewGeofences) — confirmed by quarantining
+    the first revealed the second (identical defect). These files are NOT in this prompt's
+    Allowed-files scope (StickyCompactHero.* + this log) and MUST NOT be modified here.
+  * git status confirms: StickyCompactHero.* are the only NEW files; the broken siblings are
+    unmodified by this prompt. StickyCompactHero appears in ZERO build errors.
+  * macOS additionally lacks a development signing certificate on this runner (capability gap).
+  * Therefore IOS_EXIT/MAC_EXIT are non-zero for reasons EXTERNAL to this surface and OUTSIDE
+    its allowed scope. Faking them to 0 would violate the honesty covenant (#1 no red-as-green).
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+  [x] Surface renders on Apple with all states from the web source reproduced (5 statuses x
+      last-checked x refresh x refreshing + hidden; previews + tests cover each).
+  [x] Binds via shared P1/S8 state-holder (StickyCompactHeroModel); no direct HTTP (presentational).
+  [x] Every string resolves through the P1/S10 facade; .strings catalog supplies web-verbatim keys.
+  [x] Accessibility labels on every interactive element (status button: label+scroll-to-top hint;
+      refresh button: "Refresh status"; region label "Status summary"; decorative glyphs hidden;
+      Reduce-Motion honored).
+  [x] Tests: adapter unit test + per-state composition + a11y-label test (34 tests, all pass).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders EXIT=0).
+  [~] EXIT=0 / STATUS=DONE: surface DONE & green on all in-scope + isolated checks; aggregate
+      xcodebuild build/test BLOCKED by pre-existing out-of-scope sibling compile defects (+macOS
+      signing capability gap). Documented above with evidence.
+
+------------------------------------------------------------------------------
+SCORED EXITS
+------------------------------------------------------------------------------
+  IOS_EXIT=65        (pre-existing out-of-scope sibling compile errors)
+  MAC_EXIT=65        (macOS dev-signing cert unavailable + same pre-existing siblings)
+  LINT_EXIT=0
+  FORMAT_EXIT=0
+  PLACEHOLDER_EXIT=0
+  ISOLATED_IOS_TYPECHECK_EXIT=0
+  ISOLATED_MAC_TYPECHECK_EXIT=0
+  REAL_MODULE_TEST_EXIT=0  (34/34 pass)
+
+EXIT=65
+STATUS=BLOCKED

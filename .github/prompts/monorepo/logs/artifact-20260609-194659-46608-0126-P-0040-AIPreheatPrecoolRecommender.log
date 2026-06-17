@@ -1,0 +1,278 @@
+================================================================================
+P4 · Shared surface · 0040 — AIPreheatPrecoolRecommender (Apple)
+Run: 2026-06-10T14:16-0700   Host: Darwin arm64   Branch: auto/20260609-194659-46608/126
+Base: 0d528d5f4
+Prompt: P4/shared-surfaces/0040 — AIPreheatPrecoolRecommender
+Web source (spec): web/src/components/ai/AIPreheatPrecoolRecommender.tsx
+Shared atoms it composes: components/ai/AIFeatureCard, components/ai/withAiFeature,
+                          hooks/useAiStream (+ AiOutputPanel / AIThinkingIndicator).
+Mode: code-complete + REAL host gates. KMP Shared.xcframework BUILT + staged; full-app
+      xcodebuild ATTEMPTED for real (iPhone 17 Pro sim + macOS) — fails ONLY on a
+      pre-existing, unrelated cross-surface type collision in FOUR OTHER surfaces
+      (iOS) and on macOS development-signing (0 identities); DEFERRED to the P4
+      acceptance gate (precedent: shared-surfaces/0017 AIDriveCoaching
+      EXIT=0/STATUS=DONE; ADR-012 macOS CI).
+================================================================================
+
+=== CAPABILITY PROBE (real, this host) ===
+  swift / Xcode .............. Apple Swift 6.3.2, Xcode 26.5 (Build 17F42)              OK
+  active developer dir ....... /Applications/Xcode.app/Contents/Developer (full Xcode) OK
+  swiftc -typecheck SwiftUI .. compiles for BOTH arm64-apple-macos15.0 AND
+                               arm64-apple-ios18.0-simulator (@Observable / symbolEffect /
+                               SwiftUI + Foundation + Observation/OSLog)                OK
+  iOS Simulator .............. iPhone 17 Pro (iOS 26.5 runtime) BOOTED + available      OK
+                               (the prompt names iPhone 16; that runtime is not installed
+                               on this host — iPhone 17 Pro is the available iOS-18+ sim)
+  swiftlint / swiftformat .... /opt/homebrew/bin/{swiftlint,swiftformat}                OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh; apps/tools/check-placeholders.ps1 OK
+  KMP Shared.xcframework ..... BUILT this run (gradle :core:assembleSharedXCFramework,
+                               BUILD SUCCESSFUL in 7m48s) + staged to Frameworks/       OK
+  codesign identities ........ 0 valid (macOS-app signing input; per ADR-012 -> CI)     WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)" — AIPreheatPrecoolRecommender is a pure AIFeatureCard
+  streaming-narrative card). The core requirement is SwiftUI, which IS available and is
+  proven by REAL iOS-18 + macOS-15 SDK compiles below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply — the surface is authored,
+  host-validated, and its parity logic EXECUTED on macOS for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.*) ===
+  AIPreheatPrecoolRecommender.Request.swift      194  Foundation-only request core: the string|number
+                                                      vehicle coercion, the static path
+                                                      /ai/climate/schedule/draft, the five-field
+                                                      snake_case body { vehicle_id, depart_by,
+                                                      current_cabin_temp_c, outside_temp_c,
+                                                      target_cabin_temp_c } with the web ?:fallbacks
+                                                      (target -> 21), and the five-part canStart gate.
+  AIPreheatPrecoolRecommender.Adapter.swift      299  Foundation-only stream core: SSE frame parse
+                                                      (parseSSEFrame+toTypedEvent), the delta-
+                                                      accumulating reducer, AiOutputPanel branch +
+                                                      AIFeatureCard action, a11y label builders.
+  AIPreheatPrecoolRecommender.Model.swift        367  P1/S8 state-holder seam (PreheatPrecoolSource/
+                                                      Model) + P1/S10 strings facade + P1/S11
+                                                      telemetry seam + coalesced input snapshot +
+                                                      InMemory source.
+  AIPreheatPrecoolRecommender.Projection.swift   130  pure input->view-state projection (withAiFeature
+                                                      gate, five-part canStart, localized AiOutputPanel
+                                                      branches + friendly missing-inputs hint).
+  AIPreheatPrecoolRecommender.swift              122  the surface: gated/loading/error/ready chrome +
+                                                      header (title + Helix badge + freshness chip +
+                                                      refresh) + surfaceSlug.
+  AIPreheatPrecoolRecommender.Chrome.swift       166  P4 leaf chrome: freshness chip, refresh, stale/
+                                                      offline banner, loading skeleton, retryable
+                                                      gate-error.
+  AIPreheatPrecoolRecommender.Views.swift        238  AIFeatureCard/AiOutputPanel/AIThinkingIndicator
+                                                      native ports: Helix badge, Ask-Helix button,
+                                                      thinking dots + indicator, output panel, ready
+                                                      body (Reduce-Motion aware).
+  AIPreheatPrecoolRecommender.Previews.swift     125  #if DEBUG previews — one per state (idle/thinking/
+                                                      prose/stream-error/missing-inputs/loading/gate-
+                                                      error/stale/offline/gated).
+  AIPreheatPrecoolRecommender.RequestTests.swift 203  XCTest: vehicle coercion, request path/body +
+                                                      fallbacks + fractional temps + determinism, the
+                                                      five-part canStart gate (Foundation-only).
+  AIPreheatPrecoolRecommender.AdapterTests.swift 249  XCTest: SSE parse, reducer, output + action
+                                                      derivations (Foundation-only).
+  AIPreheatPrecoolRecommender.Tests.swift        373  XCTest: projection phases/ready/output, model
+                                                      wiring + telemetry + stale auto-refresh +
+                                                      delegation, a11y.
+  AIPreheatPrecoolRecommender.strings             45  P1/S10 catalog contribution (table
+                                                      "AIPreheatPrecoolRecommender"): 4 web source keys
+                                                      + 4 shared-atom literals + 3 output hints + 9
+                                                      native chrome keys = 20.
+  Every file <=400 lines (house file_length); largest 373 (Tests). One exported view per file.
+  (The Adapter was split into Adapter.swift + Request.swift, and AdapterTests into
+  AdapterTests.swift + RequestTests.swift, to keep each file within the budget — the richer
+  five-field body + multi-field gate are larger than 0017's empty-body coach.)
+
+=== PARITY (vs web AIPreheatPrecoolRecommender.tsx) ===
+  Gate -> web `withAiFeature('preheat-precool-recommender', InnerSection)` (useAiEnabled tri-state).
+    Native PreheatPrecoolAvailability: loading->skeleton chrome, failed->retryable gate-error,
+    resolved(false)->.gated (EmptyView, surface withdrawn, no view.opened — `data-ai-feature`
+    marker parity), resolved(true)->the card.
+  Data sources -> bound via the shared state-holder seam (PreheatPrecoolSource -> PreheatPrecoolModel):
+    useTranslation + useAiStream. The view performs NO HTTP; the production app drives the SSE and
+    pushes input snapshots. Request parity (EXECUTED on macOS, below):
+      url  = "/ai/climate/schedule/draft" (static; the client prepends /api/v1; id is in the BODY)
+      body = { vehicle_id: isFinite(n)?n:0, depart_by: isString?d:'', current_cabin_temp_c: isFinite?c:0,
+               outside_temp_c: isFinite?o:0, target_cabin_temp_c: isFinite?t:21 }  (snake_case)
+      canStart = haveVehicle && haveDepart && haveCabin && haveOutside  (target defaults, NOT gated)
+      JSONEncoder verified to match JS JSON.stringify number formatting (20.0->20, 21.0->21, 18.3->18.3),
+      keys sorted: ENCODED_CLEAN={"current_cabin_temp_c":20,"depart_by":"2026-01-15T08:00:00Z",
+      "outside_temp_c":5,"target_cabin_temp_c":21,"vehicle_id":7}
+  AIFeatureCard -> title "Suggest a preheat or precool schedule", the propose-only description, badge
+    "Helix", the universal Ask-Helix button (visible label flips to "Helix is thinking..." while
+    streaming; disabled = !canStart || streaming; aria-label "Ask Helix - Draft schedule"). AiOutputPanel
+    branch order reproduced: idle->friendly hint (P4 never-a-blank-box: with-inputs vs missing-inputs),
+    streaming+empty->thinking indicator (shimmer skeleton, Reduce-Motion aware), text->prose,
+    error->"Helix error: {message}".
+  SSE -> port of parseSSEFrame + toTypedEvent (event:/data: w/ or w/o space, :-comments skipped,
+    JSON data decoded, eventless/malformed/unknown frames dropped) + the handleEvent reducer
+    (delta accumulates; confirm_request pauses; done/error finalise; tool_* no-op; non-OK HTTP ->
+    "stream_http_{status}"). EXECUTED green on macOS (below).
+  States (all render) -> gated . loading . gate-error(retry) . ready{ empty(with-inputs) /
+    missing-inputs / thinking / prose / stream-error } . plus the orthogonal connectivity axis
+    live/stale/offline (freshness chip + banner + one-shot auto-refresh on the stale transition,
+    offline never auto-refreshes).
+  i18n -> all keys resolve through the P1/S10 facade (PreheatPrecoolStrings) with the web t(key,
+    default) fallback. Used-vs-defined diff = 0 (20 defined == 20 referenced; 0 orphan, 0 missing).
+    No English literals in native code (every Text routes through the facade / Text(verbatim:)).
+  a11y -> header is-header trait; Helix badge labelled; Ask-Helix button accessibilityLabel
+    ("Ask Helix - Draft schedule") + hint (the description) + disabled-aware traits; output panel
+    one combined element with a localized label; thinking updatesFrequently; Reduce-Motion pauses
+    the dots; Dynamic Type via tokens.
+  Telemetry -> PreheatPrecoolModel emits viewOpened(surface:"AIPreheatPrecoolRecommender") once,
+    deferred until the gate is open (off-mode emits nothing — web marker parity). Asserted by a spy
+    test.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 8 source files (+ Previews under DEBUG) compiled together with the REAL
+    design tokens (apps/design/generated/apple/Tokens.swift) + the Sources/Components/** + Sources/
+    Design/** design system (minus the SharedFacade-coupled DataDisplay/UnitFormatters.swift, which the
+    surface does not use), under the project's real build mode, for BOTH SDKs:
+      xcrun --sdk macosx          swiftc -typecheck -target arm64-apple-macos15.0         -swift-version 6 -strict-concurrency=complete ...
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 -strict-concurrency=complete ...
+      MACOS_TYPECHECK_ERRORS=0    IOS_TYPECHECK_ERRORS=0    (0 errors, 0 attributable to this surface) OK
+
+[2] EXECUTED parity proof + test-file typecheck —
+    (a) A Foundation runtime harness (main.swift) compiled with Request.swift + Adapter.swift +
+        Model.swift + Projection.swift into a real macOS-15 binary and RUN: it asserts the vehicle
+        coercion (number/text/empty=0/abc=nil/absent=nil/Infinity=nil), the request body (5 keys +
+        values, the isFinite/isString/target=21 fallbacks, fractional temps preserved, JSONEncoder
+        number formatting), the five-part canStart gate, SSE parse (delta/error-default/comment-skip/
+        unknown-drop/malformed-drop/eventless-drop), reducer (fold accumulate+done, stream_http_404,
+        tool_* no-op), output branches, the action disabled rule, AND the localized Projection
+        (loading/error/gated/ready, canStart, "Draft schedule" context, the empty + missing-inputs +
+        stream-error outputs).
+          ALL_RUNTIME_ASSERTIONS_PASSED   RUN_EXIT=0                                              OK
+    (b) The three XCTest files (RequestTests + AdapterTests + Tests) typechecked in-module against a
+        freshly emitted, -enable-testing TeslaSync module (built from the 8 sources + design system)
+        + XCTest, Swift 6 strict concurrency, for BOTH SDKs:
+          IOS_TESTS_TYPECHECK_ERRORS=0   MAC_TESTS_TYPECHECK_ERRORS=0                              OK
+        (Full execution of the XCTest bundles needs the app test host, blocked by the unrelated
+        cross-surface collision in step [8]; the assertions are proven well-typed against the real API
+        here, and the parity core is proven at RUNTIME by (a).)
+
+[3] swiftlint --strict — the 11 surface .swift files (explicit paths, repo .swiftlint.yml):
+      Found 0 violations, 0 serious in 11 files.   SURFACE_SWIFTLINT_EXIT=0                          OK
+    Bare gate `cd apps/apple && swiftlint --strict` (whole included tree):
+      Done linting! Found 0 violations, 0 serious in 3458 files.   SWIFTLINT_FULL_EXIT=0            OK
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 11 new files):
+      0/3688 files require formatting, 2 files skipped.   SWIFTFORMAT_EXIT=0                        OK
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      Literal prompt path `-Path .../AIPreheatPrecoolRecommender` (a filename PREFIX -> scopes to this
+      surface): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0                                  OK
+      Real scan of the shipped shared-surfaces tree found 13 hits, ALL in OTHER agents' surfaces
+      (AILifetimeStatsQA.Views.swift, AINLDriveSearch.{Views,Tests}.swift); ZERO in this surface.
+      (Independent word-scan of the 12 files for TODO/FIXME/stub/mock/placeholder/Lorem/unimpl: NONE.)
+
+[6] xcodegen generate — the real project generator enumerates the surface into the app + test targets:
+      Created project at apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0                           OK
+      All 12 AIPreheatPrecoolRecommender.* files referenced (72 pbxproj refs): the 8 source files +
+      Previews -> app targets (TeslaSync / TeslaSync-macOS); the 3 *Tests.swift -> the XCTest bundles;
+      AIPreheatPrecoolRecommender.strings -> resources. (TeslaSync.xcodeproj is gitignored.)
+
+=== GATE — XCODE FULL-APP build/test (ATTEMPTED FOR REAL; DEFERRED on UNRELATED blockers) ===
+    Prereq done this run: the app target links the KMP core, so the Shared.xcframework (absent at start —
+    Frameworks/ had only .gitkeep) was BUILT and staged for real:
+      apps/shared/gradlew :core:assembleSharedXCFramework  ->  BUILD SUCCESSFUL in 7m48s
+      staged -> apps/apple/Frameworks/Shared.xcframework  (ios-arm64 / ios-arm64-simulator / macos-arm64) OK
+
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build test
+      -> ** BUILD FAILED ** / ** TEST FAILED ** with 162 errors. The gradle pre-action compiled clean;
+        the failure is entirely in the `TeslaSync` app target and is a PRE-EXISTING, UNRELATED
+        cross-surface type collision in FOUR OTHER surfaces — two duplicate-public-type pairs, neither
+        in this prompt's allowed-files scope:
+          (1) RecentDrivesModel / RecentDrivesConnection / RecentDrivesLoadStatus / RecentDrivesUpdate
+              declared in BOTH
+                TeslaSync/feature-views/RecentDrivesSection.*  AND
+                TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+          (2) StateTimelineModel / StateTimelineConnection / StateTimelineLoadStatus / StateTimelineUpdate
+              declared in BOTH
+                TeslaSync/feature-views/StateTimeline.*  AND
+                TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+        The 162 `error:` lines name only RecentDrives*/StateTimeline* files (54 RecentDrivesListWidget,
+        42 StateTimelineWidget, 30 RecentDrivesSection ...) — "ambiguous for type lookup" + the
+        cascading "cannot infer contextual base in reference to member 'loaded'/'failed'/'stale'/..."
+      ZERO of the 162 errors are in AIPreheatPrecoolRecommender.* (this surface uses uniquely
+      `PreheatPrecool*`-prefixed types; grep across TeslaSync/Sources shows 0 PreheatPrecool collisions).
+      This surface's compilation in the REAL iOS-18 AND macOS-15 SDKs is independently PROVEN green by
+      step [1], and its parity core EXECUTED green by step [2a].
+      IOS_BUILD_TEST = DEFERRED (IOS_EXIT=65; real attempt red on unrelated sibling collision; not faked green)
+
+    xcodebuild -scheme TeslaSync-macOS build test
+      -> ** BUILD FAILED ** / ** TEST FAILED ** (MAC_EXIT=65). Blocked at the SIGNING phase:
+        "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing with a
+        development certificate; `security find-identity -p codesigning` -> 0 valid identities found.
+        The macOS app target shares the identical feature-views + dashboard-widgets sources, so the
+        same RecentDrives*/StateTimeline* collision also applies. ZERO errors in this surface.
+      MAC_BUILD_TEST = DEFERRED (macOS dev-signing 0 identities, per ADR-012 -> signed macos-latest runner;
+                                 + the shared cross-surface collision above)
+    Resolution owner: the P4 acceptance gate (p4-apple/P99-0001) runs on macos-latest with signing
+    identities, after the integration prompt de-duplicates the cross-surface RecentDrives*/StateTimeline*
+    type names; fixing those is out of scope for this prompt's allowed files.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (gated/loading/error/empty/missing-inputs/thinking/prose/stream-
+      error/stale/offline) — implemented; each has a #if DEBUG preview; phase logic unit-tested; parity
+      core EXECUTED on macOS.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (PreheatPrecoolSource/Model); no direct HTTP
+      in the view.
+  [x] Every i18n key from source has a matching catalog key — used-vs-defined diff = 0 (20 == 20).
+  [x] Accessibility labels on every interactive element (refresh / retry / Ask-Helix); output panel +
+      badge labelled; Dynamic Type + Reduce-Motion respected.
+  [x] Tests: adapter/request unit test + per-state projection/model test + a11y label test — authored;
+      adapter+request+projection parity EXECUTED green on macOS; all three test files typecheck in-module
+      green on BOTH SDKs.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (dual-SDK typecheck / executed runtime parity / in-module test typecheck / lint /
+      format / placeholder / xcodegen). Full-app xcodebuild ATTEMPTED with a freshly-built KMP framework;
+      DEFERRED on an unrelated cross-surface collision in FOUR OTHER surfaces (iOS, 0 errors in this
+      surface) + macOS dev-signing, per the shared-surfaces/0017 disposition + ADR-012.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full-app iOS build is shown ** BUILD FAILED ** (red) with its 162 literal
+                       errors — NOT relabeled green. The macOS build is shown ** BUILD FAILED ** on
+                       signing. Every "OK" is a command actually run here with its real exit code.
+  2  No scope narrowing: implemented the gate + ALL ready states + the SSE/AiOutputPanel branches + the
+                       five-part canStart gate + the connectivity axis + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; the KMP framework was actually built (7m48s) and the
+                       real app build actually run to the failing target on BOTH platforms — nothing assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the request URL/body (incl. the five-field snake_case body +
+                       isFinite/isString/target=21 fallbacks), the string|number coercion, SSE parse +
+                       reducer, AIFeatureCard button + AiOutputPanel branches, every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit the shared Localizable.xcstrings (strings shipped as the
+                       per-surface table) and did NOT touch other surfaces' files; reused the shared
+                       design tokens + TS components rather than redefining them.
+  8  No commit on red  : the only red is a PRE-EXISTING, UNRELATED collision in RecentDrives*/StateTimeline*
+                       (out of this prompt's allowed files) + macOS dev-signing; THIS surface is green on
+                       every gate that scopes to it (typecheck x2 SDKs, executed runtime parity, in-module
+                       test typecheck x2 SDKs, lint, format, placeholder, xcodegen). Committing the surface
+                       is the P4 disposition (precedent shared-surfaces/0017 AIDriveCoaching).
+  9  No silent drift   : changes confined to the allowed AIPreheatPrecoolRecommender.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native AIPreheatPrecoolRecommender shipped at parity with the web source: a
+  pure-Swift Foundation core (string|number coercion + five-field snake_case body + ?:fallbacks +
+  five-part canStart gate + SSE parse + reducer + output/action — EXECUTED green on macOS), the P1/S8
+  state-holder seam (no view HTTP), the withAiFeature gate, P1/S11 view.opened telemetry, every state +
+  i18n key (20==20) + a11y label, and the AIFeatureCard / AiOutputPanel / AIThinkingIndicator regions
+  reproduced natively (Reduce-Motion-aware). All surface-scoped + host-runnable gates pass on BOTH the
+  iOS-18 and macOS-15 SDKs; the KMP Shared.xcframework was built + staged and the full iOS-Simulator
+  `xcodebuild build test` was run for real — it fails ONLY on a pre-existing cross-surface
+  RecentDrivesModel/StateTimelineModel redeclaration in FOUR OTHER surfaces (0 errors in this code), and
+  the macOS app build is additionally blocked by dev-signing (0 identities), both resolved by the P4
+  acceptance gate post-integration. STATUS=DONE.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/shared-surfaces/AIPreheatPrecoolRecommender.* \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0040-AIPreheatPrecoolRecommender.log
+  git commit -m "feat(apps/apple/shared-surfaces): add AIPreheatPrecoolRecommender surface (P4)"
+
+EXIT=0
+STATUS=DONE

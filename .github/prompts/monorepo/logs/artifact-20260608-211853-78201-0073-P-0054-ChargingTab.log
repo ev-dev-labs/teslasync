@@ -1,0 +1,118 @@
+=== P4 Feature view 0054 ChargingTab (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ChargingTab.*
+Web spec: web/src/features/analytics/components/analytics/ChargingTab.tsx
+Runner  : macOS (Darwin), Xcode 26.5 (17F42), Swift 6.0, iPhone 16 simulator (iOS 18), xcodegen 2.45.4
+Capability: SwiftUI + Swift Charts present and exercised (3 native charts). No MapKit needed (web source uses no maps).
+
+----------------------------------------------------------------------
+DELIVERABLE (files shipped — the only new files in the tree)
+----------------------------------------------------------------------
+  ChargingTab.swift            main composed View (phase switch, summary grid + 3 chart panels)
+  ChargingTab.Model.swift      P1/S8 state-holder seam, useFormatting seam, P1/S11 telemetry, P1/S10 i18n facade
+  ChargingTab.Adapter.swift    pure projection (safe guard, summary cards, donut/battery/hourly datasets, dual-axis scale, phase + a11y)
+  ChargingTab.Charts.swift     Swift Charts: Charger Types donut, Start Battery Distribution bars, Hourly Charging Pattern (bars+line dual-axis)
+  ChargingTab.Views.swift      chrome: MetricCard, GlassPanel, freshness chip, stale/offline banner, per-chart empty, skeleton, surface-empty, error
+  ChargingTab.Previews.swift   Xcode previews for content / empty / loading / error / stale / offline
+  ChargingTab.strings          i18n catalog (web-parity keys + native chrome keys), table "ChargingTab"
+  ChargingTab.Tests.swift      22 unit tests (adapter projection, model phases, dual-axis scale, formatting, a11y, telemetry)
+
+States reproduced from the web source: loading / empty / error / stale / offline / content
+  (+ per-chart empty rows for the donut, battery, and hourly panels — web <EmptyState/> parity).
+i18n: every web key resolved through the P1/S10 facade (analytics.charging.*) + native chrome keys (analytics.charging.tab.*).
+a11y: VoiceOver labels/values on every card, chart, chip, banner, and the retry button; Dynamic Type + Reduce Motion respected.
+Telemetry: view.opened emitted once with surface slug "ChargingTab" (P1/S11) — asserted by testStartEmitsViewOpenedOnce.
+
+======================================================================
+GATE STEP RESULTS
+======================================================================
+
+[1] swiftlint --strict
+    ChargingTab files .................. 0 violations  (PASS)
+    repo-wide (2157 files) ............. 1 serious violation, EXIT=2
+      -> the single violation is PRE-EXISTING and OUT OF SCOPE:
+         TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9 (opening_brace)
+         It is not a ChargingTab file and not in this prompt's allowed file set.
+    SWIFTLINT(ChargingTab)_EXIT=0
+    SWIFTLINT(repo)_EXIT=2   <- pre-existing sibling violation only
+
+[2] swiftformat --lint apps/apple
+    0/2161 files require formatting (3 skipped).
+    FORMAT_EXIT=0   (PASS, repo-wide)
+
+[3] check-placeholders (swift) over the ChargingTab surface
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   (PASS — no TODO/stub/mock/Placeholder/Lorem/etc.)
+
+[4] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test   (literal gate, UNMODIFIED project.yml)
+    IOS_EXIT=65   (BUILD FAILED)
+    Error attribution (build/gatelogs/ios-literal.log):
+      errors total ............... 113
+      in feature-views/ .......... 0      <- ZERO errors in ChargingTab or any feature view
+      in dashboard-widgets/ ...... 113    <- ALL errors are in sibling widget surfaces
+    Root cause = PRE-EXISTING, OUT-OF-SCOPE baseline breakage (NOT ChargingTab):
+      TeslaSync/dashboard-widgets/ChargeStatusWidget.Model.swift and
+      TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift (et al.) BOTH declare the
+      same top-level public types (ChargeStateDTO, ChargeConnection, ChargeLoadStatus,
+      ChargeUnitPrefs, ChargeDistanceUnit, ChargeSessionDTO, ...), producing
+      "'X' is ambiguous for type lookup in this context" across the app target.
+      These widget surfaces were committed by sibling P4 prompts (e.g. e31612cd1
+      "feat(apps/apple/dashboard-widgets): add ChargeStatusWidget surface (P4)").
+      They are NOT in this prompt's allowed files (apps/apple/TeslaSync/feature-views/ChargingTab.*),
+      so they are intentionally NOT modified here (Honesty Covenant #2 "No scope narrowing"
+      applies to ChargingTab; covenant + repo rule "don't fix unrelated pre-existing issues" applies here).
+
+[5] xcodebuild -scheme TeslaSync-macOS build test   (literal gate)
+    MAC_EXIT=65   (TEST FAILED)
+    Blocker = code-signing capability unavailable on this runner (build/gatelogs/mac-literal.log):
+      "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing with a
+      development certificate. Enable development signing in the Signing & Capabilities editor.
+    project.yml pins DEVELOPMENT_TEAM:"" and the macOS app sets ENABLE_HARDENED_RUNTIME:YES, so the
+    hosted-test build cannot be signed without a development certificate (none on this runner).
+    (The same pre-existing dashboard-widgets breakage from [4] also affects this scheme.)
+
+======================================================================
+ChargingTab-SCOPED VERIFICATION  (proves the SHIPPED surface is green)
+======================================================================
+Method: generated a THROWAWAY XcodeGen spec that excludes ONLY the pre-existing-broken sibling
+        directory TeslaSync/dashboard-widgets (and its co-located widget unit tests). The real
+        checked-in project.yml was NOT modified; the throwaway spec was deleted afterwards and the
+        project regenerated from project.yml. This isolates the surface under test from the external
+        baseline breakage so the ChargingTab gate can be evaluated on its own merits.
+
+[V-iOS] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test \
+          -only-testing:TeslaSyncTests/ChargingTab{Numeric,HourlyScale,Projection,Model,Accessibility}Tests
+        App target (incl. ChargingTab) compiled + linked: TeslaSync.app produced.
+        Executed 22 tests, with 0 failures (0 unexpected).
+        ** TEST SUCCEEDED **
+        V_IOS_EXIT=0
+
+[V-macOS] xcodebuild -scheme TeslaSync-macOS build-for-testing CODE_SIGNING_ALLOWED=NO ENABLE_HARDENED_RUNTIME=NO
+        ** BUILD SUCCEEDED ** — 0 errors (app + test bundle compiled for macOS 15).
+        xcodebuild -scheme TeslaSync-macOS test-without-building CODE_SIGNING_ALLOWED=NO ... \
+          -only-testing:TeslaSync-macOSTests/ChargingTab{Numeric,HourlyScale,Projection,Model,Accessibility}Tests
+        Executed 22 tests, with 0 failures (0 unexpected).
+        V_MAC_EXIT=0
+
+Result: the ChargingTab surface COMPILES on iOS 18 AND macOS 15 and ALL 22 of its tests PASS on both
+        platforms. swiftlint(ChargingTab)=0, swiftformat=clean, check-placeholders=0. The surface is
+        production-complete with no stubs/skeletons and full state + i18n + a11y coverage.
+
+======================================================================
+BLOCKER ANALYSIS
+======================================================================
+R1 (out-of-scope, pre-existing): sibling TeslaSync/dashboard-widgets surfaces declare duplicate
+   top-level public types -> app target fails to compile. Not ChargingTab; not in allowed files.
+   Cannot be fixed from within this prompt's scope (apps/apple/TeslaSync/feature-views/ChargingTab.*).
+R2 (platform capability): macOS hardened-runtime entitlements require a development signing
+   certificate that is not present on this runner; the literal macOS `build test` cannot sign/run.
+
+Neither blocker originates from ChargingTab. With both removed (clean baseline + signing), the
+ChargingTab gate is green, as demonstrated by the ChargingTab-SCOPED VERIFICATION above.
+
+Per the Honesty Covenant ("No red-as-green", "No commit on red") the literal full-app gate command is
+red in THIS shared environment due to R1+R2, so this run is reported BLOCKED with evidence rather than
+claimed DONE. The shipped ChargingTab.* diff is itself complete and verified green on iOS and macOS.
+
+EXIT=1
+STATUS=BLOCKED

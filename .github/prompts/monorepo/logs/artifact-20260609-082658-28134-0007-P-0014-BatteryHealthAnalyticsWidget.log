@@ -1,0 +1,186 @@
+=== P4 Dashboard widget 0014 BatteryHealthAnalyticsWidget (Apple) ===
+
+Artifact : BatteryHealthAnalyticsWidget (registry id `battery-health-analytics`)
+Web src  : web/src/features/dashboard/widgets/BatteryHealthAnalyticsWidget.tsx
+Runner   : Darwin arm64 (macOS), this checkout/slot
+Toolchain: Apple Swift 6.3.2 (swiftlang-6.3.2.1.108); swiftlint 0.63.3; swiftformat 0.61.1;
+           pwsh 7.6.2; SwiftPM (Swift 6.3.2).
+           Developer dir: /Library/Developer/CommandLineTools  (Command Line Tools only — NO Xcode.app).
+
+------------------------------------------------------------------------------
+PLATFORM-CAPABILITY PRECONDITION (binding honesty covenant #1/#10) — read first
+------------------------------------------------------------------------------
+The prompt's Capability clause requires the full Apple build toolchain (xcodebuild, an
+iOS 18 Simulator, XCTest, the SwiftUI #Preview macro plugin, and the KMP Shared.xcframework
+via Gradle). This runner has ONLY the Command Line Tools, so those are NOT installable here.
+Raw evidence (not paraphrased):
+
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+                '/Library/Developer/CommandLineTools' is a command line tools instance     -> exit 1
+  $ xcrun --sdk iphonesimulator --show-sdk-path
+  xcrun: error: SDK "iphonesimulator" cannot be located
+  $ xcrun --sdk macosx --show-sdk-path
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk                                       (present)
+
+Consequently the four `xcodebuild ... build test` gate steps (iOS + macOS) and the XCTest
+`swift test` runner CANNOT be executed on this runner. Per the prompt
+("If unavailable on the runner -> STATUS=BLOCKED with API evidence") the terminal status is
+BLOCKED. To honor covenant #2 (no scope narrowing) / #4 (no stubs) / #5 (no parity shortcuts),
+the surface was nonetheless implemented in FULL and every host-runnable, surface-scoped gate was
+executed and is green, AND the entire parity pipeline (projection + model + registry + a11y) was
+compiled AND EXECUTED on macOS (Swift 6, strict concurrency) with 76/76 runtime assertions passing.
+
+------------------------------------------------------------------------------
+SURFACE (parity with the web source — no scope narrowing)
+------------------------------------------------------------------------------
+Native files (allowed scope: apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.*):
+  BatteryHealthAnalyticsWidget.swift          — SwiftUI surface: header + loading/empty/error/content
+  BatteryHealthAnalyticsWidget.Model.swift    — P1/S8 state-holder seam, DTO, @Observable model, P1/S11
+                                                telemetry seam (`view.opened`), registry, P1/S10 facade
+  BatteryHealthAnalyticsWidget.Adapter.swift  — pure projector (DTO->projection): health bands,
+                                                fmtNumber gauge readout, fmtInt tiles, accessibility
+  BatteryHealthAnalyticsWidget.Views.swift    — BatteryHealthRadialGauge (<-web RadialGauge),
+                                                BatteryHealthStatCluster (<-WidgetGaugeHero stats),
+                                                loading skeleton, connectivity banner, band->colour
+  BatteryHealthAnalyticsWidget.Previews.swift — per-state + per-size #Previews (DEBUG only)
+  BatteryHealthAnalyticsWidget.strings        — P1/S10 catalog contribution (table "BatteryHealthAnalyticsWidget")
+  BatteryHealthAnalyticsWidget.Tests.swift    — adapter + format + phase + model + telemetry + registry + a11y
+
+File placement matches the CURRENT apps/apple/project.yml: `TeslaSync/dashboard-widgets` is a compiled
+source root for the `TeslaSync` (iOS) and `TeslaSync-macOS` targets (`*Tests.swift` excluded), and the
+co-located `*Tests.swift` is routed into the `TeslaSyncTests` / `TeslaSync-macOSTests` bundles. This is the
+same wiring the committed sibling DriveScoreGaugeWidget (0039) uses. No central registry edit was needed:
+the canonical catalogs `WidgetPicker.Catalog.swift` + `MiniGridPreview.Catalog.swift` ALREADY list
+`battery-health-analytics` (name "Battery Analytics", category .battery, default 2x4, icon heart.text.square)
+— left unmodified (out of allowed scope; referenced by string id only, no compile dependency).
+
+Data binds via the shared P1/S8 `BatteryHealthAnalyticsWidgetSource` seam (the production app wires the
+`VehicleStore` active vehicle + the battery-health `Resource` + `SettingsStore`; previews/tests use the
+in-memory source). No HTTP in the view. Web hooks reproduced: useVehicles, useBatteryHealthAnalytics
+(GET /analytics/battery-health?vehicle_id=), useTranslation, useUnits.
+
+useUnits note (no silent drift, covenant #9): the web source builds a temperature converter from
+`unitPrefs.temperature` but never applies it to a rendered value (the tiles are unitless 0-100 scores /
+cycle counts / percentages). Native parity therefore renders the raw scores and carries only the number
+locale + precision (the real determinants of fmtNumber/fmtInt) in BatteryHealthAnalyticsFormatPrefs.
+Documented in the Adapter's BatteryHealthAnalyticsProjector doc comment.
+
+Health bands ported verbatim from the web `scoreColor`: >=80 #10b981 (healthy), >=50 #f59e0b (moderate),
+else #ef4444 (degraded); non-finite -> degraded (matches JS NaN comparisons). Gauge centre =
+fmtNumber(clamped 0..100, integer->0 / else precision) + "health" unit; below-ring label = fmtInt(soh);
+six tiles all integer-formatted (Cycles, Charge Depth %, Discharge %, DC Fast %, Temp Score /100, Habits /100).
+
+States reproduced from the web source (every state renders — no hidden surface):
+  loading (skeleton), empty ("No battery health data"), error (retry affordance), stale (chip + retained
+  gauge + auto-refresh), offline (chip + cached gauge), content (gauge hero + 6 stat tiles).
+isCompact = size.cols <= 1 -> gauge only (no title/icon, no tiles), exactly as the web compact branch.
+
+i18n keys (all from source, resolved through the P1/S10 facade; no English literals in code):
+  widget.batteryHealthAnalytics.{title,score,totalCycles,avgChargeDepth,avgDischargeDepth,dcFastRatio,
+  tempExposure,chargeHabits,noData} + description; plus native chrome (percentUnit/scoreOutOf/live/stale/
+  offline/refresh/retry/loading/emptyHint/errorTitle/staleBanner/offlineBanner) + gaugeA11y template.
+  (The 9 web keys already exist as `translation.widget.batteryHealthAnalytics.*` in Localizable.xcstrings.)
+Telemetry: `view.opened` with surface slug `BatteryHealthAnalyticsWidget` (P1/S11 seam), emitted once.
+Accessibility: VoiceOver label on the gauge + every tile + freshness/refresh/retry controls; Dynamic Type
+via tokenized fonts; Reduce Motion respected on the arc + skeleton.
+
+------------------------------------------------------------------------------
+swiftformat --lint   (the 6 surface .swift files; config apps/apple/.swiftformat)
+------------------------------------------------------------------------------
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+swiftlint --strict   (the 6 surface .swift files; config apps/apple/.swiftlint.yml)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+check-placeholders.ps1   (apps/tools/check-placeholders.ps1)
+------------------------------------------------------------------------------
+$ ... -SelfTest      -> all 6 self-test cases PASS (tool verified working)
+$ ... -Path <isolated copy of the 7 surface files> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented; 0 opt-outs)
+
+------------------------------------------------------------------------------
+swiftc -typecheck  (macOS 15 SDK, -swift-version 6) — what CAN be type-checked without Xcode
+------------------------------------------------------------------------------
+$ swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+      Adapter.swift Model.swift DashboardWidgetInfra.swift
+  -> 0 errors                                                          LOGIC_TYPECHECK_EXIT=0
+$ swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+      Tokens.swift DashboardWidgetInfra.swift <TSSkeleton stand-in> \
+      Adapter.swift Model.swift Views.swift BatteryHealthAnalyticsWidget.swift
+  -> 0 errors                                                          VIEW_TYPECHECK_EXIT=0
+$ ... + Previews.swift (-D DEBUG)
+  -> the ONLY errors are `external macro implementation type 'PreviewsMacros.SwiftUIView' could not be
+     found` for each #Preview — i.e. the Xcode-only Previews macro plugin is absent. ZERO code errors in
+     the Previews bodies (grep for non-macro errors => none).                PREVIEWS_CODE_ERRORS=0
+  (TSSkeleton stand-in mirrors the real public init from Sources/Components/Feedback/Skeletons.swift,
+   which itself transitively needs the whole Components module; it is a COMPILE-ONLY stand-in for the
+   isolated check — the real component is used in the app target. No iphonesimulator SDK exists here, so
+   the iOS-18 type-check the canonical runner performs is not reproducible on this runner.)
+
+------------------------------------------------------------------------------
+Isolated SwiftPM build + RUNTIME verification  (macOS, Swift 6 language mode, StrictConcurrency)
+------------------------------------------------------------------------------
+A throwaway SwiftPM package (module `TeslaSync` = the 4 real surface sources + the real design
+Tokens.swift + DashboardWidgetInfra.swift + the compile-only TSSkeleton stand-in) was built, then an
+executable harness exercised the surface's PUBLIC parity API at runtime (XCTest itself ships with Xcode
+and is unavailable here, so the committed BatteryHealthAnalyticsWidget.Tests.swift could not be run via
+`swift test` — but every one of its assertions is reproduced and EXECUTED below against the same code).
+
+$ swift build
+  [10/10] Compiling TeslaSync Views/Model/Adapter/Widget/Tokens/Infra (@Observable macro expanded)
+  Build complete!                                                      ISO_BUILD_EXIT=0
+$ swift run bhawverify
+  RUNTIME_CHECKS_TOTAL=76 FAILURES=0                                   RUNTIME_VERIFY_EXIT=0
+
+  Proven at runtime (web-parity values): scoreColor band thresholds (80/50, NaN->degraded);
+  fmtNumber gauge readout (integer->0dp, fraction->precision, clamp 0..100, non-finite->0);
+  fmtInt grouping + half-away-from-zero rounding ("1,180", 87.5->"88"); gauge projection
+  (centre "92", unit "health", below "92", band healthy, fraction 0.92, a11y "Battery health 92 out of
+  100"); the 6 tiles in web order with correct ids/labels/values/units/a11y; nil-> ?? 0 fallbacks;
+  injected localized copy; resolvePhase 8-case matrix; model phases incl. cached-gauge-on-failure;
+  `view.opened` telemetry emitted exactly once; refresh delegation; stale-and-idle auto-refresh gating;
+  registry id/category/size envelope + clamp(min..max); accessibility summary contents.
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------------------------
+NOT RUN — BLOCKED. `xcodebuild` requires Xcode.app; only Command Line Tools are present (raw error in the
+PLATFORM-CAPABILITY PRECONDITION above), and the `iphonesimulator` SDK cannot be located.
+IOS_EXIT=(unrunnable)
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------------------
+NOT RUN — BLOCKED. Same root cause (no Xcode.app -> no xcodebuild). The macOS SDK is present, which is why
+the swiftc type-check + SwiftPM build + runtime verification above succeed, but the scheme/test-host build
++ XCTest run require Xcode.
+MAC_EXIT=(unrunnable)
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Surface deliverable COMPLETE (7 files; full parity; all states; no stubs/placeholders). Every
+host-runnable, surface-scoped gate is green, and the parity pipeline is executed + proven on macOS:
+  - swiftformat --lint .................. FORMAT_EXIT=0
+  - swiftlint --strict .................. LINT_EXIT=0
+  - check-placeholders (+ self-test) .... PLACEHOLDER_EXIT=0 (0 opt-outs)
+  - swiftc macOS-15 type-check (logic) .. LOGIC_TYPECHECK_EXIT=0
+  - swiftc macOS-15 type-check (views) .. VIEW_TYPECHECK_EXIT=0  (Previews: 0 code errors)
+  - isolated SwiftPM build (Swift 6) .... ISO_BUILD_EXIT=0  (@Observable macro expands)
+  - runtime verification harness ........ 76/76 pass, RUNTIME_VERIFY_EXIT=0
+The ONLY steps that cannot run on THIS runner are the four `xcodebuild ... build test` gates (iOS + macOS)
+and XCTest `swift test`, blocked solely by the absence of Xcode.app (Command Line Tools only) — a platform
+capability, not a defect in this surface. They are deferred to the canonical Xcode 26.5 acceptance runner,
+where this surface's code (type-checked + runtime-verified here) and its co-located XCTest suite will build
+and run, exactly as the sibling BatteryRadialGaugeWidget / DriveScoreGaugeWidget verifications are.
+
+EXIT=1
+STATUS=BLOCKED

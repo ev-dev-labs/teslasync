@@ -1,0 +1,116 @@
+=== P4 Shared surface 0037 AIPeriodCompareNarration (Apple) ===
+date=2026-06-10T20:56:08Z
+host=Darwin 25.5.0 arm64
+xcode=Xcode 26.5 Build version 17F42 
+swift=swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+--- toolchain present: xcodebuild, swift, swiftlint, swiftformat, pwsh, xcodegen, java17, iPhone16 sim booted ---
+
+================ SURFACE-LEVEL VERIFICATION (in-scope, deterministic) ================
+[xcodegen] project regenerated; AIPeriodCompareNarration files enumerated:
+    AIPeriodCompareNarration.Adapter.swift
+    AIPeriodCompareNarration.AdapterTests.swift
+    AIPeriodCompareNarration.Chrome.swift
+    AIPeriodCompareNarration.Model.swift
+    AIPeriodCompareNarration.Previews.swift
+    AIPeriodCompareNarration.Projection.swift
+    AIPeriodCompareNarration.strings
+    AIPeriodCompareNarration.swift
+    AIPeriodCompareNarration.Tests.swift
+    AIPeriodCompareNarration.Views.swift
+XCODEGEN_EXIT=0
+
+[isolated SwiftPM harness] module TeslaSync, Swift 6 language mode + strict concurrency
+  - real generated Tokens.swift + minimal TSButton/TSSkeleton/TSFadeIn shims
+  - compiles all 8 surface sources (incl. SwiftUI views + #Preview): swift build = Build complete!
+ISO_BUILD_EXIT=0
+  - swift test: Executed 80 tests, with 0 failures (XCTest) + Swift Testing 0/0
+ISO_TEST_EXIT=0  (80/80 PASS)
+
+[real dual-SDK swiftc -typecheck] -swift-version 6 -strict-concurrency=complete
+  macOS 15  (arm64-apple-macos15.0):            MAC_TYPECHECK_EXIT=0
+  iOS 18 sim (arm64-apple-ios18.0-simulator):   IOS_TYPECHECK_EXIT=0
+
+[swiftlint --strict] (9 surface swift files): 0 violations
+[swiftformat --lint] (9 surface swift files): 0/9 require formatting
+[check-placeholders.ps1] PLACEHOLDER_COUNT=0 / PLACEHOLDER_ALLOWED=0 / EXIT=0
+
+[i18n parity P1/S10] web t() keys -> AIPeriodCompareNarration.strings:
+  web keys present: compare.aiNarrative.{title,description,generateButton,badge} = 4/4
+  every code key has a catalog entry; 0 dead keys (a11y keys verified used)
+
+[KMP Shared.xcframework] assembled via Gradle :core:assembleSharedXCFramework — BUILD SUCCESSFUL in 6m21s; staged to apps/apple/Frameworks/Shared.xcframework
+
+================ PLATFORM GATE (literal gate commands) ================
+--- xcodebuild iOS Simulator (iPhone 16) build test ---
+IOS_EXIT=143
+  my-surface error/warning count: 0
+  total error: lines: 54
+  AIPeriodCompareNarration.strings copied into app bundle: 0
+  top failing files (pre-existing, unrelated):
+        15 RecentDrivesListWidget.Previews.swift
+        11 StateTimelineWidget.Previews.swift
+        10 StateTimeline.Previews.swift
+         8 RecentDrivesSection.Previews.swift
+         2 StateTimelineWidget.Model.swift
+         2 StateTimeline.Source.swift
+         2 RecentDrivesSection.Seams.swift
+         2 RecentDrivesListWidget.Model.swift
+  unique error messages (pre-existing dup-type collisions in other agents' surfaces):
+      error: 'RecentDrivesConnection' is ambiguous for type lookup in this context
+      error: 'RecentDrivesLoadStatus' is ambiguous for type lookup in this context
+      error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+      error: 'RecentDrivesUpdate' is ambiguous for type lookup in this context
+      error: 'StateTimelineConnection' is ambiguous for type lookup in this context
+      error: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+      error: 'StateTimelineModel' is ambiguous for type lookup in this context
+      error: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+
+--- xcodebuild macOS (TeslaSync-macOS) build test ---
+MAC_EXIT=65
+  my-surface error/warning count: 0
+  total error: lines: 4
+  signing identities: 1
+
+--- xcodebuild iOS Simulator (iPhone 16) build test [clean, single run] ---
+IOS_EXIT=65   (** TEST FAILED **)
+  AIPeriodCompareNarration error/warning count = 0  (my surface compiles clean in the real app target)
+  AIPeriodCompareNarration.strings copied into TeslaSync.app bundle = YES (CopyStringsFile, validated)
+  Cause = PRE-EXISTING, UNRELATED parallel-merge collisions in OTHER agents' surfaces:
+    duplicate type definitions -> 'ambiguous for type lookup': RecentDrivesModel/Connection/LoadStatus/Update,
+    StateTimelineModel/Connection/LoadStatus/Update (each defined in 2 files across RecentDrives*/StateTimeline*).
+    Failing files: RecentDrivesListWidget.*, RecentDrivesSection.*, StateTimeline.*, StateTimelineWidget.* (none mine).
+
+--- xcodebuild macOS (TeslaSync-macOS) build test ---
+MAC_EXIT=65   (** BUILD FAILED / TEST FAILED **)
+  AIPeriodCompareNarration error/warning count = 0
+  Cause = PRE-EXISTING, ENVIRONMENTAL macOS development-signing:
+    'TeslaSync-macOS' / 'TeslaSyncWidgets-macOS' have entitlements that require a development certificate.
+    security find-identity -p codesigning => 0 valid identities found (no signing identity on this runner).
+
+--- swiftlint --strict (tree-wide, apps/apple) ---
+LINT_EXIT=0   (Found 0 violations, 0 serious in 3456 files; AIPeriodCompareNarration = 0 violations)
+--- swiftformat --lint apps/apple (tree-wide) ---
+FORMAT_EXIT=0 (0/3686 files require formatting)
+--- check-placeholders.ps1 (apps/apple/.../AIPeriodCompareNarration) ---
+PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=0; no TODO/stub/mock/placeholder/Lorem)
+
+================ DETERMINATION ================
+SURFACE AIPeriodCompareNarration: VERIFIED GREEN by every in-scope measure —
+  xcodegen(10/10 files), isolated SwiftPM build + 80/80 XCTest under Swift 6 strict concurrency,
+  real swiftc -typecheck on iOS-18-sim AND macOS-15 (0 errors), swiftlint --strict 0, swiftformat 0,
+  placeholder 0, i18n parity 4/4 web keys + 0 dead, and 0 errors in the REAL full-app iOS compile
+  (its .strings resource was copied into the app bundle).
+
+FULL-APP xcodebuild build test (iOS + macOS): RED due to PRE-EXISTING, UNRELATED causes OUTSIDE this
+  prompt's allowed-file scope (apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.* + this log):
+    (1) duplicate-type collisions in other agents' RecentDrives*/StateTimeline* parallel-merged surfaces;
+    (2) macOS development-signing (0 codesigning identities on this runner).
+  Platform capability (SwiftUI + iOS18/iPadOS18/macOS15 SDKs, Swift Charts/MapKit not needed by this
+  AI-narration surface) IS present; the KMP Shared.xcframework was assembled + staged this run.
+  These match the repo's documented macOS-pending pattern (apps/macos-pending-verifications.md),
+  deferred to p4-apple/P99-0001-apple-acceptance-gate on macos-latest with signing identities.
+  Reproduce on a clean macOS host w/ signing:
+    cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+EXIT=65
+STATUS=BLOCKED

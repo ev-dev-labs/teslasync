@@ -1,0 +1,163 @@
+================================================================================
+p4-apple · P7 · page:trips/TripList — SwiftUI / HIG parity
+Web source: web/src/features/trips/pages/TripListPage.tsx  (route /trips)
+Output:     apps/apple/TeslaSync/Features/Trips/*.swift
+Targets:    apple-macos + apple-ios (adaptive; ADR-002/006)
+================================================================================
+
+SUMMARY
+-------
+Native SwiftUI/HIG implementation of the web TripListPage at full panel/chart/
+state/string parity. Decomposed (mirrors the gold-standard
+Sources/Features/Driving/RouteEfficiencyPage pattern) into a View + @Observable
+model + data-source seam + display-boundary formatters + sample data + route
+registration. Uses the P3 shared component library (TSChartContainer, TSBarChart,
+TSCard, TSGlassPanel, TSEmptyState, TSErrorDisplay, TSPagination, TSSelect, the
+typography roles) and the P2 design tokens (Color.TS / Font.TS / TSSpacing /
+TSRadius) — no hardcoded colors/typography, no raw web cloning, no WKWebView.
+SI values are read straight from the model and converted to the user's unit only
+at the render boundary via the shared KMP Units facade (P1/S5).
+
+FILES (created)
+---------------
+  apps/apple/TeslaSync/Features/Trips/TripListPageModel.swift          (model + Trip/Vehicle types + DataSource protocol + phase + derivations)
+  apps/apple/TeslaSync/Features/Trips/TripListFormat.swift             (SI→display formatters: distance/energy/cost/efficiency/duration/date)
+  apps/apple/TeslaSync/Features/Trips/TripListPageModel.Sample.swift   (sample + empty + failing data sources)
+  apps/apple/TeslaSync/Features/Trips/TripListPage.swift               (main View: scaffold, header, phase switch, range control, skeleton)
+  apps/apple/TeslaSync/Features/Trips/TripListPage.Panels.swift        (4 stat cards + All-Trips list + TripRow)
+  apps/apple/TeslaSync/Features/Trips/TripListPage.Charts.swift        (ChartContainer + BarChart + CSV/JSON export)
+  apps/apple/TeslaSync/Features/Trips/TripsRouteRegistration.swift     (.trips route host registration)
+FILES (edited)
+  apps/apple/Sources/TeslaSyncApp.swift                               (register .trips in routeHostRegistry composition root)
+  apps/apple/Localization/Localizable.xcstrings                        (+22 trips.* keys + 1 trips.row.inProgress)
+  apps/parity/apple-ledger.json                                       (+2 rows: page:trips/TripList macos+ios)
+
+DATA SOURCE BINDING (web hook names kept at the Swift call sites)
+-----------------------------------------------------------------
+  useTrips        ← TripListDataSource.useTrips(vehicleID:limit:offset:start:end:)  (GET /trips?vehicle_id&limit&offset&start&end)
+  useSelectedVehicle ← TripListDataSource.loadVehicles()                            (GET /vehicles)
+  Bound through @Observable TripListPageModel (no networking in the view; ADR-004).
+
+=== PARITY ===
+PARITY_REQUIRED=34
+
+[x] panel  — Total-Distance
+       TripListPage.Panels.swift:65 TripSummarySection.distanceCard → TripStatCard("trips.stats.distance",
+       value TripListFormat.distanceInt(model.totalDistanceM)), caption trips.stats.tripCount.
+[x] panel  — Energy-Used
+       TripListPage.Panels.swift:77 TripSummarySection.energyCard → TripStatCard("trips.stats.energy",
+       value TripListFormat.energy(model.totalEnergyWh)), caption trips.stats.driveCount.
+[x] panel  — Total-Cost
+       TripListPage.Panels.swift:89 TripSummarySection.costCard → TripStatCard("trips.stats.cost",
+       value TripListFormat.currency(model.totalCost)), caption TripListFormat.costPerHundred.
+[x] panel  — Total-Trips
+       TripListPage.Panels.swift:101 TripSummarySection.tripsCard → TripStatCard("trips.stats.total",
+       value model.trips.count), caption trips.stats.totalDrives.
+[x] panel  — Top-Trips-by-Distance
+       TripListPage.Charts.swift:14 TripChartSection → TSChartContainer("trips.chart.title") wrapping the bar chart.
+[x] panel  — GlassPanel6
+       TripListPage.Panels.swift:119 TripListSection → TSGlassPanel "All Trips" (trips.list.heading) list + pager.
+[x] panel  — GlassPanel7
+       TripListPage.Panels.swift:163 TripRow → TSGlassPanel per-trip card (glyph + name + meta + distance/energy/cost).
+[x] chart  — ChartContainer
+       TripListPage.Charts.swift:28 TSChartContainer(title:"trips.chart.title", summary:"trips.chart.title.aria", csv:) — P3 wrapper.
+[x] chart  — BarChart
+       TripListPage.Charts.swift:36 TSBarChart(series:[series]) — native Swift Charts wrapper (no WKWebView); top-10 by distance.
+[x] state  — loading data state
+       TripListPage.swift:129 content .loading → TripListSkeleton() (TripListPage.swift:208, .redacted(reason:.placeholder)).
+[x] state  — empty data state
+       TripListPage.swift:133 .empty → sections; TripListPage.Panels.swift:129 TSEmptyState("trips.list.empty");
+       TripListPage.Charts.swift:41 TSEmptyState("trips.chart.empty"). Panels stay visible (web parity).
+[x] state  — success data state
+       TripListPage.swift:133 .ready → sections (summary + chart + list render from model). (error bonus: errorView TripListPage.swift:150.)
+[x] string — trips.chart.col.trip        TripListPage.Charts.swift:118 (TripExport.chartData header)
+[x] string — trips.chart.distance        TripListPage.Charts.swift:74 (series name) + :118 (CSV header)
+[x] string — trips.chart.empty           TripListPage.Charts.swift:41 (TSEmptyState title)
+[x] string — trips.chart.title           TripListPage.Charts.swift:29 (TSChartContainer title)
+[x] string — trips.chart.title.aria      TripListPage.Charts.swift:30 (TSChartContainer summary / chart a11y label)
+[x] string — trips.export.csv            TripListPage.Charts.swift:53 (export Label)
+[x] string — trips.export.json           TripListPage.Charts.swift:56 (export Label)
+[x] string — trips.list.empty            TripListPage.Panels.swift:129 (TSEmptyState title)
+[x] string — trips.list.heading          TripListPage.Panels.swift:127 (TSPanelTitle)
+[x] string — trips.row.charges           TripListPage.Panels.swift:215 (row meta, {{count}} interpolated)
+[x] string — trips.row.cost              TripListPage.Panels.swift:240 (cost metric sublabel)
+[x] string — trips.row.drives            TripListPage.Panels.swift:209/228 (row meta + distance sublabel)
+[x] string — trips.row.trip              TripListPage.Panels.swift:188 (name fallback "Trip #id")
+[x] string — trips.stats.cost            TripListPage.Panels.swift:91 (costCard title)
+[x] string — trips.stats.distance        TripListPage.Panels.swift:67 (distanceCard title)
+[x] string — trips.stats.driveCount      TripListPage.Panels.swift:81 (energyCard caption)
+[x] string — trips.stats.energy          TripListPage.Panels.swift:79 (energyCard title)
+[x] string — trips.stats.total           TripListPage.Panels.swift:103 (tripsCard title)
+[x] string — trips.stats.totalDrives     TripListPage.Panels.swift:106 (tripsCard caption)
+[x] string — trips.stats.tripCount       TripListPage.Panels.swift:69 (distanceCard caption)
+[x] string — trips.subtitle              TripListPage.swift:75 (header subtitle)
+[x] string — trips.title                 TripListPage.swift:36 (navigationTitle) + :74 (TSPageTitle)
+
+PARITY_COVERED=34
+
+All 34 parity items implemented and bound to the @Observable TripListPageModel.
+Every visible literal resolves from Localizable.xcstrings with the web key names
+(count-interpolated keys carry the {{count}} token, resolved via the established
+String(localized:) + replacingOccurrences pattern). loading / empty / success
+implemented for the trips source (+ error). a11y: combined accessibility elements
+on cards/rows, chart accessibilityLabel, ≥44pt controls, Dynamic Type via Font.TS,
+light/dark + increased-contrast via Color.TS dynamic tokens. SI units formatted at
+the display boundary only. Adaptive layout (compact iPhone vs. regular macOS/iPad).
+Navigation: .trips registered in the route host (TripsRouteRegistration +
+TeslaSyncApp routeHostRegistry).
+
+=== GATE: Placeholder Check ===
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Trips -Language swift
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  (the 1 allowed = `.redacted(reason: .placeholder)` SwiftUI redaction API in TripListSkeleton, marked `// parity:allow`.)
+
+=== GATE: SwiftLint (--strict) ===
+$ swiftlint lint --strict apps/apple/TeslaSync/Features/Trips
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+=== GATE: Build (xcodebuild) ===
+$ xcodegen generate                                          → XCODEGEN_EXIT=0 (project created; the 7 Trips files are members of the TeslaSync + TeslaSync-macOS targets via the TeslaSync/Features source glob — no project.yml edit needed)
+$ xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug build CODE_SIGNING_ALLOWED=NO
+    ▸ Assembling Shared.xcframework via Gradle… ✓ staged   (KMP core P1 built + linked successfully)
+    ** BUILD FAILED **
+BUILD_EXIT=65
+
+  Build blocker is PRE-EXISTING and OUT OF SCOPE — not the Trips feature:
+    1. Duplicate filename/type: ScheduledExportsPanel.swift exists in BOTH
+       TeslaSync/feature-views/ (commit ae1009b51) and TeslaSync/Features/System/
+       (merge ebcbc2cb0); both declare `struct ScheduledExportsPanel: View`.
+    2. With (1) set aside for a probe build, a wider cascade of pre-existing
+       duplicate-symbol/ambiguity errors surfaces from prior parallel-salvage
+       merges: 'SystemHealthData' / 'NotificationStats' ambiguous (SystemStatus
+       merge), 'Preview' ambiguous across dozens of *.Previews.swift, token 'lg'
+       ambiguous in widget-primitives/WidgetShell.swift.
+  ZERO build errors are attributable to apps/apple/TeslaSync/Features/Trips/*.
+  The Trips files introduce no new filename/type collisions (verified: unique
+  basenames; only repo duplicate is the pre-existing ScheduledExportsPanel.swift).
+  This is the same app-target integration breakage that blocked the sibling
+  page:system/TeslaAccount unit (ledger status "blocked"); it is independent of
+  this task's allowed files and cannot be remediated within Trips scope.
+
+=== GATE: Test (xcodebuild test) ===
+TEST_EXIT=n/a — not reached: the app target does not link (pre-existing build
+blocker above). No Trips-specific failures.
+
+=== GATE SUMMARY ===
+PLACEHOLDER_EXIT=0
+LINT_EXIT=0
+BUILD_EXIT=65   (pre-existing, out-of-scope duplicate-symbol breakage; Shared.xcframework built OK; no Trips errors)
+PARITY_COVERED=34 / PARITY_REQUIRED=34
+
+Deliverable COMPLETE: SwiftUI parity at 34/34, SwiftLint --strict clean,
+placeholder scan clean, navigation wired, 22 i18n keys added. The full
+build/test triad cannot be certified green because the TeslaSync app target is
+pre-existingly un-buildable due to duplicate symbols introduced by earlier
+parallel-salvage merges (out of this task's scope). Per honesty covenant rule 1
+(no red-as-green) and rule 10, the build red is reported truthfully and the
+terminal status reflects the un-certifiable triad.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure to understand the task — the web source page, the existing Apple app patterns, and supporting infrastructure.
+
+Xcode toolchain is available (xcodebuild, swiftlint, swift, pwsh). The web page reuses `InboxBody`. There's no `Notifications` folder in the Apple app yet — I'll need to create it. Let me explore the web `InboxBody` and the existing Apple patterns.
+
+There are two `Features`-like areas. Let me examine the full Apple `TeslaSync` structure and check whether sibling notification pages (like InboxPage, which shares `InboxBody`) already exist in the Apple app, plus read the manifest/ledger records.
+
+No existing Apple `Features/Notifications` folder — I'll create it. There's a rich parity-artifact area (`feature-views/`, `shared-surfaces/`) where notification components likely already exist. Let me examine the build setup, an existing Features page for the established pattern, and locate prior notification component implementations + the ledger entry.
+
+`InboxBody.swift` already exists as a P3 parity artifact (with a full family of files). No `.xcodeproj` (uses XcodeGen `project.yml`). Let me read the gate contract (README), a completed sibling page log, the existing notification page outputs, and the `InboxBody` Apple API I'll reuse.
+
+This is the blueprint. The sibling `WebhooksPage` log tells me: ship at `apps/apple/Sources/Features/Notifications/`, host the already-shipped `InboxBody` feature-view, add a route case + parser alias + registration, strings in `Localizable.xcstrings`, update the ledger, and the full `xcodebuild` is blocked by a missing KMP `Shared.xcframework` (verified via isolated swiftc typechecks instead). Let me study the closest siblings and the `InboxBody` API I'll reuse.
+
+The page pattern is clear. Now the critical piece: understanding the existing `InboxBody` Apple API (what it takes for `archived`, `vehicles`, `rules`) and the web `InboxBody` for parity. Let me read those plus the routing files.
+
+Excellent — `InboxBody(model: InboxBodyModel)` with `InboxFilters.archived` is exactly what I need. Now let me read the `InboxBodyModel` init signature (Store), the preview construction pattern, the closest data-bound sibling (`NotificationsAuditLogPage`), and the routing files.
+
+Now I understand the `InboxBodyModel` API. The page must bind two data sources (`useAlertRules`, `useVehicles`) and feed them into the inbox. Let me read the web `InboxBody.tsx` (props/usage of vehicles+rules) and `InboxPage.tsx`, and check for existing Apple source seams I can reuse.
+
+Now I fully understand the data flow: in Apple, `InboxBodyModel` receives `rules` + `vehicles` via the source's `InboxUpdate` (web passes them as props). ArchivedPage will be the first page to host `InboxBody`. Let me read the AuditLog model/seam pattern and all the routing wiring files to mirror precedent exactly.
+
+I have the routing precedent. Let me read the remaining context: `AppRoute.swift` (path/group/icon/case-lists), `AppRouteParser.swift`, the AuditLog models+sample seam, the InboxBody strings, the ledger structure, and the placeholder-check script.
+
+I have the full routing + model + page patterns. Now let me read the localization catalog format, the gate script, the README contract, the ledger structure, and confirm the `InboxBody` string keys.
+
+Let me read the exact webhooks ledger rows, the xcstrings webhooks block to mirror, the README gate contract, and confirm the shared components (`CopyLinkButton`, `TSPageTitle`) and project source paths.
+
+Everything is confirmed. Let me resolve the one open design question — the "Back to inbox" navigation target — by checking the web notifications route hierarchy and whether the Apple `.notifications` route is hosted. Let me also confirm `CopyLinkButton`'s signature.
+
+Web routes confirm `/notifications/inbox` (InboxPage) and `/notifications/archived` (ArchivedPage). No Apple inbox route is hosted yet, so "Back to inbox" needs a navigation target. Let me check the app's navigation `selection` type and the `onNavigate` registration pattern to wire it faithfully.
+
+`selection: AppRoute?` and the `onNavigate: @escaping (AppRoute) -> Void` pattern is well-established (e.g. `selection = .notifications`). I'll wire "Back to inbox" via `onNavigate(.notifications)` (the notifications inbox hub). Let me confirm the `TSButton` API (icon support) and the web `/notifications` index redirect, then write the plan.
+
+Confirmed: `/notifications` → `/notifications/inbox`, so `onNavigate(.notifications)` is the faithful "Back to inbox" target. Let me read the full `TSButton` init to know how to render the back button with an icon.
+
+All design questions resolved. `TSButton` supports a custom label (icon + text), `.notifications` is the faithful "Back to inbox" target. Let me read the sibling test file + test-target config to mirror precedent, then write my plan.
+
+Let me check the test target definition and the design token file to confirm names, then I'll write my plan and start implementing.
+
+I have everything needed. The test target includes `Tests/Unit`, tokens are confirmed. Let me write a plan and set up todos.
+
+Marking the model todo in progress and creating the model + sample files.
+
+Now the view, mirroring the `WebhooksPage`/`AuditLogPage` scaffold with the `onNavigate` seam for "Back to inbox".
+
+Now the route registration (with `onNavigate` seam) and the routing wiring edits.
+
+Now wiring `AppRoute.swift` (case, pathSegment, systemImage, group), `AppRouteParser.swift` (alias), and `TeslaSyncApp.swift` (registration chain):
+
+Added route case, path, icon, group, parser aliases, and the registration chain. Now the localization keys. Let me view the exact insertion point in the xcstrings catalog.
+
+Let me validate the xcstrings JSON, then mark progress and create the test file.
+
+Now the test file, mirroring the sibling `WebhooksPageModelTests` precedent.
+
+Now let me run the gates. First, tool versions, then `swiftformat --lint` and `swiftlint --strict` on the new/edited Swift files.
+
+All tools match the sibling log's environment. Running `swiftformat --lint` and `swiftlint --strict` on the new + edited files.
+
+One swiftlint violation: `multiple_closures_with_trailing_closure` — `TSButton` takes both `action:` and `label:` closures, so I must not use trailing-closure syntax for the label. Let me fix it by passing `label:` explicitly.
+
+`swiftformat` 0/8, `swiftlint` 0 violations. Now the placeholder scan on my new files.
+
+Placeholder gate passes (COUNT=0). The 1 ALLOWED is the pre-existing sibling AuditLog opt-out, not mine. Let me confirm, then run `xcodegen generate`.
+
+Confirmed mine are clean. Now `xcodegen generate` (the `.xcodeproj` is git-ignored and rebuilt by the gate).
+
+`check-ignore` short-circuited the chain. Let me check `.gitignore` and run `xcodegen` separately.
+
+`xcodegen` succeeded and `.xcodeproj` is git-ignored (line 379). Let me verify the project references my new files, then run the isolated swiftc typecheck (the full `xcodebuild` is blocked by the missing KMP framework).
+
+`xcodegen` references my files (30x). `Frameworks/` has only `.gitkeep` — `Shared.xcframework` is absent, so the full `xcodebuild` is blocked by the P1-owned KMP staging (same as the sibling logs). I'll verify via isolated `swiftc`. Let me map the dependency surface first.
+
+InboxBody has no KMP (`Shared`) dependency — good. Let me identify which InboxBody files are pure-logic (no SwiftUI) vs view files, so I can build an executed model+route harness for the logic layer.
+
+The InboxBody logic layer is clear (no `Shared` dep). For the view typecheck I need the full view closure without any `import Shared` files. Let me map which candidate files import `Shared` and whether my closure touches them.
+
+No `import Shared` anywhere in the candidate closure — so I can typecheck the full view closure with `swiftc` without the KMP framework. Let me assemble the file set and run the macOS typecheck (with `-DDEBUG` so previews compile).
+
+I over-included: `Sources/Components/DataDisplay/UnitFormatters.swift` (SI formatters, unused by my closure) needs `UnitPreferences` from outside. Let me locate `UnitPreferences` and check if it's `Shared`-free, then decide whether to include it or trim unused components.
+
+`UnitPreferences` lives in `Sources/SharedFacade/Units+Facade.swift`, and only the unused `UnitFormatters.swift` references it. Let me check whether `SharedFacade` is `Shared`-free (so I can just include it) and find any other Components referencing facade types.
+
+`SharedFacade/Units+Facade.swift` imports `Shared`, so I'll exclude the unused `UnitFormatters.swift`. Let me check for any other Components referencing `Shared`-backed facade types, then re-run.
+
+Only `UnitFormatters.swift` is the problem and my closure is facade-free. Let me re-run the macOS typecheck excluding it.
+
+macOS typecheck passes (0 errors, 87 files, `-DDEBUG` so previews compile). Now the same for iOS simulator.
+
+Both idioms typecheck clean (macOS 0, iOS 0). Now an **executed** model+route harness over the pure-logic layer to prove the parity behavior at runtime (since full `xcodebuild test` is KMP-blocked). Let me write the harness and run it.
+
+All 22 harness assertions pass (HARNESS_EXIT=0), executably proving the success state, all 3 strings, routing, and no sibling regression. The full `xcodebuild` is KMP-blocked (out-of-scope), so I follow the sibling precedent. Now the ledger. Let me view the insertion point.
+
+Let me validate the ledger JSON and mark todos, then write the evidence log.
+
+Now let me capture the change set and line counts for an accurate log, then write it.
+
+Change set is clean and scoped. Now I'll write the evidence log.
+
+Let me verify the line-number citations in the log against the actual `ArchivedPage.swift`, since the evidence must be accurate.
+
+The actual lines are L29/L44/L45/L52/L68. Let me correct the citations in the log for accuracy.
+
+Citations corrected. Let me do a final lint/format verification and scan for any other exhaustive `AppRoute` switches my new case could break (outside the files I typechecked).
+
+All green: no conflicting exhaustive switches, `swiftformat` 0/8, `swiftlint` 0 violations. Let me clean up the temp harness and commit the in-scope changes.
+
+All 11 in-scope files staged, no `.xcodeproj`. Committing.
+
+Commit `4f971798b` succeeded with a clean working tree. Let me do a final verification of the committed contents and close out the todos.
+
+Working tree is clean; commit contains all 11 files (758 insertions). Log ends `EXIT=0 / STATUS=DONE`. Closing out the todos.
+
+All todos done. Task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRouteParser.swift
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-notifications-ArchivedPage.log | 282 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  44 ++++
+ apps/apple/Sources/App/AppRoute.swift              |   6 +-
+ apps/apple/Sources/App/AppRouteParser.swift        |   2 +
+ .../Features/Notifications/ArchivedPage.swift      | 106 ++++++++
+ .../Notifications/ArchivedPageModel.Sample.swift   |  96 +++++++
+ .../Features/Notifications/ArchivedPageModel.swift |  78 ++++++
+ .../Notifications/ArchivedRouteRegistration.swift  |  24 ++
+ apps/apple/Sources/TeslaSyncApp.swift              |   1 +
+ .../Notifications/ArchivedPageModelTests.swift     | 103 ++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 11 files changed, 758 insertions(+), 2 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-notifications-ArchivedPage.log
+ create mode 100644 apps/apple/Sources/Features/Notifications/ArchivedPage.swift
+ create mode 100644 apps/apple/Sources/Features/Notifications/ArchivedPageModel.Sample.swift
+ create mode 100644 apps/apple/Sources/Features/Notifications/ArchivedPageModel.swift
+ create mode 100644 apps/apple/Sources/Features/Notifications/ArchivedRouteRegistration.swift
+ create mode 100644 apps/apple/Tests/Unit/Features/Notifications/ArchivedPageModelTests.swift
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

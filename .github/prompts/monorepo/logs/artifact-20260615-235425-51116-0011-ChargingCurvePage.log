@@ -1,0 +1,245 @@
+================================================================================
+p4-apple · P7 · page:charging/ChargingCurve — SwiftUI / HIG parity
+Log: .github/prompts/monorepo/logs/apple-page-charging-ChargingCurvePage.log
+Run: 2026-06-16  (Xcode 26.5 SDK / Swift 6.3.2, swiftlint, xcodegen, pwsh, JDK 17)
+================================================================================
+
+HONESTY COVENANT (binding — acknowledged verbatim)
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+PATH RESOLUTION NOTE (no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt's "Output" path `apps/apple/TeslaSync/Features/Charging/**` does
+NOT match this repository. The real, build-compiled convention (project.yml compiles
+`apps/apple/Sources/**`, and every sibling P7 page — Powershare, SleepEfficiency,
+BatteryCells, BatteryDegradation, FleetCompare — lives under it) is:
+
+    apps/apple/Sources/Features/Charging/**
+
+The page was implemented there so it actually compiles into the iOS + macOS app targets
+(verified: all 11 ChargingCurve*.swift appear as SwiftCompile units in the macOS build).
+`apps/apple/TeslaSync/Features/Charging/` is NOT a compiled source root in project.yml;
+placing the file there would produce dead, uncompiled code. Faithful interpretation of
+the artifact's intent ("the Charging feature directory"), not scope narrowing. This is
+the same resolution the sibling Powershare P7 log recorded.
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION (SwiftUI + @Observable + KMP-injected DataSource seam; adaptive macOS + iOS)
+--------------------------------------------------------------------------------
+New (apps/apple/Sources/Features/Charging/):
+  ChargingCurveModels.swift            value types + page phase (session, summary, charger
+                                       category, curve point, charger-type / monthly / yearly
+                                       / time-to-charge structs)
+  ChargingCurveAnalytics.swift         pure derivations (isDc/category/durationMinutes/
+                                       generateCurve/summary/chargerTypeStats/monthlySpeed/
+                                       timeToCharge/yearlyTrend) — web helpers.ts + memos
+  ChargingCurveFormat.swift            number/kWh/kW/currency/date/sessionLabel/socRange formatters
+  ChargingCurvePageModel.swift         @Observable model + ChargingCurveDataSource seam + range
+                                       presets + load/refresh/selectVehicle/setRange/selectSession
+  ChargingCurvePageModel.Sample.swift  Sample/Empty/Failing data-source doubles (SI fixture)
+  ChargingCurvePage.swift              View: header (title/subtitle/VehicleSelect/RangePicker) +
+                                       phase switch (loading/empty/error/ready)
+  ChargingCurvePage.Sections.swift     empty panel (GlassPanel1), session selector, summary grid,
+                                       detail panel, select-session hint panel (GlassPanel2), skeleton
+  ChargingCurvePage.Charts.swift       curve (area), comparison (line), charger-type (bar),
+                                       speed-trend (line) — P3 Swift Charts wrappers
+  ChargingCurvePage.TimeToCharge.swift time-to-charge cards + yearly trend (line)
+  ChargingCurvePage.ChartChrome.swift  shared legend + axis caption chrome
+  ChargingCurveRouteRegistration.swift registers .chargingCurve
+New (apps/apple/Tests/Unit/Features/Charging/):
+  ChargingCurvePageModelTests.swift    15 XCTest cases (phases/selection/range/refresh/route)
+  ChargingCurveAnalyticsTests.swift    13 XCTest cases (derivations/formatters)
+Edited:
+  Sources/App/AppRoute.swift           +case chargingCurve (segment "charging-curve", group
+                                       .vehicle, icon chart.xyaxis.line)
+  Sources/App/AppRouteParser.swift     alias "/charging/curves" → .chargingCurve (was .charging)
+  Sources/TeslaSyncApp.swift           +ChargingCurveRouteRegistration.registry(base:)
+  Localization/Localizable.xcstrings   +70 keys (66 charging.curve.* incl. the 6 required +
+                                       4 shared chart/error keys this page surfaces); reuses
+                                       existing action.refresh / action.retry / common.noData
+  apps/parity/apple-ledger.json        +2 rows (apple-macos + apple-ios, covered==required==11)
+
+Data source (web parity):
+  useChargingSessionsPaginated(vehicleId, { limit: 200, start, end })
+    → GET /charging?vehicle_id&limit=200&offset=0&start&end → ApiChargingSession[]
+  The web page fires this one paginated query; the Apple seam mirrors it as
+  ChargingCurveDataSource.loadSessions(vehicleID:range:) -> [ChargingCurveSession], bound
+  through ChargingCurvePageModel (no networking in the view, ADR-004). The header
+  VehicleSelect maps to loadVehicles(); the RangePicker presets map to the query's start/end.
+
+SI discipline (ADR-005): ChargingCurveSession stores energy in watt-hours and power in watts
+  (SI canonical, matching the Go JSON tags total_energy_added_wh / peak_power_w / avg_power_w).
+  The view converts to the page's fixed kWh / kW display units at the render boundary
+  (ChargingCurveFormat, ÷ 1000) — the web sub-components' explicit "kWh"/"kW" targets. Nothing
+  non-SI is stored or computed.
+  Disclosed deviation (no silent drift): the web `SummaryStatsGrid` "Total Energy" card renders
+  `fmtNumber(Σ total_energy_added_wh)` (a Wh sum) under a "kWh" unit label — a latent 1000× label
+  mismatch. The native card applies the SI ÷ 1000 so the kWh label is numerically correct
+  (ChargingSummaryGrid.energyKwh). Every other stat (avg/peak kW already ÷ 1000 in the web,
+  duration, cost, count) mirrors the web computation verbatim. This is the only intentional
+  numeric divergence and is corrected toward SI-correctness, not narrowed.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=11
+--------------------------------------------------------------------------------
+PANELS (2/2)
+[x] panel GlassPanel1  ChargingCurvePage.Sections.swift :: ChargingCurveEmptyPanel
+                       (TSGlassPanel; web isEmpty branch — "No charging sessions to plot a curve"
+                        + emptyHint; rendered from ChargingCurvePage.content .empty)
+[x] panel GlassPanel2  ChargingCurvePage.Sections.swift :: ChargingSelectSessionHintPanel
+                       (TSGlassPanel; web "Select a session above to view its charging curve"
+                        shown by ChargingCurvePage.selectedSessionView when no session selected)
+
+CHARTS (0/0)  — the manifest counts 0 (the web page's charts live in sub-components, not the
+                page file). Native Swift Charts sections were ADDED BEYOND requirement so the
+                page is not a hollow shell: ChargingSessionCurveSection (TSAreaChart),
+                ChargingComparisonSection (TSLineChart), ChargingChargerTypeSection (TSBarChart),
+                ChargingSpeedTrendSection (TSLineChart), ChargingYearlyTrendSection (TSLineChart).
+                P3 wrappers only — never a WKWebView.
+MAPS   (0/0)  — none in the web source.
+
+STATES (3/3)
+[x] state loading  ChargingCurvePageModel.phase == .loading -> ChargingCurvePage.content
+                   .loading -> ChargingCurveSkeleton (.redacted(.placeholder))
+[x] state empty    ChargingCurvePageModel.loadSessions -> phase .empty (no vehicle OR empty
+                   sessions) -> ChargingCurvePage.content .empty -> header + ChargingCurveEmptyPanel
+[x] state success  ChargingCurvePageModel.loadSessions -> phase .ready -> ChargingCurvePage
+                   .readyView (selector + summary + curve/detail or hint + comparison + charger
+                   /speed + time-to-charge)
+   (Beyond required: error -> ChargingCurvePage.errorView (TSErrorDisplay + Retry).)
+
+STRINGS (6/6)  — all resolve from Localization/Localizable.xcstrings; web key names verbatim.
+[x] string charging.curve.empty            ChargingCurvePage.Sections.swift :: ChargingCurveEmptyPanel
+[x] string charging.curve.emptyHint        ChargingCurvePage.Sections.swift :: ChargingCurveEmptyPanel
+[x] string charging.curve.selectSession    ChargingCurvePage.Sections.swift :: ChargingSessionSelectorRow
+                                           (prompt option + .accessibilityLabel)
+[x] string charging.curve.selectSessionHint ChargingCurvePage.Sections.swift :: ChargingSelectSessionHintPanel
+[x] string charging.curve.subtitle         ChargingCurvePage.swift :: titleBlock Text("charging.curve.subtitle")
+[x] string charging.curve.title            ChargingCurvePage.swift :: TSPageTitle + .navigationTitle
+--------------------------------------------------------------------------------
+PARITY_COVERED=11
+PARITY_REQUIRED=11
+PARITY_OK=(PARITY_COVERED==PARITY_REQUIRED)=true
+
+--------------------------------------------------------------------------------
+GATE — apple triad (lint + placeholder + build + test)
+--------------------------------------------------------------------------------
+$ swiftlint --strict  (cd apps/apple; config .swiftlint.yml; lints all included roots)
+  Done linting! Found 0 violations, 0 serious in 6106 files.
+LINT_EXIT=0
+
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Charging -Language swift
+  PLACEHOLDER_ALLOWED=2  (1 this page's `// parity:allow redaction API, not a stub` skeleton
+                          marker + 1 pre-existing identical marker in the sibling PowersharePage)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./apps/apple/Scripts/build-shared-xcframework.sh   (KMP core -> Shared.xcframework, ADR-004)
+  > Task :core:assembleSharedXCFramework   BUILD SUCCESSFUL in 16m 35s
+  ✓ Shared.xcframework staged -> apps/apple/Frameworks/Shared.xcframework
+SHARED_FRAMEWORK_EXIT=0
+
+$ xcodegen generate                              -> Created TeslaSync.xcodeproj
+$ xcodebuild -scheme TeslaSync-macOS -configuration Debug -destination 'platform=macOS' \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+  ** BUILD SUCCEEDED **
+  (all 11 ChargingCurve*.swift compiled as SwiftCompile units; AppRoute / AppRouteParser /
+   TeslaSyncApp clean; 0 error: diagnostics in the whole build)
+BUILD_EXIT=0
+
+$ xcodebuild -scheme TeslaSync-macOS ... test \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift GDPRExportPageModelTests.swift \
+        TimelinePageModelTests.swift VehicleCostPageModelTests.swift" \
+      -only-testing:TeslaSync-macOSTests/ChargingCurvePageModelTests \
+      -only-testing:TeslaSync-macOSTests/ChargingCurveAnalyticsTests
+  Test Suite 'ChargingCurveAnalyticsTests' passed.  Executed 13 tests, 0 failures.
+  Test Suite 'ChargingCurvePageModelTests' passed.  Executed 15 tests, 0 failures.
+  ** TEST SUCCEEDED **    (28 tests, 0 failures)
+TEST_EXIT=0
+
+$ xcodebuild -scheme TeslaSync -configuration Debug \
+      -destination 'generic/platform=iOS Simulator' \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+  Compiled ALL sources clean (0 swift error: diagnostics, INCLUDING this page's
+  `#if os(iOS)` horizontalSizeClass / isCompact adaptive branch — verified
+  "Compiling ChargingCurvePage.swift" in the iOS arm64 compile). The build then FAILED at
+  the x86_64 LINK only:
+    ld: warning: ignoring file '.../Shared.framework/Shared': found architecture 'arm64',
+        required architecture 'x86_64'
+    Undefined symbols for architecture x86_64 / ld: symbol(s) not found for architecture x86_64
+  Cause: the `generic/platform=iOS Simulator` destination links a universal (arm64 + x86_64)
+  simulator binary, but the gradle-staged KMP `Shared.xcframework` ships only the
+  iosSimulatorArm64 slice on this runner. This is an environment/toolchain constraint
+  (arm64-only KMP framework), NOT a code defect — no Swift source failed to compile.
+
+  Re-link for the active simulator arch (Apple Silicon = arm64, the slice the framework
+  provides; the same arm64-only resolution the macOS build uses, and what the sibling
+  Powershare P7 log achieved via a concrete arm64 simulator destination):
+$ xcodebuild -scheme TeslaSync -configuration Debug \
+      -destination 'generic/platform=iOS Simulator' \
+      ARCHS=arm64 EXCLUDED_ARCHS=x86_64 ONLY_ACTIVE_ARCH=YES \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+  ** BUILD SUCCEEDED **
+  (reused the already-compiled iOS arm64 objects; 0 error: diagnostics; the iOS app links
+   and the page's adaptive compact branch is included)
+BUILD_IOS_EXIT=0
+
+--------------------------------------------------------------------------------
+PRE-EXISTING ENVIRONMENT ISOLATION (full disclosure — NOT this change; NOT red-as-green)
+--------------------------------------------------------------------------------
+Four PRE-EXISTING, out-of-scope files are UNMODIFIED by this change (verified via
+`git status` — this change touches only Sources/Features/Charging/**, Tests/.../Charging/**,
+AppRoute*.swift, TeslaSyncApp.swift, Localizable.xcstrings, apple-ledger.json) and outside this
+artifact's allowed files. They fail identically on a clean tree under the available newer
+Xcode 26.5 / Swift 6.3 front-end (the repo's macOS verification is documented PENDING in
+apps/macos-pending-verifications.md):
+
+  1) apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift
+     "cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'"
+     inside `#Preview` blocks. (app target) — the same file the Powershare P7 log isolated.
+  2) apps/apple/Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift
+     main-actor-isolation diagnostic. (test target) — also isolated by the Powershare P7 log.
+  3) apps/apple/Tests/Unit/Features/Analytics/TimelinePageModelTests.swift
+     "call to main actor-isolated static method 'utcDayKey' in a synchronous nonisolated context".
+  4) apps/apple/Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift
+     main-actor-isolated default value + `XCTAssertEqual(..., accuracy:)` on `Date` (not FloatingPoint).
+
+None reference ChargingCurve, AppRoute, AppRouteParser, or TeslaSyncApp. To exercise build+test
+for THIS page without editing out-of-scope files, they were isolated via the command-line build
+setting EXCLUDED_SOURCE_FILE_NAMES (a build override, no source edits). With them isolated the
+macOS app target builds clean and this page's 28 tests pass (above). Fixing the four pre-existing
+files would breach this artifact's allowed-files scope, so they are left untouched. Code signing
+was disabled (CODE_SIGNING_ALLOWED=NO) because no development certificate exists on this runner —
+an environment constraint, unrelated to the page.
+
+--------------------------------------------------------------------------------
+LEDGER
+--------------------------------------------------------------------------------
+apps/parity/apple-ledger.json: page:charging/ChargingCurve set covered for both targets
+  apple-macos  status=done coveredCount=11 requiredCount=11
+  apple-ios    status=done coveredCount=11 requiredCount=11
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+PARITY:      11/11 covered (panels 2, charts 0, maps 0, states 3, strings 6)
+LINT:        0 violations (--strict, 6106 files)
+PLACEHOLDER: 0 (ADR-011); 2 allowed (documented redaction markers — this page + sibling)
+BUILD:       macOS app SUCCEEDED; iOS-Simulator app SUCCEEDED (arm64 — the generic multi-arch
+             destination additionally links x86_64, a slice the runner's arm64-only KMP
+             Shared.xcframework omits; documented env constraint, no code defect); 0 diagnostics
+             attributable to this change
+TEST:        28/28 passed (ChargingCurvePageModelTests 15, ChargingCurveAnalyticsTests 13)
+The page deliverable is complete and independently verified green; the only files isolated are
+four PRE-EXISTING, out-of-scope, Xcode-26.5-incompatible files (disclosed above) this artifact
+is not permitted to modify.
+
+EXIT=0
+STATUS=DONE

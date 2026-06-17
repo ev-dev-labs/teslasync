@@ -1,0 +1,112 @@
+=== P4 Feature view 0169 GForcePanel (Apple) ===
+date(UTC): 2026-06-09
+runner: Darwin (Apple Silicon), shared multi-slot host (slot-30)
+toolchain: Xcode 26.5 (17F42) | Swift 6.3.2 | swiftlint 0.63.3 | swiftformat 0.61.1 | xcodegen | pwsh
+capability: SwiftUI + Swift Charts + MapKit toolchain PRESENT (iOS 18 / macOS 15 SDKs available) — NOT a capability block.
+
+Surface: features/driving/components/driving-dynamics/GForcePanel.tsx  →
+         apps/apple/TeslaSync/feature-views/GForcePanel.{swift,Model,Adapter,Views,Previews,Tests}.swift + GForcePanel.strings
+Change set (git status): ONLY the 7 GForcePanel.* files + this log are new. Nothing else touched.
+
+--------------------------------------------------------------------------------
+PRE-STEP: KMP Shared.xcframework (ADR-004 pre-build dependency)
+--------------------------------------------------------------------------------
+$ apps/apple/Scripts/build-shared-xcframework.sh   (gradle :core:assembleSharedXCFramework)
+> BUILD SUCCESSFUL in 19m 35s
+> xcframework written to apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+> ✓ Shared.xcframework staged → apps/apple/Frameworks/Shared.xcframework
+SHARED_XCFRAMEWORK_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 1 — iOS build + test   (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16')
+--------------------------------------------------------------------------------
+1a. build (whole TeslaSync app target, compiles GForcePanel.{swift,Model,Adapter,Views,Previews} + 2700+ files):
+    ** BUILD SUCCEEDED **            ← GForcePanel surface compiles clean into the real app, 0 errors/warnings.
+    IOS_BUILD_EXIT=0
+
+1b. test (TeslaSyncTests bundle) — FAILS TO COMPILE on PRE-EXISTING, OUT-OF-SCOPE sibling surfaces:
+    MonthlyCostChart.Tests.swift:318:24: error: invalid redeclaration of 'MonthlyCostAccessibilityTests'
+    MonthlyCostTable.Tests.swift:300:21: error: invalid redeclaration of 'SpyMonthlyCostTelemetry'
+    MonthlyCostTable.Tests.swift:212/215: error: type mismatch on 'MonthlyCostTableTelemetry' / 'Equatable.data'
+    ** TEST FAILED **
+    IOS_TEST_EXIT=65
+    ROOT CAUSE: MonthlyCostChart + MonthlyCostTable each declare a class named
+      `MonthlyCostAccessibilityTests` and a `SpyMonthlyCostTelemetry` in the same XCTest bundle →
+      duplicate-symbol compile errors. These files are PRE-EXISTING (committed at defbf96f8),
+      `git diff HEAD` against them is EMPTY (untouched by this task), and they are OUTSIDE this
+      prompt's allowed-files scope (GForcePanel.* + log only). A single XCTest bundle must compile
+      in full before ANY test runs, so `-only-testing:TeslaSyncTests/GForce*` cannot bypass it.
+    IOS_EXIT=65  (build=0, test blocked by pre-existing out-of-scope breakage)
+
+--------------------------------------------------------------------------------
+STEP 2 — macOS build + test   (xcodebuild -scheme TeslaSync-macOS)
+--------------------------------------------------------------------------------
+2a. build (as-specified): FAILS at code-signing only (environment, not code):
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    (DEVELOPMENT_TEAM is "" in project.yml; no signing identity provisioned on this runner.)
+    MAC_EXIT=65  (environment signing limitation; zero GForce compile errors)
+
+2b. build with signing disabled (isolates compilation from the missing cert):
+    $ xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+    ** BUILD SUCCEEDED **            ← GForcePanel surface compiles clean on macOS 15 too, 0 errors.
+    MAC_BUILD_NOSIGN_EXIT=0
+    (test action would hit the identical pre-existing MonthlyCost* bundle breakage as Step 1b.)
+
+--------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict   (cd apps/apple && swiftlint lint --strict, 2735 files)
+--------------------------------------------------------------------------------
+    Done linting! Found 1 violation, 1 serious in 2735 files.
+    The SOLE violation is PRE-EXISTING and OUT-OF-SCOPE:
+      dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: error: Opening Brace Spacing (opening_brace)
+    `git diff HEAD` against that file is EMPTY (untouched by this task).
+    GForcePanel.* files: 0 violations (verified by scoped `swiftlint --strict GForcePanel.*` → 0/6).
+    LINT_EXIT=2  (pre-existing unrelated violation; this surface contributes 0)
+
+--------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple   (2739 files)
+--------------------------------------------------------------------------------
+    SwiftFormat completed in 56.96s. 0/2739 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0   ← whole project (incl. all 7 GForcePanel.* files) is format-clean.
+
+--------------------------------------------------------------------------------
+STEP 5 — check-placeholders   (./apps/tools/check-placeholders.ps1 -Path .../GForcePanel)
+--------------------------------------------------------------------------------
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   ← no TODO/stub/mock/placeholder/Lorem in shipped GForcePanel code.
+
+--------------------------------------------------------------------------------
+SUPPLEMENTAL — Standalone logic verification (because the XCTest bundle is poisoned by
+the pre-existing MonthlyCost* errors above, GForcePanel.Tests.swift cannot execute in-bundle;
+to prove the surface's tests are nonetheless correct, the REAL SwiftUI-free Model + Adapter were
+compiled with `swiftc -O` and the exact GForcePanel.Tests.swift assertions were run against them):
+--------------------------------------------------------------------------------
+    $ swiftc -O GForcePanel.Model.swift GForcePanel.Adapter.swift main.swift -o run && ./run
+    CHECKS=61 FAILURES=0
+    STANDALONE_LOGIC_VERIFICATION=PASS
+    Coverage: fmtNumber parity (grouping, fixed-2-decimals, half-away-from-zero, safeNumber),
+      hasAny gate, projector (lateral/longitudinal values, combined=sqrt(lat²+lon²), integer→"x.00",
+      "—" + "No reading" missing branch, de_DE grouping), accessibility summary, resolvePhase matrix,
+      and the full model lifecycle (content/empty/cached-offline phases, refresh delegation,
+      stale auto-refresh-once-until-live, view.opened-once telemetry).
+
+================================================================================
+GForcePanel SURFACE HEALTH (everything in this task's allowed scope): ALL GREEN
+  iOS app compile .................. PASS (** BUILD SUCCEEDED **)
+  macOS app compile (no-sign) ...... PASS (** BUILD SUCCEEDED **)
+  swiftlint --strict (my files) .... PASS (0 violations)
+  swiftformat --lint (my files) .... PASS (0/7 need formatting)
+  check-placeholders ............... PASS (0)
+  logic/unit assertions ............ PASS (61/61, real Model+Adapter)
+
+WHOLE-PROJECT GATE: cannot reach EXIT=0 — every red step is PRE-EXISTING breakage in files
+this prompt forbids editing (allowed files = GForcePanel.* + log):
+  - test bundle:  MonthlyCostChart.Tests.swift / MonthlyCostTable.Tests.swift (duplicate symbols)
+  - swiftlint:    LiveSignalSparklinesWidget.Builder.swift (opening_brace)
+  - macOS sign:   no development certificate on runner (DEVELOPMENT_TEAM unset)
+All three confirmed pre-existing via empty `git diff HEAD`.
+================================================================================
+
+EXIT=65
+STATUS=BLOCKED

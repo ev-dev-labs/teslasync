@@ -1,0 +1,117 @@
+=== P4 Shared surface 0086 Pressure (Apple) ===
+
+Web source (THE spec): web/src/components/data-display/format/Pressure.tsx
+Native output:         apps/apple/TeslaSync/shared-surfaces/Pressure.*
+Toolchain (runner):    Xcode 26.5 (Build 17F42), Apple Swift 6.3.2, swiftlint, swiftformat,
+                       xcodegen, pwsh 7, OpenJDK 17, iPhone 16 simulator (booted).
+                       Capability present -> NOT a platform-capability BLOCK.
+
+--------------------------------------------------------------------------------
+ARTIFACT (8 files, all under the allowed Pressure.* scope)
+--------------------------------------------------------------------------------
+Pressure.Adapter.swift     Input + Meta + Source + Formatting + Accessibility (pure, Foundation)
+Pressure.Projection.swift  Pure projection -> value / empty branches
+Pressure.Model.swift       P1/S8 state-holder + P1/S11 telemetry seam + P1/S10 i18n facade
+Pressure.swift             SwiftUI View entry; reads \.tsUnits (web useUnits parity)
+Pressure.Views.swift       value branch (<span title>{display} {unit}</span>) + empty (<span>—</span>)
+Pressure.Previews.swift    DEBUG #Preview matrix (bar/psi inputs, kPa/psi/bar prefs, precision, empty)
+Pressure.Tests.swift       38 XCTest cases (formatting/projection/meta/a11y/model/view)
+Pressure.strings           P1/S10 catalog: pressure.empty.accessibilityLabel
+
+Parity reproduced from the web source:
+  - inputs bar (canonical, checked first) then psi; precision; units from useUnits()
+  - bar -> kPa (*100); psi -> kPa (*6.894757); convertPressureFromSI kPa->{kPa|psi|bar}
+  - display "{fmtNumber(v,precision)} {pressureUnit}" (NOTE: separating space, unlike Temperature)
+  - tooltip "{value.toFixed(2)} bar|psi"; empty sentinel "—" when neither input finite
+  - precision precedence prop -> user pref -> 2 (clamp 0..20); locale -> en-US fallback
+States: the web source is a SYNCHRONOUS formatter (props + useUnits settings read, no fetch).
+  It has exactly two render branches (value, empty) and NO loading/error/stale/offline axis;
+  reproducing all of them and refusing to invent network chrome (same disposition as the
+  shipped 0089 Temperature / 0085 Distance peers).
+
+--------------------------------------------------------------------------------
+PRESSURE-SURFACE VERIFICATION  ->  GREEN
+--------------------------------------------------------------------------------
+[1] swiftc (Swift 6 strict concurrency) compiled the REAL Adapter+Projection+Model and
+    produced byte-exact outputs matching the web source, e.g.:
+       source(bar:2.5)  -> kPa=250.0  title="2.50 bar"
+       source(psi:32)   -> kPa=220.632224  title="32.00 psi"
+       250 kPa -> psi   = 36.25943597432077   (web kpa/6.894757)
+       display 250kPa metric p0 = "250 kPa";  imperial p2 = "36.26 psi";  barPref p2(240) = "2.40 bar"
+       empty -> "—"  a11y="No pressure data"
+
+[2] swift test (SwiftPM, macOS 15, Swift 6 strict) on the REAL Pressure sources
+    (Adapter, Projection, Model, Pressure.swift, Views, Previews — the SwiftUI views included)
+    + real-shaped UnitPreferences/\.tsUnits/Color.TS/Font.TS shims:
+       Test Suite 'All tests' passed.  Executed 38 tests, with 0 failures.
+         PressureFormattingTests   19/19
+         PressureProjectionTests    8/8
+         PressureModelTests         5/5
+         PressureMetaTests          2/2
+         PressureAccessibilityTests 2/2
+         PressureViewTests          2/2   (real SwiftUI views compiled + composed)
+    -> The SwiftUI view layer COMPILES and every state/branch is exercised green.
+
+[3] Full iOS app target (xcodebuild, real Shared.xcframework built via gradle) TYPE-CHECKED
+    every source INCLUDING all Pressure.* files with 0 errors (EmitSwiftModule succeeded) —
+    proving the surface compiles against the REAL UnitPreferences / \.tsUnits / design tokens /
+    Shared.xcframework. No error referencing Pressure.* on iOS or macOS.
+
+swiftlint --strict   -> 0 violations / 0 serious in 4096 files (LINT_EXIT=0)
+swiftformat --lint   -> 0/4394 files require formatting (FORMAT_EXIT=0)
+check-placeholders   -> PLACEHOLDER_COUNT=0 (real scan of the 7 Pressure .swift files; PLACEHOLDER_EXIT=0)
+
+--------------------------------------------------------------------------------
+GATE AS SPECIFIED (pristine tree)  ->  RED, due to PRE-EXISTING OUT-OF-SCOPE defects only
+--------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65
+  Root cause = PRE-EXISTING sibling surfaces (git: unmodified by this prompt; outside the
+  allowed Pressure.* file set) that do not compile on this tree:
+    apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22
+      error: escaping closure captures non-escaping parameter 'content'
+      (a glass(@ViewBuilder _ content: () -> some View){ TSGlassPanel { content() } } helper;
+       TSGlassPanel.init requires @escaping. Same latent bug also in
+       AIGeofenceAwareAutomationSuggestions.swift, AIAutoNameUnnamedLocations.swift,
+       AISignalExplorerNlFilter.swift.)
+    With those 4 isolated, a deterministic swift-frontend (Swift 6.3.2) IRGen crash surfaces
+    in apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift
+      "While emitting IR SIL function @$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+      report_at_maximum_capacity -> IRGenSILFunction::visitFullApplySite  (0 source errors).
+  NONE of these files are Pressure.* and NONE are in the allowed-files set for this prompt;
+  there are ZERO compile errors attributable to the Pressure surface.
+
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65
+  Root cause = ENVIRONMENT/runner limitation: the macOS app + widget targets carry hardened-
+  runtime entitlements and fail with
+    error: "TeslaSync-macOS" has entitlements that require signing with a development
+    certificate. Enable development signing ...
+  No code-signing identity is available on this runner (the iOS Simulator leg needs none, which
+  is why it reached + passed full type-checking). The same pre-existing compile defects above
+  also apply to the shared cross-platform sources. ZERO Pressure.* errors.
+
+swiftlint --strict        LINT_EXIT=0
+swiftformat --lint        FORMAT_EXIT=0
+check-placeholders.ps1    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The Pressure shared surface is COMPLETE and independently VERIFIED GREEN (type-checks in the
+real app target; 38/38 XCTest pass with the real SwiftUI views compiled; swiftlint/swiftformat/
+placeholder all 0). The literal `build test` gate cannot reach EXIT=0 on this tree solely
+because of PRE-EXISTING defects in out-of-scope sibling files (4 AI* @escaping bugs + an
+AppearanceSettings.Controls.swift compiler IRGen crash) and the absence of a macOS development
+signing certificate on this runner — none of which this prompt is permitted to modify
+(allowed files = apps/apple/TeslaSync/shared-surfaces/Pressure.* + this log). No red-as-green:
+the gate is reported RED; the artifact is reported, with evidence, DONE-and-verified.
+
+IOS_EXIT=65        (pre-existing out-of-scope compile defects; 0 Pressure errors)
+MAC_EXIT=65        (runner has no macOS dev-signing cert; 0 Pressure errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

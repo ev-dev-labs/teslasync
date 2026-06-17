@@ -1,0 +1,132 @@
+=== P4 Shared surface 0178 ConnectionSegment (Apple) ===
+date: 2026-06-14T10:02:54Z
+
+### CAPABILITY (required: SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 HIG) ###
+Xcode 26.5
+Build version 17F42
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+SDKs:
+  	iOS 26.5                      	-sdk iphoneos26.5
+  	Simulator - iOS 26.5          	-sdk iphonesimulator26.5
+  	macOS 26.5                    	-sdk macosx26.5
+  	macOS 26.5                    	-sdk macosx26.5
+swiftlint: 0.63.3  swiftformat: 0.61.1
+CAPABILITY=PRESENT (Xcode 26.5 / iOS 26.5 + macOS 26.5 SDK / Swift 6.3.2; exceeds iOS18/macOS15 minimums)
+
+### KMP Shared.xcframework (scheme pre-action) ###
+Shared.xcframework staged OK (Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL, 12m09s):
+  Info.plist
+  ios-arm64
+  ios-arm64-simulator
+  macos-arm64
+SHARED_XCFRAMEWORK_EXIT=0
+
+### xcodegen generate ###
+TeslaSync.xcodeproj generated with ConnectionSegment files integrated
+XCODEGEN_EXIT=0
+
+### swiftformat --lint (13 surface files) ###
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260613-204822-12295/slot-22/apps/apple/.swiftformat
+SwiftFormat completed in 12.74s.
+0/13 files require formatting.
+FORMAT_EXIT=0
+
+### swiftlint --strict (13 surface files) ###
+Linting 'ConnectionSegment.Views.swift' (13/13)
+Done linting! Found 0 violations, 0 serious in 13 files.
+LINT_EXIT=0
+
+### check-placeholders.ps1 (literal gate path) ###
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+### check-placeholders.ps1 (GENUINE scan of 10 shipped swift files) ###
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+### Swift 6 strict-concurrency typecheck (pure core, standalone) ###
+TYPECHECK_CORE_EXIT=0
+
+### In-app-target compilation (iOS, real xcodebuild app build) ###
+All 10 production files compiled to object files in target 'TeslaSync' (Debug-iphonesimulator/arm64):
+  ConnectionSegment.Adapter.o
+  ConnectionSegment.Model.o
+  ConnectionSegment.o
+  ConnectionSegment.Polling.o
+  ConnectionSegment.Presentation.o
+  ConnectionSegment.Previews.o
+  ConnectionSegment.Seams.o
+  ConnectionSegment.Source.o
+  ConnectionSegment.States.o
+  ConnectionSegment.Views.o
+Linked product: TeslaSync.app PRODUCED
+INAPP_COMPILE=SUCCEEDED (10/10 production files -> .o, app linked)
+
+### Surface unit tests — actually executed (isolated SwiftPM, Swift 6 mode, macOS host) ###
+Compiles all 10 production sources + real design Tokens.swift + 3 test suites and RUNS them.
+Test Suite 'ConnectionHealthStatusTests' passed at 2026-06-14 03:03:52.889.
+Test Suite 'ConnectionLatencyTests' passed at 2026-06-14 03:03:52.889.
+Test Suite 'ConnectionPresenterTests' passed at 2026-06-14 03:03:52.891.
+Test Suite 'ConnectionProjectorTests' passed at 2026-06-14 03:03:52.893.
+Test Suite 'ConnectionSegmentModelTests' passed at 2026-06-14 03:03:52.895.
+Test Suite 'ConnectionSegmentViewTests' passed at 2026-06-14 03:03:52.896.
+Test Suite 'ConnectionStringsTests' passed at 2026-06-14 03:03:52.897.
+Test Suite 'ConnectionSurfaceTests' passed at 2026-06-14 03:03:52.898.
+Test Suite 'ConnectionValueTypeTests' passed at 2026-06-14 03:03:52.899.
+Test Suite 'PollingConnectionHealthSourceTests' passed at 2026-06-14 03:03:52.903.
+Test Suite 'ScriptedConnectionHealthProbeTests' passed at 2026-06-14 03:03:52.904.
+Test Suite 'URLSessionConnectionHealthProbeTests' passed at 2026-06-14 03:03:52.905.
+Test Suite 'ConnectionKitPackageTests.xctest' passed at 2026-06-14 03:03:52.906.
+Test Suite 'All tests' passed at 2026-06-14 03:03:52.906.
+	 Executed 54 tests, with 0 failures (0 unexpected) in 0.010 (0.014) seconds
+SWIFT_TEST_EXIT=0  (54 tests, 0 failures)
+
+### Full monorepo xcodebuild (iOS + macOS, ALL ~180 surfaces) — runner-capacity BLOCKED ###
+Command (gate): xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+Attempted 3x. The FIRST run compiled the ENTIRE app target (incl. the file below) and PRODUCED
+TeslaSync.app + TeslaSyncUITests-Runner.app, but was reaped before the unit-test bundle finished.
+Later runs hit a swift-frontend OOM during IRGen of an UNRELATED app file under concurrent
+multi-slot build storms (neighbor slots at 500-1400 swift-frontend procs; <5 GB free RAM, load ~36):
+---- crash excerpt (apps/apple .../ios-gate.log) ----
+  Command SwiftCompile failed with a nonzero exit code
+  4.	While evaluating request IRGenRequest(IR Generation for file "/Users/atulgupta/Documents/repos/.teslasync-parallel/20260613-204822-12295/slot-22/apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  5  libsystem_c.dylib        0x000000018f610644 abort + 148
+  7  swift-frontend           0x0000000108918b44 llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+  8  swift-frontend           0x00000001089501cc report_at_maximum_capacity(unsigned long) + 0
+  	Command SwiftCompile failed with a nonzero exit code
+  -> crashing file: TeslaSync/feature-views/AppearanceSettings.Controls.swift  (NOT a ConnectionSegment file)
+  -> ConnectionSegment files in any IRGen crash: 0
+IOS_FULL_SUITE_EXIT=65   (environmental swift-frontend OOM on unrelated file; not a ConnectionSegment defect)
+MAC_FULL_SUITE: not run to completion (same runner-saturation risk). macOS compilation+tests of THIS
+  surface are proven green by the SwiftPM run above (target arm64-apple-macos, 54/54 pass).
+
+================= SUMMARY =================
+SURFACE IMPLEMENTATION: COMPLETE & VERIFIED — all states (loading/empty/error/active + stale/offline
+  freshness), i18n via P1/S10 facade, VoiceOver + Dynamic Type + reduce-motion a11y, P1/S8 state-holder
+  binding (no HTTP in the view), P1/S9 tokens, view.opened telemetry, adapter+model+polling tests.
+Per-step results:
+  CAPABILITY=PRESENT
+  SHARED_XCFRAMEWORK_EXIT=0
+  XCODEGEN_EXIT=0
+  FORMAT_EXIT=0        (swiftformat --lint: 0/13)
+  LINT_EXIT=0          (swiftlint --strict: 0 violations / 13 files)
+  PLACEHOLDER_EXIT=0   (literal + genuine scan: COUNT=0)
+  TYPECHECK_CORE_EXIT=0 (Swift 6 strict-concurrency)
+  INAPP_COMPILE=SUCCEEDED (10/10 production files -> .o in real app target; TeslaSync.app linked)
+  SWIFT_TEST_EXIT=0    (54 tests, 0 failures — adapter/presenter/projection/model/polling/reachability/URLSession)
+  IOS_FULL_SUITE_EXIT=65 (BLOCKED: transient runner OOM on unrelated app file under multi-slot contention)
+
+EXIT=65
+STATUS=BLOCKED
+BLOCKED_REASON=runner-capacity: swift-frontend report_at_maximum_capacity OOM on the unrelated app file
+  AppearanceSettings.Controls.swift during the full 2000+-file app build under concurrent multi-slot build
+  storms. Capability IS present (Xcode 26.5 / iOS+macOS 26.5 SDK / Swift 6.3.2). The ConnectionSegment
+  surface itself is COMPLETE and independently VERIFIED GREEN: it compiles in the real app target (10/10
+  .o + linked app), its 54 unit tests pass, and swiftlint --strict / swiftformat --lint / placeholder /
+  Swift 6 strict-concurrency typecheck all return 0.

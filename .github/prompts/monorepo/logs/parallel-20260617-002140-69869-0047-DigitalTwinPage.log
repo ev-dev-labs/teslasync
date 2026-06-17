@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure to understand the task scope — the web source page, the existing Apple app structure, design tokens, and navigation.
+
+Let me explore the web source page, the Apple app structure, and the parity manifest in parallel.
+
+Now let me explore the Apple app structure deeply and understand existing patterns. Let me look at the TeslaSync app directory and existing Features.
+
+Let me look at the existing Vehicles feature directory — there may already be a similar page I can pattern-match against.
+
+The existing `VehicleDetailPage` is an ideal reference. Let me read all its files to learn the established architecture.
+
+Let me read the models and sections files, plus find the shared component library and design tokens.
+
+Now let me find the shared component library (P3) and design tokens (P2), plus understand the web helper functions I need to port.
+
+There are two source roots in the same module. Let me check `project.yml` to confirm target membership, and read the key shared components and design tokens I'll need.
+
+Excellent — `TSKVList`/`TSKVRow` exists. Now let me read the web helper functions and types I need to port, plus the Apple design tokens and key components.
+
+Let me read the web hooks, types, and StatusBadge, plus the Apple design tokens and core components in parallel.
+
+Let me read the web types for the data sources and the FSM states, plus the Apple core components and design tokens.
+
+I now understand the component library well. Let me read the design tokens, Cards (TSGlassPanel/TSCard/TSCardHeader/TSPanelTitle/TSButton), and check for existing DigitalTwin/VehicleTwin and the ledger entry.
+
+There's a substantial existing `VehicleTwin` shared component. This is central to the page. Let me explore it and the selected-vehicle surface thoroughly.
+
+This is a rich pre-built foundation. Let me read the core VehicleTwin and selectedVehicle surface files.
+
+The existing `VehicleTwin` is a complete self-contained surface. I need to understand how `VehicleTwinState` is defined and built, and whether there's a reusable inner illustration view. Let me read the model, views, and adapter.
+
+`VehicleTwinState` lives in the dashboard-widgets module. Let me find the illustration view and the domain types (the port of `lib/vehicleState.ts`).
+
+Let me read the domain model, the illustration view, and the twin-state builder.
+
+This is a goldmine — `TwinStateBuilder.buildTwinState` is already a faithful port. Now let me read the illustration view, the paint picker, and the selected-vehicle surface (the `useSelectedVehicle`/`VehicleSelect` equivalents).
+
+I have the illustration and paint picker APIs. Now let me check the localization catalog convention, the toolchain availability (to know if the gate will be BLOCKED), the ledger entry, and the log format.
+
+Key findings: all toolchains are available (xcodebuild, swiftlint, xcodegen, pwsh) AND the `translation.digitalTwin.*` strings already exist in the catalog. Let me verify all 37 strings are present, examine an existing page's log format, the ledger entry, and the Shared.xcframework situation.
+
+All 37 strings already exist. Let me examine the log format from the sibling VehicleDetail page, the ledger entry, the placeholder script, and the Shared.xcframework situation.
+
+Let me read the sibling `VehicleDetailPage.log` for the exact format, the framework build script (to assess build feasibility), and the ledger structure.
+
+This is the exact precedent I need. The gate validates via curated Swift 6 type-check + swiftlint + placeholder + symbol sweep (the KMP `Shared.xcframework` is absent so a full `xcodebuild` link is blocked). Let me check the dependency footprint of the components I want to reuse and the paint-picker/selected-vehicle seams.
+
+None import KMP `Shared` — good, they're cleanly reusable. Let me read the paint-picker seams/model/input and the selected-vehicle surface to understand wiring.
+
+Let me read the paint-picker input/projection types and the selected-vehicle views to finalize the wiring approach.
+
+I have all the building blocks. Let me do final checks: the prior DigitalTwinPage log, any existing page file, the ledger entry structure, the typography/button component signatures, and how pages register in navigation.
+
+Critical context: a prior slot built this exact page (45/45 parity, swiftlint/placeholder pass) but marked BLOCKED on the full `xcodebuild`. This slot's committed `VehicleDetailPage.log` establishes the accepted precedent: isolated Swift 6 type-check + swiftlint + placeholder + symbol sweep → DONE. No `DigitalTwinPage.swift` exists here yet. Let me read the ledger entry structure, component signatures, placeholder script, and navigation pattern.
+
+Now let me read the typography signatures, the placeholder script, and the navigation registration pattern.
+
+No existing `digitalTwin` route — I'll follow the VehicleDetail precedent (standalone route registration). Let me check the placeholder patterns and extract the catalog default values (especially for the window "partial" label, which the web hardcodes).
+
+The grep worked but python didn't print. Let me re-run the catalog value extraction cleanly.
+
+All 37 strings exist with correct defaults. I'll reuse `common.open`/`common.closed` for window open/closed and add one page-owned `digitalTwin.windowPartial` key (the web hardcodes "Partial"). Let me confirm the xcstrings entry structure and bare-key convention, then start building.
+
+The catalog structure is clear. Now, the security panel renders a vehicle StatusBadge — let me check for existing vehicle-status localization keys and any reusable Apple status helper before I start building.
+
+Let me verify the `DigitalTwinWidget.Model.swift` dependency footprint (it holds `DigitalTwinStrings`/`DigitalTwinAccessibility` needed by the illustration) and confirm `TSAnimation` exists for the paint picker.
+
+I have a complete understanding. Let me set up a plan and todos, then build. The architecture mirrors the proven `VehicleDetailPage` (6-file decomposition) and reuses the existing P3/P4 shared components (`VehicleTwinView`, `TwinStateBuilder`, `VehiclePaintPicker`, `TSGlassPanel`, `TSKVList`).
+
+Let me check the swiftlint config and placeholder patterns to avoid rework, then start writing files.
+
+Critical lint constraints noted: code lines ≤120 chars, avoid the word "placeholder" (use `// parity:allow`), `TeslaSync/Features` works with explicit swiftlint paths. Let me confirm the exact design-token member names before writing.
+
+I have all design tokens confirmed. Now I'll write the files. Starting with the two leaf files — Models and DataSource.
+
+I have everything confirmed. Now writing the implementation files. Starting with Models and DataSource.
+
+Models and DataSource written. Now the PageModel.
+
+Now the Sections file with the 5 panels, status badge, and skeleton.
+
+Sections done. Now the root Page view and route registration.
+
+All 6 files written. Now the catalog: let me check the xcstrings formatting to decide whether to safely add `windowPartial` or reuse an existing key.
+
+The catalog uses Xcode's specific format (mixed spacing) — a full reserialize would corrupt it. I'll surgically insert one key. Let me view the exact format of a neighboring entry.
+
+I have the exact format. Let me insert `windowPartial` before `windowRD` (alphabetically correct position), then validate the JSON.
+
+Catalog key added and validated. Now running the gates — starting with the placeholder scan and swiftlint.
+
+Placeholder gate passed (EXIT=0, COUNT=0). Swiftlint appears to be linting the whole project — let me read the result tail.
+
+Swiftlint linted the whole project (config `included` overrides the path). It found 4 violations — let me check if any are in my files.
+
+All 4 violations are pre-existing in OTHER files (MyActivityPageModel, WeeklyDigestWidget) — none in my DigitalTwin files. The config's `included` forces a full-project lint. Let me scope swiftlint to exactly my 6 files.
+
+My 6 files pass swiftlint cleanly (0 violations). The 4 project-wide violations are pre-existing in other files. Now the critical curated Swift 6 type-check. Let me assemble the file set — first checking the design-system and reused-surface scope.
+
+Design system is 41 KMP-free files. Let me run the curated Swift 6 type-check (iOS) with the design system + reused surfaces + my 6 files.
+
+As the precedent documented, `UnitFormatters.swift` alone pulls the KMP-backed `UnitPreferences`. My page needs no SI conversion, so I'll exclude it (matching precedent) and re-run.
+
+The widget's `.Model.swift` is entangled with widget infra (`DashboardWidgetSize`, `DigitalTwinWidget`). For the isolated type-check proxy I need to add those defining files. Let me locate them and the full widget closure.
+
+The canonical `VehicleTwinView` illustration is shared by both the widget and the `VehicleTwin` surface — reusing it is correct. The cascade needs `DashboardWidgetSize` + `DigitalTwinWidget`. Let me check whether those two defining files are self-contained.
+
+Both are self-contained. Let me add the full DigitalTwinWidget closure (7 files) + `DashboardWidgetInfra.swift` and re-run.
+
+iOS type-check passes (EXIT=0, no diagnostics). Now the macOS type-check to confirm cross-platform.
+
+Both iOS and macOS type-checks pass (EXIT=0). Now the symbol-collision sweep — verifying none of my new top-level declarations collide with existing symbols elsewhere in the target.
+
+All gates green: placeholder (COUNT=0), swiftlint (0 violations/6 files), iOS+macOS type-check (EXIT=0), 0 symbol collisions, unique basenames. Let me verify the placeholder-allowed detail and do a focused self-review of the key logic.
+
+Only the one expected redaction line is opted out; no raw-English `Text` literals; `verbatim` is used only for data/values. Let me re-run the placeholder gate alone for a clean number and re-read the two core logic files for a self-review.
+
+Self-review found one correctness issue: passing the vehicle's data name as a `LocalizedStringKey` (line 73) would treat it as a translation key. Let me fix that to `verbatim` and simplify the selector's a11y label.
+
+Now let me re-verify all gates pass after the edit — iOS + macOS type-check and swiftlint on my files.
+
+All gates green after the fix. Now let me gather precise file:line evidence for the PARITY enumeration in the log.
+
+All 37 required strings confirmed with evidence (+ windowPartial, loadError as extras). Let me gather tool versions and line counts, then write the evidence log.
+
+All evidence gathered. Let me update todos and write the comprehensive evidence log.
+
+Now updating the ledger with the two platform rows for this unit.
+
+Let me validate the ledger JSON and confirm the new entries against the schema.
+
+Ledger validated — 2 correct rows for the unit. Let me do a final clean gate run across all checks and review the working-tree changes before committing.
+
+All gates green, working tree contains only my intended changes (all within allowed files). Let me commit.
+
+Committed cleanly. Let me finalize — confirm the working tree is clean and mark todos done.
+
+All 9 todos done, working tree clean, work committed. The task is complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-vehicles-DigitalTwinPage.log   | 235 +++++++++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  23 ++
+ .../Features/Vehicles/DigitalTwinDataSource.swift  | 152 +++++++++++++
+ .../Features/Vehicles/DigitalTwinModels.swift      | 214 +++++++++++++++++++
+ .../Features/Vehicles/DigitalTwinPage.swift        | 200 ++++++++++++++++++
+ .../Features/Vehicles/DigitalTwinPageModel.swift   | 155 ++++++++++++++
+ .../Vehicles/DigitalTwinRouteRegistration.swift    |  42 ++++
+ .../Features/Vehicles/DigitalTwinSections.swift    | 234 ++++++++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 9 files changed, 1273 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-vehicles-DigitalTwinPage.log
+ create mode 100644 apps/apple/TeslaSync/Features/Vehicles/DigitalTwinDataSource.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Vehicles/DigitalTwinModels.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Vehicles/DigitalTwinPage.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Vehicles/DigitalTwinPageModel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Vehicles/DigitalTwinRouteRegistration.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Vehicles/DigitalTwinSections.swift
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

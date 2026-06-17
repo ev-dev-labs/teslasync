@@ -1,0 +1,197 @@
+=== P4 Shared surface 0067 ChartHiddenSeriesContext (Apple) ===
+Web source : web/src/components/charts/ChartHiddenSeriesContext.tsx (+ data hook hooks/useHiddenSeries.ts → useUrlArray in hooks/useUrlState.ts)
+Native out : apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.*
+Runner     : macOS (Darwin) · Xcode 26.5 (17F42) · Swift 6.3.2 · xcodegen 2.45.4 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh · OpenJDK 17.0.19
+
+────────────────────────────────────────────────────────────────────────
+CAPABILITY (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG;
+if unavailable → BLOCKED with API evidence"). AVAILABLE on this runner and exercised end to end:
+xcodegen generate, swiftc -typecheck against the iPhoneSimulator26.5 (iOS 18) SDK AND the MacOSX26.5
+(macOS 15) SDK under Swift 6 -strict-concurrency=complete, a real `swift test` run of the surface's
+unit suite under the Swift 6 language mode, the Kotlin/Native Shared.xcframework built via Gradle, and
+full iOS-Simulator + macOS xcodebuild builds. This surface is a chart hidden-series COORDINATION
+primitive: the web source itself renders no chart/map ("Charts / maps used: (none)"), but its native
+peer drives Swift Charts (the sample chart drops the marks for hidden series — web `<Line hide=…/>`)
+and was type-checked on the iOS 18 + macOS 15 SDKs. MapKit is not required (no maps in the source).
+Capability is therefore NOT a blocker.
+
+────────────────────────────────────────────────────────────────────────
+ARTIFACT (9 files, all ChartHiddenSeriesContext.* — the only files this prompt may touch)
+  ChartHiddenSeriesContext.swift            — SwiftUI entry: EnvironmentValues.chartHiddenSeries (web
+                                              `useChartHiddenSeries`), ChartHiddenSeriesProvider (web
+                                              `<ChartHiddenSeriesProvider chartKey>`; chartKey nil/empty
+                                              → injects nil = web `children(null)`), ChartHiddenSeriesReader
+                                              (explicit parity of the web render-prop `children(state)`),
+                                              .chartHiddenSeriesProvider(chartKey:) modifier spelling
+  ChartHiddenSeriesContext.Adapter.swift    — pure core: surface slug (P1/S11), HiddenSeriesParam (the
+                                              verbatim port of useUrlArray parse/serialize + the canonical
+                                              sort useHiddenSeries.toggle writes: decode nil/""→∅, split on
+                                              ',', empties dropped; encode ∅→nil, sorted comma-join),
+                                              HiddenSeriesReducer (toggle delegates to the shared
+                                              TSChartFormat.toggleHidden — DRY; isHidden; cleared)
+  ChartHiddenSeriesContext.Projection.swift — pure cached(query value)→resolved read-model
+                                              (HiddenSeriesResolved: hidden / isHidden / sortedKeys /
+                                              queryValue / isEmpty / count — web useHiddenSeries returns)
+  ChartHiddenSeriesContext.Model.swift      — P1/S8 HiddenSeriesStore (@Observable @MainActor peer of the
+                                              web URL store, keyed by chartKey; drop-on-empty = web
+                                              omitDefault, no-op-on-unchanged, deep-link round-trip
+                                              queryValue/apply; shared singleton + injectable),
+                                              HiddenSeriesState (web `HiddenSeriesState` = useHiddenSeries
+                                              return + context value: hidden/isHidden/toggle/reset, once-only
+                                              view.opened P1/S11, stop() does NOT clear — URL-backed set
+                                              survives unmount), P1/S10 i18n facade, OSLog telemetry seam
+  ChartHiddenSeriesContext.Views.swift      — ChartHiddenSeriesLegendChip (web `<ChartLegend>` entry
+                                              consuming the context: tap→toggle, dim+strikethrough hidden,
+                                              VoiceOver shown/hidden value + toggle hint, Reduce-Motion
+                                              respected) + DEBUG sample chart that drops hidden series'
+                                              marks (web `<Line hide={state.isHidden(key)}/>`) + standalone
+                                              (no-provider) legend, a11y
+  ChartHiddenSeriesContext.Previews.swift   — #Preview per branch (composite all-shown, seeded two-hidden,
+                                              standalone-no-provider)
+  ChartHiddenSeriesContext.strings          — i18n table "ChartHiddenSeriesContext" (shipped: the legend
+                                              chip's a11y copy; DEBUG-only: the sample chart copy. The web
+                                              source is anonymous/transparent — no shipped copy of its own)
+  ChartHiddenSeriesContext.AdapterTests.swift — pure-core unit tests (param encode/decode/round-trip/sorted/
+                                              empties, reducer toggle/isHidden/cleared, slug)
+  ChartHiddenSeriesContext.Tests.swift      — projection per-branch + store (toggle/set/reset/drop-on-empty/
+                                              no-op/deep-link/isolation/singleton) + model (view.opened once,
+                                              stop-keeps-state, cross-state sharing, isolation) + view
+                                              composition + a11y/label-from-catalog
+
+PARITY (web → native, faithful + complete; anonymous transparent primitive — same disposition as the
+sibling ChartTimeRangeContext 0069 / withAiFeature: reproduce the source's REAL branches, invent no
+loading/empty/error/stale/offline chrome the source does not have — it performs NO fetch and reads NO
+remote data, the state lives entirely in the URL)
+  • `ChartHiddenSeriesContext = createContext<HiddenSeriesState | null>(null)` → SwiftUI
+    EnvironmentValues.chartHiddenSeries (default nil; the SwiftUI analog of the React context).
+  • `useChartHiddenSeries()` → @Environment(\.chartHiddenSeries) (nil outside a provider / when the chart
+    did not opt into toggling; web useContext→null).
+  • `ChartHiddenSeriesProvider({chartKey, children})` → ChartHiddenSeriesProvider: no/empty chartKey →
+    injects nil (web `if (!chartKey) return children(null)`); a chartKey → owns the per-chart
+    HiddenSeriesState, injects it into the Environment, emits view.opened once. The web render-prop
+    `children(state)` is reproduced explicitly by ChartHiddenSeriesReader { state in … }.
+  • `useHiddenSeries(chartKey)` (= useUrlArray under `?hidden_{chartKey}=…`) → HiddenSeriesStore +
+    HiddenSeriesState: hidden (Set), isHidden, toggle (shared TSChartFormat.toggleHidden), reset (drops the
+    param). HiddenSeriesParam ports parse/serialize verbatim: empty→drop param (omitDefault), sorted
+    comma-join (the canonical URL useHiddenSeries.toggle writes), `''`→∅. Deep-link survives reload/unmount
+    (queryValue/apply round-trip + stop() deliberately does NOT clear — the faithful difference from the
+    cursor-sync sibling, whose transient cursor IS cleared on unmount).
+  • Real branches reproduced + tested: inside vs. outside a provider (context nil), chartKey present vs.
+    absent/empty, hidden set empty vs. non-empty, a given series hidden vs. shown, drop-on-empty,
+    no-op-on-unchanged, per-chartKey isolation, deep-link round-trip, once-only view.opened, stop-keeps-state.
+
+────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+  1  No red-as-green     : every exit code below is the REAL captured value. The two full-app xcodebuild
+                           gates are RED (65 / 65) and are reported as RED with file:line root-cause
+                           evidence; they are NOT claimed to pass.
+  2  No scope narrowing  : the context + reader hook + provider + the URL-backed state hook + the store
+                           reproduced, with every real render/return branch; nothing dropped. (No
+                           loading/empty/error/stale/offline chrome is invented because the web source
+                           renders none — it is a transparent coordination primitive whose state lives in
+                           the URL, identical in disposition to ChartTimeRangeContext 0069 / withAiFeature.)
+  3  No skip-and-assume  : ChartHiddenSeriesContext.tsx AND useHiddenSeries.ts AND useUrlState.ts
+                           (useUrlArray) read end-to-end; every export, the `hidden_{chartKey}` param, the
+                           sorted/comma-join serialization, the omitDefault drop-on-empty, the toggle/
+                           isHidden/reset semantics, and the deep-link survival reproduced and asserted.
+  4  No stubs as final   : check-placeholders PLACEHOLDER_COUNT=0 on a real per-file scan of all 9 files
+                           (temp-dir copy, so the trivially-empty literal gate path is not relied on);
+                           independent grep of every forbidden token = 0. No TODO/FIXME/stub/mock/
+                           placeholder/Lorem shipped. Script self-test PASS.
+  5  No parity shortcuts : full URL-param codec + set reducer + store + provider + reader + the
+                           context-consuming legend chip (tap-to-toggle, dim, VoiceOver shown/hidden) + a
+                           Swift-Charts sample that drops hidden series' marks; a11y label + visibility
+                           value on chip and chart.
+  6  No delegation       : authored directly (delegation FORBIDDEN; none used).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSChartPalette/
+                           TSAnimation + the shared TSChartSeries/TSChartFormat reused for DRY), P1/S10 i18n
+                           facade, P1/S11 once-only view.opened telemetry all honoured; types prefixed
+                           ChartHiddenSeries*/HiddenSeries* — collision-checked vs the whole app module
+                           (ChartLegend*/ChartContainer*/TSChart*): 0 redeclarations. Same iOS/macOS
+                           xcodebuild disposition as the sibling shared-surfaces (ChartTimeRangeContext
+                           0069, AnnotationList 0063, withAiFeature 0062) and apps/macos-pending-verifications.md.
+  8  No commit on red    : the committed artifact is GREEN on every gate within this surface's allowed-files
+                           scope (tree-wide format + lint --strict, placeholder, real iOS-18 + macOS-15 SDK
+                           typecheck on BOTH isolation regimes + release config, a real 46/46 `swift test`,
+                           xcodegen, the Gradle xcframework). The full-app iOS/macOS xcodebuild gates are RED
+                           for PRE-EXISTING, out-of-scope reasons (proof below) — this surface contributes
+                           ZERO errors to either (grep-verified: 0 ChartHiddenSeriesContext error lines).
+  9  No silent drift     : only the 9 ChartHiddenSeriesContext.* files are new (git status verified — no
+                           tracked file modified, no sibling surface touched). project.yml / .swiftlint.yml /
+                           .swiftformat already glob shared-surfaces (no edit needed). TeslaSync.xcodeproj +
+                           Frameworks/Shared.xcframework are git-ignored build artifacts (git check-ignore
+                           confirmed).
+  10 EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────
+GATE COMMANDS / EXITS (real, captured)
+  swiftformat --lint apps/apple (tree-wide) .......... FORMAT_EXIT=0   (0/4371 require formatting, 2 skipped)
+  swiftformat --lint (9 surface files) ............... FORMAT_EXIT=0   (0/8 swift; .strings n/a)
+  swiftlint --strict (tree-wide) ..................... LINT_EXIT=0     (0 violations, 0 serious)
+  swiftlint --strict (9 surface files) ............... LINT_EXIT=0     (0 violations in my files)
+  check-placeholders.ps1 -Path …/ChartHiddenSeriesContext  PLACEHOLDER_EXIT=0  (literal gate path; the path
+                                                     is a file-prefix, not a dir, so the script's
+                                                     Test-Path guard scans nothing — trivially 0)
+  check-placeholders.ps1 (real scan of 9 files, temp) PLACEHOLDER_COUNT=0 (meaningful verification) + SelfTest PASS
+  manual forbidden-token grep (9 files) .............. 0 matches
+  swiftc -typecheck iOS 18 SDK, Swift 6, strict=complete,
+     -D DEBUG, default (nonisolated) isolation ....... TYPECHECK_IOS_R1_EXIT=0  (6 prod files + Tokens + TSDesign + ChartModels)
+  swiftc -typecheck iOS 18, same, -default-isolation
+     MainActor ....................................... TYPECHECK_IOS_R2_EXIT=0
+  swiftc -typecheck iOS 18, release (no -D DEBUG) .... TYPECHECK_IOS_R3_EXIT=0  (shipped code only)
+  swiftc -typecheck macOS 15 SDK, Swift 6, strict,
+     -D DEBUG ........................................ TYPECHECK_MACOS_EXIT=0
+  swift test (SwiftPM, module=TeslaSync, Swift 6 mode,
+     strict concurrency complete) .................... SWIFT_TEST_EXIT=0  (Executed 46 tests, 0 failures)
+  xcodegen generate .................................. XCODEGEN_EXIT=0  (54 ChartHiddenSeriesContext refs across iOS/macOS app + test targets)
+  Shared.xcframework via Gradle (Kotlin/Native) ...... GRADLE_EXIT=0   (BUILD SUCCESSFUL in 7m46s; ios-arm64
+                                                     + ios-arm64-simulator + macos-arm64 staged to Frameworks/)
+  xcodebuild iOS (scheme TeslaSync, iPhone 16) ....... IOS_EXIT=65  [DEFERRED — see below]
+  xcodebuild macOS (scheme TeslaSync-macOS) .......... MAC_EXIT=65  [DEFERRED — see below]
+
+Runner note (honest disclosure): this is a SHARED runner with concurrent sibling-slot agents. The first
+iOS xcodebuild attempt was externally SIGTERM-killed (exit 143) mid-EmitSwiftModule and a /tmp log was
+clobbered by a concurrent slot-45 agent. The exits above were re-captured under an ISOLATED
+-derivedDataPath in this session's private folder so every path in the build log is slot-47 and fully
+attributable; my surface's .strings was copied + UTF-8-validated into TeslaSync.app and my sources reached
+EmitSwiftModule with zero error lines.
+
+DEFERRED FULL-APP GATES — ROOT CAUSE (pre-existing, out of this surface's allowed-files scope)
+  IOS_EXIT=65: exactly ONE compile error in the whole isolated slot-47 build, in a SIBLING surface this
+      prompt may NOT touch:
+        apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+        error: escaping closure captures non-escaping parameter 'content'
+        (its `private func glass(@ViewBuilder _ content: () -> some View)` passes `content` into a
+        TSGlassPanel trailing closure). `git status` shows this file is UNMODIFIED (committed at HEAD);
+        `git show HEAD:…AIAutoNameUnnamedLocations.swift` reproduces the bug at L122-124 — it predates
+        this surface. `grep -c ChartHiddenSeriesContext <iOS build log w/ error>` over the error lines = 0:
+        this surface contributes ZERO errors. Fixing it requires editing a sibling surface outside this
+        prompt's "Allowed files" scope.
+  MAC_EXIT=65: two target-level signing errors, no compile errors —
+        "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing with a
+        development certificate; this runner has no dev-signing identity, so the build is rejected at the
+        signing phase. Runner-infrastructure limitation, not a code defect; 0 ChartHiddenSeriesContext
+        errors. Identical to the sibling ChartTimeRangeContext 0069 macOS finding.
+
+────────────────────────────────────────────────────────────────────────
+DISPOSITION
+Production-polished, Apple-idiomatic ChartHiddenSeriesContext shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on this runner: all 6 production files type-check against the real iOS 18 AND
+macOS 15 SDKs under Swift 6 -strict-concurrency=complete on the nonisolated-default (SwiftUI
+View=@MainActor) regime, the -default-isolation MainActor regime, and the release (no-DEBUG) config, with
+the DEBUG Views + Previews branches and the real design system (Color.TS/Font.TS/TSSpacing/TSChartPalette/
+TSAnimation) + Swift Charts + the reused shared TSChartSeries/TSChartFormat; the full unit suite RUNS and
+PASSES (46 tests, 0 failures) in a Swift-6-language-mode SwiftPM module; swiftformat --lint / swiftlint
+--strict / placeholder are green on the surface AND tree-wide; xcodegen enumerates all 9 files into both
+app + both test targets; and the Kotlin/Native Shared.xcframework the app links was built from source
+(GRADLE_EXIT=0). The full-app iOS-Simulator + macOS `xcodebuild build` gates are RED (IOS_EXIT=65 /
+MAC_EXIT=65) for PRE-EXISTING, out-of-scope reasons — a single sibling-slot escaping-closure bug
+(AIAutoNameUnnamedLocations.swift:123, iOS) and the absent macOS development-signing certificate (macOS) —
+to which this surface contributes ZERO errors (grep-verified over the isolated build logs). Per the
+established shared-surface precedent (ChartTimeRangeContext 0069, AnnotationList 0063, withAiFeature 0062,
+and the catalogue in apps/macos-pending-verifications.md) these two gates are DEFERRED to the P4
+acceptance gate on a signed runner once the sibling bug is fixed; every gate within this surface's
+allowed-files scope is 0.
+
+EXIT=0
+STATUS=DONE

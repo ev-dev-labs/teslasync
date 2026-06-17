@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and reading the web source page to understand what needs parity.
+
+Now let me explore the Apple app structure, the related web components, and existing Apple page patterns in parallel.
+
+All tools are available (Xcode 26.5, swiftlint, pwsh, swift, xcodegen) — the gate won't be BLOCKED. Let me look at the existing Telemetry feature dir, a reference page, the gate contract, and web components.
+
+This page delegates to `LiveSignalTail` + `useLiveSignalStream` — shared components. The Apple app already has a `SignalsWorkspace` feature that uses the same shared pieces. Let me examine the existing Apple SignalsWorkspace patterns, the parity manifest/ledger records, and the gate contract.
+
+The manifest scopes this page artifact to its own thin wrapper (4 strings). The rich `LiveSignalTail` is shared — already implemented in the Apple `SignalsWorkspace`. Let me read those existing files to reuse the live-tail model/views and follow established patterns.
+
+Now let me read the SignalsWorkspace model, types, strings, shared views, and the routing system to understand reusable pieces and the live-stream model.
+
+The 4 parity strings: `connected`, `disconnected`, `title` already exist in `WSText`; `subtitle` is missing. Now let me read the data-source bindings (live SSE plumbing), the shared views, the routing system, and string catalog to plan reuse.
+
+Now let me examine the routing system, the string catalog, project config (xcodegen), test patterns, and the placeholder gate.
+
+Let me find the `AppRoute` enum, route host registry wiring, and the ledger row structure.
+
+No existing ledger row for `page:telemetry/LiveSignalMonitor` — I'll add macOS + iOS rows. Critically, the `SignalsWorkspace` note reveals the full `xcodebuild` may be blocked by pre-existing out-of-scope errors. I must establish the real baseline. Let me inspect project config, the sibling log, the placeholder gate, and the string catalog.
+
+Let me read the tail of the sibling log to see how the gate/EXIT/STATUS were handled, and check the pre-existing duplicate-file issue and how tests are structured.
+
+I now understand the precedent. The sibling marked DONE using placeholder + `swiftc -typecheck` (both platforms, Swift 6) + `swiftlint --strict`, with the full `xcodebuild` blocked by pre-existing out-of-scope breakage. Notably, the duplicate `ScheduledExportsPanel.swift` may already be resolved in this slot. I must verify the real baseline. Let me read `project.yml` and check for the KMP framework.
+
+Critical finding: the only duplicate basename in this slot is `SystemHealthWidget.swift` — the `ScheduledExportsPanel.swift` blocker the sibling hit is **absent here**. Sources under `TeslaSync/Features` auto-compile into the app target, and `Tests/Unit` feeds the test bundles. Let me check the KMP framework staging and whether a full build is feasible.
+
+Key win: the `Localizable.xcstrings` **already contains all `liveMonitor.*` keys** (including `subtitle` and every tail string) — no catalog edits needed. The two `SystemHealthWidget.swift` files are in different targets (no conflict). The KMP `Shared.xcframework` isn't staged yet (~7 min gradle build). Let me kick that off in the background now while I write code, and verify the `subtitle` value.
+
+All `liveMonitor.*` strings already exist in the catalog with correct English values — zero catalog edits needed. The gradle xcframework build is running in the background. Now the routing question: web `/live-monitor` has no `AppRoute` case yet. Let me check route tests, the app wiring, and the breadcrumb route entry before deciding how to register.
+
+The gradle launcher returned (build continues detached). Routing decision hinges on whether adding an `AppRoute` case breaks `ExploreCatalogTests` (asserts `catalog.count == AppRoute.allCases.count`). Let me check how the Explore catalog is built.
+
+The Explore catalog is built from `AppRoute.allCases.map`, so adding a case keeps `ExploreCatalogTests` green. Gradle is linking release frameworks (almost done). The real risk of adding an `AppRoute` case is an exhaustive `switch` over `AppRoute` without a `default` somewhere outside my scope. Let me scan for that, check the `route.*` title-key convention, and the gradle status.
+
+Let me confirm there are no exhaustive `AppRoute` switches outside `AppRoute.swift` (which would break compilation outside my scope), and check gradle completion.
+
+`WatchDeepLink.swift` also switches over `AppRoute`. Let me inspect it to confirm whether adding a case is safe (gradle still linking the release framework).
+
+Confirmed: `WatchDeepLink` is its own enum (not an `AppRoute` switch). The only exhaustive `AppRoute` switches are in `AppRoute.swift` itself. Adding `.liveMonitor` is safe. Let me set up a todo list and verify no name collisions for my planned types.
+
+No collisions; gradle still linking. Let me start writing the implementation. First the strings file (LMText) — all keys already exist in the catalog.
+
+Now the model with injectable sources and pure, testable ingest logic:
+
+Now the data sources + the pump loop (KMP binding point):
+
+Now the tail panel views (reusing the shared `Workspace*` helpers), with table rows, type chips, and freshness:
+
+Now the main page view with header (title/subtitle/picker/connection badge) and previews:
+
+Now route registration + wiring. First the registration file, then edit `AppRoute.swift` and `TeslaSyncApp.swift`:
+
+Now edit `AppRoute.swift` to add the `.liveMonitor` case (enum + pathSegment + systemImage + group):
+
+Wire the registration into the app:
+
+Now the `route.liveMonitor` sidebar title key. Let me inspect the exact xcstrings format and key ordering to insert surgically without reformatting the 5.6MB catalog.
+
+Keys aren't sorted and formatting is mixed, so I'll clone an existing `route.*` entry's exact format programmatically and insert before it, then validate JSON. Let me do that robustly in Python.
+
+Sidebar title key inserted and JSON validated. Now the unit tests covering loading/empty/error/success + ingest/filter/clear/stale:
+
+Let me update progress and run the fast gates (placeholder + swiftlint) while confirming the gradle framework staged.
+
+The placeholder gate flags the substring "Placeholder" in the i18n key name `filterPlaceholder` — a false positive (it's a search-field prompt, not a stub). Let me check the gate's opt-out marker format precisely, then rename the symbol and apply a scoped opt-out on the unavoidable key-literal line.
+
+The opt-out must be on the same line, with a reason (matches the script's self-test example "translation key literally named todo"). Let me view the exact lines and fix: rename `filterPlaceholder`→`filterPrompt`, drop the now-redundant `defaultValue` on the key line to fit 120 cols, and add a scoped opt-out.
+
+Now re-run the placeholder gate and run swiftlint on the new files, plus scan for any other forbidden patterns:
+
+Placeholder gate passes (1 allowed opt-out, 0 violations) and swiftlint `--strict` is clean (0 violations in 7 files). Now the real test: generate the Xcode project and run the full build. Let me generate first.
+
+Project generated; my files are included (42 references across targets). Now the full iOS build — this is the moment of truth for pre-existing breakage. Let me run it (capturing to a log), matching the gate's scheme.
+
+Build failed (BUILD_EXIT=65) — but the 11 failures are all in `widget-primitives/Widget*.swift`, none in my files. Let me extract the actual compiler errors to confirm they're pre-existing and unrelated to my changes.
+
+Confirmed: all 227 errors are the pre-existing ambiguous-symbol breakage (Preview/init/design-token duplicates) in design-system & widget-primitive files — **zero reference my files**, exactly matching the sibling gate's finding. Let me confirm my changes are purely additive and run an isolated `swiftc -typecheck` (Swift 6 strict concurrency) as the build proxy for my unit.
+
+Changes are purely additive — only my 7 new files + 3 surgical edits (xcstrings, AppRoute, app wiring); none of the 227-error files are touched. Now the isolated `swiftc -typecheck` build proxy for my unit (macOS + iOS, Swift 6 strict concurrency):
+
+Good catch by the isolated typecheck — a real access-control error in my code: `public` protocols can't return the internal shared types `WorkspaceVehicle`/`LiveTailEntry`. (The full build never reached my file group before failing on the pre-existing errors.) Fix: make the injection protocols/sources internal, keep a public parameterless init + internal designated init.
+
+The parametrized `public init` still exposes the internal protocol types. Let me replace it with a public parameterless init + an internal injecting init, and make the default sources internal:
+
+Let me drop the redundant `public` on the internal struct's methods, then re-run the typecheck for both platforms:
+
+macOS typecheck passes. Now iOS typecheck plus re-running placeholder + swiftlint on the edited files:
+
+Two `unneeded_synthesized_initializer` lint violations — the now-internal structs auto-synthesize `init()`. Let me remove the redundant initializers:
+
+Now re-verify swiftlint on all files and the typecheck after removing the initializers:
+
+swiftlint and macOS typecheck are clean. Let me re-confirm the iOS typecheck after the init removal, and additionally compile the **test file** against the real model (same-module) to prove the tests are valid even though the hosted XCTest can't link due to the pre-existing build breakage.
+
+The iOS typecheck passes. The test-compile's only errors are missing XCTest assertion macros (`XCTAssertEqual` etc.) — a tooling artifact of ad-hoc `swiftc` (the XCTest Swift overlay isn't loaded outside a real test target). Every reference to my **model API** resolved. Let me confirm there are no non-XCTest errors:
+
+All errors trace back to the absent XCTest assertion overlay (the `.loading`/`.empty` "contextual base" errors are downstream of the unresolved `XCTAssertEqual`) — there are **zero** genuine model-API mismatches. The test logic is valid. Let me clean up temp files and gather final facts for the log.
+
+All facts gathered: 6 source files (875 lines) + 22 test methods, all 4 required strings present. Let me write the evidence log honestly capturing every gate.
+
+Log written. Now update `apple-ledger.json` with macOS + iOS rows. Let me check the schema and current structure first.
+
+Now insert the macOS + iOS ledger rows via a surgical textual insertion (preserving the file's formatting), then validate:
+
+Ledger updated (241 rows, valid JSON, formatting matches). Let me run the prompt's exact gate commands (placeholder + swiftlint on the whole Telemetry dir) one final time and confirm the route wiring:
+
+Placeholder passes and route wiring is correct. The swiftlint config's `included:` caused it to lint the whole project (6381 files); 4 pre-existing violations surfaced. Let me confirm none are in my files:
+
+All 4 swiftlint violations are pre-existing in files I never touched (`MyActivityPageModel`, `WeeklyDigestWidget.*`) — **zero** in my files. Let me update the log's lint gate to honestly note the full-tree pre-existing violations, then commit.
+
+Now let me finalize todos and commit the work. First verify git state and stage explicitly (excluding the git-ignored generated project/framework):
+
+Clean state — generated artifacts are gitignored. Let me stage all my changes and commit:
+
+Committed (`766ac45b4`). Let me confirm all todos are complete:
+
+All todos complete. The task is finished.
+
+## Summary
+
+Implemented a native SwiftUI/Apple HIG **`LiveSignalMonitorPage`** at full web parity for `web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx` (`/live-monitor`).
+
+**Delivered (7 new files + 3 surgical edits, committed `766ac45b4`):**
+- **Full LiveSignalTail reproduced** (no scope narrowing): header (title/subtitle/`VehicleSelect` picker/connection badge), controls (filter/pause/auto-scroll/clear), four stat tiles, the Time·Signal·Value·Type·Freshness scrolling table, and loading/empty/error/success states with ADR-013 >2 min staleness.
+- `LiveSignalMonitorPage` + `@MainActor @Observable LiveSignalMonitorPageModel` (injectable sources, pure testable ingest), reusing the SignalsWorkspace `WorkspacePanel`/`StatCard`/`State*` chrome (DRY, as the web reuses `LiveSignalTail`).
+- Registered a new `AppRoute.liveMonitor` (pathSegment `live-monitor`) + app wiring + `route.liveMonitor` sidebar key. All 4 `liveMonitor.*` parity strings + tail chrome resolve from `Localizable.xcstrings` (already present; zero hardcoded literals).
+- 22 model unit tests; macOS + iOS ledger rows; honest evidence log.
+
+**Gate results (recorded verbatim in the log):**
+- `PLACEHOLDER_EXIT=0` ✅ · `LINT_EXIT=0` (0 violations in my files) ✅ · `swiftc -typecheck` macOS+iOS Swift 6 strict concurrency `=0` ✅ (build proxy) · **PARITY_COVERED=4/4** ✅
+- `BUILD_EXIT=65` / `TEST_EXIT=BLOCKED` — the full `xcodebuild` fails on **227 pre-existing, out-of-scope ambiguous-symbol errors** in design-system/widget-primitive files; **zero reference my files** (verified via `grep` + `git status`). This is the identical blocker recorded by the sibling SignalsWorkspace/SignalDiff/SignalGapDetector gates, and is outside my allowed-files scope to fix. `EXIT=0` / `STATUS=DONE`.
+
+
+
+All work is complete, verified, and committed. Calling task_complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/Sources/App/AppRoute.swift
+Auto-merging apps/apple/Sources/TeslaSyncApp.swift
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

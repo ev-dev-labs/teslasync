@@ -1,0 +1,213 @@
+=== P4 Shared surface 0178 ConnectionSegment (Apple) ===
+runner: macOS 26.5.1 · Xcode 26.5 Build version 17F42
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+date: 2026-06-14T16:07:55Z
+
+CAPABILITY: SwiftUI + Swift Charts + MapKit present (Xcode 26.5, iOS 18 / macOS 15 SDKs; the runner
+ships iOS 26.5 simulators incl. iPhone 16). This surface uses NO charts and NO maps (the web source is a
+status-bar segment: a tone dot + an icon + a short label + a latency/offline suffix), so it is NOT
+capability-BLOCKED. Web source: components/layout/status-bar/ConnectionSegment.tsx.
+
+================================================================
+ HOST-RUNNABLE GATES (executed on THIS runner) — raw outputs
+================================================================
+
+--- [1] swiftformat --lint (ConnectionSegment scope, 12 swift files) ---
+SwiftFormat completed in 32.71s.
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+--- [2] swiftlint --strict (ConnectionSegment scope, 12 swift files) ---
+Done linting! Found 0 violations, 0 serious in 12 files.
+LINT_EXIT=0
+
+--- [3] check-placeholders.ps1 -Path .../shared-surfaces/ConnectionSegment ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+  (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented tokens; no swift fatalError-unimpl /
+   Text("TODO" / EmptyView()-placeholder markers in the 13 shipped files.)
+
+--- [4] isolated build + test (Swift 6 language mode, strict-concurrency=complete, macOS 15) ---
+  Harness: a SwiftPM package (swift-tools-version:6.0, .macOS(.v15), .swiftLanguageMode(.v6) +
+  StrictConcurrency) whose TeslaSync module SYMLINKS the 9 real ConnectionSegment source files + the real
+  design-token file (apps/design/generated/apple/Tokens.swift), with the 3 real *Tests.swift in the test
+  target. This compiles the ACTUAL shipped files under the app's own Swift version + strict-concurrency
+  mode, exercising the SwiftUI views, the #Preview blocks, the @Observable @MainActor model, the pure
+  projector/bucketing, the polling source + actor probe double, and the NotificationCenter navigation —
+  without the 6k-file app or the KMP framework.
+      swift test  ->  Executed 38 tests, with 0 failures (0 unexpected)
+  SWIFT_TEST_EXIT=0   (bucketing + snapshot factory + projection across online/degraded/offline/connecting
+                       + the freshness/stale branch + a11y labels + seam doubles + scripted probe +
+                       polling-source orchestration + model lifecycle/telemetry-once + refreshIfStale +
+                       view composition + tone->token)
+
+--- [5] clean build, warnings-as-errors (macOS 15, Swift 6 strict-concurrency) ---
+  swift build -Xswiftc -warnings-as-errors  ->  Build complete! (14.23s)
+  BUILD_WAE_EXIT=0   (0 errors, 0 warnings compiling the real source files + real Tokens.swift)
+
+--- [6] iOS 18 simulator SDK typecheck (Swift 6, strict-concurrency=complete) ---
+  xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+    -target arm64-apple-ios18.0-simulator  <9 source files + Tokens.swift>
+  IOS_TYPECHECK_EXIT=0   (0 errors/warnings; the #Preview macro expanded clean on the iOS-18 SDK)
+
+================================================================
+ FULL-APP xcodebuild GATE — EXECUTED (raw evidence below)
+================================================================
+
+  This surface goes FURTHER than the sibling P4 status-bar segments (0179 HelpSegment / 0180
+  LiveTelemetrySegment / 0181 VersionSegment), which DEFERRED the full-app build for lack of the KMP
+  Shared.xcframework. On THIS runner the framework was assembled + staged live, and BOTH app builds were
+  run to completion with this surface compiled inside the real TeslaSync module.
+
+  [PRE] xcodegen generate
+        XCODEGEN_EXIT=0. The generated TeslaSync.xcodeproj references ALL 13 ConnectionSegment.* files
+        (78 pbxproj references) across the iOS/macOS app targets AND the XCTest bundles via the
+        project.yml `TeslaSync/shared-surfaces` source glob. The .xcodeproj is git-ignored
+        (git check-ignore confirms) and was removed after capture; it is NOT part of this commit.
+
+  [PRE] Scripts/build-shared-xcframework.sh  (KMP :core:assembleSharedXCFramework — Kotlin/Native + Gradle)
+        BUILD SUCCESSFUL in 14m 6s. xcframework written to apps/shared/core/build/XCFrameworks/release/
+        and staged to apps/apple/Frameworks/Shared.xcframework (git-ignored; .gitkeep retained; the
+        staged framework was removed after capture and is NOT part of this commit).
+
+  [1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+        ** BUILD SUCCEEDED **    XCODEBUILD_IOS_EXIT=0
+        The whole app (~6k files) + the staged Shared.xcframework linked. This surface's 9 source files
+        compiled in the real 'TeslaSync' target with ZERO ConnectionSegment errors/warnings and ZERO
+        errors overall (grep -c 'error:' == 0).
+
+  [2] xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO
+        ** BUILD SUCCEEDED **    XCODEBUILD_MAC_EXIT=0
+        The macOS app target compiled the same 9 source files (AppKit token path) with ZERO
+        ConnectionSegment errors/warnings and ZERO errors overall. (CODE_SIGNING_ALLOWED=NO isolates
+        COMPILATION from the 0 codesigning identities this non-distribution host has — the same
+        macOS-signing concern the 0181 sibling cites; it is orthogonal to whether the code compiles,
+        which it does.)
+
+  [3] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build-for-testing
+        ** TEST BUILD FAILED **    BFT_EXIT=65 — DEFERRED, and NOT caused by this surface.
+        The single compiler error is a PRE-EXISTING cross-agent duplicate-symbol collision in files this
+        commit never touches:
+          feature-views/RecentActivity.Tests.swift:103: error: invalid redeclaration of
+            'RecentActivityFeedProjectionTests'
+          (also declared at shared-surfaces/RecentActivityFeed.Tests.swift:106 — two different surfaces
+           ship an XCTestCase of the same name into the one TeslaSyncTests bundle.)
+        `git status --porcelain` shows this commit adds ONLY the 13 ConnectionSegment.* files; the
+        RecentActivity/RecentActivityFeed files are unmodified baseline. This surface's 3 *Tests.swift
+        produced ZERO errors in the same build-for-testing pass. Running the in-target tests is therefore
+        DEFERRED to the P4/P99 acceptance gate (which de-dupes cross-agent symbols); the surface's own 38
+        tests are already proven green by gate [4] against the real Swift-6 strict-concurrency toolchain +
+        the real design tokens. I did NOT edit the other agents' files to force this gate green
+        (allowed-files scope + "no silent drift").
+
+================================================================
+ SURFACE SUMMARY
+================================================================
+
+Files (13, all under apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.*):
+  Adapter.swift     — Foundation core: surface identity (slug, 15s poll, 5s timeout, 500ms degraded
+                      threshold, 30s staleness window, /system-status route, nav broadcast), the
+                      ConnectionHealthStatus taxonomy (web ApiHealthStatus), ConnectionHealthBucket (web
+                      `bucket`), ConnectionProbeResult (web ProbeResult), ConnectionSegmentSnapshot (web
+                      useApiHealth return), ConnectionFreshness, tone/glyph selectors.
+  Projection.swift  — pure snapshot->resolved (web cfg[status] + latency/Offline/Stale suffix + tooltip +
+                      aria), the 7 owned web i18n keys + fallbacks + the freshness key, isStale().
+  Model.swift       — P1/S11 telemetry seam, P1/S10 facade (ConnectionSegmentStrings), @MainActor
+                      @Observable holder (P1/S8): snapshot adoption, resolved(iconOnly:), view.opened once,
+                      refresh / refreshIfStale.
+  Seams.swift       — P1/S8 source protocol + InMemory double; poll-clock seam + Manual double.
+  Probes.swift      — ConnectionHealthProbe seam + closure adapter + scripted actor double (web probe()).
+  Polling.swift     — Timer poller + PollingConnectionSegmentSource (web useApiHealth useQuery).
+  ConnectionSegment.swift — the View: binds the model, the tappable chip (web <Link to="/system-status">),
+                      .help tooltip, VoiceOver label/hint/trait, onAppear/onDisappear, default nav broadcast.
+  Views.swift       — ConnectionSegmentChip (dot + icon + "API" + suffix) + tone->token + status icon.
+  Previews.swift    — online/degraded/offline/connecting/iconOnly/stale (#Preview, DEBUG-only).
+  strings           — 9 keys (7 web + stale + openHint).
+  AdapterTests / PollingTests / Tests — 38 tests.
+
+States (web's REAL branches reproduced + the P4 freshness leaf — no fabricated chrome):
+  • loading/initial → `connecting` (web `unknown`): muted HelpCircle "API" chip ("Connecting…" in tooltip)
+  • ready           → `online` (emerald) / `degraded` (amber): "API" + "· {latency}ms"
+  • error/offline   → `offline` (rose): "API · Offline" (web buckets a failed/timed-out /healthz to offline);
+                      tap → /system-status (diagnose/retry) and the 15s poll auto-retries
+  • stale           → a healthy reading aged past the 30s window → dimmed (muted) chip + "· Stale", with the
+                      poll cadence + on-appear refreshIfStale() as the auto-refresh (web hook
+                      refetchIntervalInBackground:false pauses on background, so the reading genuinely ages)
+  • empty           → N/A and NOT fabricated: a health probe always resolves a status; "no value yet" IS the
+                      connecting state. Documented (per the 0179/0180 honesty precedent), not faked.
+
+Data binding: useApiHealth + useTranslation bind via the shared P1/S8 state-holder layer
+(ConnectionSegmentModel over a ConnectionSegmentSource — PollingConnectionSegmentSource in production, the
+host injecting its /healthz probe). NO direct HTTP in the view.
+
+i18n: 9/9 keys declared == used (0 dead, 0 missing). All 7 web-source keys present verbatim
+(short/ok/degraded/offline/unknown/tooltip/aria) + 2 native P4-leaf keys (stale, openHint). No English
+literals in the Swift sources — every label resolves through the P1/S10 facade.
+
+Accessibility: the segment is one focusable button; its VoiceOver label is the web aria-label
+("API connection status: {state} ({latency}ms)"), with the .help tooltip mirroring the web <Tooltip>; an
+open hint + .isButton trait are added; the dot + glyph are decorative (web aria-hidden); the stale tone is
+muted so colour is never the sole encoder (the "· Stale" marker carries it too). Dynamic Type via the token
+fonts; no bespoke animation (reduce-motion safe).
+
+Telemetry: emits `view.opened` with surface slug "ConnectionSegment" exactly once per model instance
+(P1/S11), idempotent across appear/disappear churn.
+
+Acceptance criteria:
+  [x] Surface renders all web-source states on Apple (connecting/online/degraded/offline) + the P4 stale leaf.
+  [x] Hooks bind via the shared P1/S8 state-holder layer; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching catalog key (P1/S10); 9/9 used, 0 dead, 0 missing.
+  [x] Accessibility label + hint + button trait on the single interactive element.
+  [x] Tests: adapter/bucketing unit test + per-state projection/model/view test + a11y label test
+      (38 executed, all pass under Swift 6 strict-concurrency).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+  [x] Full-app iOS + macOS xcodebuild BUILD SUCCEEDED with the surface compiled in the real module; the
+      all-tests run is DEFERRED on a pre-existing cross-agent test-symbol collision this commit does not touch.
+
+================================================================
+ HONESTY COVENANT
+================================================================
+  1  No red-as-green     : build-for-testing reported TEST BUILD FAILED with the exact pre-existing
+                           RecentActivity duplicate-class error pasted; never claimed the all-tests run passed.
+  2  No scope narrowing  : every web render branch reproduced — the 4 statuses (dot+icon+label+suffix), the
+                           iconOnly prop, the latency stamp, the "Offline" suffix, the tooltip + aria — plus
+                           the P4 stale leaf. No section skipped.
+  3  No skip-and-assume  : every host-runnable gate executed here with raw output; the KMP framework was
+                           actually assembled and BOTH app builds actually run to ** BUILD SUCCEEDED **.
+  4  No stubs as final   : complete production surface (13 files) + 38 real passing tests; placeholder
+                           scanner = 0; no TODO/FIXME/stub/mock/placeholder/Lorem tokens.
+  5  No parity shortcut  : tones/glyphs/label/suffix/tooltip/aria mapped to P1/S9 tokens
+                           (Color.TS/Font.TS/TSSpacing); SF Symbols pair colour with shape; verified by the
+                           isolated build+test AND the real iOS+macOS app builds.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: binds the P1/S8 state-holder seam (ConnectionSegmentModel), P1/S9 tokens, P1/S10
+                           i18n facade (7 web keys), P1/S11 telemetry (view.opened slug "ConnectionSegment").
+  8  No commit on red    : the committed artifact (the 13 ConnectionSegment.* files + this log) is GREEN on
+                           every host-runnable gate AND compiles inside BOTH real app targets; the only red
+                           is the pre-existing cross-agent test-symbol collision this commit does not touch.
+  9  No silent drift     : changes confined to the 13 apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.*
+                           files + this log. No project.yml / shared-component / other-surface edits. The
+                           generated .xcodeproj + staged Shared.xcframework (both git-ignored) were removed
+                           after evidence capture.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic `ConnectionSegment` shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED GREEN on this host: it typechecks 0/0 on BOTH shipped SDKs (iOS 18 + macOS 15)
+  under Swift 6 -strict-concurrency=complete against the real generated tokens; its 38 tests pass under the
+  Swift 6 language mode; swiftlint --strict (0/12), swiftformat --lint (0/12) and the placeholder gate (0)
+  are green; xcodegen enumerates all 13 files (78 refs); and — with the KMP Shared.xcframework assembled +
+  staged live this run — the surface compiles with ZERO ConnectionSegment errors/warnings inside the real
+  TeslaSync app module on BOTH the iOS-18 simulator (** BUILD SUCCEEDED **) and the macOS-15 target
+  (** BUILD SUCCEEDED **). No stubs, no skeleton-only chrome; connecting/online/degraded/offline/stale are
+  REAL states of the web hook (not fabricated), and "empty" is honestly documented as non-existent for a
+  health probe. The only non-green step is the full all-tests `build test`, blocked by a PRE-EXISTING
+  cross-agent duplicate XCTestCase ('RecentActivityFeedProjectionTests' in RecentActivity.Tests.swift +
+  RecentActivityFeed.Tests.swift) that this commit neither introduces nor touches; it is the P4/P99
+  acceptance gate's responsibility to de-dupe cross-agent symbols, and this surface's own tests are already
+  proven green in isolation against the real toolchain.
+
+EXIT=0
+STATUS=DONE

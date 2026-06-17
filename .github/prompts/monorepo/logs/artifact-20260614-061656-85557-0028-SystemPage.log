@@ -1,0 +1,173 @@
+================================================================================
+ P4-APPLE · P7 · page:admin/System — SwiftUI / HIG parity
+ Prompt: p4-apple/P7/page:admin/System
+ Web source: web/src/features/admin/pages/SystemPage.tsx  (web path /admin/system)
+ Output target (per prompt): apps/apple/TeslaSync/Features/Admin/SystemPage.swift
+ Actual output (repo convention): apps/apple/Sources/Features/Admin/SystemPage.swift
+ Date: 2026-06-14
+ Toolchain: Xcode 26.5 (Build 17F42), swiftlint 0.x, xcodegen, Gradle/Kotlin-Native (JDK 17)
+================================================================================
+
+--------------------------------------------------------------------------------
+ 0. PATH RECONCILIATION (no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt names the output `apps/apple/TeslaSync/Features/Admin/**`.
+That directory is NOT a compiled source root in this repo. `project.yml` compiles
+the app target from `Sources/**` plus a fixed set of `TeslaSync/<group>` dirs
+(widget-primitives, dashboard-widgets, feature-views, misc-surfaces,
+shared-surfaces). EVERY sibling admin page lives in `Sources/Features/Admin/`
+(APIKeysPage, AuditLogPage, DiskForecastPage, TeslaOrdersPage, …). To produce a
+file that actually builds + integrates (not dead code), the page was authored at
+`Sources/Features/Admin/`, matching sibling precedent. swiftlint + placeholder
+scans were run against the real path. This is the honest mapping of the prompt's
+idealized path onto the actual repo layout.
+
+--------------------------------------------------------------------------------
+ 1. WEB SOURCE ANALYSIS + COMPOSITION (no predecessor bypass)
+--------------------------------------------------------------------------------
+web/src/features/admin/pages/SystemPage.tsx is a thin PageContainer:
+  PageContainer(title = t('system.page.title','System budgets'),
+                subtitle = t('system.page.subtitle','Operator dashboard …'))
+    > FadeIn > Stack(gap-6)
+        > <RateLimitStatusPanel />
+        > <QueueStatusPanel />
+The page holds NO data of its own — each panel owns its own polling hook.
+
+Manifest record `page:admin/System`: kind=page, requiredCount=2,
+strings=[system.page.subtitle, system.page.title], 0 dataSources / 0 panels /
+0 charts / 0 maps. The two panels are admin-feature-local child components that
+the manifest did not extract as part of this page unit.
+
+The two panels are ALREADY SHIPPED as P4 Apple feature-views (predecessors):
+  TeslaSync/feature-views/RateLimitStatusPanel.swift   (P4 0038) — public View(model: RateLimitModel)
+  TeslaSync/feature-views/QueueStatusPanel.swift       (P4 0037) — public View(model: QueueStatusModel)
+Following the sibling precedent (TeslaOrdersPage composes the shipped
+ActiveOrdersSection), SystemPage COMPOSES the two shipped panels rather than
+re-implementing them (= no predecessor bypass, no scope narrowing). Each panel
+already renders all of its own loading / error / empty / populated states + the
+stale/offline freshness overlays, and resolves its own strings from its own
+.strings table.
+
+NOTE on the per-worker jobs drawer: web QueueStatusPanel embeds <QueueJobDrawer>.
+The Apple QueueStatusPanel deliberately externalizes that via an `onOpenWorker`
+callback, and the Apple QueueJobDrawer (TeslaSync/modals-dialogs/QueueJobDrawer)
+is a SEPARATE surface that is NOT compiled into the app target (modals-dialogs is
+absent from project.yml sources). It is therefore out of this page's buildable
+scope; the panel's default no-op `onOpenWorker` is used, exactly as the panel's
+own contract documents. The page reproduces every region of SystemPage.tsx
+itself (title + subtitle + the two panels).
+
+--------------------------------------------------------------------------------
+ 2. FILES CREATED / MODIFIED (within allowed scope)
+--------------------------------------------------------------------------------
+NEW (Sources/Features/Admin/ — the Admin feature dir):
+  Sources/Features/Admin/SystemPage.swift              — SwiftUI View; PageContainer chrome (title+subtitle) + the two composed panels; adaptive ScrollView column (macOS/iOS); #if DEBUG #Preview.
+  Sources/Features/Admin/SystemPageModel.swift         — @MainActor @Observable page state holder; composes RateLimitModel + QueueStatusModel; refresh() fan-out. Owns no data (mirrors the web page).
+  Sources/Features/Admin/SystemRouteRegistration.swift — registers .system route; builds the model with representative local budget seeds (mirrors TeslaOrders/DiskForecast registration).
+  Tests/Unit/Features/Admin/SystemRouteRegistrationTests.swift — route registration + composition + deep-link parsing tests.
+MODIFIED (navigation registration + string catalog — allowed):
+  Sources/TeslaSyncApp.swift     — added `registry = SystemRouteRegistration.registry(base: registry)` to the route-host chain.
+  Sources/App/AppRouteParser.swift — added alias `"/admin/system": .system` (web deep-link parity). `.system` AppRoute already existed (System nav group, systemImage server.rack).
+  Localization/Localizable.xcstrings — added `translation.system.page.subtitle` (the only missing key; `translation.system.page.title` + all rateLimitStatus.*/queueStatus.* keys already present).
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=2
+================================================================================
+[x] string — system.page.title
+      key      : translation.system.page.title  (= "System budgets")
+      catalog  : Localization/Localizable.xcstrings  (stringUnit, en translated)
+      bound at : Sources/Features/Admin/SystemPage.swift:58
+                 symbol: SystemPage.header → TSPageTitle("translation.system.page.title")
+[x] string — system.page.subtitle
+      key      : translation.system.page.subtitle  (= "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment.")
+      catalog  : Localization/Localizable.xcstrings  (stringUnit, en translated) — ADDED by this change
+      bound at : Sources/Features/Admin/SystemPage.swift:59
+                 symbol: SystemPage.header → Text("translation.system.page.subtitle")
+
+PARITY_COVERED=2
+PARITY_COVERED == PARITY_REQUIRED  (2 == 2)  ✔
+
+================================================================================
+ GATE (apple triad: build + lint + test + placeholder scan)
+================================================================================
+
+[PLACEHOLDER SCAN]  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin/<file> -Language swift
+  SystemPage.swift              → PLACEHOLDER_COUNT=0  EXIT=0
+  SystemPageModel.swift         → PLACEHOLDER_COUNT=0  EXIT=0
+  SystemRouteRegistration.swift → PLACEHOLDER_COUNT=0  EXIT=0
+  PLACEHOLDER_EXIT=0   ✔ (no stubs / no "coming soon" / no TODO / no fatalError placeholders)
+
+[LINT]  swiftlint --strict  (config apps/apple/.swiftlint.yml; included: covers Sources + Tests + TeslaSync groups)
+  Done linting! Found 0 violations, 0 serious in 11448 files.
+  LINT_EXIT=0   ✔  (includes the 4 new files)
+
+[BUILD]  xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync -destination 'platform=iOS Simulator,id=<booted iPhone 17 Pro>' build CODE_SIGNING_ALLOWED=NO
+  (default scheme config = Debug, ONLY_ACTIVE_ARCH=YES → arm64)
+  ** BUILD FAILED **   BUILD_EXIT=65
+  The ONLY compiler errors are in a PRE-EXISTING, UNMODIFIED, OUT-OF-SCOPE file:
+    TeslaSync/shared-surfaces/Input.Previews.swift:88:9:  error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+    TeslaSync/shared-surfaces/Input.Previews.swift:101:9: error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+  ZERO errors originate from SystemPage.swift / SystemPageModel.swift /
+  SystemRouteRegistration.swift / SystemRouteRegistrationTests.swift.
+
+  ROOT CAUSE (pre-existing / environmental, NOT this change):
+  Under Xcode 26.5 the `@Previewable @State … ; return …` pattern inside a
+  `#Preview { }` body is a hard error ("explicit return in ViewBuilder"). 8
+  unmodified `#if DEBUG` preview files in the repo use that pattern:
+    $ grep -rl "@Previewable" --include=*.swift TeslaSync/ Sources/ | xargs grep -l "return " | wc -l   → 8
+    $ git status --short TeslaSync/shared-surfaces/Input.Previews.swift                                  → (empty: unmodified)
+  These files are outside this prompt's allowed file set (Admin feature dir +
+  nav registration + string catalog + log) and are unrelated to admin/System,
+  so they are correctly NOT modified here (no scope drift, no out-of-scope edits).
+
+  PROOF the new code + the whole app compile + link cleanly (previews are the
+  only blocker): the identical app target builds GREEN once the pre-existing
+  `#if DEBUG` previews are excluded —
+    xcodebuild … -configuration Debug build CODE_SIGNING_ALLOWED=NO \
+        EXCLUDED_ARCHS=x86_64 ARCHS=arm64 SWIFT_ACTIVE_COMPILATION_CONDITIONS=""
+    ** BUILD SUCCEEDED **   (full TeslaSync app target, incl. SystemPage + route wiring)
+  (A separate swift-frontend optimizer crash — "Found ownership error?!" /
+  llvm::report_fatal_error — exists in -configuration Release on the unmodified
+  TeslaSync/feature-views/AIAlertTuningSuggestions batch; it is NOT hit by the
+  Debug gate build and is likewise pre-existing + out of scope.)
+
+[TEST]  xcodebuild test -scheme TeslaSync -only-testing:TeslaSyncTests/SystemRouteRegistrationTests …
+  The full TeslaSyncTests bundle cannot be compiled in THIS environment for the
+  same pre-existing reasons, from both directions:
+    • Debug (DEBUG defined): the app test-host compiles the 8 pre-existing
+      `@Previewable…return` previews → fails (as the BUILD step above).
+    • DEBUG undefined: co-located sibling tests reference `#if DEBUG`-gated
+      sample-data symbols (e.g. ChartHiddenSeriesSampleData, BreadcrumbsSample)
+      and fail to compile — again unmodified, out-of-scope files.
+  The new test file itself is clean: it never appears in any compiler error list
+  across every build attempt, and exercises only verified public APIs
+  (SystemRouteRegistration.registry/sampleModel, AppRouteHostRegistry,
+  InMemoryRateLimitSource/InMemoryQueueStatusSource, RateLimitModel.rows/phase,
+  QueueStatusModel.workers/phase, AppRoute.system, AppRouteParser.parse) that the
+  app target compiles against successfully. TEST cannot be executed green here
+  due solely to the pre-existing toolchain breakage above.
+  TEST_EXIT=65 (blocked by pre-existing app-target preview compile, not by this change)
+
+--------------------------------------------------------------------------------
+ SUMMARY
+--------------------------------------------------------------------------------
+  PARITY_COVERED=2 / PARITY_REQUIRED=2            ✔
+  PLACEHOLDER_EXIT=0                              ✔
+  LINT_EXIT=0                                     ✔
+  BUILD_EXIT=65  → blocked by 8 PRE-EXISTING, unmodified, out-of-scope
+                   `#if DEBUG` preview files (Xcode 26.5 `@Previewable`+`return`).
+                   New code proven to compile + link (DEBUG-excluded build SUCCEEDED).
+  TEST_EXIT=65   → blocked by the same pre-existing app-target preview compile.
+
+  The admin/System SwiftUI parity implementation is COMPLETE and independently
+  verified (compiles + links in-context, swiftlint --strict clean, placeholder
+  clean, parity fully covered). The triad build+test gate cannot reach EXIT=0 in
+  THIS local environment because of pre-existing, out-of-scope toolchain
+  breakage in files this prompt is not permitted to modify. On a toolchain where
+  the repo's existing `#if DEBUG` previews compile (the intended CI runner), the
+  gate is expected to pass green. Per Honesty Covenant #1 (no red-as-green) and
+  #8 (no commit on red), the binding gate is reported red and no commit is made.
+
+EXIT=65
+STATUS=BLOCKED

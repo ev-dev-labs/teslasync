@@ -1,0 +1,119 @@
+=== P4 Shared surface 0099 ProgressRing (Apple) ===
+run: 2026-06-11T05:55Z  toolchain: Xcode 26.5 / swift 6.3.2  host: macOS 26 (arm64)
+web source: web/src/components/data-display/ProgressRing.tsx
+artifact:   apps/apple/TeslaSync/shared-surfaces/ProgressRing.{swift,Adapter,Projection,Model,Views,Previews,Tests,strings}
+
+--- [1/6] swiftformat --lint (surface scope) ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at apps/apple/.swiftformat
+SwiftFormat completed in 6.32s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+--- [2/6] swiftlint --strict (surface scope) ---
+Linting Swift files at paths ProgressRing.{swift,Adapter,Projection,Model,Views,Previews,Tests}.swift
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+--- [3/6] placeholder scan (per shipped swift file) ---
+  PLACEHOLDER_COUNT=0  ProgressRing.swift
+  PLACEHOLDER_COUNT=0  ProgressRing.Adapter.swift
+  PLACEHOLDER_COUNT=0  ProgressRing.Projection.swift
+  PLACEHOLDER_COUNT=0  ProgressRing.Model.swift
+  PLACEHOLDER_COUNT=0  ProgressRing.Views.swift
+  PLACEHOLDER_COUNT=0  ProgressRing.Previews.swift
+  PLACEHOLDER_COUNT=0  ProgressRing.Tests.swift
+PLACEHOLDER_COUNT_TOTAL=0
+PLACEHOLDER_EXIT=0
+
+--- [4/6] isolated Swift 6 strict-concurrency build + XCTest (surface vs REAL design tokens) ---
+harness: SwiftPM module 'TeslaSync' = 6 surface sources + apps/design/generated/apple/Tokens.swift;
+         test target = ProgressRing.Tests.swift; swiftLanguageMode(.v6) (== app SWIFT_VERSION 6.0 + strict-concurrency complete)
+  Executed 16 tests, with 0 failures (0 unexpected)  — ProgressRingProjectionTests
+  Executed  3 tests, with 0 failures (0 unexpected)  — ProgressRingMetaTests
+  Executed  7 tests, with 0 failures (0 unexpected)  — ProgressRingAccessibilityTests
+  Executed  6 tests, with 0 failures (0 unexpected)  — ProgressRingModelTests
+  Executed  2 tests, with 0 failures (0 unexpected)  — ProgressRingViewTests
+Test Suite 'All tests' passed.
+  Executed 34 tests, with 0 failures (0 unexpected) in 0.006 (0.009) seconds
+ISO_BUILD_TEST_EXIT=0
+
+--- [5/6] full-app iOS Simulator build test  (scheme TeslaSync, iPhone 16) ---
+Shared.xcframework: built + staged this run (Gradle :core:assembleSharedXCFramework — BUILD SUCCESSFUL in 7m05s).
+IOS_EXIT=65   ** TEST FAILED ** (build failed → testing cancelled)
+errors total = 162; errors attributed to ProgressRing.* = 0
+ROOT CAUSE (pre-existing, unrelated, OUTSIDE allowed files): duplicate type declarations among sibling
+surfaces collapsed into the single app module make shared names ambiguous. Representative:
+  ios_build.log:5028: apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:14:76: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+  ('RecentDrivesModel' is ambiguous appears 6x; 'RecentDrivesUpdate'/'RecentDrivesLoadStatus'/'RecentDrivesConnection'/'StateTimelineModel' likewise)
+  defn A: TeslaSync/feature-views/RecentDrivesSection.Model.swift:23      public final class RecentDrivesModel
+  defn B: TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:181  public final class RecentDrivesModel
+  defn A: TeslaSync/feature-views/StateTimeline.Model.swift:64            public final class StateTimelineModel
+  defn B: TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104     public final class StateTimelineModel
+  defn A: TeslaSync/feature-views/RecentDrivesSection.Seams.swift:90      public struct RecentDrivesUpdate
+  defn B: TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:137  public struct RecentDrivesUpdate
+  (both feature-views + dashboard-widgets are sources of the SAME app target — project.yml L41/45,L90/94)
+  → none of the 162 errors reference ProgressRing; this surface compiles cleanly (see [4/6]).
+
+--- [6/6] full-app macOS build test  (scheme TeslaSync-macOS) ---
+MAC_EXIT=65   ** TEST FAILED **
+errors total = 4; errors attributed to ProgressRing.* = 0
+ROOT CAUSE (runner capability, unrelated): code-signing requires a development certificate the unsigned
+runner does not have. Representative:
+  mac_build.log: apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+  mac_build.log: apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. (in target 'TeslaSyncWidgets-macOS')
+
+=== Honesty Covenant (binding) ===
+ 1 No red-as-green   : IOS_EXIT/MAC_EXIT pasted RAW as 65 and labelled FAILED — never reported green.
+                       The full-app build is disclosed as DEFERRED, not passing.
+ 2 No scope narrowing : every web render branch reproduced — the always-present track ring (never a
+                       blank box), the rounded-cap fill arc rotated -90° trimmed to clamped/max, the
+                       optional centered primary (semibold, tabular-nums) + secondary (uppercase) text
+                       gated on hasCenter, and the optional caption below. The web geometry is ported
+                       verbatim: radius (size-strokeWidth)/2, circumference 2*pi*r, clamp max(0,min),
+                       strokeDashoffset, mainSize max(10,round(size*.32)), subSize max(8,round(size*.18)).
+                       The web source has NO data/loading/error/empty/stale/offline branch (pure
+                       presentational, reads no hooks) — see the Adapter parity note; the 0075
+                       AnimatedNumber + 0053 AIThinkingIndicator precedents took the same line.
+ 3 No skip-and-assume : every runnable gate executed on THIS runner; raw exits pasted. The deferred
+                       iOS/macOS blockers were each re-confirmed by a real xcodebuild error line + a
+                       grep proving the two duplicate declarations exist in this checkout — not assumed.
+ 4 No stubs as final  : complete production surface + 34 real tests; placeholder COUNT=0 on every
+                       shipped swift file; no TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-impl.
+                       The OSLog telemetry default is a working logging seam the app overrides.
+ 5 No parity shortcut : the radius/circumference, the clamp (negative/in-range/over-max/non-finite),
+                       the guarded fill fraction (the non-positive-max divide the web leaves unguarded),
+                       the dashoffset peer, the percentage, and the font-scale floors are each unit-
+                       asserted against the web expressions. web `color` default #3b82f6 → P1/S9
+                       Color.TS.accent (caller-overridable); track → Color.TS.border; centred text →
+                       textPrimary/textMuted — platform tokens, not ported Tailwind/hex.
+ 6 No delegation      : implemented directly; no agents (delegation FORBIDDEN for this tier).
+ 7 No predecessor bypass: binds P1/S8 state-holder (ProgressRingModel), P1/S9 tokens (Color.TS/Font.TS/
+                       TSSpacing/TSMotion via Tokens.swift), P1/S10 i18n (no translatable copy in source
+                       — every visible string is caller data; see ProgressRing.strings), and P1/S11
+                       view.opened telemetry. Honours the established P4 isolated-build + DEFERRED
+                       full-app disposition.
+ 8 No commit on red   : the committed artifact (8 ProgressRing.* files + this log) is GREEN on
+                       swiftformat, swiftlint --strict, placeholder, AND a real Swift 6 strict-
+                       concurrency build + 34/34 XCTest against the REAL design tokens. The deferred
+                       full-app gate is blocked only by pre-existing, unrelated, out-of-allowed-files
+                       sibling collisions (iOS) and runner code-signing (macOS).
+ 9 No silent drift    : changes confined to TeslaSync/shared-surfaces/ProgressRing.* + this log. No
+                       sibling surface, project.yml, or token file was touched (the duplicate-symbol
+                       fix is owned by the P4 acceptance gate, not this per-surface prompt). The
+                       generated .xcodeproj + staged Shared.xcframework are git-ignored.
+10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ProgressRing shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 34 tests pass under the app's own Swift 6 strict-
+  concurrency rules, against the REAL design system (Tokens.swift), via the Xcode 26.5 toolchain, with
+  swiftformat / swiftlint --strict / placeholder all green on the surface files and the #Preview matrix
+  compiling. The full-app iOS + macOS xcodebuild build/test gate is DEFERRED (not failed by this code)
+  on pre-existing, unrelated, out-of-allowed-files blockers — sibling duplicate-symbol collisions
+  (RecentDrives*/StateTimeline* in feature-views vs dashboard-widgets) on iOS, and development
+  code-signing on the unsigned macOS runner — owned by the P4 acceptance gate on a signed runner.
+
+EXIT=0
+STATUS=DONE

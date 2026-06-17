@@ -1,0 +1,188 @@
+=== P4 Shared surface 0231 Tooltip (Apple) ===
+Artifact: apps/apple/TeslaSync/shared-surfaces/Tooltip.*
+Web source (specification): web/src/components/ui/Tooltip.tsx
+Date: 2026-06-13
+Runner: Darwin arm64 (Apple Studio), Xcode 26.5 (17F42)
+Toolchain: Apple Swift 6.3.2 (swiftlang-6.3.2.1.108), swiftlint + swiftformat (homebrew),
+           pwsh 7 present, xcodegen present, JDK 17 (KMP Shared.xcframework built OK).
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+The Tooltip shared surface was implemented to full parity with the web source
+(8 files: public view + adapter/model/views + previews + strings + 2 test files).
+Every check that exercises THIS surface in isolation passes (typecheck, 42/42 unit
+tests, swiftlint --strict, swiftformat --lint, placeholder gate — all green below).
+
+The full-project xcodebuild gate steps cannot reach EXIT=0 in this environment due
+to TWO pre-existing, environment-level blockers that are OUTSIDE this prompt's
+allowed file set (Tooltip.* + this log) and are NOT caused by the Tooltip surface:
+
+  B1. iOS `build test`  -> swift-frontend (Swift 6.3.2) IRGen COMPILER CRASH
+      (report_fatal_error -> report_at_maximum_capacity in SyncCallEmission::setArgs)
+      while emitting a SwiftUI reabstraction thunk for unrelated feature-view code
+      (AppearanceSettings.* / ApiPlaygroundPage batch). PROVEN pre-existing: a
+      baseline build with the 8 Tooltip files REMOVED reproduces the IDENTICAL crash.
+
+  B2. macOS `build test` -> fails at code-signing ("entitlements require signing with
+      a development certificate") — no dev signing identity on this runner — and, with
+      signing disabled, then hits the SAME B1 compiler crash (same module/toolchain).
+
+Both blockers live in files this prompt is forbidden to edit (Out of Scope: other
+surfaces; Allowed files: Tooltip.* only). Per Honesty Covenant rule 1 (no red-as-green)
+and rule 8 (no commit on red), this run is reported STATUS=BLOCKED, not DONE.
+
+================================================================================
+GATE STEPS (as specified in the prompt) — real results
+================================================================================
+
+-------- STEP 1: iOS build test --------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=65   (FAIL — pre-existing swift-frontend compiler crash, NOT a Tooltip error)
+
+Source-level "error:" diagnostics in the whole build: 0
+The 8 Tooltip files compile/are referenced 37x in the build with ZERO errors; the
+build dies in a DIFFERENT batch during LLVM IR generation:
+
+  4. While evaluating request IRGenRequest(IR Generation for file
+     ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".   <- SwiftUI
+     reabstraction thunk for (Bool, ScrollViewProxy?) -> ...  (NOT Tooltip code)
+  ...
+  5  libsystem_c.dylib   abort + 148
+  7  swift-frontend      llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+  8  swift-frontend      report_at_maximum_capacity(unsigned long) + 0
+  10 swift-frontend      (anonymous namespace)::SyncCallEmission::setArgs(...) + 688
+  ** BUILD FAILED ** -> ** TEST FAILED **
+
+ROOT-CAUSE PROOF (pre-existing, independent of this surface):
+$ # move the 8 Tooltip files out, regenerate the project, rebuild
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+BASELINE_BUILD_EXIT=65   (identical crash, with NO Tooltip files in the project)
+  baseline log: "While emitting IR SIL function @$sSbScA_pSgIeAghyg_SbIeAghn_TR",
+                "report_at_maximum_capacity", "SyncCallEmission::setArgs", "** BUILD FAILED **"
+  baseline source-level "error:" diagnostics: 0
+=> The crash is a Swift 6.3.2 compiler defect on the existing generated codebase at
+   module scale; adding/removing the Tooltip surface does not change it. The files
+   were restored afterward (all 8 present).
+
+-------- STEP 2: macOS build test --------
+$ xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=65   (FAIL — environment code-signing, then the B1 compiler crash)
+  .../TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require
+     signing with a development certificate. Enable development signing ...
+  .../TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that
+     require signing with a development certificate ...
+  ** BUILD FAILED **
+$ # with signing disabled to reach the compiler:
+$ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+MAC_NOSIGN_EXIT=65   (FAIL — IDENTICAL B1 compiler crash on macOS)
+  "While evaluating request IRGenRequest(IR Generation for file
+     .../TeslaSync/feature-views/AppearanceSettings.Controls.swift)"
+  "While emitting IR SIL function @$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+  "report_at_maximum_capacity" -> "SyncCallEmission::setArgs" -> "** BUILD FAILED **"
+  source-level "error:" diagnostics: 0
+  => Same Swift 6.3.2 IRGen crash as iOS; the macOS gate is doubly blocked
+     (dev-signing absence + the pre-existing compiler crash). Neither involves Tooltip.
+
+-------- STEP 3: swiftlint --strict (whole project) --------
+$ swiftlint --strict
+LINT_EXIT=2   (FAIL — 3 PRE-EXISTING violations in a NON-Tooltip surface)
+  TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54 :
+     identifier_name — variable names 'a' / 'b' / 'c'
+  Tooltip files: 0 violations (grep 'shared-surfaces/Tooltip.' over the full
+  violation set = 0). These 3 are outside this prompt's allowed file set.
+
+-------- STEP 4: swiftformat --lint apps/apple --------
+$ swiftformat --lint apps/apple
+FORMAT_EXIT=1   (FAIL — 1 PRE-EXISTING issue in a NON-Tooltip surface; 1/5637 files)
+  TeslaSync/feature-views/RecentDrivesSection.Previews.swift:27/28 :
+     redundantType
+  Tooltip files: 0 issues. Outside this prompt's allowed file set.
+
+-------- STEP 5: check-placeholders (Tooltip surface) --------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Tooltip
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   (PASS)
+
+================================================================================
+SURFACE-LEVEL VERIFICATION (this artifact, in isolation) — all GREEN
+================================================================================
+
+-------- A. Standalone typecheck of the surface against the real design tokens --------
+$ xcrun swiftc -typecheck -D DEBUG -sdk <macosx> -target arm64-apple-macos15.0 \
+    ../design/generated/apple/Tokens.swift Sources/Design/TSMaterial.swift \
+    Tooltip.Adapter.swift Tooltip.Model.swift Tooltip.Views.swift \
+    Tooltip.swift Tooltip.Previews.swift
+TYPECHECK_EXIT=0   (PASS — view/model/adapter/previews are type-correct)
+
+-------- B. Unit + view-composition tests (real execution) --------
+A minimal SwiftPM module named "TeslaSync" (tokens + the 5 surface files) with a
+test target that `@testable import TeslaSync` runs the two co-located test files
+(Tooltip.Tests.swift + Tooltip.AdapterTests.swift) unchanged:
+$ swift test   (Target Platform: arm64-apple-macos)
+  Executed 42 tests, with 0 failures (0 unexpected)
+SWIFT_TEST_EXIT=0   (PASS — 42/42)
+  Coverage: surface identity/slug; TooltipSide web-side mapping + axis + per-side
+  reveal-offset math (LTR + RTL); layout metrics vs web Tailwind sizes; projector
+  isContentEmpty (empty-content guard) + describedBy (aria-describedby join);
+  controller once-only view.opened (idempotent across stop/start), reveal state,
+  carried side/multiline, stable useId-peer id, derived a11y description; SwiftUI
+  anchor/scale-anchor per side; every view branch composes (string/arbitrary/empty
+  content, single-line vs multiline, described-by hint with/without text); strings
+  facade table + fallback resolution.
+
+-------- C. swiftlint --strict on the 7 Tooltip swift files --------
+$ swiftlint lint --strict <Tooltip swift files>
+  Found 0 violations, 0 serious in 7 files.   (PASS)
+
+-------- D. swiftformat --lint on the 7 Tooltip swift files --------
+$ swiftformat --lint <Tooltip swift files>
+  0/7 files require formatting.   (PASS)
+
+-------- E. Forbidden-token scan of Tooltip.* --------
+  TODO/FIXME/XXX/coming soon/placeholder/lorem/not implemented/stub/mock/fatalError
+  => NONE FOUND (clean).
+
+================================================================================
+PARITY NOTES (web/src/components/ui/Tooltip.tsx -> native)
+================================================================================
+- Data source: web `useId` -> TooltipController.surfaceID (stable per-instance id,
+  the a11y identity + once-only telemetry key); no HTTP in the view (bound via the
+  P1/S8 state-holder).
+- Faithful-parity: the web <Tooltip> is a pure presentational primitive (no fetch,
+  no React-Query, no Promise). It therefore has no loading/error/stale/offline
+  branch; reproducing such chrome would fabricate states the source lacks. The REAL
+  branches are all reproduced and tested: resting (opacity-0 scale-95) / revealed
+  (opacity-100 scale-100, on hover/tap/programmatic), single-line vs multiline
+  (whitespace-nowrap vs max-w-[260px]), the four sides (top/bottom/left->leading/
+  right->trailing), the empty-content guard (never reveal a blank box), and reduced
+  motion (motion-reduce -> animation disabled). Same stance as siblings HelpTooltip
+  (0216), ContextMenu (0206), DataTableColumnMenu (0210).
+- Inverted-surface contract (web bg-gray-900 text-gray-100 dark:bg-gray-100
+  dark:text-gray-900) reproduced token-only: paint with Color.TS.textPrimary, write
+  with Color.TS.bg — both flip together across light/dark/high-contrast.
+- aria-describedby -> the trigger's accessibility hint (TooltipProjector.describedBy
+  join); decorative card hidden from VoiceOver to avoid a duplicate announcement.
+- i18n (P1/S10): the web source routes NO t() call (content is caller-supplied,
+  already-localized); the surface is anonymous. TooltipStrings facade + Tooltip.strings
+  document this; no hardcoded English in the surface.
+- Telemetry (P1/S11): view.opened emitted once per content-bearing instance with the
+  slug "Tooltip".
+
+================================================================================
+DISPOSITION
+================================================================================
+The Tooltip surface is implemented, type-correct, lint/format-clean, placeholder-free,
+and fully unit-tested (42/42). The prompt's xcodebuild gate steps are RED solely due
+to environment/pre-existing blockers in files outside this prompt's allowed scope
+(a Swift 6.3.2 IRGen compiler crash on existing feature-view code, proven by the
+baseline; macOS dev-signing absence; 3 pre-existing swiftlint + 1 swiftformat
+violations in other surfaces). None are caused by, nor fixable within, the Tooltip
+artifact. Honesty Covenant rules 1 (no red-as-green) and 8 (no commit on red) =>
+reported BLOCKED rather than claimed DONE; the verified surface files remain present
+(untracked) in the working tree, not committed.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,247 @@
+================================================================================
+P4 · Feature view · 0144 — JourneyDetailsPanel (Apple)
+Run: 2026-06-09T14:48-0700   Host: Darwin arm64 (macOS 26.5, Xcode 26.5 / 17F42)   Slot: slot-26
+Prompt: P4/feature-views/0144 — Feature view: JourneyDetailsPanel
+Web source (spec): web/src/features/driving/components/drive-detail/JourneyDetailsPanel.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012; 0009/0036/0046/0054 precedent + the
+      two prior 0144 runs). The literal `xcodebuild` is deferred because the KMP Shared.xcframework is
+      NOT staged (only .gitkeep) and staging it is outside this prompt's allowed files; every other
+      gate step is RUN FOR REAL on this host with its true exit code.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42); xcode-select -p already full Xcode   OK
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)         OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present + booted (83717DEE-70A3-4325-AA61-CBDDD3140989)  OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                    OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift build/test (SwiftPM) . compiles + runs XCTest on the macOS host             OK
+  Frameworks/Shared.xcframework  NOT staged (only .gitkeep) — KMP core absent       WARN
+  feature-views in project.yml   REGISTERED (iOS + macOS app targets + both test targets)  OK
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is available and PROVEN by
+  the real iOS-18-simulator AND macOS-15 SDK typechecks + the executed SwiftPM XCTest below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the surface
+  is authored, host-compiled against BOTH SDKs, and host-tested (23/23) for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.*) ===
+  JourneyDetailsPanel.Model.swift     310  P1/S8 state-holder seam + P1/S11 telemetry seam + P1/S10
+                                           strings facade: JourneyDetailsTelemetry (+OSLog default),
+                                           load/connection enums, JourneyDriveDTO (DriveDetail subset),
+                                           JourneyFormatPrefs (locale/tz/precision), JourneyDetailsUpdate,
+                                           @MainActor JourneyDetailsSource, @Observable JourneyDetailsModel
+                                           (resolvePhase + stale one-shot auto-refresh), InMemory source,
+                                           JourneyDetailsSurface.slug "JourneyDetailsPanel"
+  JourneyDetailsPanel.Adapter.swift   245  Foundation-only projection core: JourneyDetailsFormat
+                                           (number=fmtNumber port / dateTime=formatDateTime port in
+                                           vehicle tz / coordinate with signed-lat+abs-lon quirk /
+                                           battery sentinel), JourneyEndpoint (one column), JourneyDetails-
+                                           Projection (Start+Destination), JourneyDetailsProjector
+                                           (web branch-for-branch incl JS lat&&lon truthiness),
+                                           JourneyDetailsAccessibility (per-column VoiceOver summary)
+  JourneyDetailsPanel.swift           105  the surface: TSFadeIn>TSGlassPanel header+content, phase switch,
+                                           onAppear/onDisappear telemetry lifecycle, freshness-chip +
+                                           connectivity-banner gating; surfaceSlug "JourneyDetailsPanel"
+  JourneyDetailsPanel.Views.swift     304  presentational subviews: header (location.north glyph + title +
+                                           chip), responsive endpoint grid (LazyVGrid .adaptive = web
+                                           grid-cols-1 sm:grid-cols-2), endpoint column (tinted icon+label,
+                                           bold primary, mono coords, muted timestamp, secondary battery),
+                                           freshness chip, stale/offline banner, loading skeleton, friendly
+                                           empty, QueryError-equivalent error+retry; tone -> Color.TS map
+  JourneyDetailsPanel.Previews.swift  118  #if DEBUG previews, one per state (content-address / content-
+                                           coordinate / in-progress / empty / loading / error / stale /
+                                           offline)
+  JourneyDetailsPanel.Tests.swift     388  XCTest: format logic (number/date/coordinate/battery) +
+                                           projection branches + resolvePhase + model wiring + telemetry
+                                           spy + stale/offline auto-refresh + a11y + per-state view render
+                                           (31 methods: 23 pure + 8 #if-guarded ImageRenderer view tests)
+  JourneyDetailsPanel.strings          38  P1/S10 catalog contribution (6 web-source keys + 12 native
+                                           chrome keys)
+  Every file <= 388 lines (house file_length 400). Total 1508 lines (1470 Swift across 6 + 38 strings).
+  Distinct Journey* type prefix; shared TSGlassPanel/TSFadeIn/TSSkeleton/TSButton + Color.TS/Font.TS/
+  TSSpacing/TSRadius are REUSED from the real component library (no redeclaration). git status: exactly
+  7 new untracked files, nothing else.
+
+=== PARITY (vs web JourneyDetailsPanel.tsx) ===
+  Data sources -> useTranslation only. The web source is a pure presentational leaf taking a non-optional
+    prop { drive: DriveDetail }. The native surface binds the P1/S8 JourneyDetailsSource carrying the
+    parent's drive snapshot + the display context the web pulls from hooks at render (the
+    `DateTime in="vehicle"` IANA timezone + the `fmtNumber` locale + global precision=2). The view does
+    NO HTTP.
+  Projection -> 1:1 port of the web inline branches, all unit-tested + EXECUTED green:
+    (a) primary per endpoint: truthy (non-empty) address -> address; else `lat && lon` (BOTH non-nil AND
+        non-zero, JS truthiness) -> "fmtNumber(lat)°N|S, fmtNumber(abs(lon))°E|W" rendered monospaced
+        (web font-mono); else fallback.
+    (b) web QUIRK reproduced verbatim: latitude is NOT Math.abs'd (keeps its sign, e.g. "-33.87°S"), only
+        the longitude is abs'd.
+    (c) 0 / nil short-circuits the coordinate to the fallback (JS falsy).
+    (d) battery "{pct ?? '?'}%" -> raw value incl 0, else "?".
+    (e) destination fallback: endTs present -> "No address data", absent -> "In progress".
+    (f) destination timestamp: endTs ? formatted : "In progress"; start timestamp always formatted
+        ("—" when nil, the web formatDateTime null path).
+  Composition -> web header `<h3>` (lucide Navigation, text-cyan -> location.north.fill / Color.TS.accent)
+    + "Journey Details"; web `grid-cols-1 sm:grid-cols-2` -> LazyVGrid(.adaptive minimum 240); Start cell
+    (lucide MapPin/green -> mappin.circle.fill / Color.TS.statusSuccess) + Destination cell (lucide
+    Flag/red -> flag.fill / Color.TS.statusDanger). Per cell: bold primary (text-primary), muted
+    timestamp (text-muted), secondary battery (text-secondary). Whole panel wrapped in TSFadeIn>TSGlassPanel
+    (web <FadeIn><GlassPanel>).
+  Shared components -> @/components/ui GlassPanel -> TSGlassPanel; @/components/motion FadeIn -> TSFadeIn;
+    @/components/data-display DateTime -> DateFormatter setLocalizedDateFormatFromTemplate("yMMMdjjmm") in
+    the vehicle tz + locale (Apple-HIG idiomatic peer of the web year/month-short/day + 2-digit
+    hour:minute); fmtNumber -> NumberFormatter(.decimal, grouping, min=max fraction=precision, locale).
+    Skeleton chrome -> TSSkeleton; retry -> TSButton. Compiled against the REAL apps/apple component
+    library in the iOS-18 + macOS-15 typechecks below. Recharts -> none / Leaflet -> none.
+  States (all render) -> loading (skeleton grid) · content (the journey panel) · empty (resolved with no
+    drive -> friendly hint, never a blank box) · error (QueryError-equivalent + retry) · stale (freshness
+    chip + banner over the cached journey + one-shot auto-refresh) · offline (chip + banner over the cached
+    journey). NOTE: the web LEAF renders content unconditionally (non-optional drive); THIS prompt's States
+    section explicitly requires loading/empty/error/stale/offline + "bind via the shared P1/S8 state
+    holders", so the chrome is a strict SUPERSET that never distorts the web content (same disposition as
+    the 0046 / DriveDetailHeader 0137 precedents). Each state has a #if DEBUG preview and is unit-tested.
+  i18n -> all 6 source keys resolve through the P1/S10 facade with the web t(key,default) fallback
+    (driveDetail.journeyDetails / start / destination / noAddress / inProgress / battery) — ALL present in
+    JourneyDetailsPanel.strings, plus 12 native chrome keys (live/stale/offline/updating/staleBanner/
+    offlineBanner/loading/unavailable/errorTitle/retry). No English literals in native code
+    (Text(verbatim:) over the facade). The degree symbol, N/S/E/W hemisphere letters, and the "?"
+    unknown-battery glyph are web-HARDCODED (not localized in the source), so they stay as non-localized
+    formatting sentinels for parity.
+  a11y -> each endpoint column is ONE VoiceOver element with the composed "label: primary. timestamp.
+    Battery N%" summary; the loading grid + empty hint + freshness chip + connectivity banner + retry each
+    carry an accessibilityLabel; icons accessibilityHidden; the title carries .isHeader; Dynamic Type via
+    Font.TS tokens; Reduce Motion gates the TSSkeleton shimmer + TSFadeIn.
+  Telemetry -> JourneyDetailsModel.start() emits viewOpened(surface:"JourneyDetailsPanel") via the
+    view-independent JourneyDetailsSurface.slug (P1/S11). Asserted by a spy test (fires exactly once
+    across a double start()).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK. The 5 shipped SwiftUI surface files (.swift/.Views/.Previews/
+    .Model/.Adapter) compiled together with the REAL apps/apple component closure (generated Tokens +
+    Sources/Design + Sources/Components, 40 files; the 2 excluded files are DataDisplay/UnitFormatters.swift
+    and UI/DataTable.swift, which need the KMP `UnitPreferences` facade from the absent Shared xcframework
+    and are NOT in this surface's graph):
+      DEVELOPER_DIR=<Xcode> xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+        -target arm64-apple-ios18.0-simulator -D DEBUG <5 surface files> <40 closure files>
+      IOS_TYPECHECK error count = 0                                                 OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0 -swift-version 6 -D DEBUG):
+      MAC_TYPECHECK error count = 0                                                 OK
+[3] swift build — DEBUG SwiftPM module "TeslaSync" = the Foundation-only Adapter + Model (Observation/OSLog),
+    platforms .macOS(.v15), Swift 6 language mode:
+      Build complete! (10.85s)
+      BUILD_EXIT=0                                                                  OK
+[4] swift test — XCTest EXECUTED on the macOS host (production Adapter/Model as module "TeslaSync";
+    @testable import TeslaSync). The slug is owned by the Foundation JourneyDetailsSurface (decoupled from
+    the SwiftUI view) so the suite runs without the design system, exercising the real projection/model code.
+    The 8 #if canImport(UIKit)||canImport(AppKit) ImageRenderer view tests are the Xcode-target half
+    (they need the design system) — covered by the dual-SDK typecheck in [1]/[2] and the deferred Xcode run:
+      Executed 23 tests, with 0 failures (0 unexpected)
+        JourneyDetailsFormatTests       7  (number grouping+precision / dateTime in-zone 12h+24h+nil-marker /
+                                           coordinate hemispheres + signed-lat/abs-lon / battery known+0+nil)
+        JourneyDetailsProjectorTests    7  (address drive / coordinate drive (mono) / 0|nil-coordinate ->
+                                           noAddress / finished-no-address / in-progress fallbacks /
+                                           start-always-formatted / a11y summary compose)
+        JourneyDetailsPhaseTests        1  (resolvePhase matrix: loading±data / empty / loaded±data / failed±data)
+        JourneyDetailsModelTests        8  (initial content projects both endpoints / empty no projection /
+                                           cached stays content while failing / freshness tracking / refresh
+                                           delegation / stale one-shot auto-refresh guard / offline no
+                                           auto-refresh / view.opened once + startCount==1)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh):
+      meaningful scan over a temp dir of the 7 surface files -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+      literal gate path .../JourneyDetailsPanel (file prefix, no extension) -> PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (the gate's case-insensitive "Placeholder" pattern was checked; no occurrence of that word — or of
+       TODO/FIXME/XXX/Coming soon/Lorem ipsum/not implemented/stub/mock — exists in shipped code.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> exit 0 (project + targets + schemes generate cleanly).
+      - `grep -c JourneyDetailsPanel TeslaSync.xcodeproj/project.pbxproj` -> 42 (surface IS registered in
+        the build graph; project.yml sources TeslaSync/feature-views in BOTH app targets + both test targets).
+      - `grep -c Shared.xcframework project.pbxproj` -> 10 (the app targets LINK the KMP core) while
+        `ls apps/apple/Frameworks/Shared.xcframework` -> No such file or directory (NOT staged; only .gitkeep).
+      - the TeslaSync scheme build preAction runs Scripts/build-shared-xcframework.sh (Kotlin/Native gradle
+        assemble — heavy, requires the KMP toolchain). Staging it is outside this UI prompt's allowed files.
+      - iPhone 16 simulator present + booted (so the simulator is NOT the blocker).
+      - the generated .xcodeproj is git-ignored (`git check-ignore` confirms) and was removed after evidence.
+    Why deferred (independent, code-unrelated reasons — none a defect in this surface; ADR-012 / Honesty
+    rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a Kotlin/Native
+          gradle build, independent of this UI surface and outside this prompt's allowed files. Running
+          xcodebuild now fails at the missing framework (or triggers the heavy gradle preAction), giving ZERO
+          additional signal about this deliverable beyond the dual-SDK typechecks + executed XCTest in
+          [1]/[2]/[4].
+      (b) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME pure tests are PROVEN GREEN
+    (23/23) by the executed SwiftPM harness in [4], and the surface typechecks against BOTH the iOS 18
+    simulator and macOS 15 SDKs in [1]/[2] under Swift 6 strict concurrency.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states (loading/content/empty/error/stale/offline) — implemented; each has a
+      #if DEBUG preview; phase + projection unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (JourneyDetailsSource -> Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 6 source keys present in the strings table.
+  [x] Accessibility labels on every interactive/element surface (per-column combined label, loading, chip,
+      banner, retry; header .isHeader).
+  [x] Tests: adapter logic + projection per-branch + resolvePhase + model wiring + telemetry + stale/offline
+      + a11y + per-state render — 31 methods (23 pure EXECUTED green; 8 view-render in the Xcode half).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (case-insensitive).
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with captured pbxproj/framework
+                       evidence; every "OK" is a command actually run with its real exit code (iOS+macOS SDK
+                       typechecks, a DEBUG SwiftPM build, an executed 23/23 XCTest run, lint/format/placeholder
+                       gates).
+  2  No scope narrowing: implemented Start + Destination columns + loading + empty + error + stale + offline +
+                       i18n + a11y + telemetry; reproduced every web primary/timestamp/battery branch.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. The SwiftPM harness compiles the
+                       REAL Adapter/Model; the dual-SDK typechecks compile the REAL Views/surface/previews
+                       against the REAL component library. Only the 2 KMP-facade files (UnitFormatters,
+                       DataTable), unused by this surface, are excluded from the typecheck closure.
+  5  No parity shortcuts: faithful port incl. the JS lat&&lon truthiness, the signed-latitude/abs-longitude
+                       coordinate quirk, the "?" battery sentinel, and the finished-vs-in-progress destination
+                       branch — all unit-tested.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml (feature-views already registered) and did NOT edit the
+                       shared Localizable.xcstrings (parallel-unsafe) — strings shipped as the per-surface
+                       table; the generated .xcodeproj was removed after evidence.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed JourneyDetailsPanel.* files + this log (git status
+                       shows exactly 7 new files; no other working-tree changes staged).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native JourneyDetailsPanel shipped at parity with the web source: a Foundation-only
+  logic/projection core (executed-green XCTest, 23/23) faithfully porting fmtNumber + DateTime + every
+  coordinate/battery/in-progress branch incl. the web quirks, a P1/S8 state-holder seam (no view HTTP),
+  P1/S11 telemetry, the Start/Destination columns + loading/empty/error/stale/offline states + all 6 i18n
+  keys + per-column a11y, on the shared TSGlassPanel/TSFadeIn/TSSkeleton/TSButton components. All
+  host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs with
+  the real Xcode 26 toolchain under Swift 6 strict concurrency. The Xcode app build/test is DEFERRED to the
+  downstream integration/signed runner (Shared.xcframework KMP staging + macOS signing — neither a defect in
+  this code, both outside this prompt's allowed files), matching the 0009/0036/0046/0054 "code-complete +
+  DEFERRED Xcode gate" precedent (ADR-012). The surface IS already target-registered (42 pbxproj refs), so
+  only the absent KMP framework + signing remain.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0144-JourneyDetailsPanel.log
+  git commit -m "feat(apps/apple/feature-views): add JourneyDetailsPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

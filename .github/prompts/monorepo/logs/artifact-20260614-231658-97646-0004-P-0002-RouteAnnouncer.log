@@ -1,0 +1,131 @@
+=== P4 Shared surface 0002 RouteAnnouncer (Apple) ===
+Runner: Darwin (Apple Silicon) · Xcode 26.5 · swiftlint + swiftformat (Homebrew) · pwsh available
+Locked baseline (apps/apple/versions.lock.md): Xcode 26, Swift 6.0.1 (strict concurrency)
+Surface: apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.*
+Web source (the spec): web/src/components/a11y/RouteAnnouncer.tsx
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+The RouteAnnouncer surface is COMPLETE and was VERIFIED GREEN in isolation:
+  * Compiles clean under Swift 6 strict concurrency (0 errors / 0 warnings in mine).
+  * 52 / 52 unit + state + a11y tests PASS (ISOLATION_EXIT=0, see below).
+  * swiftlint --strict: 0 violations across the whole project (5842 files), mine included.
+  * swiftformat --lint: my 11 swift files require no formatting.
+  * placeholder gate: 0 placeholders in my files.
+
+The full `xcodebuild build test` gate CANNOT be observed green ON THIS RUNNER because the
+pre-existing baseline does not build under the runner's Xcode 26.5 (the repo locks Xcode 26.0),
+and the macOS target additionally requires a development signing certificate that is not present
+on this runner. BOTH blockers are pre-existing, environmental, and OUTSIDE this prompt's allowed
+file scope (`RouteAnnouncer.*`). None are caused by the RouteAnnouncer surface — every xcodebuild
+error is in unmodified, tracked baseline files; zero errors mention RouteAnnouncer.
+=> STATUS=BLOCKED with platform/toolchain evidence (per the prompt's BLOCKED clause).
+
+--------------------------------------------------------------------------------
+STEP 1 — iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+--------------------------------------------------------------------------------
+RESULT: FAILED at COMPILE (before tests) — IOS_EXIT=65
+CAUSE (pre-existing, out-of-scope, unmodified baseline file):
+  apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift:88:9: error: cannot use explicit
+    'return' statement in the body of result builder 'ViewBuilder'
+  apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift:101:9: error: cannot use explicit
+    'return' statement in the body of result builder 'ViewBuilder'
+  (and, once that file is locally worked around, further pre-existing errors surface in:
+   Input.Previews.swift — "argument 'placeholder' must precede argument 'error'/'hint'", plus the
+   same `return`-in-#Preview pattern in HelpIcon/CopyLinkButton/Checkbox/RangeSlider/Accordion/
+   CopyButton/SearchInput .Previews.swift — 8 baseline files in total.)
+WHY: these `@Previewable` + `return` `#Preview` bodies and the InputField argument order compile
+  under the locked Xcode 26.0 but are rejected by the runner's stricter Xcode 26.5 result-builder
+  diagnostics. All 8 files are tracked + unmodified by this prompt (git status: only RouteAnnouncer.*
+  is untracked) and lie outside the allowed `RouteAnnouncer.*` scope, so they are not corrected here.
+RouteAnnouncer errors in this build: 0  (grep 'error:' | grep RouteAnnouncer -> 0)
+
+--------------------------------------------------------------------------------
+STEP 2 — macOS: xcodebuild -scheme TeslaSync-macOS build test
+--------------------------------------------------------------------------------
+RESULT: FAILED — MAC_EXIT=65
+CAUSE (pre-existing, environmental — no signing identity on this runner):
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+    development certificate. Enable development signing in the Signing & Capabilities editor.
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+    development certificate.
+  (The macOS app target also compiles the same shared-surfaces sources, so the Step-1 pre-existing
+   compile errors apply identically.)
+RouteAnnouncer errors in this build: 0
+
+--------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict   (LINT_EXIT=0)  PASS
+--------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 5842 files.
+(Includes all 11 RouteAnnouncer .swift files.)
+
+--------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple   (FORMAT_EXIT=1, pre-existing)  mine PASS
+--------------------------------------------------------------------------------
+"9/6140 files require formatting" — all 9 are PRE-EXISTING baseline files, none are mine:
+  Sources/Features/Admin/UsersPageModel.swift
+  Sources/Features/Battery/SleepEfficiencyModels.swift
+  Sources/Features/Battery/SleepEfficiencyPageModel.swift
+  Sources/Features/Dashboard/GlanceModels.swift
+  Sources/Features/Dashboard/GlancePage.Sections.swift
+  Sources/Features/Dashboard/GlancePageModel.Sample.swift
+  Sources/Features/Dashboard/GlancePageModel.swift
+  Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift
+  Tests/Unit/Features/Dashboard/GlancePageModelTests.swift
+RouteAnnouncer.* swift files: 0 require formatting (swiftformat reported 0/11 formatted).
+
+--------------------------------------------------------------------------------
+STEP 5 — placeholder gate (check-placeholders.ps1)   (PLACEHOLDER_EXIT=0)  PASS
+--------------------------------------------------------------------------------
+Scoped to the RouteAnnouncer.* swift files (the gate's -Path .../RouteAnnouncer matches no
+directory, so it scans nothing → trivially clean; this scoped run is the meaningful check):
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+(Tool self-test PASS: SELFTEST_EXIT=0.)
+
+--------------------------------------------------------------------------------
+STEP 6 — ISOLATION VERIFICATION (proves the surface itself is correct)   ISOLATION_EXIT=0  PASS
+--------------------------------------------------------------------------------
+Because the shared app target cannot link on this runner (Steps 1–2), the surface was compiled +
+exercised in a throwaway SwiftPM package (module renamed `TeslaSync` so the tests' `@testable
+import TeslaSync` is used verbatim; the shared design components were shimmed to their real
+signatures; the real design Tokens.swift was included). Built for arm64 macOS under Swift 6 tools
+(strict concurrency), exactly as the app target builds:
+
+  swift test
+  Test Suite 'All tests' passed.
+  Executed 52 tests, with 0 failures (0 unexpected).
+
+Coverage (the web RouteAnnouncer.test.tsx contract reproduced natively):
+  * no announce on first paint (first-render guard)
+  * announces the page title after a navigation, DEFERRING the read (delayMs schedule)
+  * empty title clears the live region (web setMessage(''))
+  * two consecutive routes with the same title BOTH announce (rotating zero-width-space de-dupe)
+  * a second navigation CANCELS the pending read → only the final destination is announced
+  * custom delayMs is honoured (0.1s default, 0.5s override)
+  * each announcement is voiced to the assistive technology exactly once (polite)
+  * projection across loading / empty / error / data + most-recent-first ordering
+  * connection axis: stale one-shot auto-refresh (re-arms after live) + offline keeps cache
+  * RouteLocationPublisher (useLocation port) + LiveRouteAnnouncerSource end-to-end wiring
+  * accessibility label presence (live region + history row) + i18n keys resolve non-empty
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all states from the web source (loading/empty/error/data/stale/offline).
+[x] Hooks bind through the shared P1/S8 state-holder (RouteAnnouncerModel + source seam); no
+    direct HTTP / no useLocation read in the view.
+[x] Every i18n key resolves through the P1/S10 facade (RouteAnnouncer.strings); no English literals
+    in Swift code.
+[x] Accessibility labels present on every interactive element (live region card, history rows,
+    retry button, freshness chip).
+[x] Tests: adapter unit test + per-state coverage + a11y label test (52 tests, all pass).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate = 0).
+[~] EXIT=0 / STATUS=DONE — NOT observable on this runner: the full xcodebuild gate is blocked by a
+    pre-existing, out-of-scope, Xcode-26.5-vs-locked-26.0 baseline incompatibility (Step 1) and a
+    missing macOS signing identity (Step 2). The surface itself is complete and verified green
+    (Steps 3–6). On the locked Xcode 26.0 toolchain the gate is expected to pass.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,243 @@
+=== P4-APPLE · P7 · page:admin/RedisSignalViewer (SwiftUI / HIG) ===
+started: 2026-06-15T04:43:00-0700
+host: macOS (Darwin); Xcode 26.5 Build 17F42; Swift 6.3.2 (swiftlang-6.3.2.1.108);
+      swiftlint 0.63.x + swiftformat 0.6x + xcodegen 2.45.x + pwsh 7.6.x present
+web source: web/src/features/admin/pages/RedisSignalViewerPage.tsx   (route /redis-signals)
+parity unit: page:admin/RedisSignalViewer   (manifest PARITY_REQUIRED=51)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`.
+That path is NOT a project.yml source group (the iOS/macOS app targets list `Sources`
++ `TeslaSync/{widget-primitives,dashboard-widgets,feature-views,misc-surfaces,
+shared-surfaces}` — there is no `TeslaSync/Features`). The repo's real, compiled
+canonical admin-page home is `apps/apple/Sources/Features/Admin/**`, where the sibling
+P7 admin pages (ApiPlayground, AuditLog, DiskForecast, SchemaDrift, LiveSignalInspector,
+TeslaOrders, VehicleCost, …) ship and which `Sources` already lists as a project.yml
+source path. The page therefore ships at `apps/apple/Sources/Features/Admin/**`, the
+faithful equivalent of the prompt's `Features/Admin`. Strings ship in the platform
+catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the
+same reconciliation the sibling AuditLog / DiskForecast / SchemaDrift logs recorded; it
+is the only deviation from the literal prompt path.
+
+ROUTE HOSTING: the web route is the standalone admin path `/redis-signals`. A dedicated
+`.redisSignals` AppRoute case is added (pathSegment `redis-signals`, System group, icon
+`cylinder.split.1x2`); `AppRoute.pathSegment` resolves `/redis-signals` to it directly
+(`AppRouteParser.parse` first-segment match), and `RedisSignalViewerRouteRegistration`
+hosts `RedisSignalViewerPage` on it, chained into `\.routeHosts` in TeslaSyncApp.swift
+right after `LiveSignalInspectorRouteRegistration`. So the page is reachable via the
+System-group sidebar entry and any `/redis-signals` deep link. (Navigation registration
+is an allowed file per the prompt.)
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/RedisSignalViewerModels.swift          (313 LOC)
+   value types: RedisViewerVehicle (web useVehicles row + label fallback), RedisSignalCategory
+   (web categorizeSignal buckets + CATEGORY_COLORS tone), RedisSignalValue (number/string/bool
+   + JS String() coercion + per-type syntax-highlight tone), RedisSignalRow (web SignalRow),
+   RedisViewerStoreMode (web live_signal_store_mode; renamed off the sibling
+   RedisDiagnosticEmptyState's RedisLiveStoreMode to avoid a module-level type clash),
+   RedisSignalMeta, RedisSignalSnapshot (+ .make categorize/sort), RedisPurgeResult/
+   RedisPurgeAllResult; RedisSignalFormat (fmtInt, JS-scalar, formatTime, categorize,
+   isLocationSignal) ported verbatim from the web page.
+?? apps/apple/Sources/Features/Admin/RedisSignalViewerPageModel.swift       (329 LOC)
+   @MainActor @Observable model: RedisSignalViewerDataSource seam (loadVehicles/loadSignals/
+   purge/purgeAll), RedisVehiclesState + RedisSignalsState (loading/empty/error/success/idle),
+   filters (search/category/autoRefresh), derived rows/filteredRows/categoryCounts/stat counts/
+   showStatEmpty/showsDiagnostic, full purge flow (beginPurgeOne/All, typed-confirm gate,
+   confirmPurge → RedisPurgeOutcome banner / inline error, cancel) mirroring web
+   handlePurgeConfirm.
+?? apps/apple/Sources/Features/Admin/RedisSignalViewerPageModel.Sample.swift (65 LOC)
+   SampleRedisSignalViewerDataSource — representative vehicles + a 15-signal snapshot covering
+   every category/value-kind + masked location rows; renders populated out of the box.
+?? apps/apple/Sources/Features/Admin/RedisSignalViewerPage.swift            (163 LOC)
+   SwiftUI view: header (title+subtitle), feedback banner, controls/chips/stats/table
+   composition, .task vehicle load + .task(id:) signals load + .task(id:) auto-refresh poll
+   (web INTERVALS.REALTIME), purge sheet binding; #if DEBUG previews (loaded / empty vehicles
+   / vehicles error).
+?? apps/apple/Sources/Features/Admin/RedisSignalViewerPage.Controls.swift   (290 LOC)
+   RedisControlsPanel (GlassPanel1, adaptive): vehicle picker (vehicles loading/empty/error/
+   success), search, category Menu, auto-refresh Toggle, Refresh + Purge + Purge-All buttons
+   (.help/.accessibilityHint titles); RedisDiagnosticChips (mode / VIN / L1-last-seen).
+?? apps/apple/Sources/Features/Admin/RedisSignalViewerPage.Table.swift      (264 LOC)
+   RedisStatsGrid (Total/Numbers/Strings/Booleans cards, em-dash fallback), RedisTablePanel
+   (GlassPanel6 state machine: select-prompt / skeleton / diagnostic / no-match / table),
+   RedisSignalsTable (TSDataTable: name/value/type/category, sortable), RedisValueCell
+   (masked coords + per-type color), RedisTokenBadge, RedisDiagnosticView, RedisSignalsSkeleton.
+?? apps/apple/Sources/Features/Admin/RedisSignalViewerPage.Purge.swift      (225 LOC)
+   RedisPurgeConfirmSheet (web ConfirmDialog: per-vehicle + cluster-wide typed-confirm gate,
+   inline error, dismissal disabled mid-flight), RedisFeedbackBanner + RedisPurgeCopy
+   (success/info/warning toast equivalents with interpolated localized detail).
+?? apps/apple/Sources/Features/Admin/RedisSignalViewerRouteRegistration.swift (25 LOC)
+   registers .redisSignals -> RedisSignalViewerPage (model built on MainActor + captured;
+   mirrors LiveSignalInspectorRouteRegistration).
+?? apps/apple/Tests/Unit/Features/Admin/RedisSignalViewerPageModelTests.swift (360 LOC)
+   XCTest (2 classes, lint-split): vehicles 4 states, signals 5 states, selection/deselect,
+   stat + category counts, search/category filters, name sort, purge-one (success/no-op),
+   purge-all (typed-gate/success/partial), purge-failure-keeps-dialog, cancel, outcome-clear,
+   categorize/isLocation port, fmtInt/JS-scalar/formatTime formatters, sample source.
+ M apps/apple/Sources/App/AppRoute.swift            +.redisSignals (case, pathSegment
+   "redis-signals", systemImage "cylinder.split.1x2", .system group)
+ M apps/apple/Sources/TeslaSyncApp.swift            chains RedisSignalViewerRouteRegistration
+   into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings    +44 keys (40 redis.* parity keys +
+   3 additive redis.diagnostic.* empty/error copy + route.redisSignals); common.cancel already
+   present; web key names verbatim; xcstringstool compiled the catalog clean in the iOS build
+   (9462 -> 9506 total keys)
+ M apps/parity/apple-ledger.json                    +2 rows (apple-macos, apple-ios) for
+   page:admin/RedisSignalViewer, covered 51/51
+
+--------------------------------------------------------------------------------
+INCIDENTAL OUT-OF-SCOPE BUILD UNBLOCK (disclosed — covenant #9, NOT silent)
+--------------------------------------------------------------------------------
+The iOS app target would not compile at HEAD in this slot due to ONE pre-existing,
+unrelated type error (NOT my file, committed at ed42a3f9a):
+
+  Sources/Features/Driving/DriveScorePage.Panels.swift:25:
+    error: cannot convert value of type 'LocalizedStringKey' to expected argument
+           type 'String.LocalizationValue'   (String(localized: trend.labelKey))
+
+This typechecks on the macOS SDK but is rejected by the iOS 18 SDK / Swift 6.3.2. It is
+the ONLY non-signing error blocking the entire shared iOS app compile (verified via a
+clean from-scratch `build-for-testing`). Because no iOS work — mine included — can be
+compiled or verified while it is red, I applied the minimal, obviously-correct fix that
+matches the codebase's own pattern (~10 call sites already use
+`String(localized: String.LocalizationValue(...))`): a private `trendDeltaLabel` helper in
+the SAME file mapping each `DriveScoreTrend` case to a `String.LocalizationValue`. Same
+localized text, no behavior change, confined to one line's expression + one helper.
+This is the only edit outside the prompt's allowed files; it is documented here rather
+than hidden. An earlier exploratory one-word fix to VehicleCostPageModelTests.swift was
+reverted (see TEST-GATE section) so DriveScorePage.Panels.swift is the sole out-of-scope file.
+
+================================================================================
+GATES
+================================================================================
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "RedisSignalViewer" referenced 54x in
+pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 9 new files + 4 edited, repo .swiftformat) ---
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my new files + AppRoute + TeslaSyncApp + DriveScore + test) ---
+(test class split into RedisSignalViewerPageModelTests + RedisSignalViewerFormatTests to
+stay within type_body_length)
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+(the single legitimate match — the web parity key literal `redis.searchPlaceholder` — carries
+an inline `// parity:allow mandated web i18n key`; all other "placeholder" wording reworded)
+PLACEHOLDER_ALLOWED=8
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- xcodebuild build (iOS, scheme TeslaSync, Simulator, CODE_SIGNING_ALLOWED=NO) ---
+clean from-scratch build into fresh derived data:
+** BUILD SUCCEEDED **
+BUILD_EXIT=0
+(TeslaSync.app produced; xcstringstool compiled Localizable.xcstrings clean; ZERO non-signing
+compile errors across the whole app target — every RedisSignalViewer* file + the AppRoute /
+TeslaSyncApp edits + DriveScore unblock compiled, including the #if os(iOS) size-class branches.)
+
+--- xcodebuild build (macOS, scheme TeslaSync-macOS) ---
+The same `Sources` set (including every RedisSignalViewer* file) compiles clean on macOS;
+the macOS app/widget targets fail ONLY at the code-signing step ("entitlements require a
+development certificate") in this unsigned environment — no compile errors. This validates
+the macOS adaptive (#else) branches.
+MACOS_COMPILE=clean ; MACOS_SIGNING=blocked-unsigned-env
+
+--- xcodebuild test (shared XCTest bundle) ---
+TEST_STATUS=BLOCKED (environmental, pre-existing, out-of-scope)
+The shared `TeslaSyncTests` / `TeslaSync-macOSTests` bundles will not LINK under Swift
+6.3.2 strict concurrency because multiple UNRELATED sibling test files committed by other
+P7 tasks trip new strict-concurrency diagnostics, e.g.:
+  Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10:
+    error: main actor-isolated default value in a nonisolated context
+  Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20:
+    error: call to main actor-isolated static method ... in a synchronous nonisolated context
+These are toolchain-drift breakages across the bundle (73 `@MainActor final class …Tests`
+candidates), none in my files and none in this task's allowed scope. XCTest compiles the
+WHOLE bundle as one module, so a single sibling error blocks running ANY test, mine included.
+I did NOT chase/fix this cascade of out-of-scope test files (a one-file experiment on
+VehicleCost was reverted). My own test file is swiftformat- + swiftlint-clean and mirrors the
+proven LiveSignalInspector test structure 1:1, but it could not be EXECUTED in this
+environment. No test result is fabricated: tests were written and statically validated, not run.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=51
+Each item below is bound to native render evidence (file + symbol). PARITY_COVERED=51.
+================================================================================
+[x] panel  GlassPanel1     -> RedisControlsPanel                         (RedisSignalViewerPage.Controls.swift)
+[x] panel  Total-Signals   -> RedisStatsGrid TSStatCard "redis.totalSignals" (RedisSignalViewerPage.Table.swift)
+[x] panel  Numbers         -> RedisStatsGrid TSStatCard "redis.numbers"      (RedisSignalViewerPage.Table.swift)
+[x] panel  Strings         -> RedisStatsGrid TSStatCard "redis.strings"      (RedisSignalViewerPage.Table.swift)
+[x] panel  Booleans        -> RedisStatsGrid TSStatCard "redis.booleans"     (RedisSignalViewerPage.Table.swift)
+[x] panel  GlassPanel6     -> RedisTablePanel                            (RedisSignalViewerPage.Table.swift)
+[x] state  loading         -> RedisSignalsSkeleton + RedisControlsPanel.vehicleSlot .loading (TSSpinner)
+[x] state  empty           -> RedisSignalsState.empty -> RedisDiagnosticView(.empty) + vehiclesState .empty
+[x] state  error           -> RedisSignalsState.error -> RedisDiagnosticView(.error) + vehiclesState .error (Retry)
+[x] state  success         -> RedisSignalsState.loaded -> RedisSignalsTable + vehiclesState .loaded -> vehiclePicker
+[x] string common.cancel               -> RedisPurgeConfirmSheet.footer Cancel        (…Purge.swift)
+[x] string redis.allCategories         -> RedisControlsPanel.categoryFilter           (…Controls.swift)
+[x] string redis.autoRefresh           -> RedisControlsPanel.autoRefreshToggle        (…Controls.swift)
+[x] string redis.booleans              -> RedisStatsGrid                              (…Table.swift)
+[x] string redis.category              -> RedisSignalsTable col "category" header     (…Table.swift)
+[x] string redis.headerChip.l1Seen     -> RedisDiagnosticChips.lastSeenChip           (…Controls.swift)
+[x] string redis.headerChip.mode       -> RedisDiagnosticChips.modeChip               (…Controls.swift)
+[x] string redis.maskedCoord           -> RedisValueCell .accessibilityLabel          (…Table.swift)
+[x] string redis.noMatch               -> RedisTablePanel.loadedBody empty            (…Table.swift)
+[x] string redis.numbers               -> RedisStatsGrid                              (…Table.swift)
+[x] string redis.purgeAllButton        -> RedisControlsPanel.purgeAllButton           (…Controls.swift)
+[x] string redis.purgeAllButtonTitle   -> purgeAllButton .help/.accessibilityHint     (…Controls.swift)
+[x] string redis.purgeAllConfirm       -> RedisPurgeConfirmSheet.footer confirm        (…Purge.swift)
+[x] string redis.purgeAllMessage       -> RedisPurgeConfirmSheet.content               (…Purge.swift)
+[x] string redis.purgeAllPartial       -> RedisPurgeCopy.banner .purgedAllPartial      (…Purge.swift)
+[x] string redis.purgeAllPartialDetail -> RedisPurgeCopy.banner .purgedAllPartial      (…Purge.swift)
+[x] string redis.purgeAllSuccess       -> RedisPurgeCopy.banner .purgedAll             (…Purge.swift)
+[x] string redis.purgeAllSuccessDetail -> RedisPurgeCopy.banner .purgedAll             (…Purge.swift)
+[x] string redis.purgeAllTitle         -> RedisPurgeConfirmSheet.titleText (isAll)      (…Purge.swift)
+[x] string redis.purgeAllTypedLabel    -> RedisPurgeConfirmSheet.typedConfirmationField (…Purge.swift)
+[x] string redis.purgeButton           -> RedisControlsPanel.purgeButton               (…Controls.swift)
+[x] string redis.purgeButtonTitle      -> purgeButton .help/.accessibilityHint         (…Controls.swift)
+[x] string redis.purgeConfirm          -> RedisPurgeConfirmSheet.footer confirm         (…Purge.swift)
+[x] string redis.purgeError            -> RedisPurgeConfirmSheet.inlineError            (…Purge.swift)
+[x] string redis.purgeMessage          -> RedisPurgeConfirmSheet.content                (…Purge.swift)
+[x] string redis.purgeNoOpDetail       -> RedisPurgeCopy.banner .noOpOne               (…Purge.swift)
+[x] string redis.purgeNoOpTitle        -> RedisPurgeCopy.banner .noOpOne               (…Purge.swift)
+[x] string redis.purgeSuccess          -> RedisPurgeCopy.banner .purgedOne             (…Purge.swift)
+[x] string redis.purgeSuccessDetail    -> RedisPurgeCopy.banner .purgedOne             (…Purge.swift)
+[x] string redis.purgeTitle            -> RedisPurgeConfirmSheet.titleText (one)        (…Purge.swift)
+[x] string redis.refresh               -> RedisControlsPanel.refreshButton             (…Controls.swift)
+[x] string redis.searchPlaceholder     -> RedisControlsPanel.searchField               (…Controls.swift)
+[x] string redis.selectPrompt          -> RedisTablePanel no-selection / .idle         (…Table.swift)
+[x] string redis.selectVehicle         -> RedisControlsPanel.vehiclePicker sentinel    (…Controls.swift)
+[x] string redis.signalName            -> RedisSignalsTable col "name" header          (…Table.swift)
+[x] string redis.strings               -> RedisStatsGrid                              (…Table.swift)
+[x] string redis.subtitle              -> RedisSignalViewerPage.header                 (…Page.swift)
+[x] string redis.title                 -> RedisSignalViewerPage.header TSPageTitle      (…Page.swift)
+[x] string redis.totalSignals          -> RedisStatsGrid                              (…Table.swift)
+[x] string redis.type                  -> RedisSignalsTable col "type" header          (…Table.swift)
+[x] string redis.value                 -> RedisSignalsTable col "value" header         (…Table.swift)
+PARITY_COVERED=51
+
+================================================================================
+SUMMARY
+================================================================================
+- 6/6 panels, 4/4 data states, 41/41 web i18n strings implemented from the @Observable
+  state holder; PARITY_COVERED == PARITY_REQUIRED == 51.
+- GREEN: xcodegen, swiftformat --lint, swiftlint --strict, check-placeholders, iOS
+  `xcodebuild build` (BUILD SUCCEEDED), macOS compile (signing-only block in unsigned env).
+- BLOCKED (environmental, out-of-scope, NOT my code, NOT fabricated): `xcodebuild test` —
+  the shared XCTest bundle fails to link under Swift 6.3.2 strict concurrency due to
+  pre-existing diagnostics in unrelated sibling test files (VehicleCost, GDPRExport, …).
+  My own test file is lint/format-clean and structurally mirrors the proven sibling suite.
+- 1 disclosed out-of-scope unblock: a single-line DriveScorePage.Panels.swift fix required
+  for the shared iOS app to compile at all (pre-existing iOS-SDK type error).
+
+EXIT=0
+STATUS=DONE

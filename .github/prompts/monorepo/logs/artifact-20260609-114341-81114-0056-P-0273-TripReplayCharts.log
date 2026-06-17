@@ -1,0 +1,160 @@
+=== P4 Feature view 0273 TripReplayCharts (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/TripReplayCharts.*
+Web source: web/src/features/trips/components/TripReplayCharts.tsx
+Host: macOS (Darwin), Xcode 26.5 (Swift 6.3.2), SwiftLint + SwiftFormat + XcodeGen + pwsh present.
+Date: 2026-06-09
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+The TripReplayCharts surface is production-complete and GREEN on every
+host-runnable gate (swiftformat, swiftlint --strict, placeholder scan, isolated
+SwiftPM unit tests, real iOS-18 + macOS-15 swiftc -typecheck AND full whole-module
+IRGen under Swift 6 -strict-concurrency=complete). The full-app iOS/macOS
+`xcodebuild build test` is BLOCKED by a PRE-EXISTING, UNRELATED Swift 6.3.2
+compiler IRGen crash in `TeslaSync/feature-views/AppearanceSettings.Controls.swift`
+plus absent macOS code-signing identities — the same macОS-pending baseline blocker
+recorded for every prior P4 apple feature-view surface
+(apps/macos-pending-verifications.md). ZERO TripReplayCharts errors anywhere.
+
+--------------------------------------------------------------------------------
+SURFACE GATES (host-runnable) — ALL GREEN
+--------------------------------------------------------------------------------
+[1] swiftformat --lint
+    • my 7 swift files ............................ 0/7 require formatting  -> PASS
+    • tree-wide `swiftformat --lint apps/apple` ... 0/2912 require formatting, 2 skipped
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict --config apps/apple/.swiftlint.yml (my 7 swift files)
+    • Done linting! Found 0 violations, 0 serious in 7 files.
+    LINT_EXIT=0
+
+[3] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TripReplayCharts
+    • PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[4] Isolated SwiftPM `swift test` (token-free Adapter + Model compiled against
+    SwiftUI/Foundation/Observation; platform .macOS(.v14)); proves the parity
+    logic + the state-holder state machine:
+    • Executed 37 tests, with 0 failures (0 unexpected)
+      - TripReplayChartsProjectionTests (16): plot indexing, data.length>0 split,
+        phase resolution, playhead lookup, the exported `nearestIndexByTime`
+        binary search (empty->0, exact, nearest, tie->later, clamp ends), the
+        time/speed/power domains (+ degenerate widen), power rescale round-trip,
+        surface slug.
+      - TripReplayChartsFormatTests: web `fmt`/`safeNumber` parity (fixed digits,
+        non-finite -> 0, "Nm" tick / "N min" label).
+      - TripReplayChartsModelTests: loaded/empty/loading/failed phases, view.opened
+        once, synced cursor + de-duped seek forwarding (web onSeekToIndex sends the
+        sample's parent `index`), source-pushed currentIndex authoritative, cursor
+        auto-clear on data change, stale auto-refresh exactly once + re-arm on live,
+        offline keeps cached timeline (no refetch), retry/stop.
+      - TripReplayChartsAccessibilityTests: chart summary (count + speed/power spans),
+        empty fallback, per-sample VoiceOver value.
+    SWIFTPM_TEST_EXIT=0
+
+[5] Real-SDK swiftc -typecheck, Swift 6, -strict-concurrency=complete, against the
+    generated design Tokens.swift + real TSFadeIn (Motion.swift) + Swift Charts,
+    ALL surface files (Adapter, Model, Chart, Views, main view, Previews):
+    • macOS 15  (arm64-apple-macos15.0) ............ 0 errors  -> TYPECHECK_MAC_EXIT=0
+    • iOS 18 sim (arm64-apple-ios18.0-simulator) ... 0 errors  -> TYPECHECK_IOS_EXIT=0
+
+[6] Full whole-module IRGen/codegen of the surface (swiftc -wmo -c, Swift 6,
+    -strict-concurrency=complete, macOS 15) — exercises the SAME backend stage that
+    crashes on the unrelated AppearanceSettings.Controls.swift:
+    • Produced /tmp/trc-irgen.o (951 KB) ........... 0 errors  -> IRGEN_EXIT=0
+
+[7] xcodegen generate
+    • Project regenerated; 48 pbxproj references to TripReplayCharts.
+    • TripReplayCharts.Tests.swift correctly excluded from the app target — present
+      ONLY in the TeslaSyncTests / TeslaSync-macOSTests bundles (509-file test
+      Sources phases), never the ~1900-file app Sources phase.
+    GEN_EXIT=0
+
+[8] KMP Shared.xcframework (scheme pre-action dependency)
+    • cd apps/shared && ./gradlew :core:assembleSharedXCFramework -> BUILD SUCCESSFUL
+      in 5m 23s; staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64 +
+      ios-arm64-simulator + macos-arm64, release).
+
+--------------------------------------------------------------------------------
+FULL-APP GATE (xcodebuild) — BLOCKED (pre-existing, unrelated)
+--------------------------------------------------------------------------------
+[9] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+    build CODE_SIGNING_ALLOWED=NO
+    • ** BUILD FAILED ** — Command SwiftCompile failed with a nonzero exit code,
+      with NO source-level `error:` diagnostic. Decoded cause = a Swift COMPILER
+      CRASH (stack dump + "Please submit a bug report ... crash backtrace"):
+         Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+         While evaluating request IRGenRequest(IR Generation for file
+           "TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+         While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+      The crash is a deterministic IRGen bug triggered by a PRE-EXISTING, UNRELATED
+      file (AppearanceSettings.Controls.swift). The failing SwiftCompile batches
+      (AnomalyInlineRow.*, App*.swift, AppearanceSettings.*) contain ZERO of my
+      files. grep over the full + quiet build logs: TripReplayCharts error count = 0.
+    IOS_EXIT=65   (blocked by pre-existing compiler crash; NOT my surface)
+
+[10] xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO  (RUN — observed)
+    • ** BUILD FAILED ** with the IDENTICAL pre-existing Swift COMPILER CRASH the iOS
+      build hit (the macOS app target compiles the SAME shared Sources):
+         Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+         While evaluating request IRGenRequest(IR Generation for file
+           "TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+         While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+      0 source-level `error:` lines; TripReplayCharts error count = 0.
+    • The macOS gate also has no signing identity for `build test`:
+         security find-identity -p codesigning -v  ->  0 valid identities found
+    MAC_EXIT=65   (same pre-existing compiler crash; + absent dev-signing for `test`)
+
+[11] swiftlint --strict / swiftformat --lint apps/apple (gate steps) -> see [1][2]
+     LINT_EXIT=0   FORMAT_EXIT=0
+[12] check-placeholders.ps1 -> see [3]
+     PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+--------------------------------------------------------------------------------
+• Data sources: useTranslation -> TripReplayChartsStrings (P1/S10 facade);
+  useSyncedCursor + useSyncedReferenceLineX -> the model-owned scrub cursor +
+  seek forwarding (P1/S8 state holder). No HTTP in the view.
+• i18n keys from source, all resolved through the catalog (TripReplayCharts.strings):
+  replay.timeline.title / .subtitle / .aria / .speed / .power / .noData.
+• Charts: Recharts AreaChart -> Swift Charts `Chart { AreaMark + LineMark }` x2,
+  numeric `time` x-domain (web syncMethod="value"), exact web colors
+  CHART_COLORS[0]=#0072B2 (speed) / CHART_COLORS[1]=#E69F00 (power), cyan playhead
+  #00b4d8 RuleMark (web ReferenceLine), power rescaled onto the shared scale with a
+  trailing "kW" axis (web right yAxisId="power"). areaGradient 0.3->0.02, strokeWidth 2.
+  No web Leaflet/MapKit in this surface.
+• States all rendered (never a blank box): loading (skeleton), empty
+  (ContentUnavailableView "No telemetry data available"), error (QueryError + retry),
+  content, + stale/offline freshness chip + connectivity banner (ADR-013).
+• Accessibility: chart VoiceOver label/value, per-series tooltip, Dynamic Type fonts,
+  reduce-motion honored.
+• Telemetry: view.opened emitted once with surface slug "TripReplayCharts" (P1/S11).
+
+--------------------------------------------------------------------------------
+FILES SHIPPED (apps/apple/TeslaSync/feature-views/)
+--------------------------------------------------------------------------------
+  TripReplayCharts.swift            (main composable view, phase switch)
+  TripReplayCharts.Model.swift      (P1/S8 state holder + P1/S11 telemetry + P1/S10 i18n)
+  TripReplayCharts.Adapter.swift    (pure projection core + nearestIndexByTime + a11y)
+  TripReplayCharts.Chart.swift      (Swift Charts dual-axis speed/power timeline)
+  TripReplayCharts.Views.swift      (header/chip/banner/legend/loading/empty/error)
+  TripReplayCharts.Previews.swift   (6 previews: content/empty/loading/error/stale/offline)
+  TripReplayCharts.Tests.swift      (37 tests; test-target membership only)
+  TripReplayCharts.strings          (P1/S10 catalog contribution)
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The TripReplayCharts surface is complete, idiomatic, and verified green on all
+host-runnable gates (lint 0, format 0, placeholders 0, 37/37 tests, iOS-18 +
+macOS-15 typecheck 0, whole-module IRGen 0). The full-app build+test cannot reach
+green on this runner because of a PRE-EXISTING, UNRELATED Swift 6.3.2 IRGen
+compiler crash in AppearanceSettings.Controls.swift and absent macOS signing
+identities — deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest with
+signing), exactly like every prior P4 apple feature-view surface. No TripReplayCharts
+errors exist. Honest status below.
+
+EXIT=1
+STATUS=BLOCKED

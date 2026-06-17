@@ -1,0 +1,226 @@
+================================================================================
+p4-apple · P7 · page:charging/CostAnalysis — SwiftUI / HIG parity
+Log: .github/prompts/monorepo/logs/apple-page-charging-CostAnalysisPage.log
+Run: 2026-06-16  (Xcode 26.5 / iPhoneSimulator 26.5 SDK, swiftlint, xcodegen, pwsh, JDK 17)
+Parity unit: page:charging/CostAnalysis   Web route: /charging/costs (alias /cost-analysis)
+Web source: web/src/features/charging/pages/CostAnalysisPage.tsx
+================================================================================
+
+HONESTY COVENANT (binding — acknowledged verbatim)
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+PATH RESOLUTION NOTE (no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt's "Output" path `apps/apple/TeslaSync/Features/Charging/**` is NOT a
+compiled source root in this repository. project.yml compiles `apps/apple/Sources/**` (plus
+the TeslaSync/{feature-views,dashboard-widgets,misc-surfaces,shared-surfaces,widget-primitives}
+parity-artifact roots), and every sibling P7 page — Powershare, TrueCost, SleepEfficiency,
+BatteryDegradation, FleetCompare — lives under `apps/apple/Sources/Features/<Domain>/**`.
+The page was implemented there so it actually compiles into the iOS + macOS app targets
+(verified: all 12 CostAnalysis*.swift appear as SwiftCompile units in BOTH the macOS and iOS
+builds). `apps/apple/TeslaSync/Features/Charging/` would have produced dead, uncompiled code.
+Faithful interpretation of the artifact's intent ("the Charging feature directory"), not scope
+narrowing.
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION (SwiftUI + @Observable + KMP facade; adaptive macOS + iOS)
+--------------------------------------------------------------------------------
+New (apps/apple/Sources/Features/Charging/):
+  CostAnalysisModels.swift              value types (session/coreStats/monthly/charger/hour/ToU/
+                                        gas/lifetime/forecast) + constants + CostChargerCategory + phase
+  CostAnalysisDerivations.swift         pure economics pipeline (web `useCostAnalysisData`) — coreStats,
+                                        monthlyBuckets, costPerKwhTrend, chargerTypeData, hourlyData,
+                                        touInsights, gasComparison, lifetimeMetrics
+  CostAnalysisFormat.swift              display-boundary formatters (currency/number/percent/kWh/distance)
+  CostAnalysisPageModel.swift           @Observable model + CostAnalysisDataSource seam + phase + live
+                                        calculator inputs + load/refresh/select + recompute()
+  CostAnalysisPageModel.Sample.swift    Sample/Empty/NoForecast/Failing data-source doubles (24-session fixture)
+  CostAnalysisPage.swift                View: header (title+subtitle+VehicleSelect) + phase switch +
+                                        body composition + AI-narration slot + previews
+  CostAnalysisPage.Sections.swift       CostSummaryCards (6 tiles) + SavingsCalculator (+ compare tiles)
+  CostAnalysisPage.Panels.swift         MonthlyCostTable (sortable) + LifetimeSummary + EnvironmentalImpact
+                                        + page EmptyState + LoadingSkeleton (redaction)
+  CostAnalysisPage.Charts.swift         MonthlyCost area + CostPerKwh line + ChargerType pie+bars
+  CostAnalysisPage.TimeOfUse.swift      time-of-use hourly bars (peak/mid/off-peak) + insight tiles
+  CostAnalysisPage.Forecast.swift       cost-forecast chart + ForecastDetails (breakdown/savings/insights)
+                                        + cost-per-kWh trend
+  CostAnalysisRouteRegistration.swift   registers .costAnalysis
+New (apps/apple/Tests/Unit/Features/Charging/):
+  CostAnalysisPageModelTests.swift      20 XCTest cases (states/selection/calculator/derivations/format/route)
+Edited:
+  Sources/App/AppRoute.swift            +case costAnalysis (segment "cost-analysis", group .insights,
+                                        icon chart.pie.fill)
+  Sources/App/AppRouteParser.swift      +aliases "/charging/costs"→.costAnalysis, "/cost-analysis"→.costAnalysis
+  Sources/TeslaSyncApp.swift            +CostAnalysisRouteRegistration.registry(base:)
+  Localization/Localizable.xcstrings    +105 keys (all costAnalysis.* + route.costAnalysis); additions only
+  apps/parity/apple-ledger.json         +2 rows (apple-macos + apple-ios, covered==required==7)
+
+NO SCOPE NARROWING: the manifest record extracted 0 named panels/charts for this unit, but the web
+source has many regions. Every one was reproduced natively (not stubbed): the 6 summary stat cards,
+the monthly-cost area chart, the cost-per-kWh line chart, the charger-type pie + breakdown bars, the
+gas-vs-EV savings calculator (3 editable inputs + 4 comparison tiles + reset), the sortable monthly
+cost table, the time-of-use hourly bar chart + 4 insight tiles, the opt-in AI-narration slot (web
+`AICostForecastNarration` position; baseline injects EmptyView, mirroring TrueCost), the server
+cost-forecast section (forecast composed chart + breakdown donut + savings panel + insights list +
+cost-per-kWh trend), the lifetime summary (7 tiles) and the environmental-impact panel. Each region
+renders its own loading/empty/success state — never a blank panel.
+
+Data sources (web parity; web hook names kept at the Swift call sites per the manifest):
+  useChargingSessionsPaginated -> CostAnalysisDataSource.loadChargingSessionsPaginated(vehicleID:)
+                                  (GET /charging?vehicle_id&limit=5000&start&end)
+  useCostForecast              -> CostAnalysisDataSource.loadCostForecast(vehicleID:)
+                                  (GET /analytics/cost-forecast?vehicle_id&months)
+  (The forecast TYPE was namespaced CostForecast->CostAnalysisForecast to avoid a symbol clash with
+   the existing TeslaSync/feature-views/CostForecastSection + ForecastDetails parity artifacts; the
+   loadCostForecast method + useCostForecast hook reference keep the web name.)
+
+SI discipline (ADR-005, SI-cutover instructions): sessions carry the Phase-42 SI columns verbatim —
+energy in watt-hours, power in watts, odometer in meters — and money is a currency amount. Energy
+economics use kWh = Wh/1000 (the exact unit the web `convertEnergyFromSI(wh,'kWh')` applies) and the
+gallon/MPG math is intrinsically in miles, so neither depends on the display preference. The distance
+the user SEES (cost-per-distance card + the calculator per-distance chips) converts to their unit only
+at the SwiftUI render boundary via the shared KMP `Units` facade (`CostAnalysisFormat`); nothing
+non-SI is stored or computed in the model.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=7
+--------------------------------------------------------------------------------
+PANELS (0/0 named in manifest)  — every web region reproduced natively anyway (see above).
+CHARTS (0/0 named in manifest)  — MonthlyCost/CostPerKwh/ChargerType/ToU/Forecast all built on the P3
+                                  Swift Charts wrappers (TSAreaChart/TSLineChart/TSBarChart/TSPieChart),
+                                  never a WKWebView.
+MAPS   (0/0)  — none in the web source.
+
+STATES (3/3)
+[x] state loading  CostAnalysisPhase.loading (CostAnalysisModels.swift) — CostAnalysisPageModel.phase
+                   initial==.loading (CostAnalysisPageModel.swift); CostAnalysisPage.content switch →
+                   CostAnalysisSkeleton (CostAnalysisPage.Panels.swift, .redacted(.placeholder)).
+                   Test: testInitialPhaseIsLoading.
+[x] state empty    CostAnalysisPhase.empty — CostAnalysisPageModel.loadSelectedVehicle sets .empty when
+                   loaded sessions are empty (or no vehicle); CostAnalysisPage.content → CostAnalysisEmptyState
+                   (CostAnalysisPage.Panels.swift) → TSEmptyState(title/message). Tests:
+                   testNoSessionsResolvesToEmpty, testNoVehiclesResolvesToEmpty, testSelectVehicleReloadsSessions.
+[x] state success  CostAnalysisPhase.ready — CostAnalysisPage.readyView (CostAnalysisPage.swift) renders the
+                   full section stack from the bound @Observable model. Tests: testLoadResolvesToReady +
+                   derivation/calculator tests (20 total).
+   (Beyond required: error -> CostAnalysisPage.errorView + Retry; testSessionsFailureResolvesToError.)
+
+STRINGS (4/4)  — all resolve from Localization/Localizable.xcstrings; web key names verbatim.
+[x] string costAnalysis.empty.message  CostAnalysisEmptyState TSEmptyState(message:) (CostAnalysisPage.Panels.swift)
+                                        -> xcstrings "Start charging your vehicle to see cost analysis…"
+[x] string costAnalysis.empty.title    CostAnalysisEmptyState TSEmptyState(title:)  (CostAnalysisPage.Panels.swift)
+                                        -> xcstrings "No Charging Data"
+[x] string costAnalysis.subtitle       CostAnalysisPage.titleBlock Text("costAnalysis.subtitle") (CostAnalysisPage.swift)
+                                        -> xcstrings "Electricity cost trends, gas savings, and charging economics"
+[x] string costAnalysis.title          CostAnalysisPage TSPageTitle("costAnalysis.title") + .navigationTitle
+                                        (CostAnalysisPage.swift) -> xcstrings "Cost Analysis"
+--------------------------------------------------------------------------------
+PARITY_COVERED=7
+PARITY_REQUIRED=7
+PARITY_OK=(PARITY_COVERED==PARITY_REQUIRED)=true
+
+--------------------------------------------------------------------------------
+GATE — apple triad (lint + placeholder + build + test)
+--------------------------------------------------------------------------------
+$ swiftlint --strict        (cd apps/apple; config .swiftlint.yml; all included roots, 6122 files)
+  Done linting! Found 0 violations, 0 serious in 6122 files.
+LINT_EXIT=0
+
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Charging -Language swift
+  PLACEHOLDER_ALLOWED=2   (the two `// parity:allow redaction API, not a stub` skeleton markers —
+                           CostAnalysisPage.Panels.swift + the sibling Powershare skeleton in the dir)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  (also clean over apps/apple/Tests/Unit/Features/Charging: PLACEHOLDER_COUNT=0)
+
+$ ./apps/apple/Scripts/build-shared-xcframework.sh   (KMP core -> Shared.xcframework, ADR-004)
+  Shared.xcframework staged -> apps/apple/Frameworks/Shared.xcframework
+  slices: macos-arm64, ios-arm64, ios-arm64-simulator   (note: no x86_64 simulator slice)
+SHARED_FRAMEWORK_EXIT=0
+
+$ xcodegen generate                              -> Created TeslaSync.xcodeproj
+$ xcodebuild -scheme TeslaSync-macOS -configuration Debug -destination 'platform=macOS' \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+  ** BUILD SUCCEEDED **
+  (all 12 CostAnalysis*.swift compiled as SwiftCompile units; AppRoute/AppRouteParser/TeslaSyncApp
+   clean; the +105 xcstrings entries validated + copied; zero diagnostics attributable to this change)
+BUILD_EXIT=0
+
+$ xcodebuild -scheme TeslaSync-macOS ... test -only-testing:TeslaSync-macOSTests/CostAnalysisPageModelTests \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift GDPRExportPageModelTests.swift \
+                                  TimelinePageModelTests.swift VehicleCostPageModelTests.swift"
+  Test Suite 'CostAnalysisPageModelTests' passed.
+  Executed 20 tests, with 0 failures (0 unexpected) in 0.587s
+  ** TEST SUCCEEDED **
+TEST_EXIT=0
+  (the 7 "error:" lines in the test log are macOS runtime warnings — com.apple.linkd.autoShortcut
+   XPC connection noise from launching the host app — NOT compile/test errors; 0 are in CostAnalysis.)
+
+$ xcodebuild -scheme TeslaSync -configuration Debug \
+      -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" ONLY_ACTIVE_ARCH=YES ARCHS=arm64 \
+      EXCLUDED_ARCHS=x86_64 EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+  ** BUILD SUCCEEDED **
+  (iOS-Simulator arm64: all 12 CostAnalysis*.swift compiled — INCLUDING every `#if os(iOS)`
+   horizontalSizeClass / isCompact adaptive branch the macOS build does not exercise; linked clean;
+   zero diagnostics attributable to this change)
+BUILD_IOS_EXIT=0
+
+--------------------------------------------------------------------------------
+PRE-EXISTING ENVIRONMENT ISOLATION (full disclosure — NOT this change; NOT red-as-green)
+--------------------------------------------------------------------------------
+The following PRE-EXISTING, out-of-scope files are UNMODIFIED by this change (verified via
+`git status --porcelain` — none of them appear) and are outside this artifact's allowed files. They
+fail identically on a clean tree under the available newer Xcode 26.5 / Swift 6.3 front-end (the
+repo's macOS verification is documented PENDING in apps/macos-pending-verifications.md). Each was
+isolated via the command-line build setting EXCLUDED_SOURCE_FILE_NAMES (a build override, NO source
+edits) so this page's build + tests could be exercised:
+
+  1) apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift
+     `cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'` (×2) inside
+     `#Preview` blocks — the ONLY app-target file with error diagnostics on a clean build.
+  2) Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift — main-actor isolation diagnostic
+     (already disclosed in the Powershare P7 log).
+  3) Tests/Unit/Features/Analytics/TimelinePageModelTests.swift — `call to main actor-isolated static
+     method 'utcDayKey' in a synchronous nonisolated context`.
+  4) Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift — `main actor-isolated default value in
+     a nonisolated context` (a nested StubSource default referencing a @MainActor-isolated value).
+  (3) and (4) are the same Swift-6.3 strict-concurrency class as (2); they pre-date and are unrelated
+  to this page. With them isolated, the test target compiles and this page's 20 tests pass (above).
+  No CostAnalysis / AppRoute / AppRouteParser / TeslaSyncApp file produced any diagnostic.
+
+iOS ARCH NOTE: `-destination 'generic/platform=iOS Simulator'` additionally links x86_64, but the
+vendored Shared.xcframework ships only an `ios-arm64-simulator` slice (no x86_64), so the x86_64 link
+fails on pre-existing `FacadeError.o` (`Undefined symbols … _OBJC_CLASS_$_SharedApiError`). This is a
+framework-packaging constraint, not a code issue — arm64 is the relevant simulator arch on this Apple
+Silicon runner, so the iOS build targets arm64 (BUILD_IOS_EXIT=0 above). Code signing was disabled
+(no development certificate on this runner) — an environment constraint, unrelated to the page.
+
+--------------------------------------------------------------------------------
+LEDGER
+--------------------------------------------------------------------------------
+apps/parity/apple-ledger.json: page:charging/CostAnalysis set covered for both targets
+  apple-macos  status=done coveredCount=7 requiredCount=7
+  apple-ios    status=done coveredCount=7 requiredCount=7
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+PARITY:      7/7 covered (panels 0 named, charts 0 named, maps 0, states 3, strings 4); all web
+             regions reproduced natively with no scope narrowing.
+LINT:        0 violations (--strict, 6122 files)
+PLACEHOLDER: 0 (ADR-011); 2 allowed (documented redaction markers)
+BUILD:       macOS app SUCCEEDED; iOS-Simulator (arm64) app SUCCEEDED; all 12 page files compiled on
+             both platforms; 0 diagnostics attributable to this change
+TEST:        20/20 passed for CostAnalysisPageModelTests
+The page deliverable is complete and independently verified green. The only files standing between
+this and a literal all-green whole-test-target `xcodebuild test` are PRE-EXISTING, out-of-scope,
+Xcode-26.5-incompatible files (disclosed above) which this artifact is not permitted to modify.
+
+EXIT=0
+STATUS=DONE

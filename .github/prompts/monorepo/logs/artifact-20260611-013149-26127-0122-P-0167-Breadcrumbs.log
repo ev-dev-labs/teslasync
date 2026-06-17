@@ -1,0 +1,161 @@
+=== P4 Shared surface 0167 Breadcrumbs (Apple) ===
+Date: 2026-06-11
+Prompt: P4 · shared-surfaces · 0167 — Breadcrumbs (Apple)
+Web source (spec): web/src/components/layout/Breadcrumbs.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.*
+Allowed files: apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.*, this log
+
+--------------------------------------------------------------------------------
+[surface] — files shipped (8, all within the allowed Breadcrumbs.* scope)
+--------------------------------------------------------------------------------
+Breadcrumbs.Adapter.swift       Foundation-only pure core: surface slug (P1/S11),
+                                BreadcrumbCrumb (closure-free), BreadcrumbsInput,
+                                BreadcrumbPosition, ResolvedBreadcrumb,
+                                BreadcrumbCompactSegments, BreadcrumbsProjection,
+                                BreadcrumbsProjector (pure resolve + home-a11y label).
+Breadcrumbs.Model.swift         BreadcrumbsStrings (P1/S10 i18n facade), BreadcrumbsTelemetry
+                                seam + OSLog default (P1/S11), @Observable BreadcrumbsModel
+                                (P1/S8): props + host nav closures + once-only view.opened.
+Breadcrumbs.Views.swift         Token-driven (P1/S9) subviews: Home link, chevron separator,
+                                crumb link/text, compact "…" collapse menu, empty placeholder.
+Breadcrumbs.swift               Public API: BreadcrumbItem (w/ onNavigate) + Breadcrumbs: View;
+                                horizontally-scrollable trail, compact middle-collapse.
+Breadcrumbs.Previews.swift      DEBUG previews: 2-crumb / deep / compact-collapse / label-only
+                                middle / suppressed placeholder / Dynamic Type XXL.
+Breadcrumbs.strings             P1/S10 catalog: a11y.breadcrumb, a11y.breadcrumbHome (verbatim
+                                web keys) + native a11y additions.
+Breadcrumbs.Tests.swift         Model + Views + Strings + Accessibility tests.
+Breadcrumbs.AdapterTests.swift  Pure projector + value-type tests.
+
+--------------------------------------------------------------------------------
+[capability] — Apple platform IS present on this runner
+--------------------------------------------------------------------------------
+Xcode 26.5 (17F42); Swift 6.3.2; iPhone 16 simulator (booted); iOS/macOS 26.5 SDK;
+swiftlint + swiftformat (homebrew); pwsh 7; xcodegen; Gradle 8.14.5 + JDK 17.
+=> SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 minimums — all available.
+
+--------------------------------------------------------------------------------
+[build-graph] — predecessor blockers from the earlier 0167 attempt are RESOLVED here
+--------------------------------------------------------------------------------
+(b1) project.yml registers TeslaSync/shared-surfaces in BOTH app targets (TeslaSync,
+     TeslaSync-macOS) and BOTH unit-test bundles (TeslaSyncTests, TeslaSync-macOSTests).
+     Verified in project.yml. => the surface IS in the build graph.
+(b2) KMP Shared.xcframework built + staged via Gradle/Kotlin-Native:
+     KMP_STAGE_EXIT=0  (Scripts/build-shared-xcframework.sh)
+     Frameworks/Shared.xcframework = { ios-arm64, ios-arm64-simulator, macos-arm64 }.
+XCODEGEN_EXIT=0 (TeslaSync.xcodeproj generated; TeslaSync + TeslaSync-macOS schemes present).
+
+--------------------------------------------------------------------------------
+[gate] — literal gate steps
+--------------------------------------------------------------------------------
+IOS_EXIT=65   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  BUILD FAILED — NOT in this surface. The TeslaSync app target fails to compile because of a
+  SYSTEMIC, PRE-EXISTING baseline defect in sibling shared-surfaces (NOT in the allowed
+  Breadcrumbs.* scope, git-tracked at HEAD, `git diff` empty => unmodified by me):
+      error: escaping closure captures non-escaping parameter 'content'
+  Same bug pattern (a `func glass(@ViewBuilder _ content: () -> some View)` helper that feeds
+  `content()` into the escaping TSGlassPanel content closure WITHOUT marking the param @escaping)
+  in at least 4 sibling surfaces:
+      AIAutoNameUnnamedLocations.swift
+      AIGeofenceAwareAutomationSuggestions.swift:141
+      AISignalExplorerNlFilter.swift:142
+      AISuggestNewGeofences.swift
+  These form an interdependent chain (AIGeofenceAwareAutomationSuggestions <- AINLAutomationBuilder
+  <- AIPiiRedactionSharedExports), so they cannot be cleanly excluded, and they are outside this
+  prompt's allowed files. ZERO Breadcrumbs errors in the build (grep: 0).
+  => The baseline app does not compile for ANY surface on this runner until those sibling files
+     are repaired by their owners. This is predecessor breakage, not a defect in Breadcrumbs.
+
+MAC_EXIT=65   xcodebuild -scheme TeslaSync-macOS build
+  BUILD FAILED at code-signing BEFORE compiling:
+      error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  Environment/capability gap: no development certificate on this runner. Re-running with
+  CODE_SIGNING_ALLOWED=NO reaches the compile phase and is then blocked by the SAME systemic
+  sibling defect above (shared source tree). ZERO Breadcrumbs errors.
+
+LINT_EXIT=0       swiftlint --strict            (whole tree: 4460 files, 0 violations, 0 serious)
+FORMAT_EXIT=0     swiftformat --lint apps/apple  (whole tree: 4758 files, 0 require formatting)
+PLACEHOLDER_EXIT=0 check-placeholders.ps1 -Path .../Breadcrumbs  (PLACEHOLDER_COUNT=0)
+
+--------------------------------------------------------------------------------
+[in-surface verification] — everything within Breadcrumbs.* is GREEN
+--------------------------------------------------------------------------------
+TYPECHECK_SHIPPED_EXIT=0   swiftc -typecheck, Swift 6 strict concurrency, macOS 15 SDK, -D DEBUG:
+                           Tokens + Breadcrumbs.{Adapter,Model,Views,swift,Previews}. Compiles clean.
+RUNTIME_PROJECTOR=PASSED   Standalone executable exercising BreadcrumbsProjector across the
+                           suppression boundary (items<=1 -> hidden), the position bands
+                           (first/middle/last), the link role (!isLast && href), the compact
+                           first-…-current split, and the Home-label override/fallback.
+                           Output: ALL_PROJECTOR_ASSERTIONS_PASSED.
+MYLINT_EXIT=0 / MYFORMAT_EXIT=0  swiftlint --strict + swiftformat --lint on the 7 shipped+test
+                           swift files: 0 violations, 0 require formatting.
+
+In-surface bug found AND fixed during verification (this is why the macOS compile pass was run):
+  Breadcrumbs.Previews.swift / Breadcrumbs.Tests.swift sample-item builders originally wrote
+  `let onNavigate: (@MainActor () -> Void)? = isLast ? nil : {}` — a closure literal inside a
+  ternary assigned to an optional @MainActor closure, which trips a Swift type-checker bug
+  ("failed to produce diagnostic for expression") under -D DEBUG. The first standalone typecheck
+  missed it (no -D DEBUG => the #if DEBUG block was skipped); the in-project macOS build surfaced
+  it. Rewritten to a conditional assignment (no closure-in-ternary). DEBUG typecheck now EXIT=0.
+
+--------------------------------------------------------------------------------
+[parity] — web branches reproduced (faithful to components/layout/Breadcrumbs.tsx)
+--------------------------------------------------------------------------------
+- Pure presentational, prop-driven; only hook is useTranslation => NO loading/error/stale/offline
+  branch (nothing to fetch/fail/age). Those belong to the host page, exactly as the sibling
+  presentational surfaces ActiveFilterChips (0147) + HistoryListRow (0091) documented. Documented
+  verbatim in Breadcrumbs.Adapter.swift. Not a scope shortcut.
+- hidden: items.length <= 1 -> web `return null`. Native: EmptyView by default; a friendly
+  localized placeholder when hideWhenSuppressed == false (never a blank box).
+- trail: leading Home link + chevron-separated crumbs.
+- per-crumb role: trailing crumb = current-page emphasized text (web isLast); earlier crumb with
+  href = link (web <PrefetchLink>); earlier crumb without href = muted text (web !item.href).
+- compact width: middle crumbs (web isMiddle, `hidden sm:inline`) collapse behind ONE accessible
+  "…" menu — the Apple-idiomatic, VoiceOver-preserving read of the web per-item `…` markers.
+- navigation delegated to the host via onNavigate / onHomeNavigate (dependency inversion); the
+  surface never rewrites a route itself (web hands routing to react-router).
+
+--------------------------------------------------------------------------------
+[acceptance criteria]
+--------------------------------------------------------------------------------
+[x] Surface renders all web states (hidden / trail / link / current-text / label-only /
+    compact-collapse / placeholder) — reproduced by Breadcrumbs.{swift,Views,Adapter}; covered by
+    Breadcrumbs.{Tests,AdapterTests}.swift + Breadcrumbs.Previews.swift.
+[x] Binds via shared state-holder layer (P1/S8 @Observable BreadcrumbsModel); the only web hook is
+    useTranslation (P1/S10 facade). No direct HTTP in the view.
+[x] Every i18n key from source has a matching catalog key: a11y.breadcrumb ("Breadcrumb"),
+    a11y.breadcrumbHome ("Dashboard") in Breadcrumbs.strings (table "Breadcrumbs"); they also exist
+    in the master Localizable.xcstrings. No English literals in Swift code.
+[x] Accessibility labels on every interactive element: nav landmark label, Home link label
+    (+ homeAriaLabel override), link crumbs carry .isLink + their label, current crumb marked,
+    separators/ellipsis hidden; Dynamic Type + Reduce-Motion respected (no animation to disable).
+    Asserted in Breadcrumbs.Tests.swift (BreadcrumbsAccessibilityTests) + shown in previews.
+[x] Tests: adapter projection unit tests (AdapterTests) + per-state composition/Views tests +
+    Strings facade tests + a11y-label tests (Tests). Adapter logic ALSO runtime-verified
+    (ALL_PROJECTOR_ASSERTIONS_PASSED). NOTE: the XCTest suite could not be EXECUTED via xcodebuild
+    because the app target it depends on does not build (systemic pre-existing sibling defect, see
+    [gate]); the tests are type-consistent with the (green) shipped sources and the projector is
+    runtime-proven.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_EXIT=0).
+[ ] xcodebuild build+test EXIT=0 — BLOCKED. The literal build+test gate cannot go green on this
+    runner WITHIN the allowed files (Breadcrumbs.*, this log) because the TeslaSync app target is
+    broken at BASELINE by a systemic pre-existing "escaping closure captures non-escaping
+    parameter 'content'" defect in >=4 sibling shared-surfaces (out of scope, unmodified by me),
+    plus a macOS code-signing capability gap. Apple platform capability itself IS present
+    (see [capability]); the surface itself is fully green (see [in-surface verification]).
+    Reported honestly per the Honesty Covenant (no red-as-green), not bypassed.
+
+--------------------------------------------------------------------------------
+[summary]
+--------------------------------------------------------------------------------
+Breadcrumbs surface implemented at full parity with the web source (8 files, all within the
+allowed scope). ALL in-scope gates GREEN:
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TYPECHECK_SHIPPED_EXIT=0  RUNTIME_PROJECTOR=PASSED
+The xcodebuild build+test gate is BLOCKED by causes OUTSIDE this surface and OUTSIDE its allowed
+files: (1) a systemic pre-existing baseline compile defect in >=4 sibling AI* shared-surfaces
+(escaping closure captures non-escaping parameter 'content'), and (2) a macOS dev-certificate
+signing gap. Zero Breadcrumbs build errors on either platform. Honest BLOCKED, not red-as-green,
+and not worked around by editing out-of-scope files.
+
+EXIT=1
+STATUS=BLOCKED

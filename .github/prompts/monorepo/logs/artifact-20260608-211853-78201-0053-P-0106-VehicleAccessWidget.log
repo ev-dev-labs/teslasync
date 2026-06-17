@@ -1,0 +1,135 @@
+=== P4 Dashboard widget 0106 VehicleAccessWidget (Apple) ===
+Surface: apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.*
+Web spec: web/src/features/dashboard/widgets/VehicleAccessWidget.tsx
+Registry: registry/security.ts -> "vehicle-access" (security, default 2x4, min 1x2, max 4x40)
+Runner: macOS Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1
+Allowed files: apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.* + this log
+
+------------------------------------------------------------------------
+SHIPPED FILES (7)
+------------------------------------------------------------------------
+VehicleAccessWidget.swift          main surface (header, freshness chip, refresh/open, state switch, compose)
+VehicleAccessWidget.Model.swift    P1/S8 state-holder seam, P1/S11 telemetry seam, registry, P1/S10 i18n facade
+VehicleAccessWidget.Adapter.swift  pure projection (mobile tri-state, role/status badges, date, layout, a11y)
+VehicleAccessWidget.Views.swift    compact view, standard view, mobile row, detail card/row, badge, banner, empty
+VehicleAccessWidget.Previews.swift 9 previews (content/wide/compact/drivers-only/empty/loading/error/offline/stale)
+VehicleAccessWidget.strings        i18n catalog (19 verbatim web keys + native chrome)
+VehicleAccessWidget.Tests.swift    adapter + model + registry + accessibility unit tests
+
+------------------------------------------------------------------------
+GATE STEP 1 — xcodebuild iOS (scheme TeslaSync, iPhone 16) build test
+------------------------------------------------------------------------
+RESULT: BUILD/TEST FAILED — IOS_EXIT=65
+ROOT CAUSE: 152 compile errors, ALL in pre-existing, OUT-OF-SCOPE widgets; ZERO in VehicleAccessWidget.*.
+  grep -c "error:" ios-buildtest.log            -> 152
+  grep "error:" | grep -i VehicleAccess         -> 0   (my surface is clean)
+  Broken files (committed baseline, not in my allowed-files scope):
+    ChargeSessionChartWidget.{Model,Previews}.swift
+    ChargeStatusLiveWidget.{Adapter,Content,Model,Previews}.swift
+    ChargeStatusWidget.{Adapter,Model,Previews}.swift
+    FleetStatsBarWidget.{swift,Previews}.swift
+  Duplicate-symbol collisions (ambiguous for type lookup) between sibling widgets:
+    ChargeConnection, ChargeDistanceUnit, ChargeLoadStatus, ChargeSessionDTO, ChargeStateDTO,
+    ChargeStatusProjection, ChargeStatusUpdate, ChargeUnitPrefs  (ChargeStatusWidget vs ChargeStatusLiveWidget)
+    FleetStatsBarModel  (FleetStatsBarWidget.Model.swift vs feature-views/FleetStatsBar.Model.swift)
+  Provenance (git log): these surfaces were added by PRIOR parallel merges
+    (a13997d3a "add FleetStatsBarWidget surface", 7d8b9e473 "...ChargeStatusLiveWidget...").
+    The collisions are a pre-existing merged-baseline condition — the baseline app target does NOT
+    compile before this surface was added. `git status` shows the ONLY new files are VehicleAccessWidget.*.
+
+------------------------------------------------------------------------
+GATE STEP 2 — xcodebuild macOS (scheme TeslaSync-macOS) build test
+------------------------------------------------------------------------
+RESULT: BUILD FAILED — MAC_EXIT=65
+PRIMARY BLOCKER (environment / platform capability): code-signing.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  No development signing certificate is provisioned on this runner for the entitlement-bearing macOS targets.
+SECONDARY (with CODE_SIGNING_ALLOWED=NO to reach the compile phase): MAC_NOSIGN_EXIT=65
+  Same 152 pre-existing collisions as iOS; ZERO errors in VehicleAccessWidget.* (grep confirmed).
+
+------------------------------------------------------------------------
+GATE STEP 3 — swiftlint --strict (VehicleAccessWidget.* )
+------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------
+GATE STEP 4 — swiftformat --lint (VehicleAccessWidget.* )
+------------------------------------------------------------------------
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------
+GATE STEP 5 — check-placeholders (swift) on VehicleAccessWidget.*
+------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(direct grep for TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|fatalError -> none)
+
+------------------------------------------------------------------------
+ISOLATED SURFACE VERIFICATION (proves THIS surface is complete + correct)
+------------------------------------------------------------------------
+Because the shared app module is pre-existing-red (out-of-scope widgets above) and the allowed-files
+scope forbids touching them, the surface was verified in an isolated SwiftPM package that compiles the
+REAL widget files against the REAL design tokens (apps/design/generated/apple/Tokens.swift) + the REAL
+infra types (DashboardWidgetInfra.swift, Badges.swift TSTone, TSSkeleton), in Swift 6 strict-concurrency
+mode (swift-tools-version 6.0, platform macOS v15):
+
+  swift test (VAWKit isolated package)
+  [compile] VehicleAccessWidget.swift            OK
+  [compile] VehicleAccessWidget.Model.swift      OK
+  [compile] VehicleAccessWidget.Adapter.swift    OK
+  [compile] VehicleAccessWidget.Views.swift      OK
+  [compile] VehicleAccessWidget.Previews.swift   OK
+  Test Suite 'All tests' passed.
+  Executed 32 tests, with 0 failures (0 unexpected)
+  SWIFT_TEST_EXIT=0
+
+Coverage: MobileAccessStatus tri-state + tone/label/keys; AccessRoleCatalog (owner/driver);
+InvitationStatusKind (pending/accepted/expired + else-branch) tone/label/keys; VehicleAccessDateText
+(nil -> "—", MMMd template); VehicleAccessProjection driver/invitation row maps + stable-id fallbacks;
+VehicleAccessLayout.isCompact; VehicleAccessModel phase resolution (loading/empty/error/content,
+mobile-only-as-data, cached-stays-content), projection tracking, hasInvitations, view.opened telemetry
+(once) + refresh delegation; registry parity + clamp; accessibility summaries (with/without date).
+
+------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+------------------------------------------------------------------------
+- States reproduced: loading (skeleton), empty ("No access data available"), error (+Retry), content,
+  plus connection live/stale/offline (header chip + cached banner) for the shell freshness indicator.
+- Compact (cols<=1): person.2 glyph + "{n} Drivers" + mobile status dot (green/red/muted) — web CompactView.
+- Standard: Mobile Access row (Enabled/Disabled/Unknown Badge) + always-on Authorized Drivers detail card
+  + Pending Invitations card rendered only when invitations exist (web invitationEntries.length > 0).
+- Driver badge owner->success "Owner" / else neutral "Driver"; invitation badge
+  pending->warning / accepted->success / else danger "Expired" — exact web ternaries.
+- 19 i18n keys lifted verbatim from the .tsx; no English literals in code (all via P1/S10 facade).
+- No direct HTTP in the view; binds through VehicleAccessSource (P1/S8). view.opened telemetry (P1/S11).
+- Registry id "vehicle-access" + size envelope (2x4 / 1x2 / 4x40) match registry/security.ts and the
+  WidgetPicker catalog entry; DashboardWidgetRegistration.clamp enforces the envelope.
+
+------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------
+This surface (VehicleAccessWidget.*) is COMPLETE and INDEPENDENTLY VERIFIED:
+  swiftlint --strict = 0 · swiftformat --lint = 0 · placeholders = 0 · isolated build+test = 32/32 PASS.
+The full-module gate cannot reach EXIT=0 for reasons entirely OUTSIDE this surface and its allowed-files
+scope:
+  (1) iOS/macOS app target is pre-existing-red — 152 duplicate-symbol errors in Charge*/FleetStatsBar
+      widgets merged in by prior parallel runs (0 errors in VehicleAccessWidget.*).
+  (2) macOS test action additionally requires a development code-signing certificate not provisioned on
+      this runner.
+Per the Honesty Covenant (no red-as-green, no scope narrowing, no commit-fabrication), the aggregate gate
+is reported BLOCKED with the above evidence rather than asserted green.
+
+IOS_EXIT=65            (pre-existing out-of-scope collisions; 0 errors in this surface)
+MAC_EXIT=65            (macOS dev code-signing certificate unavailable on runner)
+MAC_NOSIGN_EXIT=65     (compile reached; same pre-existing out-of-scope collisions; 0 in this surface)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+ISOLATED_BUILD_TEST_EXIT=0   (32/32 tests, Swift 6 strict-concurrency)
+
+EXIT=65
+STATUS=BLOCKED

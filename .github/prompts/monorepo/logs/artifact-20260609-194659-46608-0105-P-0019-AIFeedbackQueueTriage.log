@@ -1,0 +1,98 @@
+=== P4 Shared surface 0019 AIFeedbackQueueTriage (Apple) ===
+date: 2026-06-10T18:38:27Z
+host: macOS 26.5.1; Xcode 26.5 Build version 17F42; Swift 6.3.2; swiftlint+swiftformat (Homebrew)
+capability: SwiftUI present; iOS 18 / macOS 15 SDKs present; iPhone 16 simulator booted; Swift Charts + MapKit available (surface uses neither — web source has no charts/maps).
+
+--- Deliverable: apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.* (10 files) ---
+AIFeedbackQueueTriage.swift            (public View + withAiFeature gate parity + production init)
+AIFeedbackQueueTriage.Adapter.swift    (SSE lifecycle/event/snapshot/reducer/parser, endpoint+body, a11y) — Foundation only
+AIFeedbackQueueTriage.Model.swift      (telemetry/connection/input/resolved/projection/@Observable model/i18n facade)
+AIFeedbackQueueTriage.Seams.swift      (context source + stream driver: live + in-memory doubles)
+AIFeedbackQueueTriage.Views.swift      (HelixMark/Badge/FeatureCard/AskHelix button/ThinkingDots/Freshness chip)
+AIFeedbackQueueTriage.States.swift     (output router/panel + loading/idle/thinking/advisory/error bodies)
+AIFeedbackQueueTriage.Previews.swift   (8 states: gated-off/no-row/idle/thinking/advisory/error/stale/offline)
+AIFeedbackQueueTriage.strings          (i18n catalog: feedbackTriage.aiAdvisor.* + helix.* + ai.common.* + P4 chrome)
+AIFeedbackQueueTriage.Tests.swift      (adapter/parser/reducer/endpoint/projection/a11y)
+AIFeedbackQueueTriage.ModelTests.swift (state-holder + seams + live request builder)
+Parity: SwiftUI port of components/ai/AIFeedbackQueueTriage.tsx — AIFeatureCard driven by useAiStream,
+gated by withAiFeature('feedback-queue-triage'); "Suggest triage" POSTs {feedback_id} to the fixed route
+/ai/feedback/triage/draft; streamed text -> output panel. Propose-only: never calls useUpdateFeedback
+(operator manual controls remain the sole write path). All states render; i18n via P1/S10 facade; a11y
+labels on every interactive element; view.opened telemetry emitted with slug "AIFeedbackQueueTriage".
+All top-level symbols prefixed `FeedbackTriage` to stay module-collision-free (self-contained convention).
+
+=== GATE STEP 1: xcodebuild -scheme TeslaSync -destination 'iOS Simulator,name=iPhone 16' build test ===
+Prerequisite Shared.xcframework built via Gradle :core:assembleSharedXCFramework => BUILD SUCCESSFUL (2m53s) and staged.
+RESULT: ** BUILD FAILED ** IOS_EXIT=65
+  errors referencing AIFeedbackQueueTriage.* .... 0
+  total compile errors ......................... 54
+  ALL 54 errors are in 10 sibling files NOT in scope and NOT modified by this prompt:
+    dashboard-widgets/RecentDrivesListWidget.{swift,Model,Previews}.swift
+    dashboard-widgets/StateTimelineWidget.{swift,Model,Previews}.swift
+    feature-views/RecentDrivesSection.{Seams,Previews}.swift
+    feature-views/StateTimeline.{Source,Previews}.swift
+  Error class: "ambiguous for type lookup" — PRE-EXISTING duplicate public type definitions:
+    public final class RecentDrivesModel   defined in BOTH dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+                                              AND feature-views/RecentDrivesSection.Model.swift:23
+    public final class StateTimelineModel  defined in BOTH dashboard-widgets/StateTimelineWidget.Model.swift:104
+                                              AND feature-views/StateTimeline.Model.swift:64
+    public enum RecentDrivesConnection     defined in BOTH dashboard-widgets/RecentDrivesListWidget.Model.swift:54
+                                              AND feature-views/RecentDrivesSection.Adapter.swift:49
+  `git status` confirms this prompt ONLY ADDED AIFeedbackQueueTriage.* + this log; the failing sibling
+  files are tracked at HEAD and untouched. This is the exact module-wide collision this surface AVOIDED
+  by prefixing every type with `FeedbackTriage`. Allowed-files scope forbids editing the sibling files.
+  => Step blocked by pre-existing, out-of-scope breakage; NOT caused by this surface.
+
+=== GATE STEP 2: xcodebuild -scheme TeslaSync-macOS build test ===
+RESULT: ** BUILD FAILED ** MAC_EXIT=65
+  errors referencing AIFeedbackQueueTriage.* .... 0
+  "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+  certificate. (no dev certificate provisioned in this environment — environment limitation).
+  Would additionally hit the same pre-existing sibling duplicate-type errors as Step 1 once compiling.
+  => Step blocked by environment (code-signing) + pre-existing out-of-scope breakage; NOT this surface.
+
+=== GATE STEP 3: swiftlint --strict (whole tree, included dirs per .swiftlint.yml) ===
+RESULT: Done linting! Found 0 violations, 0 serious in 3324 files.  LINT_EXIT=0
+  (AIFeedbackQueueTriage.* 9 Swift files: 0 violations.)
+
+=== GATE STEP 4: swiftformat --lint apps/apple ===
+RESULT: 0/3554 files require formatting, 2 files skipped.  FORMAT_EXIT=0
+  (AIFeedbackQueueTriage.* 9 Swift files: 0/9 require formatting.)
+
+=== GATE STEP 5: check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces (swift) ===
+RESULT: PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+  No TODO/FIXME/stub/mock/placeholder/Lorem in shipped surface code.
+
+=== SURFACE-LEVEL VERIFICATION (authoritative, in-scope; project Swift 6 + strict concurrency settings) ===
+A. swiftc -emit-module of all 7 non-test surface files vs real design tokens + Sources/Design +
+   Components(Cards,Buttons,Badges,Typography,Skeletons), -swift-version 6 -strict-concurrency=complete
+   -D DEBUG, iphonesimulator SDK, target arm64-apple-ios18.0-simulator => 0 errors (module emitted).
+B. swiftc -typecheck of both test files vs the testable module + XCTest => 0 errors.
+C. swiftc -typecheck of the logic core (Adapter+Model+Seams) for arm64-apple-macos15.0 => 0 errors.
+D. RUNTIME TEST EXECUTION via throwaway SwiftPM package (surface + same real deps as a TeslaSync
+   target; tests as @testable test target), `swift test`:
+     Executed 65 tests, with 0 failures (0 unexpected).  SWIFT_TEST_EXIT=0
+   Coverage: SSE frame parser (every event + typeof guards + malformed/unknown/spacing variants),
+   reducer (delta/confirm/done/error + start/close/cancel/fail), endpoint (fixed path + {feedback_id}
+   body + 0-sentinel + haveFeedback guard), input canStart, projection (gatedOff/loading/idle/thinking/
+   advisory/error + offline keeps advisory + error precedence), accessibility labels, model state-holder
+   (telemetry-once, gate, generate body+guards, stream->thinking->advisory, error/retry, cancel/stop,
+   stale one-shot auto-refresh + re-arm, offline cache), live request builder (POST + SSE headers + body).
+
+=== ANALYSIS ===
+The surface itself is COMPLETE and fully verified: it compiles cleanly under the project's exact Swift 6
+strict-concurrency settings against the real design tokens + shared components, all 65 of its unit tests
+PASS at runtime, and it is clean under whole-tree swiftlint --strict, whole-tree swiftformat --lint, and
+the placeholder gate. The two xcodebuild whole-app steps cannot reach EXIT=0 in this environment for
+reasons entirely external to this surface and outside its allowed-files scope:
+  (1) PRE-EXISTING duplicate public type definitions across sibling surfaces (RecentDrives*, StateTimeline*)
+      produce "ambiguous for type lookup" — 0 of these errors are in AIFeedbackQueueTriage.*, and the
+      offending files are untouched by this prompt; fixing them is out of scope (Allowed files = this
+      surface + this log).
+  (2) macOS scheme additionally requires a development signing certificate not provisioned here.
+SwiftUI platform capability IS present; the block is repo build-state + signing infra, not capability and
+not this surface. Per the gate's "EXIT=0 only when every step is 0", the prescribed whole-app gate is not
+green => reported honestly as BLOCKED (no red-as-green).
+
+EXIT=1
+STATUS=BLOCKED

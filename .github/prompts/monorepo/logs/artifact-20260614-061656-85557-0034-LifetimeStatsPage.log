@@ -1,0 +1,354 @@
+================================================================================
+p4-apple · P7 · page:analytics/LifetimeStats — SwiftUI / HIG parity
+  web source : web/src/features/analytics/pages/LifetimeStatsPage.tsx   (route /lifetime-stats)
+  output     : apps/apple/Sources/Features/Analytics/LifetimeStats*.swift
+               (the live Xcode project — like the sibling StatisticsPage /
+                FleetComparePage / SlowQueriesPage — hosts feature pages under
+                Sources/Features/<Area>/; the prompt's nominal
+                TeslaSync/Features/Analytics/** is the allowed-files alias, reconciled here)
+  host       : macOS (Darwin); Xcode/xcodebuild; Apple Swift 6; swiftlint + swiftformat +
+               xcodegen + pwsh 7 + java 17 (Gradle/KMP) present — Xcode runner IS available.
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI LifetimeStatsPage at web parity: a pure @Observable
+state holder (ADR-004 — no networking in the view) over an injectable
+LifetimeStatsDataSource seam whose value types mirror the web LifetimeStats /
+PersonalRecord / LifetimeAchievement 1:1 (production binds the shared KMP
+repositories — useSelectedVehicle + useLifetimeStats, GET /analytics/lifetime
+[vehicle_id] — through the seam). Every measurement is SI canonical on the model
+(meters, meters/second, watt-hours); the view converts to the user's unit at the
+render boundary via the shared Units facade (ADR-005). The page is the all-time
+driving + charging + savings roll-up.
+
+One lifetime query drives the page; its states switch in place (web PageContainer
+loading/error + the per-panel `!stats` empties) — never a blank region. The hero +
+four key tiles always render (zeros when `!stats`, exactly like the web hero /
+StatCards); the six lower GlassPanels each show their own EmptyState when stats is
+nil / the per-panel guard fails. The eleven web panels are reproduced:
+
+  GlassPanel1  — Hero (LifetimeStatsPage.Hero.swift > LifetimeHeroPanel): the
+                 SI-distance hero + "driven across N drives" + the optional
+                 earthCompare / since lines.
+  Total-Drives / Total-Distance / Total-Energy / Total-Savings — the four key
+                 StatCards (LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid +
+                 LifetimeStatTile; the shared TSStatCard lacks unit/sublabel slots,
+                 so a faithful tile composes TSCard + TSIconBox + typography).
+  GlassPanel6  — Fun Facts        (LifetimeStatsPage.Sections.swift > LifetimeFunFactsPanel)
+  GlassPanel7  — Savings vs Gas    (LifetimeSavingsPanel + Cards > LifetimeSavingsBar)
+  GlassPanel8  — Environmental     (LifetimeEnvironmentalPanel — CO2 ring + trees + coffee)
+  GlassPanel9  — Personal Records  (LifetimeRecordsPanel + Cards > LifetimeRecordCard)
+  GlassPanel10 — Activity Summary  (LifetimeActivityPanel + Cards > LifetimeMiniStat)
+  GlassPanel11 — Achievement Gallery (LifetimeAchievementsPanel + Cards > LifetimeAchievementBadge)
+
+Adaptive (ADR-002/006): the hero, the stat/fun-fact grids, and the records/activity
+rows reflow via adaptive LazyVGrid columns + the header's #if os(iOS) compact branch
+(verified by the iOS whole-module type-check below). The pure web display logic was
+ported 1:1 + unit-tested: fmtNumber (en-US grouping, fixed precision), fmtInt,
+formatCurrency, fromKm/fromKmh (SI meters → user distance, SI m/s → user speed),
+energy kWh from watt-hours, the Wh/km activity efficiency, the most-active-hour and
+date formatting, and the derived coffeesSaved / unlockedAchievements / hasSavingsData.
+
+Scope notes (no narrowing):
+  - The web actions render <VehicleSelect /> (global selected vehicle) — reproduced as
+    a header vehicle picker (TSSelect) that re-queries useLifetimeStats(vehicle_id),
+    mirroring the sibling StatisticsPage; route.vehicles reused as its a11y label.
+  - No live SSE / >2 min staleness indicator: the lifetime roll-up is cagg-driven
+    (web staleTime SLOW + forceStaleAfterMs 6h), NOT a live source, so ADR-013 does
+    not apply. (The web DataFreshnessAuto chip is a non-parity action, omitted.)
+  - The opt-in <AILifetimeStatsQA /> block is a SEPARATE shared surface (already
+    shipped under TeslaSync/shared-surfaces/AILifetimeStatsQA*), not in this unit's
+    parity record — not duplicated here.
+
+Files (all new unless noted):
+  Sources/Features/Analytics/LifetimeStatsModels.swift             (SI value types / record / achievement / seam / phase)
+  Sources/Features/Analytics/LifetimeStatsFormat.swift             (display formatters via Units + date)
+  Sources/Features/Analytics/LifetimeStatsPageModel.swift          (@Observable model + vehicle select + reload)
+  Sources/Features/Analytics/LifetimeStatsPageModel.Sample.swift   (Sample/Empty/Failing sources + fixtures)
+  Sources/Features/Analytics/LifetimeStatsPage.swift               (chrome + header + 4 states + ready body)
+  Sources/Features/Analytics/LifetimeStatsPage.Hero.swift          (GlassPanel1 hero + 4 key tiles + LifetimeStatTile)
+  Sources/Features/Analytics/LifetimeStatsPage.Sections.swift      (GlassPanel6..11)
+  Sources/Features/Analytics/LifetimeStatsPage.Cards.swift         (FunFact/Savings/Record/MiniStat/Badge + skeleton)
+  Sources/Features/Analytics/LifetimeStatsRouteRegistration.swift  (.lifetimeStats route)
+  Tests/Unit/Features/Analytics/LifetimeStatsPageModelTests.swift  (state-machine + display-logic tests)
+  Sources/App/AppRoute.swift           (MOD: +.lifetimeStats case / "lifetime-stats" pathSegment / "trophy.fill" / Insights group)
+  Sources/TeslaSyncApp.swift           (MOD: wire LifetimeStatsRouteRegistration into routeHostRegistry)
+  Localization/Localizable.xcstrings   (MOD: +42 bare keys — 41 lifetime.* + route.lifetimeStats)
+  apps/parity/apple-ledger.json        (MOD: +2 rows page:analytics/LifetimeStats 56/56 macos+ios)
+
+Navigation: the web route /lifetime-stats resolves to the dedicated .lifetimeStats
+route by its pathSegment ("lifetime-stats") via AppRouteParser's segment match —
+reachable in the Insights sidebar group + deep-linkable, no alias needed. The
+navigate-command catalog auto-covers it (MenuCommandCatalog.navigateCommands maps
+AppRoute.allCases), and the generated TeslaSync.xcodeproj + built Frameworks/
+Shared.xcframework are git-ignored.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=56
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1
+       LifetimeStatsPage.Hero.swift > LifetimeHeroPanel (TSGlassPanel) — SI distance hero +
+       heroSubtitle + earthCompare + since; rendered by LifetimeStatsPage.readyView
+[x] panel  — Total-Drives
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (LifetimeStatTile "lifetime.totalDrives",
+       value fmtInt(total_drives), sublabel hrs)
+[x] panel  — Total-Distance
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (LifetimeStatTile "lifetime.totalDistance",
+       value fromKm(total_distance) + distanceUnit)
+[x] panel  — Total-Energy
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (LifetimeStatTile "lifetime.totalEnergy",
+       value energyKWh + kWh, sublabel sessions)
+[x] panel  — Total-Savings
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (LifetimeStatTile "lifetime.totalSavings",
+       value formatCurrency(total_savings,0), sublabel vsGas)
+[x] panel  — GlassPanel6
+       LifetimeStatsPage.Sections.swift > LifetimeFunFactsPanel (TSGlassPanel) — 4 LifetimeFunFactCard
+       (earth/moon/trees/homes) or TSEmptyState(noData)
+[x] panel  — GlassPanel7
+       LifetimeStatsPage.Sections.swift > LifetimeSavingsPanel — LifetimeSavingsBar when
+       gas_equivalent_cost>0 (hasSavingsData) else TSEmptyState(noSavingsData)
+[x] panel  — GlassPanel8
+       LifetimeStatsPage.Sections.swift > LifetimeEnvironmentalPanel — CO2 ring + trees + coffee
+       (ImpactItem) or TSEmptyState(noData)
+[x] panel  — GlassPanel9
+       LifetimeStatsPage.Sections.swift > LifetimeRecordsPanel — 3 LifetimeRecordCard
+       (longest/highest/biggest) or TSEmptyState(noData)
+[x] panel  — GlassPanel10
+       LifetimeStatsPage.Sections.swift > LifetimeActivityPanel — 4 LifetimeMiniStat
+       (day/hour/daysOnRoad/efficiency) or TSEmptyState(noData)
+[x] panel  — GlassPanel11
+       LifetimeStatsPage.Sections.swift > LifetimeAchievementsPanel — badge grid + "X/Y unlocked"
+       header or TSEmptyState(noAchievements)
+[x] state  — loading
+       LifetimeStatsPage.swift > content/.loading -> LifetimeStatsSkeleton (Cards) — hero/grid/panel
+       shimmer blocks; model LifetimeStatsPhase.loading (web PageContainer loading Skeleton)
+[x] state  — empty
+       model LifetimeStatsPageModel.loadStats (nil result → .ready, stats nil; web `!stats`); each
+       lower panel renders TSEmptyState (noData / noSavingsData / noAchievements), hero/tiles show zeros
+[x] state  — error
+       LifetimeStatsPage.swift > content/.error -> errorView (TSErrorDisplay + Retry); model
+       LifetimeStatsPhase.error(String) (web PageContainer query error)
+[x] state  — success
+       LifetimeStatsPage.swift > readyView with model.stats present (LifetimeStatsPhase.ready);
+       all 11 panels render bound values
+[x] string — lifetime.achievements
+       LifetimeStatsPage.Sections.swift > LifetimeAchievementsPanel.header (TSPanelTitle)
+[x] string — lifetime.activitySummary
+       LifetimeStatsPage.Sections.swift > LifetimeActivityPanel (LifetimeSectionHeader title)
+[x] string — lifetime.avgEfficiency
+       LifetimeStatsPage.Sections.swift > LifetimeActivityPanel.grid (LifetimeMiniStat label)
+[x] string — lifetime.avoided
+       LifetimeStatsPage.Cards.swift > LifetimeSavingsBar.co2Line
+[x] string — lifetime.biggestCharge
+       LifetimeStatsPage.Sections.swift > LifetimeRecordsPanel.grid (LifetimeRecordCard title)
+[x] string — lifetime.co2Offset
+       LifetimeStatsPage.Sections.swift > LifetimeEnvironmentalPanel.grid (ImpactItem label)
+[x] string — lifetime.coffeesEquiv
+       LifetimeStatsPage.Sections.swift > LifetimeEnvironmentalPanel.grid (ImpactItem label)
+[x] string — lifetime.days
+       LifetimeStatsPage.Sections.swift > LifetimeFunFactsPanel.grid (homes fun-fact unit, String(localized:))
+[x] string — lifetime.daysOnRoad
+       LifetimeStatsPage.Sections.swift > LifetimeActivityPanel.grid (LifetimeMiniStat label)
+[x] string — lifetime.earthCompare
+       LifetimeStatsPage.Hero.swift > LifetimeHeroPanel.earthCompareText (String(format: String(localized:)) %@)
+[x] string — lifetime.earthProgress
+       LifetimeStatsPage.Sections.swift > LifetimeFunFactsPanel.grid (earth fun-fact label)
+[x] string — lifetime.electricCost
+       LifetimeStatsPage.Cards.swift > LifetimeSavingsBar.costBar(label:) (electric bar)
+[x] string — lifetime.environmentalImpact
+       LifetimeStatsPage.Sections.swift > LifetimeEnvironmentalPanel (LifetimeSectionHeader title)
+[x] string — lifetime.funFacts
+       LifetimeStatsPage.Sections.swift > LifetimeFunFactsPanel (LifetimeSectionHeader title)
+[x] string — lifetime.gasCost
+       LifetimeStatsPage.Cards.swift > LifetimeSavingsBar.costBar(label:) (gasoline bar)
+[x] string — lifetime.heroSubtitle
+       LifetimeStatsPage.Hero.swift > LifetimeHeroPanel.heroSubtitle (String(format: String(localized:)) %@)
+[x] string — lifetime.highestSpeed
+       LifetimeStatsPage.Sections.swift > LifetimeRecordsPanel.grid (LifetimeRecordCard title)
+[x] string — lifetime.homesPowered
+       LifetimeStatsPage.Sections.swift > LifetimeFunFactsPanel.grid (homes fun-fact label)
+[x] string — lifetime.hours
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid.drivesSublabel (String(localized:))
+[x] string — lifetime.longestDrive
+       LifetimeStatsPage.Sections.swift > LifetimeRecordsPanel.grid (LifetimeRecordCard title)
+[x] string — lifetime.moonProgress
+       LifetimeStatsPage.Sections.swift > LifetimeFunFactsPanel.grid (moon fun-fact label)
+[x] string — lifetime.mostActiveDay
+       LifetimeStatsPage.Sections.swift > LifetimeActivityPanel.grid (LifetimeMiniStat label)
+[x] string — lifetime.mostActiveHour
+       LifetimeStatsPage.Sections.swift > LifetimeActivityPanel.grid (LifetimeMiniStat label)
+[x] string — lifetime.noAchievements
+       LifetimeStatsPage.Sections.swift > LifetimeAchievementsPanel (TSEmptyState title — empty state)
+[x] string — lifetime.noData
+       LifetimeStatsPage.Sections.swift > FunFacts/Environmental/Records/Activity panels (TSEmptyState title)
+[x] string — lifetime.noSavingsData
+       LifetimeStatsPage.Sections.swift > LifetimeSavingsPanel (TSEmptyState title — empty state)
+[x] string — lifetime.personalRecords
+       LifetimeStatsPage.Sections.swift > LifetimeRecordsPanel (LifetimeSectionHeader title)
+[x] string — lifetime.savingsComparison
+       LifetimeStatsPage.Sections.swift > LifetimeSavingsPanel (LifetimeSectionHeader title)
+[x] string — lifetime.sessions
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid.energySublabel (String(localized:))
+[x] string — lifetime.since
+       LifetimeStatsPage.Hero.swift > LifetimeHeroPanel.sinceText (String(format: String(localized:)) %@ %@)
+[x] string — lifetime.subtitle
+       LifetimeStatsPage.swift > titleBlock (Text "lifetime.subtitle")
+[x] string — lifetime.title
+       LifetimeStatsPage.swift > titleBlock (TSPageTitle "lifetime.title") + skeleton a11y label;
+       also route.lifetimeStats sidebar title
+[x] string — lifetime.totalDistance
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (LifetimeStatTile label)
+[x] string — lifetime.totalDrives
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (LifetimeStatTile label)
+[x] string — lifetime.totalEnergy
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (LifetimeStatTile label)
+[x] string — lifetime.totalSavings
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (LifetimeStatTile label)
+[x] string — lifetime.treesEquiv
+       LifetimeStatsPage.Sections.swift > LifetimeEnvironmentalPanel.grid (ImpactItem label)
+[x] string — lifetime.treesPlanted
+       LifetimeStatsPage.Sections.swift > LifetimeFunFactsPanel.grid (trees fun-fact label)
+[x] string — lifetime.unlocked
+       LifetimeStatsPage.Sections.swift > LifetimeAchievementsPanel.unlockedSummary +
+       LifetimeStatsPage.Cards.swift > LifetimeAchievementBadge.statusLine (✓ via checkmark.seal.fill)
+[x] string — lifetime.vsGas
+       LifetimeStatsPage.Hero.swift > LifetimeKeyStatsGrid (Total-Savings tile sublabel, String(localized:))
+[x] string — lifetime.youSaved
+       LifetimeStatsPage.Cards.swift > LifetimeSavingsBar.savedLine
+--------------------------------------------------------------------------------
+PARITY_COVERED=56
+(All 41 required visible literals resolve from Localizable.xcstrings; key names match the
+ web verbatim — verified catalog ⊆ source: every lifetime.* catalog key is referenced in
+ the Analytics sources. The 3 interpolated strings (heroSubtitle / earthCompare / since)
+ use String(format: String(localized: "<bare-key>"), …) with %@ placeholders fed
+ pre-formatted strings — the established repo pattern (see RbacMatrixPage.Summary) — so the
+ bare web key names are preserved. route.lifetimeStats was also added as the nav/sidebar
+ title. The only Text(verbatim:) calls render backend data — vehicle names, emoji icons —
+ or already-formatted numbers/percent/currency from the ported fmtNumber/fmtInt/formatCurrency.)
+
+================================================================================
+GATE RESULTS  (real commands, real exit codes)
+================================================================================
+Toolchain present: Xcode / Swift 6 / swiftlint / swiftformat / xcodegen / pwsh 7 /
+                   java 17 (Gradle/KMP). Xcode runner IS available.
+
+[GREEN] XCFRAMEWORK  apps/shared/gradlew :core:assembleSharedXCFramework (ADR-004)
+        -> "xcframework successfully written out (ios-arm64, ios-arm64-simulator, macos-arm64)"
+           BUILD SUCCESSFUL in 8m 29s; staged to apps/apple/Frameworks/Shared.xcframework.
+        XCFRAMEWORK_EXIT=0
+
+[GREEN] XCODEGEN     xcodegen generate -> "Created project at apps/apple/TeslaSync.xcodeproj"
+        ("LifetimeStats" referenced 162x in the generated pbxproj — iOS+macOS app + both test bundles).
+        GEN_EXIT=0
+
+[GREEN] PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Analytics -Language swift
+        -> PLACEHOLDER_ALLOWED=2  PLACEHOLDER_COUNT=0  EXIT=0
+        (the 2 opt-outs are PRE-EXISTING sibling redaction markers; my 9 LifetimeStats files +
+         test carry ZERO opt-outs / stubs / TODO / FIXME.)
+
+[GREEN] SWIFTFORMAT  swiftformat --lint (9 new sources + test + AppRoute + TeslaSyncApp)
+        -> 0/12 files require formatting.
+        FORMAT_LINT_EXIT=0
+
+[GREEN] SWIFTLINT    swiftlint lint --strict --no-cache (my 9 LifetimeStats + test + AppRoute + TeslaSyncApp)
+        -> "Done linting! Found 0 violations, 0 serious in 12 files."
+        LINT_EXIT=0
+
+[GREEN] TYPE-CHECK (macOS, whole-module): xcodebuild -scheme TeslaSync-macOS -destination platform=macOS
+        CODE_SIGNING_ALLOWED=NO build
+        -> SwiftEmitModule/EmitSwiftModule normal arm64 (in target 'TeslaSync-macOS') ran over the
+           WHOLE module incl. every LifetimeStats* source. grep of the build log for LifetimeStats +
+           'error:' = 0 hits. The only Swift errors (4) are the PRE-EXISTING, out-of-scope
+           TeslaSync/shared-surfaces/Input.Previews.swift:88/101 ViewBuilder "explicit return" error.
+        TYPECHECK_EXIT(macOS, in-scope)=0   (full build exit 65 — see OUT-OF-SCOPE below)
+
+[GREEN] TYPE-CHECK (iOS, whole-module): xcodebuild -scheme TeslaSync -destination generic/platform=iOS
+        CODE_SIGNING_ALLOWED=NO build
+        -> EmitSwiftModule normal arm64 (in target 'TeslaSync') ran over the whole iOS module —
+           exercising the #if os(iOS) horizontalSizeClass/isCompact header branch in
+           LifetimeStatsPage.swift. grep LifetimeStats + 'error:' = 0 hits; the only error file is
+           the same pre-existing Input.Previews.swift.
+        TYPECHECK_EXIT(iOS, in-scope)=0     (full build exit 65 — see OUT-OF-SCOPE below)
+
+[GREEN] TYPE-CHECK (TEST, macOS vs real XCTest overlay): xcrun swiftc -typecheck -module-name TeslaSync
+        LifetimeStatsModels + Format + PageModel + Sample + LifetimeStatsPageModelTests + XCTest overlay
+        (-F MacOSX.platform/Developer/Library/Frameworks -I .../usr/lib)
+        -> EXIT=0, zero diagnostics.
+        TEST_TYPECHECK_EXIT=0
+
+[GREEN] LOGIC HARNESS  xcrun swiftc -O -D DEBUG (real LifetimeStatsModels + Format + PageModel + Sample)
+        + stub(UnitPreferences+Units) + harness  => COMPILE_EXIT=0; ./bin =>
+        CHECKS=38 FAILURES=0 "ALL PASSED" (run exit 0). Covers: every phase
+        (loading/ready-success/ready-empty(`!stats`)/error), vehicle auto-select + reselect re-query
+        (asserts the 2nd query carries the new vehicle_id), unlockedAchievements/coffeesSaved/
+        hasSavingsData/progressPercent/isNearComplete, fmtNumber grouping+precision+NaN, fmtInt,
+        currency finiteness, energyKWh, efficiencyWhKm em-dash edge, hourLabel, ISO date parse/reject,
+        distance/speed SI conversion, and the Sample source. The XCTest peer is
+        Tests/Unit/Features/Analytics/LifetimeStatsPageModelTests.swift.
+        HARNESS_EXIT=0
+
+[OUT-OF-SCOPE / NOT GREENABLE HERE] full xcodebuild build / test (whole TeslaSync scheme)
+        RED. xcodebuild -scheme TeslaSync-macOS ... build => BUILD FAILED (exit 65); the iOS scheme
+        the same (exit 65). The SOLE root cause is PRE-EXISTING and OUT-OF-SCOPE, untouched by this
+        change (git status confirms): TeslaSync/shared-surfaces/Input.Previews.swift:88/101
+        "cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'" — a
+        generated sibling surface owned by another prompt, the SAME blocker the sibling
+        StatisticsPage / SlowQueriesPage logs record. My LifetimeStats files do NOT reference that
+        file; their full type-check correctness is proven by the macOS+iOS whole-module
+        EmitSwiftModule passes (0 LifetimeStats diagnostics) against the REAL design tokens, the REAL
+        shared component library, and the REAL Shared.xcframework, plus the executed logic harness
+        (38/38). NOT claimed green (Covenant #1); fixing a pre-existing sibling surface is
+        out-of-scope (Covenant #7). The XCTest bundle cannot link only because the app module won't
+        code-gen past that pre-existing defect.
+        BUILD_EXIT(full, pre-existing out-of-scope)=65
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : in-scope gates GREEN are reported GREEN; the full xcodebuild is reported
+                         OUT-OF-SCOPE / not-greenable (a pre-existing Input.Previews.swift ViewBuilder
+                         error) with its exact root cause + exit 65 named — not masked.
+ 2 No scope narrowing  : all 11 web panels + every data state (loading/empty/error/success) + the
+                         vehicle selector + the SI hero + the savings bar proportions + the
+                         achievement gallery (rings, locked/unlocked, progress) implemented; not a minimum.
+ 3 No skip-and-assume  : web page + useLifetimeStats hook + api/types + AchievementBadge read end-to-end;
+                         the `!stats` per-panel empties, the gas_equivalent_cost>0 / earth_circumferences>0 /
+                         ownership_days>0 guards, and the fromKm/fromKmh + fmtNumber + coffeesSaved
+                         semantics all verified.
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0; my files carry ZERO opt-outs. Complete code — each of
+                         loading/empty/error/success renders distinct UI; the skeleton is real shimmer
+                         blocks, not a redaction opt-out.
+ 5 No parity shortcuts : 4 states render distinctly; every visible string = a web key verbatim
+                         (catalog ⊆ source verified); the per-record SI unit (m / m·s⁻¹ / Wh), the
+                         Wh/km activity efficiency, the coffee/earth/moon derivations, and the date
+                         formatting ported + unit-tested.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface / shared component / other owners' files;
+                         only added the .lifetimeStats nav registration + 42 strings + the ledger rows.
+                         The pre-existing Input.Previews ViewBuilder error was left to its owner
+                         (NOT worked around / NOT reverted).
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE gates — placeholder(0) / swiftformat(0/12) /
+                         swiftlint --strict(0) / xcodegen(0) / macOS+iOS whole-module EmitSwiftModule
+                         (0 LifetimeStats diagnostics) / test type-check(0) / executed logic harness
+                         (38/38). The only RED is the inherited, out-of-scope shared-surfaces error.
+ 9 No silent drift     : changes confined to the files listed above + this log + the ledger.
+                         TeslaSyncApp gained one registry line; AppRoute gained one case (+ pathSegment
+                         / icon / Insights group). No new callers of legacy unit helpers (SI read direct).
+10 EXIT/STATUS below.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Analytics/LifetimeStats*.swift \
+          apps/apple/Tests/Unit/Features/Analytics/LifetimeStatsPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-analytics-LifetimeStatsPage.log
+  git commit -m "feat(apps/apple): LifetimeStatsPage at web parity (P7 analytics)"
+
+EXIT=0
+STATUS=DONE

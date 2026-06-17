@@ -1,0 +1,271 @@
+================================================================================
+P4 · Feature view · 0298 — SecuritySection (Apple)
+Run: 2026-06-11T02:3x-0700   Host: Darwin arm64   Repo: ev-dev-labs/teslasync
+Prompt: P4/feature-views/0298 — Feature view: SecuritySection
+Web source (spec): web/src/features/vehicles/components/vehicle-detail/SecuritySection.tsx (82 lines)
+Mode: code-complete + host-green; full-app xcodebuild build/test RAN and captured,
+      DEFERRED to the signed macos-latest acceptance gate (ADR-012) on two PRE-EXISTING,
+      code-unrelated reasons — (a) a SYSTEMIC sibling-surface Swift-6 escaping-closure bug
+      (the `glass(@ViewBuilder _ content:) { TSGlassPanel { content() } }` non-escaping
+      capture, present in multiple shared-surfaces/AI*.swift files) PROVEN pre-existing by
+      a clean isolation rebuild, and (b) macOS dev-signing (0 valid identities) — identical
+      disposition to ClimateSection 0291 / LiveTelemetryPanels 0281 / FleetSummary 0276.
+      Honesty rule 7 (predecessor standard honoured). Delegation: NONE (FORBIDDEN by this
+      prompt; authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (Xcode toolchain) .... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  Xcode ...................... Xcode 26.5 (17F42)                                   OK
+  iPhoneSimulator SDK ........ iPhoneSimulator.sdk (iOS 18.0 deploy target)         OK
+  macOS SDK .................. MacOSX.sdk (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-…-CBDDD3140989)           OK
+  SwiftUI .................... present in both SDKs (this surface's core dependency) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER —
+                               web "Charts/maps used: (none)")                       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... project generates cleanly; 42 SecuritySection pbxproj
+                               refs across app + test targets                       OK
+  Shared.xcframework ......... BUILT + STAGED — gradlew :core:assembleSharedXCFramework
+                               BUILD SUCCESSFUL (7m33s); ios-arm64 + ios-arm64-simulator
+                               + macos-arm64 staged to apps/apple/Frameworks/        OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared components
+  "@/components/ui", "@/components/data-display", "@/components/feedback". The core
+  requirement is SwiftUI, AVAILABLE and PROVEN by the real iOS-18-simulator AND macOS-15
+  SDK type-checks + the executed XCTest suite below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== WHAT WAS BUILT (parity with the web source, read end-to-end) ===
+  SecuritySection is the Security section of the Vehicle Detail page: a GlassPanel with a
+  Shield-icon "Security" header over either a four-tile MetricCard grid (when a security
+  reading is present) or an EmptyState ("No security data available"). The web component is
+  a pure presentational leaf fed TWO props — securityData (a SecurityEvent) and state (a
+  VehicleState) — by the Vehicle Detail page. The native surface reproduces its data,
+  composition, every state, and i18n keys via shared P1/S8 state-holder seams (no view I/O).
+
+  Composition (web → native), all FOUR MetricCards reproduced VERBATIM (not stubbed):
+   1. Locked  — state.is_locked ? "Yes" : "No"; lock.fill when locked else lock.open.fill;
+                green accent when locked else cyan (the web Lock/Unlock + green/cyan flip).
+   2. Sentry  — state.sentry_mode ? "Active" : "Off"; eye.fill glyph; green when active else
+                cyan (web Eye + green/cyan).
+   3. Doors   — door_state shown verbatim when present + non-empty (web
+                `door_state != null && door_state !== '' ? String(door_state) : null`,
+                reproduced incl. the JS String() coercion), else localized "Closed";
+                door.left.hand.closed glyph; cyan when a door state is present else green.
+   4. Windows — `{{count}} open` when windowOpenCount > 0 else "Closed"; car.fill glyph;
+                cyan when open else green. windowOpenCount ports the web inline helper
+                EXACTLY: over fd/fp/rd/rp_window, coerce `typeof v==='number' ? v : Number(v)`
+                and count finite readings strictly > 0 (a nil field is skipped; a NaN
+                coercion is not finite so not counted).
+
+  JS coercion fidelity (the heart of the web component): SecuritySectionNumber ports
+  Number(string) (empty/whitespace → 0; full numeric parse else NaN) and String(number)
+  (whole drops the fraction; fractional keeps minimal decimal). SecuritySectionSignalValue
+  models the backend `string | boolean | null` union (a `number` case for numeric
+  percentages) with numericReading (`Number(true)=1`/`Number(false)=0`/`Number(str)`) and
+  stringValue (`String(true)="true"`/etc.). All unit tested directly.
+
+  Accent fidelity (ADR-006 semantic, not literal): the web MetricCard `color` prop tints
+  ONLY the icon chip (bg/ring/glyph), not the value. green → statusSuccess, cyan →
+  statusInfo; the locked/sentry/doors/windows tiles flip green↔cyan by state. The value
+  reads textPrimary; the label reads textSecondary.
+
+  Two-prop modelling: the web empty branch keys ONLY on `securityData` (`securityData ?
+  grid : EmptyState`); the always-present `state` flags (is_locked / sentry_mode) are
+  surfaced only inside the grid. Modelled as SecuritySectionReading carrying both the
+  VehicleState flags and the SecurityEvent door/window signals; a nil reading is the web
+  `!securityData` empty branch (so the state-derived tiles render iff a security reading
+  exists — web parity, unit tested).
+
+  Seams (P1/S8): SecuritySectionSource (one coalesced snapshot: reading + loading/error +
+    connectivity) → SecuritySectionModel (@Observable). Previews/tests inject
+    InMemorySecuritySectionSource; the view performs no networking.
+    Telemetry (P1/S11): view.opened with surface slug "SecuritySection", emitted once.
+    i18n (P1/S10): every string via SecuritySectionStrings; 0 hardcoded English literals in
+    native code. The "{{count}}" token is substituted by SecuritySectionStrings.windowsOpen
+    (i18next-style, also tolerating single-brace {count}). The raw door_state string is
+    device/data text carried through unchanged, not a translated string.
+
+  Collision audit (rule 9): a tree-wide scan of all 41 type/protocol names this surface
+  declares (incl. the test types) found 0 declarations outside the SecuritySection.* files
+  — every name uses the unique `SecuritySection*` / `OSLogSecuritySection*` /
+  `InMemorySecuritySection*` prefix. The sole shared name `Phase` is the nested
+  `SecuritySectionResolved.Phase` (matching the ClimateSectionResolved.Phase sibling
+  pattern). ZERO new redeclarations introduced.
+
+  Files (7; allowed scope = apps/apple/TeslaSync/feature-views/SecuritySection.*):
+    SecuritySection.Adapter.swift   315  (JS Number/String ports + SignalValue + Reading
+                                         (door/windows/locked/sentry) + windowOpenCount +
+                                         accent/kind/value + projection + a11y)
+    SecuritySection.Model.swift     255  (telemetry/i18n facade + connection + input/resolved
+                                         + projector + Source seam + @Observable model +
+                                         windowsOpen {{count}} substitution)
+    SecuritySection.Tests.swift     374  (Number/String ports + SignalValue + door/window
+                                         count + 4-card projection + value-text + projector
+                                         + model/telemetry/stale + a11y + per-state render)
+                                         [test target, not app target]
+    SecuritySection.Views.swift     243  (value-words + value-text resolver + grid + metric
+                                         tile + icon chip + loading/empty/error chrome)
+    SecuritySection.swift           151  (surface View shell + header + freshness chip/banner
+                                         + state switch)
+    SecuritySection.Previews.swift  112  (8 per-state #if DEBUG previews)
+    SecuritySection.strings          47  (i18n catalog; 12 source keys + 9 native-chrome keys)
+  All 6 .swift files ≤ 400 lines (swiftlint file_length); decomposed surface + sub-components,
+  not a monolith.
+
+=== STATES (every state renders — no hidden surfaces) ===
+  loading ......... initial-fetch skeleton (4 tile-shaped skeletons in the data grid)
+  data ............ the four-tile grid (web `securityData ? grid`); a present reading always
+                    renders the grid (unit tested)
+  empty ........... no reading (web `!securityData`) → ContentUnavailableView, never blank
+  error ........... parent-query failure → retry affordance (web QueryError peer) →
+                    model.refresh()
+  stale ........... freshness window exceeded → amber freshness chip + banner + one guarded
+                    auto-refresh on the stale transition (web refetch self-refresh)
+  offline ......... no connectivity → cached values + offline chip + banner
+  Each has a #if DEBUG preview (8 previews: loading / data·secured / data·alert /
+  data·partial / empty / error / stale / offline) and is exercised by the per-state
+  ImageRenderer render test (EXECUTED green).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 5 production + 1 test .swift compiled together with the REAL
+  apps/apple token + component closure (design/generated/apple/Tokens + Sources/Design +
+  Sources/Components, minus the KMP-Units-dependent UnitFormatters.swift); none of the
+  surface files import the Shared xcframework.
+
+  [1] Isolated SwiftPM build — module "TeslaSync", real tokens + component library, Swift 6
+        language mode (.swiftLanguageMode(.v6)):
+          swift build -> "Build complete! (12.22s)"
+        ISO_BUILD_EXIT=0                                                           OK
+  [2] swift test — the FULL XCTest suite EXECUTED on the macOS host (real Adapter / Model /
+        Views / Previews + real tokens):
+          Executed 33 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: JS Number() ports (empty/whitespace→0, numeric, non-numeric→NaN) + String()
+        ports (whole/fractional); SignalValue numericReading (number / bool 1|0 / string)
+        + stringValue (true|false / number / string) + isEmptyString; resolvedDoorState
+        (nil / empty-string→nil / verbatim / bool / number coercion); windowOpenCount (all
+        absent → 0; mixed number/bool/string > 0; NaN + empty-string + negative ignored;
+        all-four open); the four-card projection (order, locked value+accent+lock/unlock
+        glyph flip, sentry, doors present→text/cyan vs absent→closed/green, windows
+        open→count/cyan vs none→closed/green); the value-text resolver (yesNo / activeOff /
+        text / closed / windowsOpen); windowsOpen {{count}} substitution; projector phase
+        precedence (error > loading > empty > data + present-reading → data +
+        empty-error-string ≠ error); model start-applies-initial + view.opened-once + slug +
+        refresh-forwarding + push-updates-connection + stale-auto-refresh-once; a11y tile
+        summary; per-state ImageRenderer render smoke (loading / data / empty / error /
+        stale / offline).
+  [3] swiftc -typecheck — iOS 18 SIMULATOR SDK (-swift-version 6 -strict-concurrency=complete
+        -target arm64-apple-ios18.0-simulator -D DEBUG; 46 files = production surface + real
+        token/component closure):
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [4] swiftc -typecheck — macOS 15 SDK (same files/flags; -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [5] swiftlint --strict (6 surface .swift files; explicit paths; config apps/apple/
+        .swiftlint.yml):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                                OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate):
+        (a) gate's literal invocation: -Path apps/apple/TeslaSync/feature-views/SecuritySection
+              PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+        (b) real scan dir holding ALL 7 SecuritySection.* files (incl .strings):
+              PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+        (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented in any file; 0
+         opt-outs.)
+  [8] i18n key coverage (referenced == declared) + plutil:
+          referenced=21  declared=21  missing=0  orphan=0   plutil -lint: OK
+        I18N_EXIT=0                                                               OK
+
+=== GATE — FULL-APP XCODEBUILD (RAN on this host; real output; DEFERRED to signed runner) ===
+    Prereqs done: Shared.xcframework BUILT via gradlew :core:assembleSharedXCFramework
+    (BUILD SUCCESSFUL 7m33s; ios-arm64 + ios-arm64-simulator + macos-arm64) and staged to
+    apps/apple/Frameworks/; `xcodegen generate` -> GEN_EXIT=0 (42 SecuritySection pbxproj
+    refs).
+
+    [A] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+          IOS_EXIT=65   (** BUILD FAILED ** then ** TEST FAILED **, before the test phase)
+          error: lines = 1 total; SecuritySection error: lines = 0 (verified:
+            grep 'error:' | grep -ci securitysection -> 0). The sole error is a PRE-EXISTING
+            Swift-6 escaping-closure bug in a SIBLING shared-surface, OUTSIDE this prompt's
+            allowed files:
+              TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+              error: escaping closure captures non-escaping parameter 'content'
+            (the helper `private func glass(@ViewBuilder _ content: () -> some View)` passes
+             the NON-escaping `content` into `TSGlassPanel { content() }`, whose init takes
+             @escaping). That file contains 0 references to SecuritySection.
+
+          PROOF the failure is PRE-EXISTING (not induced by this surface): with all 7
+          SecuritySection.* files MOVED OUT of the target and the project regenerated
+          (pbxproj SecuritySection refs = 0), a CLEAN xcodebuild build (fresh derived-data
+          path) STILL fails —
+              ISO_CLEAN: ** BUILD FAILED **; 1 error: line, the IDENTICAL bug pattern in a
+              DIFFERENT sibling:
+                TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+                error: escaping closure captures non-escaping parameter 'content'
+              SecuritySection refs in the build = 0.
+          The systemic `glass { TSGlassPanel { content() } }` bug reproduces WITHOUT this
+          surface present → it is a pre-existing sibling-surface defect, unrelated to
+          SecuritySection. (Cold builds bail on the first failing batch; which AI* sibling
+          surfaces first is batch-ordering, not relevance — both runs show 0 SecuritySection
+          errors.) Files restored afterward (7 files; 42 pbxproj refs; lint/format re-checked
+          green).
+
+    [B] xcodebuild -scheme TeslaSync-macOS build test
+          MAC_EXIT=65   (** BUILD FAILED ** then ** TEST FAILED **)
+          Real errors = development-signing entitlements, PRE-EXISTING / infra (the 2 cited;
+          4 error: lines total counting the duplicated emission):
+            "TeslaSync-macOS"        has entitlements that require signing with a development
+                                     certificate. Enable development signing…
+            "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+                                     certificate. Enable development signing…
+          `security find-identity -v -p codesigning` = "0 valid identities found" on this
+          runner. Fast-fails at code-signing; SecuritySection error: lines = 0. Both the
+          signing config and the AI* sibling bug are OUTSIDE this prompt's allowed files.
+
+    Disposition (ADR-012; matches ClimateSection 0291 / LiveTelemetryPanels 0281): the
+    surface is 0-error and host-green on EVERY runnable surface-scoped gate; the only
+    non-green steps are a PRE-EXISTING systemic sibling-surface Swift-6 escaping-closure bug
+    + macOS dev-signing, both PROVEN code-unrelated (isolation rebuild) and out-of-allowed-
+    files. The full-app build/test is DEFERRED to the signed macos-latest acceptance gate.
+    This is NOT a capability block (SwiftUI/Charts/MapKit all present + proven), so
+    STATUS=BLOCKED does not apply.
+
+=== HONESTY COVENANT (binding — point by point) ===
+  1 No red-as-green ...... IOS_EXIT / MAC_EXIT reported as the real 65 with full error text;
+                          not laundered. EXIT=0 rests on the surface being 0-error +
+                          host-green + the documented pre-existing/external deferral.
+  2 No scope narrowing ... all 4 web MetricCards + every state + every i18n key reproduced;
+                          nothing dropped.
+  3 No skip-and-assume ... web source read end-to-end; the windowOpenCount + door coercion
+                          ported VERBATIM (incl. JS Number()/String() edge semantics) and
+                          unit tested, not approximated.
+  4 No stubs as final .... no TODO/placeholder/mock; check-placeholders COUNT=0 on all 7
+                          files; every state renders real content.
+  5 No parity shortcuts .. accents/glyphs/values/empty-message/connectivity all mapped to
+                          shared tokens + facade; no Tailwind ports, no raw hex.
+  6 No delegation ........ authored directly (delegation FORBIDDEN by this prompt; none).
+  7 No predecessor bypass  same disposition + same host-green-+-isolation-proof standard as
+                          ClimateSection 0291 (the sibling vehicle-detail section); the
+                          full-app deferral causes are PROVEN pre-existing, matching the
+                          predecessor's standard.
+  8 No commit on red ..... committed work is green on every surface-scoped runnable gate; the
+                          only non-green steps are a PRE-EXISTING sibling Swift-6 bug +
+                          dev-signing, both out-of-scope / out-of-allowed-files, and the
+                          surface itself is 0-error in the full-app build (0 SecuritySection
+                          error lines).
+  9 No silent drift ...... the SecuritySection* prefix collision audit (0 collisions), the
+                          two-prop empty-branch modelling, the JS-coercion fidelity, and the
+                          full-app deferral + its causes (real exit codes, the colliding
+                          pre-existing sibling bug, and the clean isolation-rebuild proof)
+                          are all recorded above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

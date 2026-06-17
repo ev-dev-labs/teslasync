@@ -1,0 +1,216 @@
+=== P4-APPLE · P7 · page:admin/TeslaRegion (SwiftUI / HIG) ===
+started: 2026-06-12T14:06:34-0700
+host: macOS (Darwin, arm64); Xcode 26.5 (Build 17F42, xcodebuild present); Swift 6.3.2;
+      swiftlint 0.63.3; swiftformat 0.61.1; xcodegen 2.45.4; pwsh 7.6.2;
+      Kotlin/Native prebuilt-macos-aarch64-2.4.0 (Gradle KMP reachable)
+web source: web/src/features/admin/pages/TeslaRegionPage.tsx   (route /tesla-region)
+parity unit: page:admin/TeslaRegion  (manifest PARITY_REQUIRED=2; strings region.subtitle, region.title)
+data sources: NONE declared — the web page is a thin PageContainer wrapper that renders
+              <RegionSettings /> (a separate P3 component parity unit, already shipped as the
+              native RegionSettings surface in TeslaSync/feature-views/RegionSettings*.swift).
+
+--------------------------------------------------------------------------------
+WEB SOURCE SHAPE (what parity means here)
+--------------------------------------------------------------------------------
+TeslaRegionPage.tsx (31 lines) is a first-class page wrapper:
+  • usePageTitle(t('region.title','Region & API'))
+  • <PageContainer title={t('region.title')} subtitle={t('region.subtitle', 'Tesla account
+        region and Fleet API endpoint')}>
+       <RegionSettings />
+    </PageContainer>
+It carries NO API hook of its own (RegionSettings owns useTeslaUserRegion/useRefreshTeslaRegion).
+So the page parity unit = the page chrome (the two strings region.title / region.subtitle, in the
+same grouping/order) + the embedded RegionSettings panel. The manifest record confirms this:
+"strings": ["region.subtitle","region.title"], requiredCount 2, no panels/charts/maps/data sources.
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`. That path is
+NOT a project.yml source group in this repo. The real, COMPILED canonical admin-page home is
+`apps/apple/Sources/Features/Admin/**` — where the live sibling P7 admin pages ship (ApiPlayground,
+DiskForecast, FleetTelemetryCoverage, LiveSignalInspector, SchemaDrift; apps/parity/apple-ledger.json
+shows all five "done"), and which project.yml lists as a `Sources` source path. The page therefore
+ships at `apps/apple/Sources/Features/Admin/**`, the faithful equivalent of the prompt's
+`Features/Admin`. Strings ship in the platform catalog `apps/apple/Localization/Localizable.xcstrings`
+(an allowed file). This is the SAME reconciliation the DiskForecast / SchemaDrift sibling logs recorded.
+
+ROUTE HOSTING: the web route is the top-level path `/tesla-region` (the Region & API page, promoted
+out of the Settings "Integrations" group). Exactly as the SchemaDrift / LiveSignalInspector siblings
+did for their routes, TeslaRegion gets a dedicated `.teslaRegion` AppRoute case (pathSegment
+"tesla-region"). `AppRouteParser` resolves `/tesla-region -> .teslaRegion` via its canonical path
+segment (no alias needed — the segment matches 1:1). `TeslaRegionRouteRegistration` hosts the page on
+that route; it is composed into `\.routeHosts` in TeslaSyncApp.swift, so the page is reachable via the
+System-group sidebar entry, the iPhone "More" list, the command palette, and any `/tesla-region` deep
+link. The new case is placed in the `.system` group with siblings admin/apiPlayground/schemaDrift/etc.
+
+NATIVE RegionSettings COMPONENT REUSE: the embedded panel is the already-shipped native RegionSettings
+(P3 component unit) in TeslaSync/feature-views/RegionSettings{,.Model,.Adapter,.Views}.swift. The page
+constructs it through a composition-time `SampleRegionSettingsSource` default (a representative SI-free
+region snapshot — na / fleet-api.prd.na.vn.cloud.tesla.com) so the embedded panel renders its populated
+data state out of the box (ADR-011 — never a blank surface), mirroring the sibling admin pages'
+`Sample…DataSource` defaults. Production injects the KMP-backed useTeslaUserRegion adapter at the
+registration seam (TeslaRegionRouteRegistration.registry(source:)).
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/TeslaRegionPage.swift               (≈150 LOC) SwiftUI view +
+     @Observable TeslaRegionPageModel + SampleRegionSettingsSource. TeslaRegionPage: ScrollView >
+     VStack { header(TSPageTitle(region.title) + Text(region.subtitle)) ; RegionSettings(model:) }.
+     TeslaRegionPageModel exposes titleKey="region.title", subtitleKey="region.subtitle" as bound
+     state, resolvedTitle (usePageTitle peer), and owns the embedded RegionSettingsModel.
+     SampleRegionSettingsSource: composition-time default region snapshot. #if DEBUG previews (Data/Empty).
+?? apps/apple/Sources/Features/Admin/TeslaRegionRouteRegistration.swift  (≈25 LOC)  registers
+     .teslaRegion -> TeslaRegionPage (mirrors SchemaDriftRouteRegistration; model built on MainActor +
+     captured so the escaping registry closure never constructs an isolated type).
+ M apps/apple/Sources/App/AppRoute.swift           +.teslaRegion case (pathSegment "tesla-region",
+     systemImage "globe", group .system)
+ M apps/apple/Sources/TeslaSyncApp.swift           chains TeslaRegionRouteRegistration.registry(...) as
+     the outermost \.routeHosts wrapper
+ M apps/apple/Localization/Localizable.xcstrings    +3 keys (region.title, region.subtitle,
+     route.teslaRegion); web key names verbatim; en, extractionState "manual" (matches the recent P7
+     admin keys); additive textual insert immediately after "strings": { (no reorder of existing keys);
+     JSON validated (8235 -> 8238 keys); xcstringstool compile OK (en/ar/he)
+ M apps/parity/apple-ledger.json                    +2 rows (apple-macos, apple-ios) for
+     page:admin/TeslaRegion, covered 2/2
+
+(The generated apps/apple/TeslaSync.xcodeproj and the staged apps/apple/Frameworks/Shared.xcframework
+ are git-ignored — `git check-ignore` confirmed — and are NOT committed.)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (apps/apple/Scripts/build-shared-xcframework.sh) ---
+":core:assembleSharedXCFramework" ; "xcframework successfully written out to .../XCFrameworks/release"
+"Staging .../release/Shared.xcframework -> apps/apple/Frameworks/Shared.xcframework" ; "✓ staged"
+BUILD SUCCESSFUL in 10m 29s   (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+"Created project at apps/apple/TeslaSync.xcodeproj"
+TeslaRegionPage.swift / TeslaRegionRouteRegistration.swift referenced 12x in project.pbxproj
+(iOS + macOS app targets + both XCTest bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 2 new files + 2 edited swift files, repo .swiftformat) ---
+0/4 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint lint --strict (my 2 new files + 2 edited swift files, repo .swiftlint.yml) ---
+Done linting! Found 0 violations, 0 serious in 4 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=1   (the single allow marker is a sibling admin page, NOT mine)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin/TeslaRegionPage.swift (mine only) ---
+PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+(grep of my 2 files for TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/"not implemented" -> 0;
+ the embedded RegionSettings loading uses the shared TSSkeleton, deliberately NOT
+ `.redacted(reason:.placeholder)`, so no forbidden token appears in shipped code.)
+
+--- xcstringstool compile (validates the Localizable.xcstrings edit) ---
+xcrun xcstringstool compile --output-directory <tmp> Localization/Localizable.xcstrings
+emitted en/ar/he Localizable.strings ; en.lproj contains region.subtitle="Tesla account region and
+Fleet API endpoint", region.title="Region & API", route.teslaRegion="Region & API"
+XCSTRINGS_EXIT=0
+
+--- Isolated view+model type-check vs the REAL P2 tokens + P3 components + RegionSettings
+    (Swift 6, -strict-concurrency=complete) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Cards,Badges,Buttons,Typography}.swift Sources/Components/Motion/Motion.swift \
+#   Sources/Components/Feedback/Skeletons.swift Sources/App/{AppRoute,RouteHostRegistry}.swift \
+#   TeslaSync/feature-views/RegionSettings{,.Model,.Adapter,.Views}.swift \
+#   Sources/Features/Admin/TeslaRegion{Page,RouteRegistration}.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0
+(compiles my page + model + sample source + registration against the ACTUAL TSPageTitle / TSGlassPanel /
+ TSIconBox / TSButton / TSFadeIn / TSSkeleton / Color.TS / Font.TS / TSSpacing / TSRadius / TSTypeMetrics /
+ AppRouteHostRegistry / AppRoute sources AND the real native RegionSettings surface it embeds —
+ authoritative proof the API usage is correct on BOTH idioms, ADR-002/006.)
+
+--- Executed route-logic harness (real AppRoute.swift + AppRouteParser.swift, Swift 6 strict-concurrency) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   Sources/App/AppRoute.swift Sources/App/AppRouteParser.swift main.swift -o routeharness   (compile EXIT=0)
+12 assertions, 0 failures -> "ALL ASSERTIONS PASSED (27 routes)"
+  .teslaRegion: pathSegment "tesla-region" / path "/tesla-region" / group .system / systemImage "globe";
+  AppRouteParser.parse resolves /tesla-region, /tesla-region/, tesla-region, /TESLA-REGION, and
+  teslasync://tesla-region all to .teslaRegion; RouteTests invariants still hold (all 27 path segments
+  unique; every route resolves to its group; .system group contains .teslaRegion).
+HARNESS_EXIT=0
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS \
+      -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [RED — blocked by PRE-EXISTING, OUT-OF-SCOPE errors; see note below; ZERO errors in any of my files]
+TEST not reached  [the XCTest bundle hosts on the app target, blocked by the same out-of-scope errors;
+                   the route logic is instead proven GREEN by the harness above, 12/12, and the
+                   existing Tests/Unit/App/RouteTests.swift invariants are reproduced there.]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7/#8)
+================================================================================
+With the Shared.xcframework freshly built + staged, the full `xcodebuild` app target halts on a
+SYSTEMIC pre-existing Swift 6 strict-concurrency defect in the `TeslaSync/shared-surfaces/` AI* chrome
+helpers — a non-escaping `@ViewBuilder _ content: () -> some View` parameter captured by an escaping
+closure ("escaping closure captures non-escaping parameter 'content'"):
+  build #1 halted at  TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22
+  (after a throwaway one-line @escaping on that single helper, purely to probe depth — REVERTED, never
+   committed; `git status --porcelain` lists only my 6 in-scope paths) build #2 halted at the NEXT
+  occurrence  TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22  (identical class).
+The vulnerable helper pattern appears in 74 `TeslaSync/{shared-surfaces,feature-views}` files; this is
+the same class of pre-existing `TeslaSync/*` breakage the DiskForecast (AISuggestNewGeofences.swift) and
+SchemaDrift (RecentDrivesSection.Previews.swift) sibling logs documented. Every erroring file is OUTSIDE
+this artifact's allowed files, is UNCHANGED by this artifact, and is independent of every file I touched.
+Grep of BOTH full build logs for TeslaRegion* / AppRoute / TeslaSyncApp diagnostics -> 0 `error:` lines.
+My files' correctness is proven instead by the isolated Swift 6 type-check (macOS + iOS, 0/0) against the
+real tokens/components/RegionSettings AND the executed route harness (12/12) — the same host-harness
+methodology the peer p4-apple logs use when the shared app bundle is blocked by out-of-scope siblings.
+No out-of-scope file was edited; the breakage is DEFERRED to its owner / the P99 apple acceptance gate.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+================================================================================
+[x] string — region.title
+      bound state : Sources/Features/Admin/TeslaRegionPage.swift `TeslaRegionPageModel.titleKey`
+                    (LocalizedStringKey = "region.title")
+      rendered    : Sources/Features/Admin/TeslaRegionPage.swift `TeslaRegionPage.header` ->
+                    `TSPageTitle(model.titleKey)` (page chrome title, web PageContainer title +
+                    usePageTitle); also surfaced by `TeslaRegionPageModel.resolvedTitle` =
+                    String(localized:"region.title")
+      catalog     : apps/apple/Localization/Localizable.xcstrings  "region.title" = "Region & API"
+                    (en, manual) — xcstringstool compile OK; web key name verbatim
+[x] string — region.subtitle
+      bound state : Sources/Features/Admin/TeslaRegionPage.swift `TeslaRegionPageModel.subtitleKey`
+                    (LocalizedStringKey = "region.subtitle")
+      rendered    : Sources/Features/Admin/TeslaRegionPage.swift `TeslaRegionPage.header` ->
+                    `Text(model.subtitleKey)` (page chrome subtitle, web PageContainer subtitle)
+      catalog     : apps/apple/Localization/Localizable.xcstrings  "region.subtitle" =
+                    "Tesla account region and Fleet API endpoint" (en, manual) — web key name verbatim
+PARITY_COVERED=2
+(2/2 — every visible page-chrome literal resolves from Localizable.xcstrings via the bound @Observable
+ TeslaRegionPageModel; zero hardcoded strings; key names match web. The embedded RegionSettings panel
+ (its own P3 component parity unit) additionally renders region.title/region.subtitle + its data/empty/
+ error/loading/staleness states from RegionSettingsModel.)
+
+ACCEPTANCE
+[x] Every anonymous region of the web source reproduced (PageContainer header chrome + embedded
+    RegionSettings); no named panels declared by the manifest.
+[x] All 2 parity items render from the bound @Observable state holder (TeslaRegionPageModel).
+[x] Data states: page declares 0 data sources (manifest) — none required at page level; the embedded
+    RegionSettings owns loading/empty/error + >2min staleness (ADR-013).
+[x] All visible strings from Localizable.xcstrings; zero hardcoded literals; key names match web.
+[x] Dark mode + Dynamic Type + a11y + SI honored; SwiftUI-native only (design tokens, materials, no web
+    cloning); adaptive macOS + iOS (single scrolling column; #if os(iOS) branches in embedded surface
+    type-checked on the iOS target).
+[x] swiftformat + swiftlint(--strict) + placeholder + xcstrings + isolated build(typecheck macOS/iOS) +
+    route harness green; full app build red ONLY on pre-existing out-of-scope siblings (0 errors in my
+    files); PARITY_COVERED==PARITY_REQUIRED (2).
+[x] apple ledger rows (apple-macos, apple-ios) for page:admin/TeslaRegion set covered 2/2.
+
+EXIT=0
+STATUS=DONE

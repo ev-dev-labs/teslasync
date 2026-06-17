@@ -1,0 +1,223 @@
+=== P4 Shared surface 0146 FormatterPrefsBridge (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin 25.5.0 arm64, Apple Silicon) — shared parallel runner, slot-101.
+  Xcode              : 26.5 (Build 17F42) — DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+  Toolchain          : swift 6.3.2 · swiftlint (--strict) · swiftformat (--lint) · xcodegen · pwsh 7.
+  Destinations       : iOS 18 simulator (iPhone 16, booted) + macOS 15 SDKs present.
+  Capability         : SwiftUI present; this surface uses NO Swift Charts / MapKit (web "Charts/maps used:
+                       none"). The bridge is a side-effect mount (web renders null); the native parity needs only
+                       SwiftUI + Foundation + os (OSAllocatedUnfairLock, iOS16+/macOS13+). => NOT capability-
+                       BLOCKED. The surface is INDEPENDENTLY VERIFIED on this runner (typecheck iOS+macOS, a real
+                       Swift 6 XCTest run, lint/format/placeholder, xcodegen membership); the full-app xcodebuild
+                       is DEFERRED on a PRE-EXISTING, code-unrelated infra gap (the unstaged KMP Shared.xcframework
+                       — see DEFERRED), per the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition
+                       used by every P4 surface to date.
+
+WEB SOURCE (the specification) — components/FormatterPrefsBridge.tsx (+ the libs it binds)
+  FormatterPrefsBridge.tsx — mounts near the React root and renders `null`. It is a side-effect-only bridge that
+    keeps the module-level number-format globals in sync with the persisted user settings:
+      • useSettingsQuery() (the `['settings']` query) + useQueryClient().
+      • locale  = resolveLocale(settings.locale)            // lib/locale.ts: non-empty(after trim) tag, else "en-US"
+      • decimals = settings.decimal_precision ?? 2
+      • useEffect([settings]) applies setGlobalLocale(locale) / setGlobalPrecision(decimals) with a de-dupe:
+        write only when the value !== the bridge's last-written value AND !== the current global; on the first
+        resolve, record the observed value even when no write was needed (lastLocale/lastDecimals refs).
+      • mounting it creates a PERMANENT `['settings']` subscriber so cross-tab invalidations always refetch.
+      • useEffect: subscribe((msg) => { if (msg.type === TOPICS.SETTINGS_CHANGED) qc.invalidateQueries(['settings']) }).
+  numberFormat.ts globals — `_globalLocale='en-US'`, `_globalPrecision=2`; setGlobalLocale empties to "en-US";
+    setGlobalPrecision clamps Math.max(0, Math.min(20, decimals)); getGlobalLocale/getGlobalPrecision read them.
+  Render output — `null` (no JSX, no t() keys; the surface is anonymous).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/, 11 .swift + 1 .strings = 12 files, 1916 lines; each <= 400)
+  FormatterPrefsBridge.Adapter.swift     198  Resolve typealias, Settings value type, fetch + connectivity status,
+                                              the verbatim resolveLocale port (+ isExplicit), Limits (default 2 /
+                                              clamp [0,20] / "en-US"), the process-wide formatter-globals Store
+                                              (numberFormat-globals parity: empty->en-US, clamp, en-US/2 defaults),
+                                              surface slug, a11y label builders.
+  FormatterPrefsBridge.Projection.swift  161  Input / Config (defaultPrecision) / Applied / Resolved phases
+                                              (loading / unavailable / usingDefaults / applied) + offline/connection;
+                                              pure resolve() (web branch order; explicit-vs-defaults decision).
+  FormatterPrefsBridge.Seams.swift       321  Source (P1/S8) protocol + Live (update) + InMemory; Applier seam
+                                              (setGlobal*/getGlobal* parity) + Globals (store-backed) + Recording
+                                              double; Broadcast seam (settings.changed parity) + NotificationCenter
+                                              + Noop + Manual doubles.
+  FormatterPrefsBridge.Model.swift       189  @Observable state-holder: start/stop/refresh, view.opened telemetry
+                                              (P1/S11) once, the verbatim apply-globals de-dupe, settings-changed
+                                              broadcast -> refresh (web qc.invalidateQueries), stale rising-edge
+                                              auto-refresh; P1/S10 facade.
+  FormatterPrefsBridge.States.swift      122  Loading skeleton card, the friendly device-defaults card, the
+                                              unavailable retry tile (web QueryError peer).
+  FormatterPrefsBridge.Views.swift       188  Active-prefs card (locale + precision rows + synced/offline note),
+                                              the shared value row + grid, the freshness chip.
+  FormatterPrefsBridge.swift              89  public surface View (phase switch + freshness chip + onAppear/
+                                              onDisappear lifecycle); surfaceSlug="FormatterPrefsBridge".
+  FormatterPrefsBridge.Previews.swift     78  #if DEBUG previews: loading / unavailable / using-defaults / applied /
+                                              stale / offline (isolated store + no-op broadcast).
+  FormatterPrefsBridge.AdapterTests.swift 112 Pure: resolveLocale (+ isExplicit), store guards (empty->en-US, clamp,
+                                              defaults), globals applier, slug, a11y composition. (13 cases)
+  FormatterPrefsBridge.Tests.swift        202 Projection per-phase (incl. zero-precision-is-explicit, custom default,
+                                              offline), Live + InMemory source, every subview + the surface compose.
+                                              (16 cases)
+  FormatterPrefsBridge.ModelTests.swift   215 Model: start-idempotence + once-only telemetry, apply once / skip
+                                              redundant re-emit / skip when == current global / DO apply defaults /
+                                              write-on-change / no-write-in-chrome, broadcast -> refresh, stale
+                                              rising-edge refresh + offline-no-refresh, stop wiring, exposed phase.
+                                              (6 cases) — 35 tests total.
+  FormatterPrefsBridge.strings             41  P1/S10 catalog table — the web bridge renders null (zero t() keys);
+                                              these are the native P4 leaf chrome / freshness / a11y keys.
+  No wiring edits required: TeslaSync/shared-surfaces is ALREADY registered in project.yml (iOS + macOS app and
+  test targets) and .swiftlint.yml `included:` by prior surfaces — changes are confined to the allowed glob + log.
+
+PARITY MAPPING (web -> Apple platform tokens; no Tailwind ported, no raw hex)
+  useSettingsQuery / useQueryClient     -> P1/S8 FormatterPrefsBridgeSource (Live/InMemory) -> ...Model (no view HTTP).
+  setGlobalLocale / setGlobalPrecision  -> FormatterPrefsBridgeApplier over FormatterPrefsBridgeStore (process-wide,
+    getGlobalLocale / getGlobalPrecision     OSAllocatedUnfairLock-guarded; the numberFormat module-globals parity:
+                                             empty->en-US, clamp [0,20], en-US/2 defaults). Default applier = shared.
+  resolveLocale(settings.locale)        -> FormatterPrefsBridgeLocale.resolve (verbatim: original tag when trimmed
+                                             non-empty, else "en-US") + .isExplicit (the applied-vs-defaults decider).
+  settings.decimal_precision ?? 2       -> Config.defaultPrecision (2); 0 is treated as an explicit user choice.
+  subscribe(TOPICS.SETTINGS_CHANGED)    -> FormatterPrefsBridgeBroadcast (NotificationCenter "io.teslasync.settings
+    -> qc.invalidateQueries(['settings'])    .changed") -> model.refresh() (the native refetch).
+  render null (anonymous, invisible)    -> P4 leaf "never a blank box": a compact, accessible diagnostic of the two
+                                             values the bridge syncs (locale + decimal precision), across all states.
+  i18n                                  -> every string via FormatterPrefsBridgeStrings (P1/S10); web contributes no
+                                             t() keys, so all keys are native P4 chrome with English fallbacks.
+  telemetry                             -> view.opened surface="FormatterPrefsBridge" once on appear (P1/S11).
+  Reduce Motion                         -> TSFadeIn + TSSkeleton shimmer honour accessibilityReduceMotion.
+
+  Parity decision (logged, no silent drift): the web effect always applies the resolved values (it runs whenever
+  `settings` resolves), so the native model applies in BOTH resolved phases — `applied` AND `usingDefaults` — and
+  a unit test pins that the en-US/2 defaults are written. The web de-dupe (compare against last-written AND current
+  global; record-without-write on first resolve) is reproduced verbatim and pinned by ModelApplyTests. The web
+  passes the RAW precision to setGlobalPrecision (which clamps); the native Store clamps identically, so the
+  apply/de-dupe matches even for out-of-range inputs (asserted in StoreTests).
+
+STATES (every web side effect + P4 leaf state reproduced — never a hidden/blank surface)
+  loading        : skeleton card chrome (the `['settings']` query in flight).
+  unavailable    : retry tile (web QueryError peer; the query-failure branch — a P4 leaf state).
+  usingDefaults  : friendly "device defaults" card (native parity of resolveLocale('')->en-US + decimal_precision
+                   ?? 2 taking effect with nothing configured — the web invisible null, made informative).
+  applied        : active locale + decimal-precision card (the prefs the bridge syncs).
+  stale          : freshness chip + one-shot auto-refresh on the rising edge.
+  offline        : freshness chip over the cached prefs (no auto-refresh while offline).
+  Each state has a #if DEBUG preview + a unit test.
+
+GATES — HOST-RUNNABLE STEPS (executed on this machine; real output)
+  [GREEN] swiftc -typecheck — iOS 18 simulator SDK (the 8 production files + DEBUG previews vs the REAL apps/apple
+          component closure: generated Tokens + Design/TSDesign+TSMaterial + UI/Buttons+Cards+Typography+Badges+
+          Utility + Feedback/States+Banners+Skeletons + Motion), -swift-version 6 -strict-concurrency=complete
+          -target arm64-apple-ios18.0-simulator -D DEBUG:
+            IOS_TYPECHECK_EXIT=0
+  [GREEN] swiftc -typecheck — macOS 15 SDK (same closure + DEBUG previews, -target arm64-apple-macos15.0):
+            MAC_TYPECHECK_EXIT=0
+  [GREEN] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness (the
+          real production Adapter/Projection/Seams/Model/States/Views/surface/Previews + the real design tokens +
+          the verbatim real TS primitives, module name "TeslaSync"), Swift 6 language mode + strict concurrency:
+            Executed 35 tests, with 0 failures (0 unexpected)
+              FormatterPrefsBridgeLocaleTests                2/2
+              FormatterPrefsBridgeStoreTests                 4/4
+              FormatterPrefsBridgeGlobalsApplierTests        1/1
+              FormatterPrefsBridgeMetaTests                  3/3  (slug + a11y composition)
+              FormatterPrefsBridgeProjectionTests            9/9
+              LiveFormatterPrefsBridgeSourceTests            2/2
+              InMemoryFormatterPrefsBridgeSourceTests        1/1
+              FormatterPrefsBridgeViewTests                  2/2
+              FormatterPrefsBridgeModelLifecycleTests        3/3
+              FormatterPrefsBridgeModelApplyTests            5/5
+              FormatterPrefsBridgeModelSignalTests           3/3
+            SWIFT_TEST_EXIT=0
+  [GREEN] swiftlint --strict (explicit paths; config apps/apple/.swiftlint.yml):
+            Done linting! Found 0 violations, 0 serious in 11 files.        LINT_EXIT=0
+  [GREEN] swiftformat --lint (config apps/apple/.swiftformat):
+            0/11 files require formatting.                                  FORMAT_EXIT=0
+  [GREEN] check-placeholders.ps1 (ADR-011 stub gate; pwsh) — self-test PASS (SELFTEST_EXIT=0); the prompt's prefix
+          -Path matches no directory and trivially returns clean, so the 12 shipped files were ALSO scanned
+          directly + a direct grep for every banned pattern:
+            PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   (grep: NONE FOUND)  PLACEHOLDER_EXIT=0
+  [GREEN] xcodegen generate — project generates cleanly; pbxproj membership VERIFIED by parse:
+            TeslaSync & TeslaSync-macOS            -> the 8 production .swift + FormatterPrefsBridge.strings (NOT tests)
+            TeslaSyncTests & TeslaSync-macOSTests  -> ONLY the 3 *Tests.swift
+            XCODEGEN_EXIT=0
+
+GATES — XCODE FULL-APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green)
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5; the target build skips the scheme's KMP
+    pre-action so the missing artifact surfaces directly):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at
+          '.../apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+        ** BUILD FAILED **   XCODEBUILD_MAC_EXIT=65
+      FormatterPrefsBridge-specific compile errors in that output: 0 (the build fails at the framework-link stage,
+      before any source is compiled).
+    Why deferred (code-unrelated; not a defect in this surface; identical disposition to the predecessor shared-
+    surfaces, Honesty rule 7):
+      Frameworks/Shared.xcframework is not staged on this worktree (it holds only .gitkeep). The app target links
+      the KMP shared core; staging it runs apps/shared/gradlew :core:assembleSharedXCFramework — a long
+      Kotlin/Native Gradle assemble wired as the scheme's pre-build phase (ADR-004), owned by the P4/P99 Apple
+      acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. macOS additionally
+      requires a development signing certificate. These are PRE-EXISTING and unrelated to this commit, which only
+      adds files under the allowed shared-surfaces glob.
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18 simulator and the
+    macOS 15 SDKs and its full 35-test XCTest suite EXECUTES green under the app's own Swift 6 strict-concurrency
+    rules, against the real design tokens + real shared components. Under Xcode these same tests run in the
+    TeslaSync(/-macOS) test targets (membership verified).
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders all states from the web source reproduced (loading / unavailable / using-defaults / applied /
+      stale / offline) — each with a #if DEBUG preview + a unit test; the using-defaults + applied cards are the
+      never-a-blank-box native treatment of the web invisible `return null` bridge.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (FormatterPrefsBridgeSource -> ...Model); no view HTTP.
+      useSettings/useSettingsQuery -> Source; useQueryClient invalidate -> Broadcast -> refresh.
+  [x] Every i18n key from source has a matching catalog key — the web bridge contributes NO t() keys (renders
+      null), so the catalog holds the native P4 leaf chrome / freshness / a11y keys, all via the P1/S10 facade.
+  [x] Accessibility labels on every interactive element (the retry button + the freshness chip carry explicit
+      labels; the applied / defaults cards are single combined VoiceOver elements voicing title + values).
+  [x] Tests: adapter unit tests + per-state projection/render + model/telemetry/apply-de-dupe/broadcast/stale + a11y
+      label — 35 methods, EXECUTED green via SwiftPM.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (check-placeholders EXIT=0 + direct grep clean).
+  [x] view.opened telemetry emitted with surface slug "FormatterPrefsBridge" (P1/S11), asserted once + idempotent.
+  [~] EXIT=0 / STATUS=DONE for all host-runnable gates; the signed full-app Xcode build/test is DEFERRED with real
+      captured evidence (unstaged KMP Shared.xcframework), per the predecessor precedent (ADR-004).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild is reported DEFERRED (RED) with its real exit 65 +
+                           framework error, never as passing; 0 surface-specific errors (link-stage failure).
+  2  No scope narrowing  : every web behaviour (resolveLocale fallback, ?? 2 default, the apply-globals de-dupe incl.
+                           record-without-write, the settings.changed refetch, the permanent-subscriber intent) +
+                           the full P4 states contract shipped.
+  3  No skip-and-assume  : web source read end-to-end (the component + lib/locale.ts + numberFormat globals +
+                           broadcastTopics + the AppSettings shape); every host gate executed on THIS runner with
+                           pasted results.
+  4  No stubs as final   : complete production view + 35 real XCTest; placeholder scanner = 0, grep = 0.
+  5  No parity shortcuts : the resolveLocale fallback, the precision clamp, the en-US/2 defaults, the de-dupe, and
+                           the settings-changed refetch are faithful ports (the apply-in-both-resolved-phases and
+                           raw-precision-clamped-by-store decisions are logged above, not hidden).
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened all present and
+                           consumed; the isolated-harness + macos-pending DEFERRED convention followed. Did NOT
+                           stage Shared.xcframework, did NOT edit project.yml / shared wiring.
+  8  No commit on red    : the COMMITTED artifact (FormatterPrefsBridge.* + this log) is GREEN on every surface-
+                           scoped host gate AND on a real Swift 6 SwiftPM 35-test run + iOS/macOS typecheck; the
+                           deferred full-app gate is a PRE-EXISTING infra gap, neither introduced nor touched.
+  9  No silent drift     : changes confined to shared-surfaces/FormatterPrefsBridge.* (12 files) + this log — no
+                           project.yml / .swiftlint.yml edits (the tier was already wired by prior surfaces).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic FormatterPrefsBridge shipped at full parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: it compiles for iOS 18 + macOS 15 and its 35 tests pass under the app's
+  own Swift 6 strict-concurrency rules, against the real design tokens + shared components, with swiftformat /
+  swiftlint (--strict) / placeholder all green for the surface and the xcodegen target membership validated. The
+  web component renders `null` (a side-effect bridge); the native surface reproduces the side effect (sync the
+  formatter globals + refetch on settings.changed) AND, per the P4 leaf contract, renders an accessible diagnostic
+  of the synced prefs across every state. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED
+  (not failed by this code): it is blocked by the pre-existing unstaged Kotlin/Native Shared.xcframework (captured
+  error, exit 65) + macOS development signing, owned by the P4/P99 acceptance gate on a signed macos-latest CI
+  runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED
+  Xcode gate" disposition used by every P4 surface.
+
+EXIT=0
+STATUS=DONE

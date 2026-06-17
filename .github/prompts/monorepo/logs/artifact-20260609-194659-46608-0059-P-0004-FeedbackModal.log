@@ -1,0 +1,158 @@
+=== P4 Modal / dialog 0004 FeedbackModal (Apple) ===
+Date: 2026-06-10
+Runner: Darwin (Apple Silicon), Xcode 26.5 (build 17F42), Swift 6.3.2,
+        xcodegen 2.45.4, swiftlint + swiftformat (homebrew), pwsh, iPhone 16 simulator (booted).
+Capability (SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG): AVAILABLE.
+
+------------------------------------------------------------------------------
+ARTIFACT
+------------------------------------------------------------------------------
+Web source : web/src/components/feedback/FeedbackModal.tsx (317 lines)
+Native out : apps/apple/TeslaSync/modals-dialogs/FeedbackModal.* (9 files, 2203 LoC Swift + 1 .strings)
+  FeedbackModal.Adapter.swift   — pure projection core: category enum, field bounds, draft,
+                                  validity/clamp rules, submit request, context phase resolution,
+                                  a11y builders, surface slug (P1/S11).
+  FeedbackModal.Seams.swift     — telemetry seam, submit seam (web useSubmitFeedback), context
+                                  source seam (web useLocation + errorReporter + VITE_APP_VERSION
+                                  + navigator.userAgent) + in-memory/controllable doubles, i18n
+                                  facade + LocalizedText copy catalog (table "FeedbackModal").
+  FeedbackModal.Model.swift     — @MainActor @Observable state holder: controlled fields, per-field
+                                  touched gating, submit lifecycle, dismiss signal, context apply
+                                  + freshness, one-shot stale auto-refresh, telemetry.
+  FeedbackModal.States.swift    — context loading skeleton / empty / error+retry / inline reload
+                                  error / freshness chip (live·stale·offline) / connectivity banner
+                                  / inline submit error (web submit.isError).
+  FeedbackModal.Views.swift     — i18n SwiftUI bridge + header, category Select, title Input, body
+                                  Textarea, auto-attached-context panel (page/version/browser rows
+                                  + 2 consent-gated toggles), actions bar (Cancel + Send/Submitting).
+  FeedbackModal.swift           — composed sheet surface; onAppear start + view.opened; focus-blur
+                                  → touched; shouldDismiss → onClose; re-entrancy guarded submit.
+  FeedbackModal.Previews.swift  — DEBUG previews for every state.
+  FeedbackModal.Tests.swift     — 27 unit tests (adapter projections + model lifecycle + per-state
+                                  + a11y + i18n facade + telemetry).
+  FeedbackModal.strings         — P1/S10 catalog (web keys + native chrome).
+
+States reproduced (all render, no hidden surface): loading / empty / error / stale / offline
+(auto-attached-context source) + web form branches: per-field validation errors, in-flight
+"Submitting…", inline submit error, success→dismiss. Data sources bound via P1/S8 seams
+(useFeedback/useSubmitFeedback, useLocation, useTranslation). i18n via P1/S10 facade (no English
+literals in code). a11y labels/hints/identifiers on every interactive element; Dynamic Type +
+reduce-motion respected (TSFadeIn/TSMotion). Telemetry view.opened(surface:"FeedbackModal").
+
+Necessary build wiring (a NEW top-level surface directory must be registered or the surface would
+not compile/lint — shipping uncompiled code would violate the honesty covenant). Changes confined
+to registration only:
+  - project.yml      : added TeslaSync/modals-dialogs to both app targets + both unit-test bundles
+                       (mirrors the existing misc-surfaces entries).
+  - .swiftlint.yml   : added TeslaSync/modals-dialogs to `included`.
+git status (working tree) — ONLY these three items changed:
+   M apps/apple/.swiftlint.yml
+   M apps/apple/project.yml
+   ?? apps/apple/TeslaSync/modals-dialogs/   (the 9 new files)
+
+------------------------------------------------------------------------------
+GATE
+------------------------------------------------------------------------------
+$ xcodegen generate
+  Created project at apps/apple/TeslaSync.xcodeproj   (all 9 FeedbackModal files referenced)
+
+$ ./apps/shared/gradlew :core:assembleSharedXCFramework   (scheme pre-action dependency)
+  BUILD SUCCESSFUL — Shared.xcframework staged to apps/apple/Frameworks/ (KMP/Kotlin-Native OK).
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ** TEST FAILED **  ->  IOS_EXIT=65
+  Root cause: PRE-EXISTING duplicate type declarations across OTHER surfaces compiled into the same
+  `TeslaSync` module (parallel-slot collision hazard called out in the project methodology). 216
+  compile errors, ALL "ambiguous for type lookup" / contextual-base in these families — ZERO in
+  FeedbackModal (`grep -c 'FeedbackModal.*: error:'` = 0):
+    RecentDrives{Model,Update,Connection,LoadStatus,Source,Projection,Strings,Surface,
+                 Telemetry,Accessibility, …} declared in BOTH
+        TeslaSync/dashboard-widgets/RecentDrivesListWidget.*  (and RecentDrivesWidget.*)
+        TeslaSync/feature-views/RecentDrivesSection.*
+    StateTimeline{Model,Update,Connection,LoadStatus,Source,Projection,Strings,
+                  Telemetry,Accessibility,Format, …} declared in BOTH
+        TeslaSync/dashboard-widgets/StateTimelineWidget.*
+        TeslaSync/feature-views/StateTimeline.*
+  None of these files are in this prompt's diff or its Allowed-files scope; they are owned by other
+  surface prompts/slots. Per the change rules ("do not fix pre-existing issues unrelated to your
+  task") + the Allowed-files restriction, they are intentionally left untouched.
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+  ** TEST FAILED **  ->  MAC_EXIT=65
+  Root cause: the runner has NO development code-signing certificate — the macOS app/widget targets
+  carry entitlements that require signing:
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  This is an environment/signing limitation, not a source defect; ZERO FeedbackModal errors.
+
+$ swiftlint --strict           (apps/apple, 3234 files)             -> LINT_EXIT=0
+$ swiftformat --lint apps/apple                                     -> FORMAT_EXIT=0
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/FeedbackModal
+      PLACEHOLDER_COUNT=0  -> PLACEHOLDER_EXIT=0
+  (note: the literal gate path is a filename prefix, so it scans nothing; the REAL directory scan
+   also passes —)
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  -> EXIT=0
+  (the web "placeholder" prop is mapped to the "prompt" key/identifier convention used by the
+   reference IncidentForm surface, so no forbidden "Placeholder" token ships in .swift files.)
+
+------------------------------------------------------------------------------
+INDEPENDENT VERIFICATION OF THIS SURFACE (isolated from the broken module)
+------------------------------------------------------------------------------
+Because the shared `TeslaSync` module cannot link as a whole (pre-existing collisions above), the
+FeedbackModal surface was verified in isolation so its correctness is proven, not asserted:
+
+1. Logic core + ALL unit tests — throwaway SwiftPM package (FeedbackModal.Adapter/Seams/Model +
+   FeedbackModal.Tests, macOS 15, swift-tools 6.0, strict concurrency):
+   $ swift test
+     Executed 27 tests, with 0 failures (13 FeedbackModalAdapterTests + 14 FeedbackModalModelTests).
+   Covers: category order, title/body validity bounds + clamps, request build (trim + consent-gated
+   attachment flags), submit-button label, context phase resolution, a11y builders, submit lifecycle
+   (idle/submitting/succeeded/failed), validation early-return (never calls seam), per-field touched
+   gating, context apply + freshness, one-shot stale auto-refresh, view.opened telemetry, i18n facade
+   fallback + {{count}} format.
+
+2. SwiftUI layer — throwaway SwiftPM package (FeedbackModal.swift/.Views/.States/.Previews +
+   Adapter/Seams/Model) compiled against the REAL shared components (TSButton, TSTextField,
+   TSTextArea, TSToggle, TSSelect, TSCaption, TSHelperText, TSErrorText, TSCode, TSLabel,
+   TSGlassPanel, TSFadeIn) + real design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion),
+   macOS 15:
+   $ swift build
+     Build complete!   (FeedbackModal.Views/.States/.swift/.Previews all type-check clean.)
+
+3. Full-module xcodebuild (iOS + macOS): 0 FeedbackModal compile errors in either run.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+1 No red-as-green  — the iOS/macOS gate is reported RED (EXIT=65); not dressed up as green.
+2 No scope narrowing — every web data source, state, i18n key, and a11y affordance reproduced.
+3 No skip-and-assume — web source read end-to-end; all branches reproduced.
+4 No stubs as final — complete implementation; no TODO/stub/mock/placeholder/Lorem (gate=0).
+5 No parity shortcuts — form, context panel, both toggles, validation, submit-error all present.
+6 No delegation — surface authored here.
+7 No predecessor bypass — modals-dialogs dir created + registered (no predecessor had).
+8 No commit on red — NOT committing while the whole-app gate is red for external reasons.
+9 No silent drift — deviations (build-wiring, placeholder→prompt key) documented above.
+10 Log ends with EXIT=<int> and STATUS=<…> (below).
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+The FeedbackModal surface is COMPLETE and INDEPENDENTLY VERIFIED (27/27 unit tests pass; full
+SwiftUI layer type-checks against the real shared components + tokens; swiftlint/swiftformat/
+placeholder all 0; zero FeedbackModal errors in the full build). The whole-app gate cannot go green
+on this runner for two reasons OUTSIDE this surface's allowed scope and NOT present in its diff:
+  • iOS  — pre-existing duplicate-symbol collisions in RecentDrives*/StateTimeline* surfaces
+           (owned by other prompts/slots).
+  • macOS — runner has no development code-signing certificate (entitlements require signing).
+Both are evidenced above with zero FeedbackModal involvement.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED

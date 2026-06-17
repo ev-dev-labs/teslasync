@@ -1,0 +1,135 @@
+=== P4 Shared surface 0219 Lightbox (Apple) ===
+Prompt: .github/prompts/monorepo/.../p4-apple-shared-surfaces-0219-Lightbox
+Web source (spec): web/src/components/ui/Lightbox.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/Lightbox.*
+Host: macOS (Darwin), Xcode 26.5 (Build 17F42), Swift 6.3.2, swiftlint + swiftformat + xcodegen present.
+Date: 2026-06-12
+
+--------------------------------------------------------------------------------
+ARTIFACT (9 files, all match the allowed glob apps/apple/TeslaSync/shared-surfaces/Lightbox.*)
+--------------------------------------------------------------------------------
+  Lightbox.Adapter.swift       324  Foundation-only core: surface slug, zoom constants, LightboxImage,
+                                    LightboxInput, LightboxPresentation, LightboxProjection,
+                                    LightboxProjector (clamp / nav / zoom / percent / neighbour math).
+  Lightbox.Model.swift         367  LightboxStrings i18n facade (8 web keys + native a11y), LightboxTelemetry
+                                    seam + OSLog default, LightboxPrefetching seam (URLSession + Noop),
+                                    LightboxModel @MainActor @Observable state-holder.
+  Lightbox.Views.swift         330  Motion, backdrop, control button, top bar, decoding skeleton,
+                                    zoomable/pannable image + drag-to-pan, image stage (AsyncImage
+                                    loading/loaded/error + prev/next nav).
+  Lightbox.Chrome.swift        145  Control bar (caption + zoom controls), empty leaf, error leaf+retry.
+  Lightbox.swift               182  Public Lightbox View: prop init + model seam, presentation switch
+                                    (hidden/empty/viewer), full-bleed overlay, web keyboard map
+                                    (arrows/Home/End/Esc + +/-/0), modal VoiceOver container.
+  Lightbox.Previews.swift      100  DEBUG previews: empty / single / multi / captioned / zoomed / error.
+  Lightbox.AdapterTests.swift  234  Pure projector + value-type tests.
+  Lightbox.Tests.swift         348  Model + motion + view-composition + strings tests.
+  Lightbox.strings                  i18n catalog: 8 verbatim web keys + native a11y additions.
+
+Faithful-parity note: the web <Lightbox> is a PURE presentational primitive (images are caller-supplied
+props; no fetch / clock / connectivity), so — exactly as the sibling presentational primitives Accordion
+(0203), Delta (0081), Avatar (0076) — the native peer reproduces only the source's REAL branches and does
+NOT fabricate data-level stale/offline chrome the source has no notion of. REAL branches reproduced:
+hidden (web !open||total===0 → return null), empty (open w/ no images → native "never a blank box" leaf),
+loading (AsyncImage .empty decode skeleton = web !decoded), loaded, error (AsyncImage .failure / nil url =
+web onError, + Retry), single vs multi nav (disabled at ends), zoomed + pannable, caption present/absent.
+i18n: 8/8 web t() keys mirrored (counter, close, previous, next, zoomOut, zoomPercent, zoomIn, zoomReset).
+
+================================================================================
+A. PER-SURFACE HOST-RUNNABLE GATES — ALL GREEN
+================================================================================
+
+[A1] swiftc -typecheck — macOS 15, Swift 6, -strict-concurrency=complete, vs real generated Tokens.swift
+  $ xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+      -target arm64-apple-macos15.0 apps/design/generated/apple/Tokens.swift \
+      Lightbox.Adapter.swift Lightbox.Model.swift Lightbox.Views.swift Lightbox.Chrome.swift \
+      Lightbox.swift Lightbox.Previews.swift
+  RESULT: 0 errors / 0 warnings.   MAC_TYPECHECK_EXIT=0
+
+[A2] swiftc -typecheck — iOS 18 simulator (arm64-apple-ios18.0-simulator), Swift 6 strict concurrency
+  RESULT: 0 errors / 0 warnings.   IOS_TYPECHECK_EXIT=0
+
+[A3] swift test — full XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM package
+     (module TeslaSync = Tokens.swift + the 5 app Lightbox files; test target = the 2 *Tests.swift)
+  RESULT: Executed 49 tests, with 0 failures (0 unexpected).   SWIFT_TEST_EXIT=0
+     Coverage: projector index clamps + nav + zoom reducers + percent + presentation + neighbour URLs +
+     resolve (hidden/empty/single/multi-first/last/zoomed/panned); model once-only view.opened, index
+     seeding, nav-resets-zoom/pan + same-index no-op, zoom bounds + pan-reset-on-snap, pan guard < 1x,
+     close routing, retry token, closed->open reset + while-open initialIndex ignore + shrink clamp,
+     neighbour prefetch on open + on nav; motion honors Reduce Motion; every view branch composes;
+     strings fallbacks (8 web + native).
+
+[A4] swiftlint --strict (apps/apple/.swiftlint.yml) — the 8 Lightbox .swift files
+  RESULT: Found 0 violations, 0 serious in 8 files.   SWIFTLINT_EXIT=0
+
+[A5] swiftformat --lint (apps/apple/.swiftformat) — the 8 Lightbox .swift files
+  RESULT: 0/8 files require formatting.   SWIFTFORMAT_EXIT=0
+
+[A6] check-placeholders.ps1 (ADR-011 definition-of-done) — Lightbox swift files
+  RESULT: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   (0 opt-outs; no TODO/stub/mock/Placeholder)
+
+[A7] i18n parity — 8/8 verbatim web t() keys present in Lightbox.strings AND resolved by LightboxStrings;
+     0 dead / 0 missing. (counter, close, previous, next, zoomOut, zoomPercent, zoomIn, zoomReset)
+
+[A8] xcodegen generate — enumerates the surface
+  RESULT: XCODEGEN_EXIT=0; project.pbxproj references all 9 files (Lightbox.{Adapter,AdapterTests,Chrome,
+     Model,Previews,Tests,Views}.swift + Lightbox.swift + Lightbox.strings) across the iOS/macOS app +
+     XCTest targets via the existing shared-surfaces globs (no project.yml edit needed).
+
+================================================================================
+B. FULL-APP GATE (the prompt Gate) — RAN; BLOCKED by platform / cross-surface, NOT by this surface
+================================================================================
+
+[B1] iOS Simulator — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  - KMP Shared.xcframework: ASSEMBLED + STAGED THIS RUN. The scheme pre-action
+    (Scripts/build-shared-xcframework.sh -> Gradle :core:assembleSharedXCFramework) ran to completion:
+        "xcframework successfully written out to: .../XCFrameworks/release/Shared.xcframework"
+        "> Task :core:assembleSharedXCFramework"
+    The app target then compiled (SwiftEmitModule TeslaSync) — i.e. the framework block did NOT stop us.
+  - The build then failed with exactly ONE compile error, in ANOTHER agent's surface (NOT Lightbox):
+        apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error:
+        escaping closure captures non-escaping parameter 'content'
+    ** BUILD FAILED **  /  ** TEST FAILED **
+  - Lightbox errors in the whole iOS build log: ZERO.
+  IOS_GATE_EXIT=65
+
+[B2] macOS — xcodebuild -scheme TeslaSync-macOS build test
+  - Failed at CODE SIGNING, before Swift compilation:
+        TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. Enable development signing in the Signing & Capabilities editor.
+        (same for "TeslaSyncWidgets-macOS")
+    ** BUILD FAILED **  /  ** TEST FAILED **
+  - `security find-identity -p codesigning -v` -> "0 valid identities found" (no dev signing identity
+    on this dev host).
+  - Lightbox errors in the whole macOS build log: ZERO.
+  MAC_GATE_EXIT=65
+
+[B3] swiftlint --strict / swiftformat --lint / check-placeholders — tree-wide (the prompt Gate scope):
+  Not asserted green tree-wide here because the shared-surfaces tree contains 1495 files authored by many
+  parallel-slot agents (e.g. the AISuggestNewGeofences.swift compile error above; the documented duplicate
+  symbols ChargingProjection in dashboard-widgets/ChargeStatusWidget.Adapter.swift and StateTimeline* in
+  feature-views/). Those are out of this surface's allowed-files scope and are not introduced by Lightbox.
+  The Lightbox files themselves are 0/8 swiftlint, 0/8 swiftformat, 0 placeholders (sections A4/A5/A6).
+
+--------------------------------------------------------------------------------
+PLATFORM-CAPABILITY ASSESSMENT (Honesty Covenant rule 1 "no red-as-green", rule 3 "no skip-and-assume")
+--------------------------------------------------------------------------------
+The full-app `xcodebuild build test` cannot go green on THIS dev host for reasons entirely unrelated to the
+Lightbox surface — and this is the established, sanctioned situation recorded in
+apps/macos-pending-verifications.md for every P4 Apple surface (ToolCard, AlertMessageEditor,
+FSMTimelineChart, MediaNavigationPanel, ...). Concretely:
+  (i)  iOS: a pre-existing compile error in another agent's surface (AISuggestNewGeofences.swift:129)
+       fails the shared app-target compile. Zero Lightbox errors.
+  (ii) macOS: development code-signing identities are absent (0 valid), so the signed app/widget targets
+       cannot link. Zero Lightbox errors.
+The KMP Kotlin/Native Shared.xcframework — usually the long-pole — DID assemble + stage this run, and the
+iOS app target compiled up to the unrelated error, demonstrating the Lightbox surface integrates cleanly.
+Deferred to: p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing identities + a
+clean cross-surface merge), per ADR-012's CI matrix.
+
+Surface-level verdict: PRODUCTION-READY. All 8 host-runnable per-surface gates GREEN (A1-A8): iOS18 +
+macOS15 typecheck 0/0, 49/49 tests, swiftlint 0/8, swiftformat 0/8, placeholder 0, i18n 8/8, xcodegen 9
+files. No stubs / TODO / mock / placeholder. All web states + i18n + a11y reproduced.
+
+EXIT=65
+STATUS=BLOCKED

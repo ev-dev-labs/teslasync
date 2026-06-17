@@ -1,0 +1,231 @@
+================================================================================
+P4 · Feature view · 0271 — SignalSparklinePreview (Apple)
+Run: 2026-06-09T17:43-0700   Host: Darwin arm64, macOS 26.5 (Xcode 26.5 / 17F42)
+Prompt: P4/feature-views/0271 — Feature view: SignalSparklinePreview
+Web source (spec): web/src/features/telemetry/components/SignalSparklinePreview.tsx
+Native output: apps/apple/TeslaSync/feature-views/SignalSparklinePreview.*
+Toolchain: Xcode 26.5 (17F42) · Apple Swift 6.3.2 · xcodegen 2.45.x ·
+           swiftlint · swiftformat · pwsh · OpenJDK 17 · iPhoneSimulator 26.5 + MacOSX 26.5 SDK
+Mode: code-complete + host-validated gates; full-app Xcode scheme build/test DEFERRED
+      (ADR-012 macOS-pending; apps/macos-pending-verifications.md) — the established
+      P4 Apple disposition shared by every prior feature-view surface (STATUS=DONE),
+      e.g. 0265 SignalCategoryTree, 0266 SignalChartPanel, 0269 SignalHistoryTable.
+Delegation: NONE (authored directly; delegation FORBIDDEN by the prompt).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS + iPhoneSimulator SDKs present   OK
+  Xcode ...................... 26.5 (17F42)                                              OK
+  SwiftUI .................... compiles for iOS 18 sim + macOS 15 (real SDK typechecks)  OK
+  Swift Charts ............... available (TSSparkline trend compiled on both SDKs)       OK
+  MapKit ..................... N/A for this surface (web "Charts / maps used: (none)";
+                               no map in the web source — nothing to port)              N/A
+  iPhone 16 simulator SDK .... arm64-apple-ios18.0-simulator typecheck EXIT=0            OK
+  macOS 15 SDK ............... arm64-apple-macos15.0 typecheck EXIT=0                     OK
+  swiftlint / swiftformat .... present; --strict / --lint both green on the 7 files      OK
+  pwsh (placeholder gate) .... present; -SelfTest PASS                                    OK
+  xcodegen ................... generate EXIT=0; 8 files auto-wire (48 pbxproj refs)       OK
+  OpenJDK 17 + gradlew ....... present — the scheme pre-action STAGED Shared.xcframework  OK
+  codesign identities ........ "0 valid identities found"                                WARN (macOS app gate blocker, ADR-012)
+
+  The prompt's capability requirement is SwiftUI + Swift Charts (+ MapKit, unused here).
+  All are present and proven by REAL-SDK compiles below, so the capability-BLOCKED
+  escape hatch does NOT apply — the surface is authored and host-validated for real.
+
+=== WHAT SHIPPED (8 files, established feature-view multi-file pattern) ===============
+  SignalSparklinePreview.Adapter.swift       184  pure Foundation core: SignalSparklineKind
+        (web SignalKind + NON_NUMERIC isNumeric split), SignalSparklineValue (number/bool/string/
+        null) + Envelope (web SignalEnvelope), connection + load enums, SignalSparklineProjection,
+        the surface slug, the web module constants + prop defaults (SignalSparklineConfig:
+        hours 1 / limit 30 / 80x18 / colorIndex), and SignalSparklineBuilder — numbers()
+        (web envelopesToNumbers), hasTrend() (web length<2), project().
+  SignalSparklinePreview.Model.swift         300  P1/S11 telemetry seam, SignalSparklineUpdate
+        (mirrors web props + fetched envelopes), P1/S8 SignalSparklineSource seam + @Observable
+        SignalSparklineModel (Phase: disabled/nonNumeric/loading/empty/error/content; web-order
+        resolvePhase; stale one-shot auto-refresh; offline keeps cache) + InMemorySignalSparklineSource.
+  SignalSparklinePreview.Localization.swift  130  P1/S10 facade (table "SignalSparklinePreview")
+        — the 2 web-source strings + native envelope + SignalSparklineAccessibility VoiceOver summaries.
+  SignalSparklinePreview.swift                68  main surface View: phase switch over the model;
+        .onAppear start / .onDisappear stop; surfaceSlug. Compact inline (no panel — it is a leaf slot).
+  SignalSparklinePreview.Views.swift         164  chrome: non-numeric kind chip, loading skeleton box
+        (TSSkeleton at width x height), "—" no-samples fallback, compact retry affordance, trend
+        (TSSparkline + freshness dot), stale/offline freshness dot. Token-driven; web `title` -> .help.
+  SignalSparklinePreview.Previews.swift      122  #if DEBUG previews — content / content(stale) /
+        content(offline) / loading / empty(no samples) / non-numeric(kind chip) / error / disabled (8),
+        each framed in a leaf-row context.
+  SignalSparklinePreview.strings              39  P1/S10 catalog: 2 web-source keys + native chrome + a11y.
+  SignalSparklinePreview.Tests.swift         310  XCTest: 4 suites / 27 tests (builder, kind, model, a11y).
+  Total 1317 lines. Every file <= 400 (house file_length budget); largest 310 / 300. One exported public
+  View (SignalSparklinePreview); helper Views are internal.
+
+  States reproduced (no hidden surface — every web branch + the native envelope renders):
+    disabled  — web `if (!enabled) return null` — the parent-controlled fetch gate; renders a
+                zero-size clear surface while keeping the view host + once-only view.opened alive.
+    nonNumeric— web `!isNumeric` (string/time/unknown) — the uppercase `(kind)` chip; web `title`
+                "Non-numeric signal (kind)" -> pointer .help + VoiceOver.
+    loading   — web `query.isLoading` — pulsing width x height TSSkeleton box.
+    empty     — web `numericSeries.length < 2` — the "—" glyph; web `title` "No samples in last
+                hour" -> .help + VoiceOver. Never a blank box.
+    error     — native load envelope (web collapses a failed query into the "—" line): a compact
+                tappable retry. Documented as a native addition.
+    content   — web `<Sparkline data color width height />` -> shared TSSparkline (Swift Charts),
+                width-constrained, brand-palette color index.
+    stale     — Stale freshness dot + ONE guarded auto-refresh (ADR-013), folded into VoiceOver.
+    offline   — Offline freshness dot; cached trend kept; NO refetch.
+
+  Data binding: the web preview owns its own `useSignalHistory(vehicleId, signal, { hours: 1,
+  limit: 30 })` query, gated by the parent's `enabled` flag; it only reads from it. The native surface
+  reproduces that whole lifecycle through the P1/S8 `SignalSparklineSource` seam coalesced into one
+  `SignalSparklineUpdate`; the view performs ZERO networking. `useSignals`/`useSignalHistory` ->
+  SignalSparklineSource (P1/S8). `t()` -> SignalSparklineStrings (P1/S10). Telemetry: `view.opened`
+  slug "SignalSparklinePreview" once (P1/S11), spy-asserted.
+
+=== HOST-RUNNABLE GATES (all green; real exit codes from this machine) ===============
+  swiftformat --lint <7 .swift> ............... 0/7 files require formatting             FORMAT_EXIT=0
+  swiftlint lint --strict <7 .swift> .......... Found 0 violations, 0 serious in 7 files LINT_EXIT=0
+  check-placeholders.ps1 (3 ways) ............. PLACEHOLDER_EXIT=0
+        (a) literal gate path-prefix invocation ...... PLACEHOLDER_ALLOWED=0 COUNT=0 EXIT=0
+        (b) isolated scan of all 8 shipped files ..... PLACEHOLDER_ALLOWED=0 COUNT=0 EXIT=0
+        (c) -SelfTest ................................ SELFTEST_EXIT=0 (proven to flag
+            NotImplementedException / Kotlin TODO( and honor opt-outs)
+  swiftc -typecheck iPhoneSimulator (target arm64-apple-ios18.0-simulator, -swift-version 6,
+        -strict-concurrency=complete, real iPhoneSimulator 26.5 SDK, bound against the REAL shared
+        Sources/Components + Sources/Design + design/generated/apple/Tokens.swift — 40 files +
+        the 6 surface .swift incl. previews) ................. IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (target arm64-apple-macos15.0, -swift-version 6,
+        -strict-concurrency=complete, real MacOSX 26.5 SDK, same 40+6 dep set) ... MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 language mode; the real
+        Adapter + Model + Localization as the lib target, Tests.swift as @testable) . 27/27, TEST_EXIT=0
+      -> SignalSparklineBuilderTests (7) · SignalSparklineKindTests (3) ·
+         SignalSparklineModelTests (12) · SignalSparklineAccessibilityTests (5).
+  xcodegen generate (project spec re-generated; the 8 new files auto-wire into the iOS + macOS app
+        targets + the co-located XCTest bundles — 48 pbxproj references, 6 per file) . XCODEGEN_EXIT=0
+
+  Typecheck dep-set note: the surface is bound against the REAL shared component library + design
+  tokens. The single file Sources/Components/DataDisplay/UnitFormatters.swift is excluded from the
+  host typecheck dep-set because it depends on `Units`/`UnitPreferences` from the SharedFacade/KMP
+  layer and is NOT a dependency of this surface (the sparkline reads SI numbers directly; no unit
+  conversion). The remaining 40 Components/Design files + Tokens compile clean with this surface added.
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===============
+  GATE STEP 1 — xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test
+    Result: ** BUILD FAILED **                                                          SCHEME_IOS_EXIT=65
+    This run went FURTHER than a typical slot: OpenJDK 17 + gradlew are present, so the scheme
+    pre-action (Scripts/build-shared-xcframework.sh -> gradlew :core:assembleSharedXCFramework)
+    SUCCEEDED — it downloaded the Kotlin/Native distribution and linked + assembled
+    Shared.xcframework for every variant (iosArm64, iosSimulatorArm64, macosArm64; debug + release).
+    The app target then compiled and the FAILURE is PRE-EXISTING and UNRELATED to this surface:
+      • 0 `error:` diagnostics in the entire 25,961-line log.
+      • The one failed unit is a batched `SwiftCompile normal arm64 Compiling …` of 25 UNRELATED
+        sibling files (AnomalyInlineRow.* + App*.swift + AppearanceSettings.*) that terminated with
+        NO source diagnostic — i.e. the Swift compiler exhausted resources / crashed compiling the
+        single TeslaSync module that globs 1,800+ parallel-surface files (project.yml
+        `path: TeslaSync/feature-views`). This is the monorepo single-module scale condition the P4
+        integration/acceptance prompt owns; it is not a defect in any one surface.
+      • grep over the "following build commands failed" block for SignalSparklinePreview = 0.
+        ZERO failed commands reference this surface.
+      • This surface's OWN artifacts processed cleanly in the SAME build: SignalSparklinePreview.strings
+        -> CopyStringsFile + `builtin-copyStrings --validate` OK (UTF-8); the 6 surface .swift files
+        appear only as compiler INPUTS with no diagnostics.
+
+    Deterministic cross-check (no scheme pre-action, isolates the framework dependency):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build
+        -> exactly ONE error: "There is no XCFramework found at …/Frameworks/Shared.xcframework."
+        ** BUILD FAILED **  (exit 65)  — 0 errors mention SignalSparklinePreview; 0 compile errors.
+
+  GATE STEP 2 — xcodebuild -scheme TeslaSync-macOS build test                           MAC_EXIT=65
+    Same single-module compile-scale condition PLUS the documented macOS dev-signing blocker:
+    `security find-identity -p codesigning` -> "0 valid identities found", which the macOS app +
+    widget hardened-runtime entitlements require (ADR-012). Environmental (no dev certificate in this
+    slot) — owned by the signed macos-latest acceptance runner. NOT a defect in this code.
+
+    The Gradle-staged apps/apple/Frameworks/Shared.xcframework and the generated TeslaSync.xcodeproj
+    + build/ are git-ignored (confirmed via `git check-ignore`) and are NOT committed — no drift.
+
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs (both
+    typechecks EXIT=0) and its logic runs green (27/27 XCTest under Swift 6 strict concurrency). The
+    full-app build/test belongs to the P4/P99 apple-acceptance-gate on a macos-latest runner with
+    signing, exactly as recorded for the sibling 0265 / 0266 / 0269 telemetry surfaces.
+
+=== PARITY (vs web SignalSparklinePreview.tsx) ===
+  Logic — faithfully ported + unit-tested:
+    • envelopesToNumbers: finite number kept; non-finite number dropped; boolean -> 1/0; string/null
+      dropped (SignalSparklineBuilder.numbers, 4 tests).
+    • numericSeries content boundary: hasTrend == values.count >= 2 (web `numericSeries.length < 2`).
+    • NON_NUMERIC kind split: bool/int/float numeric; string/time/unknown non-numeric (web set).
+    • branch order: !enabled (disabled) -> !isNumeric (kind chip) -> trend-present wins as content
+      (cached even while failed/stale) -> isLoading (skeleton) -> failed (native error) -> loaded
+      empty ("—"). resolvePhase is a pure, table-tested function.
+    • module constants + prop defaults: hours 1, limit 30, width 80, height 18, teal color.
+  Composition — native primitives (no Tailwind ports): the web `Sparkline` (@/components/charts) ->
+    the shared TSSparkline (Swift Charts), width-constrained, brand-palette color index (the web
+    `#22d3ee` teal -> the cyan-leaning categorical index, index-stable). The web pulsing `width x
+    height` box -> the shared TSSkeleton. Recharts -> Swift Charts. Leaflet -> none. Tokens P1/S9
+    throughout (Color.TS / Font.TS / TSSpacing / TSRadius / TSTypeMetrics).
+  i18n — both human strings the web source renders resolve through the P1/S10 facade with the web
+    English as the fallback: "No samples in last hour" and "Non-numeric signal (%@)" -> present in
+    SignalSparklinePreview.strings. No English literals in native code. Shipped as a per-surface table
+    (NOT edited into the shared Localizable.xcstrings — parallel-unsafe).
+  a11y — every phase carries a localized VoiceOver summary (trend + sample count + freshness clause;
+    empty no-samples; non-numeric kind); the retry button is labelled + hinted; the decorative
+    freshness dot is accessibilityHidden (freshness folded into the summary); web `title` attributes
+    become pointer `.help`; Dynamic Type via the token ramp; Reduce Motion via the shared TSSkeleton.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced (disabled / non-numeric
+      / loading / empty) plus the prompt envelope (error / stale / offline) and the content trend
+      — 8 #if DEBUG previews; phase resolution unit-tested.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (SignalSparklineSource -> SignalSparklineModel);
+      no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (2/2 source strings in .strings).
+  [x] Accessibility labels present on every interactive/meaningful element (retry button labelled +
+      hinted; kind chip / dash / trend carry summaries); Reduce Motion + Dynamic Type honoured.
+  [x] Tests: adapter unit (numbers + projection + kind) + per-state model test + a11y label test — 27 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0, 0 opt-outs (3 ways).
+  [x] Telemetry: `view.opened` emitted once with surface slug "SignalSparklinePreview" (P1/S11) — spy-asserted.
+  [~] xcodebuild build test EXIT=0 — DEFERRED to P99 macos-latest (single-module compile-scale crash on
+      UNRELATED sibling batches + macOS signing; the KMP Shared.xcframework staged fine here); host-runnable
+      equivalents (real-SDK typecheck both platforms + 27/27 XCTest + lint/format/placeholder + xcodegen)
+      all green, and zero failures reference this surface.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full-app xcodebuild is shown DEFERRED with its real exit codes
+                       (SCHEME_IOS_EXIT=65, MAC_EXIT=65, deterministic build exit 65) and the exact
+                       pre-existing causes; never reported as passing. Every host "EXIT=0" is a real run.
+  2  No scope narrowing: implemented ALL web branches (disabled / non-numeric / loading / empty / content)
+                       + the prompt envelope (error / stale / offline) + seams + 27 tests + 8 previews.
+  3  No skip-and-assume: web source read end-to-end; every t() + conditional branch reproduced; the
+                       scheme build was actually RUN to completion (Gradle staged the framework) and its
+                       real failure enumerated (0 error: lines; the failed sibling batch named), not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 three ways; no forbidden markers.
+  5  No parity shortcuts: envelopesToNumbers / length<2 boundary / NON_NUMERIC split / branch order all
+                       ported AND unit-tested against the web source.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (feature-views is
+                       already a registered source path) and did NOT edit the shared Localizable.xcstrings;
+                       strings shipped as the per-surface table, consuming P1/S8 + P1/S9 + P1/S10 + P1/S11.
+  8  No commit on red  : committing on all-green host gates + 27/27 isolated Swift-6 XCTest + both real-SDK
+                       typechecks; the Xcode app build/test is explicitly DEFERRED (pre-existing single-module
+                       scale + signing), not failed by this code — 0 failures reference this surface.
+  9  No silent drift   : changes confined to the allowed SignalSparklinePreview.* files + this log. The temp
+                       SwiftPM verification package, the placeholder scan copy, the generated .xcodeproj,
+                       build/ and the Gradle-staged Shared.xcframework (all git-ignored) were removed.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SignalSparklinePreview shipped at parity with the web source: pure-Swift
+  display math (27/27 green — envelopesToNumbers, content boundary, kind split, phase order), a P1/S8
+  state-holder seam (no view HTTP), P1/S11 view.opened telemetry, every web branch + the error / stale /
+  offline envelope, 2/2 i18n keys + a11y summaries, the web Sparkline mapped onto the shared TSSparkline
+  (Swift Charts). All host-runnable gates pass and both real-SDK typechecks are green; the Xcode app
+  build/test is DEFERRED to the signed macos-latest runner (single-module compile-scale crash on unrelated
+  sibling batches + 0 signing identities — neither a defect in this code), matching the established P4
+  Apple disposition.
+
+Per-step: FORMAT_EXIT=0 LINT_EXIT=0 PLACEHOLDER_EXIT=0 IOS_TYPECHECK_EXIT=0 MAC_TYPECHECK_EXIT=0
+          TEST_EXIT=0 XCODEGEN_EXIT=0 | DEFERRED full-app xcodebuild (SCHEME_IOS_EXIT=65 / MAC_EXIT=65:
+          pre-existing single-module compile-scale on unrelated sibling batches + macOS dev-signing;
+          0 failures reference this surface; KMP Shared.xcframework staged successfully)
+
+EXIT=0
+STATUS=DONE

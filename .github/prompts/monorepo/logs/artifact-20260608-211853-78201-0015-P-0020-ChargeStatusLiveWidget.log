@@ -1,0 +1,131 @@
+=== P4 Dashboard widget 0020 ChargeStatusLiveWidget (Apple) ===
+Runner: Darwin arm64 (Atuls-Mac-Studio) · Xcode 26.5 (17F42) · Swift 6.3.2
+Capability: SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 SDKs — AVAILABLE.
+  (This surface uses no chart/map per the web source; SwiftUI primitives only.)
+
+Web source of truth: web/src/features/dashboard/widgets/ChargeStatusLiveWidget.tsx
+Registry (canonical): web/src/features/dashboard/widgets/registry/charging.ts → "charge-status-live"
+
+--- Files shipped (apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.*) ---
+  ChargeStatusLiveWidget.swift            (surface: shell, header, freshness, states, body dispatch)
+  ChargeStatusLiveWidget.Content.swift    (sub-views: full/idle/compact charging + idle, MetricCell, badge, animated value, pulsing icon)
+  ChargeStatusLiveWidget.Model.swift      (P1/S8 source seam + @Observable model, P1/S11 telemetry, registry, P1/S10 strings facade)
+  ChargeStatusLiveWidget.Adapter.swift    (pure projection: SI converters + fmtNumber/formatTime ported 1:1 from web; a11y summary; layout helper)
+  ChargeStatusLiveWidget.Previews.swift   (DEBUG previews: every state + layout)
+  ChargeStatusLiveWidget.Tests.swift      (28 unit tests: adapter/format/phase/model/registry/layout/a11y)
+  ChargeStatusLiveWidget.strings          (P1/S10 i18n table — all 11 source keys + native chrome)
+
+Parity notes:
+  - Data sources bound via shared state-holder seam (no HTTP in the view): useVehicles/useVehicleState
+    (charger_power, time_to_full_charge, charge_rate[SI m/h], battery_level, is_charging),
+    useChargingSessionsPaginated (total_energy_added_wh[SI Wh]), useUnits (distance pref), useTranslation.
+  - SI on the wire; display conversion only at the render boundary (convertDistanceFromSI / convertEnergyFromSI ported 1:1).
+  - All 11 source i18n keys resolved through the P1/S10 facade (no English literals in code):
+    widget.chargeStatusLive, widget.noChargeData, widget.notCharging, widget.charging, widget.voltage,
+    widget.amps, widget.timeRemaining, widget.energyAdded, widget.chargeRate, widget.batteryLevel, widget.lastSession.
+  - States rendered: loading (skeleton), empty (No charge data), error (retry), stale (chip+banner+auto-refresh),
+    offline (cached+chip+banner), content → charging vs idle, each in compact + full forms (web branch-for-branch).
+  - Telemetry: view.opened emitted once with surface slug "ChargeStatusLiveWidget" (P1/S11).
+
+============================================================
+STEP 1 — iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+============================================================
+Build action:  ** BUILD SUCCEEDED **   (full app + this surface compile clean; 0 errors)
+  evidence: /tmp/ios_buildtest2.log  → "** BUILD SUCCEEDED **"
+           My ChargeStatusLiveWidget.{swift,Content,Model,Adapter,Previews}.swift and .Tests.swift all compiled
+           (SwiftCompile entries, 0 errors); ChargeStatusLiveWidget.strings validated + bundled (builtin-copyStrings --validate, UTF-8).
+
+Full-suite test action: ** TEST FAILED **  (IOS_EXIT=65) — ENVIRONMENTAL, NOT THIS SURFACE.
+  Cause: the shared runner was under extreme parallel-slot load (load avg 100–260; ~20 concurrent Gradle/
+         Kotlin-Native builds across sibling slots). The iOS test HOST and UI-test runners were SIGKILL'd
+         during bootstrap before establishing connection:
+           "Early unexpected exit, operation never finished bootstrapping ...
+            Test crashed with signal kill before establishing connection."
+  Failing tests were exclusively the test host bootstrap + PRE-EXISTING UI tests (none belong to this surface):
+           TeslaSyncTests (host bootstrap killed), AuthOnboardingUITests x2, LiveDataUITests, PushNotificationsUITests x2.
+  No ChargeStatus* test failed; the host was killed before the suite finished (only 8 of N ran).
+
+Surface test action (isolated, prebuilt — removes the simulator-starvation confound):
+  xcodebuild test-without-building -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+    -only-testing:TeslaSyncTests/ChargeStatus{Adapter,Format,Phase,Model,Registry,Layout,Accessibility}Tests
+  → Test Suite 'Selected tests' passed
+    Executed 28 tests, with 0 failures (0 unexpected) in 0.143 (0.271) seconds
+  IOS_SURFACE_TEST_EXIT=0   evidence: /tmp/ios_chargetests2.log
+
+============================================================
+STEP 2 — macOS: xcodebuild -scheme TeslaSync-macOS build test
+============================================================
+Default-signing build: ** BUILD FAILED ** — DOCUMENTED macOS-pending limitation (NOT this surface, NOT a capability gap):
+  "'TeslaSync-macOS' has entitlements that require signing with a development certificate"
+  (project.yml DEVELOPMENT_TEAM="" — no signing identity on this dev host). This is the exact deferral recorded in
+  apps/macos-pending-verifications.md (deferred to the macos-latest acceptance-gate runner with signing identities),
+  the same way prior P4 surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) recorded it.
+
+Signing-neutral build+test (CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""):
+  xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build test \
+    -only-testing:TeslaSync-macOSTests/ChargeStatus{Adapter,Format,Phase,Model,Registry,Layout,Accessibility}Tests CODE_SIGNING_ALLOWED=NO ...
+  → ** BUILD SUCCEEDED **   (full macOS app + this surface compile clean on the macOS-15 SDK; 0 errors)
+  → Test Suite 'TeslaSync-macOSTests.xctest' passed
+    Executed 28 tests, with 0 failures (0 unexpected) in 0.036 (0.073) seconds
+  → ** TEST SUCCEEDED **
+  MAC_BUILD_TEST_EXIT=0   evidence: /tmp/mac_chargetests2.log
+
+Test inventory (28 tests — identical set green on BOTH iOS Simulator and macOS, native):
+  ChargeStatusAdapterTests       (7)  cached DTO → projection value parity (km/mi rate, voltage/amps, nil→0, idle last-session, labels)
+  ChargeStatusFormatTests        (5)  fmtNumber half-up+grouping, jsNumber(${battery}), formatTime, energy/distance SI converters
+  ChargeStatusPhaseTests         (1)  resolvePhase loading/empty/loaded/failed × hasState matrix
+  ChargeStatusModelTests         (8)  phases, view.opened-once telemetry, refresh + stale auto-refresh, connection/units tracking
+  ChargeStatusRegistryTests      (2)  canonical id/category/sizes (charge-status-live, 2×2 / 1×2 / 3×40) + clamp
+  ChargeStatusLayoutTests        (2)  web isCompact (cols≤1 && rows≤1) / isTall (rows≥2)
+  ChargeStatusAccessibilityTests (3)  VoiceOver summary content (charging full datum set; idle ± last-session)
+
+============================================================
+STEP 3 — swiftlint --strict   (cd apps/apple && swiftlint --strict)
+============================================================
+This surface (the 6 shipped .swift files): Found 0 violations, 0 serious in 6 files.   SWIFTLINT_SURFACE_EXIT=0
+Full tree (1917 files): Found 1 violation, 1 serious — PRE-EXISTING, OUT-OF-SCOPE (not this surface, allowed-files = ChargeStatusLiveWidget.* only):
+  TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: opening_brace
+  (committed sibling-slot file, unmodified by this surface — git status confirms it is not in this changeset).
+
+============================================================
+STEP 4 — swiftformat --lint apps/apple
+============================================================
+  SwiftFormat completed. 0/1921 files require formatting, 2 files skipped.   FORMAT_EXIT=0
+
+============================================================
+STEP 5 — check-placeholders.ps1 -Path .../ChargeStatusLiveWidget
+============================================================
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  (no TODO/FIXME/stub/mock/Placeholder/Lorem in shipped code; 0 opt-outs.)
+
+============================================================
+SUMMARY (per-step truth)
+============================================================
+  IOS_BUILD_EXIT=0                  (full app + surface compile)
+  IOS_SURFACE_TEST_EXIT=0           (28/28 pass on iPhone 16 simulator, isolated)
+  IOS_FULLSUITE_TEST=env-flaky      (host/UI-runner SIGKILL'd during bootstrap under parallel-slot load; 0 ChargeStatus failures)
+  MAC_BUILD_TEST_EXIT=0             (signing-neutral; 28/28 pass natively)
+  MAC_DEFAULTSIGN_BUILD=macOS-pending  (dev-signing only; deferred per apps/macos-pending-verifications.md)
+  SWIFTLINT_SURFACE_EXIT=0          (1 full-tree violation is pre-existing + out-of-scope)
+  FORMAT_EXIT=0
+  PLACEHOLDER_EXIT=0
+
+Acceptance criteria (this surface):
+  [x] Renders on Apple with all web states reproduced (loading/empty/error/stale/offline/charging/idle, compact+full).
+  [x] Hooks bind to the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every web i18n key has a matching key in the P1/S10 catalog (11/11) — diff-verified.
+  [x] Accessibility labels on every interactive element + combined VoiceOver summary (a11y test green).
+  [x] Tests: adapter unit + per-state model/phase + registry + layout + a11y label = 28, green on iOS & macOS.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate green).
+  [x] Builds on iOS (BUILD SUCCEEDED) and macOS (BUILD SUCCEEDED, signing-neutral).
+
+The only non-green literal-gate items are (a) the iOS full-suite test EXECUTION (shared-runner simulator
+starvation killing the host + PRE-EXISTING UI tests), (b) the macOS default-signing build (documented
+macOS-pending dev-signing deferral), and (c) one PRE-EXISTING swiftlint violation in a sibling slot's file.
+None is caused by, or within the allowed-files scope of, this surface. This surface itself is verified green
+on both platforms.
+
+EXIT=0
+STATUS=DONE

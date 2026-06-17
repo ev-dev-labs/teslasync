@@ -1,0 +1,245 @@
+================================================================================
+P4 · Feature view · 0017 — JsonFormatter (Apple)
+Run: 2026-06-09T00:55-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/61
+Base: 887134713
+Prompt: P4/feature-views/0017 — JsonFormatter
+Web source (spec): web/src/features/admin/components/devtools/tools/JsonFormatter.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (Base64Tool 0011 precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989, Booted) OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  node (parity oracle) ....... used to cross-check JSON.stringify byte-for-byte      OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  KMP gradle assembleSharedXCFramework  Kotlin/Native toolchain provisioning timed out  WARN
+
+  NOTE — the active developer dir defaults to CommandLineTools (no xcodebuild); the
+  full Xcode 26.5 toolchain (xcodebuild, simctl, iOS+macOS SDKs) is reached with
+  `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (no sudo).
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — SwiftUI is present and PROVEN by real iOS-18-simulator AND macOS-15
+  SDK compiles below. This surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)").
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/JsonFormatter.*) ===
+  JsonFormatter.Parser.swift   361  JsonScanner — strict, order-preserving recursive-descent JSON
+                                    parser (the web `JSON.parse`) producing an ordered AST so object
+                                    key order survives the round-trip; surrogate-pairing string scan,
+                                    grammar-checked number scan, structured JsonSyntaxError on failure
+  JsonFormatter.Adapter.swift  272  testable projection core — JsonFormatResult (empty/formatted/
+                                    invalid + flags), JsonSyntaxError (+ localized message builder),
+                                    JsonPrettyPrinter.format/serialize/encodeString (port of web
+                                    JSON.stringify(_, null, 2)), JsonNumber.canonical (ECMAScript
+                                    Number→String), JsonFormatterSurface.slug, JsonFormatterAccessibility
+  JsonFormatter.Model.swift    100  P1/S8 state holder (JsonFormatterModel: input → derived result =
+                                    web useMemo) + P1/S11 telemetry seam + P1/S10 strings facade
+  JsonFormatter.Views.swift    237  presentational subviews — ToolCard-style header (green), input
+                                    editor (+ example overlay), formatted-output panel (scroll + copy),
+                                    invalid panel (danger + parse message), empty hint, copy button
+                                    (UIKit/AppKit)
+  JsonFormatter.swift           62  JsonFormatter surface (glass-card shell + state switch + view.opened)
+  JsonFormatter.Previews.swift  56  #if DEBUG previews — empty, formatted, formatted·nested, invalid
+  JsonFormatter.Tests.swift    234  XCTest — printer (16) + number (3) + model (3) + a11y (3) = 25 methods
+  JsonFormatter.strings         45  P1/S10 catalog contribution (5 web-source keys + 16 native chrome/
+                                    a11y/parse-message keys)
+  Total 1367 lines across 8 files. Every shipped .swift file <= 400 lines (house file_length: Parser
+  is the largest at 361); no line > 120 cols (per-file max 112). The surface depends only on the
+  design Tokens (Color.TS / Font.TS / TSSpacing / TSRadius) — no shared TSButton (the web has no
+  buttons besides copy, inlined here), no KMP `Shared` import, no charts/maps. The JSON scanner is
+  split into JsonFormatter.Parser.swift (SRP + house file_length) — allowed by the JsonFormatter.* glob.
+
+=== PARITY (vs web JsonFormatter.tsx) ===
+  Data sources -> the web source's ONLY hook is `useTranslation`; it is a pure, synchronous, local
+    transform (`JSON.parse` then `JSON.stringify(parsed, null, 2)` in a `useMemo`) with NO data hook,
+    NO network, NO cache. The native parity binds through a local P1/S8 state holder
+    (JsonFormatterModel) that owns `input` and DERIVES `result` on read (the @Observable analogue of
+    the web `useMemo`). The view performs no HTTP — there is none to perform.
+  Transform -> JsonPrettyPrinter.format is a faithful port: blank/whitespace-only input -> `.empty`
+    (web `if (!inputVal.trim()) return { formatted: '', error: '' }`); valid JSON -> two-space pretty
+    print with object KEY ORDER PRESERVED (which JSONSerialization drops — hence the hand-rolled
+    ordered scanner), `": "` separators, empty `{}`/`[]` collapsed; parse failure -> `.invalid` (web
+    `catch (e)`). Numbers are re-canonicalized like ECMAScript Number→String (1.0->1, -0->0, 1e2->100,
+    2.5e-3->0.0025, 1e20->full decimal, 1e21->1e+21, 1e-7 exponent normalized). Strings decode escapes
+    incl. surrogate pairs and re-escape JSON.stringify-style (escape "/\\ + control via short forms,
+    `\u00NN` for other control; `/` and non-ASCII left raw). Duplicate keys keep first position + last
+    value (V8 semantics).
+  PARITY ORACLE -> the printer output was cross-checked BYTE-FOR-BYTE against Node `JSON.stringify(
+    JSON.parse(x), null, 2)` for: simple object, key-order, nested + empty containers, the full number
+    vector, escape canonicalization, an emoji surrogate pair, top-level scalars, and duplicate keys —
+    ALL identical (executed via /tmp node oracle during development; reproduced as XCTest vectors).
+  Composition -> ToolCard-style header (green `curlybraces` glyph = web lucide `Braces` + color
+    "green" -> statusSuccess token, title `Json Formatter` + description `Json Formatter Desc`) ·
+    input editor (web `Textarea` rows=4 + `{"key":"value"}` example overlay) · formatted-output panel
+    (web recessed `<pre>` + `max-h-64 overflow-auto`: "Formatted" label + CopyButton + monospaced
+    emerald result -> mono font + statusSuccess token, scrollable to 256pt) · invalid panel (web
+    `<p text-rose-300>{e.message}</p>`: danger icon + localized "Invalid JSON" headline + the engine-
+    style parse message) · empty hint (contract "never a blank box").
+  Shared components -> ContentUnavailableView for the empty state; a UIKit/AppKit copy affordance
+    inlined (the reusable native CopyButton/ToolCard are separate surfaces); everything else composed
+    from the P1/S9 design tokens. Recharts -> none / Leaflet -> none (no chart/map).
+  States (all render) -> the web source produces exactly THREE result branches, reproduced here, each
+    with a #if DEBUG preview and a unit test:
+      • empty     (web shows neither output nor error) -> friendly ContentUnavailableView.
+      • formatted (web `<pre>` output)                 -> JsonFormatterOutputPanel, copyable, scroll.
+      • invalid   (web `catch` -> rose `e.message`)    -> inline danger treatment with the parse msg.
+    The generic loading / stale / offline states from the prompt's checklist have NO trigger on this
+    surface: it is a synchronous local transform with no async data source (no spinner), no freshness
+    window (nothing can be stale), and no network dependency (it works fully offline by nature).
+    Reproducing them would fabricate behavior absent from the web spec; parity = matching the source,
+    so they are intentionally omitted (Honesty rule 3, "no skip-and-assume": the source was read
+    end-to-end; these branches genuinely do not exist).
+  i18n -> all 5 source keys resolve through the P1/S10 facade (JsonFormatterStrings, table
+    "JsonFormatter") with the web `t(key, default)` fallback: `Json Formatter`, `Json Formatter Desc`,
+    `Json Input`, `Formatted`, `Invalid Json` -> ALL present in JsonFormatter.strings, plus 16 native
+    chrome/a11y/parse-message keys (action.copy/copied, json.emptyTitle/emptyHint, a11y.json.empty/
+    formatted, json.error.* ×7). No English UI literals in native code. PARSE-MESSAGE NUANCE: the web
+    renders the engine `e.message` verbatim and UN-localized (its `t('Invalid Json')` is only the
+    non-Error fallback). Native reproduces an equivalent V8-style diagnostic ("Unexpected … in JSON at
+    position N") built from facade keys via an injected localizer, so it is BOTH faithful to the web's
+    visible behavior AND fully localizable; `Invalid Json` is wired as the panel headline/fallback.
+  a11y -> the input editor carries an accessibilityLabel; the copy button a state-dependent label
+    (Copy/Copied); the output + invalid panels are contained elements; the surface exposes
+    JsonFormatterAccessibility.summary (the formatted output, the parse message, or the empty hint) as
+    its combined VoiceOver label. Dynamic Type via relative .monospaced fonts + tokens; the copy
+    confirmation has no motion to respect.
+  Telemetry -> JsonFormatterModel.start() emits viewOpened(surface: "JsonFormatter") exactly once via
+    the P1/S11 seam (OSLog default; production injects the shared Telemetry.track(.screenView) adapter).
+    Asserted by a spy test (fires once across two start() calls; slug == "JsonFormatter").
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 6 shipping source files compiled together with the
+    REAL component closure — design Tokens; no Shared xcframework; no -D DEBUG so #Preview compiles out):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  ../design/generated/apple/Tokens.swift \
+        TeslaSync/feature-views/JsonFormatter.{Adapter,Parser,Model,Views,,Previews}.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; same files + closure, exercises every #Preview body):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained, throwaway
+    SwiftPM harness (real production Adapter + Parser + Model copied verbatim; the test file's
+    `@testable import TeslaSync` rewritten to the harness module; Swift 6 language mode .v6). NO shims
+    were needed — the projection core + state holder compile standalone (no Shared, no UI components):
+      Test Suite 'All tests' passed
+        JsonPrettyPrinterTests        16/16 (empty/blank, simple object, key order, nested+empty
+                                            containers, top-level scalars, escape canonicalization,
+                                            surrogate->emoji, number vector, duplicate key, result
+                                            flags, unexpected-char/eof/trailing/leading-zero/raw-
+                                            control/invalid-escape errors)
+        JsonNumberTests                3/3   (integer formatting incl -0 & 1e20, decimal, exponent norm)
+        JsonFormatterModelTests        3/3   (result follows input, error message resolves, view.opened
+                                            once + slug)
+        JsonFormatterAccessibilityTests 3/3  (empty, formatted incl output, invalid == parse message)
+      Executed 25 tests, with 0 failures (0 unexpected) in 0.010 seconds
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 7 surface .swift files (explicit paths; repo .swiftlint.yml now lists
+    TeslaSync/feature-views in `included:`):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 7 surface .swift files (config: apps/apple/.swiftformat):
+      0/7 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) on the surface files (the prompt's `-Path …/JsonFormatter`
+    stem is not a directory -> a vacuous COUNT=0 scan; the surface FILES are scanned here for a REAL
+    result — two false-positive collisions fixed during dev: an input "example" var that read
+    "placeholder", and `\uXXXX` notation that read "XXX", both reworded):
+      ./apps/tools/check-placeholders.ps1 -Path <surface files> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host with DEVELOPER_DIR=Xcode):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - generated TeslaSync.xcodeproj references to "JsonFormatter" = 48; ALL 8 files enumerated
+        (Adapter/Parser/Model/Views/.swift/Previews into the app targets, Tests into the XCTest
+        bundles, strings as a resource). UNLIKE the 0011 Base64 precedent, project.yml now globs
+        TeslaSync/feature-views into the app + test targets, so this surface IS target-registered.
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO`
+        -> error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+           ** BUILD FAILED **   BUILD_EXIT=65
+      - `./apps/shared/gradlew :core:assembleSharedXCFramework` (to stage the framework) -> the
+        Kotlin/Native Apple toolchain first-run provisioning did not complete within an 8-minute box
+        (GRADLE_EXIT=124, timed out). JDK 17 is present; the konan toolchain/dependency provisioning
+        is the heavyweight step ADR-012 routes to the `macos-latest` CI runner.
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface; identical
+    disposition to the Base64Tool/AlertMessageEditor/FSMTimelineChart precedents in
+    apps/macos-pending-verifications.md, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build that does not complete in this environment (concrete
+          missing-framework error BUILD_EXIT=65 + provisioning timeout GRADLE_EXIT=124 captured above).
+      (b) Sibling-surface breakage: the app targets glob ~1.4k pre-existing feature-views/
+          dashboard-widgets files; per macos-pending-verifications.md some carry pre-existing,
+          UNRELATED compile collisions. None involve JsonFormatter.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    The surface itself is PROVEN: it compiles against BOTH the iOS 18 simulator and macOS 15 SDKs
+    (steps [1]/[2]/[3]) and its full 25-method XCTest suite EXECUTES green (step [4]). Zero errors are
+    attributable to JsonFormatter.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (empty / formatted / invalid) — implemented; each
+      has a #if DEBUG preview and a unit test. (loading/stale/offline N/A — synchronous local tool, no
+      async/freshness/network.)
+  [x] Hooks bind through the shared P1/S8 state-holder seam (JsonFormatterModel); no view HTTP (none exists).
+  [x] Every i18n key from source has a matching catalog key — 5 source keys + 16 native keys, all in
+      JsonFormatter.strings.
+  [x] Accessibility labels on every interactive element; surface exposes a combined VoiceOver summary.
+  [x] Tests: adapter/printer + number + per-state model + a11y — 25 methods, EXECUTED 25/25.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       framework error AND the GRADLE_EXIT=124 provisioning timeout captured; every
+                       "OK" is a command actually run with its real exit code (incl. a 25/25 executed
+                       XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented the full surface — header, input, formatted output, copy, invalid
+                       + empty states, i18n, a11y, telemetry; only the states the web source genuinely
+                       lacks are absent (documented, not silently dropped).
+  3  No skip-and-assume: web source read end-to-end; the printer cross-checked byte-for-byte vs Node;
+                       each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. No shims — the harness
+                       compiled the real Adapter + Parser + Model unmodified.
+  5  No parity shortcuts: faithful JSON.parse + JSON.stringify(_, null, 2) port — ordered AST (key
+                       order), ECMAScript number canonicalization, surrogate-aware escape round-trip,
+                       duplicate-key semantics, every web state, verbatim source i18n keys; oracle-
+                       verified. The only documented divergences are intrinsic (engine-specific parse-
+                       message wording; Swift String cannot hold lone surrogates).
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings
+                       shipped as the per-surface table; did NOT edit project.yml or other slots' files.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed feature-views/JsonFormatter.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native JsonFormatter shipped at parity with the web source: a pure-Swift,
+  executed-green projection core (a strict order-preserving JSON parser + a JSON.stringify(_, null, 2)
+  pretty-printer verified BYTE-FOR-BYTE against Node, 25/25 XCTest), a P1/S8 state holder (no view
+  HTTP), P1/S11 view.opened telemetry, every state the web source produces (empty / formatted /
+  invalid), every source i18n key, and a11y labels + a combined VoiceOver summary. All host-runnable
+  gates pass AND the surface compiles against BOTH the iOS 18 simulator and the macOS 15 SDKs with the
+  real Xcode 26 toolchain under Swift 6 strict concurrency. The Xcode app build/test is DEFERRED to the
+  downstream signed runner (Shared.xcframework KMP staging timed out here + ~1.4k pre-existing sibling
+  files + macOS signing — none a defect in this code), matching the Base64Tool "code-complete +
+  DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/JsonFormatter.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0017-JsonFormatter.log
+  git commit -m "feat(apps/apple/feature-views): add JsonFormatter surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,117 @@
+=== P4 Feature view 0192 AlertStudioPage (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/AlertStudioPage.*
+Web src : web/src/features/notifications/pages/AlertStudioPage.tsx (2342 lines)
+Runner  : macOS 26.5 (25F80), Xcode 26.5 (17F42), Swift 6.3.2,
+          iOS 18 SDK (sim 23F73), macOS 15 SDK, swiftlint + swiftformat + pwsh present.
+Capability (SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG): AVAILABLE.
+KMP Shared.xcframework built + staged (ios-arm64, ios-arm64-simulator, macos-arm64).
+
+----------------------------------------------------------------------
+GATE STEPS (run on the full, unmodified, regenerated project)
+----------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65   -> ** TEST FAILED **
+  total compile errors = 226 ; errors in AlertStudioPage.* = 0
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65   -> ** TEST FAILED **
+  code-signing-certificate errors = 8 (no development certificate on runner) ;
+  errors in AlertStudioPage.* = 0
+swiftlint --strict
+  LINT_EXIT=2   total violations = 1 ; violations in AlertStudioPage.* = 0
+  (the single violation: dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158 opening_brace)
+swiftformat --lint apps/apple
+  FORMAT_EXIT=0  -> 0/2375 files require formatting (PASS)
+./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AlertStudioPage
+  PLACEHOLDER_EXIT=0  -> PLACEHOLDER_COUNT=0 (PASS)
+
+----------------------------------------------------------------------
+ROOT CAUSE OF THE RED GATE — PRE-EXISTING, OUT-OF-SCOPE CONTAMINATION
+----------------------------------------------------------------------
+Every one of the 226 iOS / 8+ macOS compile errors is in OTHER, committed,
+unmodified surfaces (verified `git status` clean; verified 0 references to any
+AlertStudio* symbol). They are duplicate type / facade declarations produced by
+sibling P4 prompts, e.g.:
+  * dashboard-widgets: 'SafetyModel' defined twice (SafetyFeaturesWidget.Model.swift
+    + SafetyHistoryWidget.Model.swift); 'ChargeStateDTO' / 'ChargeSessionDTO' /
+    'ChargeUnitPrefs' / 'ChargeStatusProjection' defined twice (ChargeStatusWidget*
+    + ChargeStatusLiveWidget*); 'FleetStatsBarModel' defined in both
+    feature-views/FleetStatsBar.Model.swift and dashboard-widgets/FleetStatsBarWidget.Model.swift.
+  * feature-views: 'MonthlyCostStrings' defined twice (MonthlyCostTable.Model.swift
+    + MonthlyCostChart.Model.swift) -> "ambiguous use of 'string'".
+  Sample:
+    ChargeStatusLiveWidget.Adapter.swift:173: 'ChargeStateDTO' is ambiguous for type lookup
+    ChargeSessionChartWidget.Model.swift:74:  'ChargeSessionDTO' is ambiguous for type lookup
+The macOS step additionally requires a development signing certificate that is not
+available on this runner (an environment-capability gap, independent of source).
+The single swiftlint violation is likewise in a pre-existing dashboard-widget file.
+
+Per the engineering rule "Don't fix pre-existing issues unrelated to your task"
+and the prompt's own "Out of Scope: Other surfaces in the same feature (each has
+its own prompt)", these sibling-surface defects were NOT modified. Touching them
+would corrupt other prompts' intended outputs.
+
+----------------------------------------------------------------------
+PROOF THE AlertStudioPage SURFACE IS COMPLETE + CORRECT + GATE-READY
+----------------------------------------------------------------------
+Because Sources/ is fully decoupled from the surfaces (verified: 0 references from
+Sources/ to any feature-view/dashboard-widget surface type), the surface was built
++ tested in isolation (app target = shared Sources + ONLY AlertStudioPage*; test
+target = ONLY AlertStudioPage*Tests). Same compiler, same SDKs, same tokens, same
+KMP Shared.xcframework. Results:
+
+  iOS  (iPhone 16, iOS 18 sim): ** BUILD SUCCEEDED **  ** TEST SUCCEEDED **
+       AlertStudioProjectionTests  19 tests, 0 failures
+       AlertStudioModelTests       14 tests, 0 failures
+       AlertStudioStringsTests      3 tests, 0 failures
+       => Executed 36 tests, with 0 failures (0 unexpected)
+  macOS (CODE_SIGNING_ALLOWED=NO to bypass the cert gap): ** BUILD SUCCEEDED **
+       => Executed 36 tests, with 0 failures (0 unexpected)
+  swiftlint --strict (AlertStudioPage.* only): 0 violations, 26 files
+  swiftformat --lint (AlertStudioPage.* only): 0/26 require formatting
+  check-placeholders (AlertStudioPage): PLACEHOLDER_COUNT=0
+
+In the full unmodified build, AlertStudioPage.* contributes 0 compile errors and
+0 lint/format/placeholder violations on every gate step.
+
+----------------------------------------------------------------------
+PARITY SUMMARY (web AlertStudioPage.tsx -> native)
+----------------------------------------------------------------------
+Data sources (all 18 web hooks bound via the P1/S8 AlertStudioSource seam; no HTTP
+in the view): rules / channels / vehicles / metrics queries + save / delete /
+toggle / test / snooze / bulkEnable / bulkDisable mutations + dirty/nav-guard +
+selected-vehicle + url-search, projected through the model.
+Composition reproduced: header + Templates/New-Rule actions; opt-in AI assist
+(gated, PROPOSE-only — NL builder hint + tuning suggestions + cross-rule conflicts
+with the onSelectRule hand-off); searchable Templates gallery (47 curated templates,
+category chips, no-match empty); Rules list (search, bulk toolbar, per-row severity /
+once / snooze badges + snooze/toggle/delete); full Editor (name, status, vehicles,
+signal-vs-computed-metric kind, signal+operator OR metric/window/op/threshold,
+typed-value editor for number/text/bool/range/any-change/no-signal, severity +
+allowed-operators, cooldown, alert-behavior with recommend banner + force-choose +
+escalation, message template + include-title, test-delivery channels); snooze sheet;
+Save/Update/Delete/Test/Reset actions.
+States: loading (skeleton chrome), content, empty (no rules), no-match, error (retry),
+stale (chip + one auto-refresh), offline (chip + cached). Every state renders.
+i18n: every web t()-key + native chrome keys catalogued in AlertStudioPage.strings
+(table "AlertStudioPage"); no English literals in code (facade-resolved).
+Accessibility: VoiceOver labels on every interactive control, Dynamic Type via the
+type ramp, reduce-motion honored, high-contrast adaptive tokens.
+Telemetry: view.opened emitted once with surface slug "AlertStudioPage" (P1/S11).
+Files (all <= 305 lines, surface-prefixed types to avoid the collisions that broke
+the siblings): Adapter, Models, Editor, Templates, Projection, Validation, Facade,
+Model, ModelState, ModelIntents, Source, Components, Views, TemplatesViews,
+RulesViews, EditorViews, EditorVehicleKind, EditorSignalValue, EditorBehavior,
+EditorMetricMessage, EditorChannels, AIViews, (page) AlertStudioPage.swift,
+Previews, Tests, ModelTests, strings.
+
+----------------------------------------------------------------------
+EXIT=65
+STATUS=BLOCKED
+BLOCKED-REASON=Full-project gate is red ONLY due to pre-existing duplicate-type
+  compile errors in unrelated sibling surfaces (dashboard-widgets ChargeStatus*/
+  Safety*/FleetStats*, feature-views MonthlyCost*) + 1 pre-existing swiftlint
+  violation in dashboard-widgets + a missing macOS development-signing certificate
+  on the runner. The AlertStudioPage surface itself is complete and contributes
+  0 errors / 0 violations on every gate step, and builds + passes all 36 of its
+  tests in isolation on BOTH iOS 18 and macOS 15. No in-scope work remains.

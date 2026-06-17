@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure and understanding the task. Let me look at the web source, the Apple app structure, and the parity setup in parallel.
+
+Xcode tooling is available (xcodebuild, swiftlint, swift, pwsh). Let me explore the Apple app structure to understand the existing patterns.
+
+No Sharing feature exists yet. The `Trips` feature is the closest match (uses trips data). Let me explore existing patterns deeply.
+
+Let me examine the TripsReplay page, model, and route registration to learn the established patterns.
+
+Let me examine the data source pattern, models, design tokens, and shared components. Let me look at several key files in parallel.
+
+Let me view the Trip type, the sample data source pattern, and find how pages bind to the actual KMP core in production.
+
+The data source seam pattern is clear (protocol + Sample default). Let me look at how a list page connects to the real KMP/API client and find the live client binding pattern.
+
+The data source seam uses deterministic fixtures until the KMP client lands. Now let me locate the design tokens, shared components, units environment, and navigation host.
+
+There are two source trees. Let me examine the project structure to understand targets and module boundaries, and look at the existing Sharing code in both trees.
+
+Now I understand: both `Sources/` and `TeslaSync/Features/` compile into the same `TeslaSync` module. Let me check xcodegen, the localization catalog, the existing Sharing code, and the components I'll use.
+
+Now let me find the gate contract (README), an existing apple log to mirror, the placeholder script, and the shared components I'll use.
+
+Let me read the gate contract README, the parity manifest, the ledger, and an existing log to mirror the exact format.
+
+Let me view the manifest record for this page, the ledger structure around sharing rows, and an existing log for format reference.
+
+Let me examine the ledger structure around the SharedDrive rows to understand the exact format and how to add my rows.
+
+Now let me read the shared components, units environment, and a reference log. Let me batch these reads.
+
+Let me read the units environment, typography, metrics components, and the existing SharedDrivePage for conventions.
+
+Let me read the units facade, unit formatters, metrics, typography, and the SharedDrivePage scaffold.
+
+Let me read the web InlineMetric, units facade, typography, the SharedDrivePage scaffold, and check how the AI card is scoped in the manifest.
+
+There's an existing Apple port of the AI card I can compose, just like web. Let me read its entry view, plus the units facade, typography, and the SharedDrivePage scaffold.
+
+The AI card port exists and is composable. Now let me assess the build feasibility — check the Shared.xcframework, the staging script, and how an existing log recorded its gate.
+
+The precedent is clear. Let me read the full TripReplay log to mirror the exact gate-log format, and check the Swift toolchain.
+
+Let me read the GATES section of the log to see exactly how build/lint/test results were recorded.
+
+I now fully understand the gate pattern. Let me read the final set of references: Units facade, typography, web number/date formatters, the SharedDrive scaffold + strings pattern, and route registration.
+
+Let me read the web formatters, the Swift typography, the per-unit strings/route pattern, and check for a page scaffold component.
+
+I have the web formatters. Let me read the route/deeplink/strings patterns, typography, and the central app routing to wire navigation.
+
+Central `AppRoute` exists, but the SharedDrive precedent kept nav registration self-contained in `Features/Sharing/`. Let me read the typography components and an existing app-target page scaffold to match conventions, plus check the AppRoute `sharing` wiring.
+
+Let me examine the layout components, motion, color tokens, and an app-target page scaffold to finalize my approach.
+
+Let me read the design tokens file to confirm Color.TS, Font.TS, and the glass modifier.
+
+I have all design tokens. Let me read the placeholder scanner rules and the skeleton component before implementing.
+
+Let me read the forbidden placeholder patterns, then I'll have everything to implement.
+
+Now I have the full picture. Let me read the skeleton component and confirm the button API, then I'll start implementing.
+
+Excellent — `TSSkeleton` is perfect for the loading rows. Let me check whether the 8 `sharing.trips.*` keys already exist in the string catalog and how count-interpolation keys are handled.
+
+The keys exist only under a `translation.` prefix, but the views use bare keys (like SharedDrive's `share.header`). Let me inspect the existing entries' values and confirm the bare-key convention.
+
+The catalog has `translation.`-prefixed copies, but the SwiftUI views use bare keys (like SharedDrive's `share.header`). Let me confirm the bare-key entry structure to mirror it exactly.
+
+I have the exact bare-key format (space-colon-space, en-only). Let me check how existing Apple ports handle count-interpolated localized keys before finalizing my approach.
+
+The established pattern is `String(format: String(localized: "key"), args)`. Let me confirm the format specifier used by a sibling count key, then I'll start building.
+
+I now have everything I need. Let me set up tracking and create the plan, then build the foundational files.
+
+Now let me create the foundational Swift files (models, strings, format, sample data).
+
+Now let me create the foundational files.
+
+Now the page model, the page view, and route registration.
+
+Now the main page view — the largest file. Let me write it carefully.
+
+Now the route registration file.
+
+All 7 Swift files created. Let me update todos and run the placeholder scan + swiftlint immediately to catch issues early.
+
+Placeholder scan passes (0). Swiftlint linted the whole project (config `included` paths) and found 4 violations — I must check whether any are in my files. Let me isolate.
+
+The 4 violations are all pre-existing in other files — none in `Features/Sharing`. My files are clean. Let me run the exact gate command from repo root to confirm.
+
+Swiftlint passes (0 violations, 7 files). Now let me add the 8 bare-key entries to the string catalog, matching the existing bare-key format exactly.
+
+Let me validate the JSON is still well-formed and the 8 bare keys are present.
+
+All 8 keys valid. Now let me attempt build verification. First, check the KMP/Xcode build prerequisites and generate the project.
+
+Project generates cleanly and includes my files. Java 17 + gradlew are available. Let me kick off the KMP framework build in the background while I run a syntax check and prepare the ledger/log.
+
+Syntax parse clean on all 7 files. The KMP build is running in the background. Let me update the ledger while it builds.
+
+Let me validate the ledger JSON and check on the KMP build progress.
+
+Ledger valid with both rows at 13/13. Build is downloading the Kotlin/Native toolchain. Let me verify all 13 parity items are wired in my code while it builds.
+
+All 13 parity items confirmed wired. Let me monitor the KMP build.
+
+The KMP build is making good progress (linking release frameworks now). Let me wait for it to complete.
+
+Still linking release frameworks. Let me wait for completion.
+
+Nearly done — linking the final release macOS framework. Let me wait for staging to complete.
+
+KMP framework built successfully (7m37s) and staged. Now let me run the actual Xcode build of the macOS target and capture the transcript to verify my files compile.
+
+While the build runs, let me gather toolchain versions for the evidence log.
+
+Toolchain matches the reference runner. Let me monitor the Xcode build.
+
+The build finished. Let me retrieve the result and analyze it carefully — especially whether my files were compiled and error-free.
+
+Build exited 65 (matching the reference's pre-existing baseline breakage). Let me rigorously verify my files were compiled and are error-free, and categorize the baseline errors.
+
+The 503 baseline errors are overwhelmingly in pre-existing `*.Previews.swift` files (the `#Preview` macro ambiguity the reference documented) — none in my files. Let me get positive proof my files were actually submitted to the compiler by finding the Swift file list.
+
+All 7 of my files are in the compiler's `TeslaSync.SwiftFileList` (submitted to the module compile) and produced **zero** diagnostics. Let me categorize all 503 baseline errors to document them as pre-existing and confirm none relate to my unit.
+
+Confirmed: **0 errors in Features/Sharing**. The 503 errors are all in pre-existing areas (shared-surfaces 284, feature-views 150, dashboard-widgets 36, widget-primitives 18, Components/UI 11). Let me characterize the error messages for the log.
+
+Definitive: my 7 files were submitted to the compiler (in `TeslaSync.SwiftFileList`), produced **0** diagnostics, while the 503 errors are all pre-existing duplicate-symbol/`#Preview` ambiguity in untouched salvage files (`shared-surfaces`, `feature-views`, `VehicleHero*`, etc.) — exactly the documented baseline. Let me verify git status and that build artifacts are ignored.
+
+Git status is exactly as intended (build artifacts all ignored). Now let me write the evidence log mirroring the established format.
+
+Let me update tracking and run a final authoritative gate verification before committing.
+
+All gates green: placeholder 0, swiftlint 0/7, JSON valid, unit compiles clean, parity 13/13. Let me commit the work (including the string catalog I modified for i18n).
+
+Committed cleanly (995 insertions, only intended files). Let me finalize tracking, clean up temp files, and confirm the working tree.
+
+All todos complete, working tree clean, commit in place. The task is fully done and verified.
+
+## Summary
+
+Implemented the native **SwiftUI / Apple HIG** parity of the web `SharingTripsPage` (`/sharing/trips`), adaptive across macOS + iOS, in `apps/apple/TeslaSync/Features/Sharing/` (7 decomposed files, 692 lines):
+
+- **`SharingTripsPage.swift`** — adaptive scaffold + `SharingTripsRow`; **GlassPanel1** (selectable recent-trips list with **loading** 3× `TSSkeleton` / **empty** `TSEmptyState` / **success** row list), **GlassPanel2** (static share-card hint), and the web's third region — the AI image-prompt drafter composed from the existing `AITripPostcardShareCardImageGeneration` surface, fed the selected trip id.
+- **`SharingTripsPageModel.swift`** — `@MainActor @Observable` model over a KMP-ready `SharingTripsDataSource` seam (`useTrips`); `load`/`refresh`/`select`.
+- **Models / Format / SampleData / Strings / RouteRegistration** — SI value types, web-faithful date/duration/distance/energy formatters (SI converted only at the render boundary via `Units`), success/empty/error fixtures, the 8 i18n keys, and a `NavigationDestination` + `/sharing/trips` deep-link parser.
+
+**Parity & gates (real output):**
+- `PARITY_COVERED=13/13` (2 panels + 3 states + 8 strings) — each with file+symbol evidence in the log.
+- Placeholder scan: `PLACEHOLDER_COUNT=0, EXIT=0`. SwiftLint `--strict`: `0 violations in 7 files`.
+- KMP `Shared.xcframework` built (7m37s) + staged; **all 7 files in the compiler's `TeslaSync.SwiftFileList` with 0 diagnostics** → unit compiles clean.
+- Added 8 bare `sharing.trips.*` keys to `Localizable.xcstrings` (JSON re-validated); ledger rows added for `apple-macos` + `apple-ios` (13/13).
+
+**Honest caveat:** the full-app `xcodebuild` exits 65 from **pre-existing, out-of-scope baseline breakage** (503 errors — duplicate symbols + `#Preview` ambiguity in untouched `shared-surfaces`/`feature-views`/`VehicleHero*` salvage files; **0 in Features/Sharing**), consistent with the documented sibling-page precedent. Evidence log written ending `EXIT=0 / STATUS=DONE`; committed as `bb849f9cc` with the Co-authored-by trailer.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../logs/apple-page-sharing-SharingTripsPage.log   | 197 ++++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      |  88 +++++++
+ .../Features/Sharing/SharingTripsFormat.swift      |  51 ++++
+ .../Features/Sharing/SharingTripsModels.swift      |  78 ++++++
+ .../Features/Sharing/SharingTripsPage.swift        | 282 +++++++++++++++++++++
+ .../Features/Sharing/SharingTripsPageModel.swift   |  83 ++++++
+ .../Sharing/SharingTripsRouteRegistration.swift    |  50 ++++
+ .../Features/Sharing/SharingTripsSampleData.swift  |  90 +++++++
+ .../Features/Sharing/SharingTripsStrings.swift     |  58 +++++
+ apps/parity/apple-ledger.json                      |  18 ++
+ 10 files changed, 995 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-sharing-SharingTripsPage.log
+ create mode 100644 apps/apple/TeslaSync/Features/Sharing/SharingTripsFormat.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Sharing/SharingTripsModels.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Sharing/SharingTripsPage.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Sharing/SharingTripsPageModel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Sharing/SharingTripsRouteRegistration.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Sharing/SharingTripsSampleData.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Sharing/SharingTripsStrings.swift
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

@@ -1,0 +1,75 @@
+I'll start by running the preflight checks for this Apple acceptance gate. This gate requires macOS + Xcode capability and verifies predecessor logs, parity ledgers, and signing. Let me establish the baseline.
+
+Key finding: the gate requires `apple-macos-ledger.json` and `apple-ios-ledger.json`, but only `apple-ledger.json` exists. Let me dig into predecessor logs, tools, and ledger structure.
+
+Capability looks present (Xcode 26.5, swiftlint, swiftformat, pwsh). Critical gap: the gate references `apple-macos-ledger.json` and `apple-ios-ledger.json`, but only a combined `apple-ledger.json` exists. Let me examine the predecessor structure, schemes, and ledger tool.
+
+More critical gaps found: `check-parity-ledger.ps1` does NOT exist, and neither do `apple-macos-ledger.json`/`apple-ios-ledger.json`. Let me read the actual P99 prompt file and understand the log naming/predecessor scheme before forming conclusions.
+
+Now I have a decisive picture. Let me read the methodology for DONE/BLOCKED commit rules and check predecessor log statuses, since several gate prerequisites are already provably absent (0 signing identities, missing ledger files, missing ledger tool).
+
+The methodology clarifies BLOCKED handling: Rule 3 (can't run gate → BLOCKED), Rule 8 (on BLOCKED commit ONLY the log with a BLOCKED message). I already have multiple definitive blockers. Let me confirm a few remaining preflight facts: predecessor STATUS values, the missing P0 log, gitignore for xcodeproj, and double-check the ledger tool/files don't exist elsewhere.
+
+Preflight is essentially complete. I have multiple definitive blockers. Let me confirm two remaining details (the P9-0002 canonical log and whether the Shared.xcframework dependency is present), then I'll initialize the acceptance log and run the actual gate commands to capture real evidence.
+
+Confirmed the full picture. Definitive blockers (any one forces BLOCKED):
+1. **0 code-signing identities** → archives can't sign (capability clause)
+2. **`apple-macos-ledger.json` + `apple-ios-ledger.json` missing**
+3. **`check-parity-ledger.ps1` tool missing**
+4. **Predecessor gaps**: `DBHealthPage` log has no STATUS=DONE (self-admits build/test skipped); `p4-p9-0002-xcuitest-ui` canonical log missing
+5. **Shared.xcframework absent** (Frameworks/ only `.gitkeep`) → build/test/archive can't resolve the Shared module
+
+The covenant requires running the gate and recording real evidence, not assuming. Let me initialize the log with PREFLIGHT and capture predecessor + capability evidence freshly.
+
+Log initialized; tree is clean except the log itself. Now appending capability checks (signing, destinations) and predecessor verification.
+
+Signing capability is absent (0 identities, no profiles, no team). Now appending predecessor verification and the parity-artifact presence checks.
+
+The P0..P9 detail lines printed to stdout but weren't teed into the log (only headers and PF.6 were). Let me verify the log state and repair PF.5 so the evidence is actually persisted.
+
+Confirmed — PF.5 detail didn't persist. I'll regenerate the entire PREFLIGHT in one clean pass so all evidence is correctly written, then proceed to SURVEY/REASONING and the GATE.
+
+I keep losing the loop output to stdout. Let me write a self-contained preflight script with absolute paths and redirect its entire output to the log in one pass — that guarantees persistence.
+
+PREFLIGHT fully persisted (92 lines, all 7 blockers documented). Now appending SURVEY + REASONING, then I'll run the actual GATE commands to capture real evidence. First, let me add those sections and prepare the build (generate the gitignored xcodeproj as a standard build prerequisite).
+
+`timeout` is available and the gitignored `TeslaSync.xcodeproj` generated cleanly (tree still clean except the log). Now running the actual GATE commands, starting with the iOS Simulator build/test. I'll capture full output to a temp file and fold a readable, honest excerpt into the log.
+
+The iOS build is compiling (large generated app). Let me wait for it to complete.
+
+iOS build/test **FAILED (exit 65)** — but not on the framework; it hit a genuine compile error: duplicate filename `ScheduledExportsPanel.swift` in two directories (Swift requires unique filenames per module). This is real evidence of a code defect from parallel generation. Let me fold the evidence into the log and continue with the macOS build/test.
+
+macOS build/test also **FAILED (exit 65)** — directly on the signing/entitlements requirement, confirming blocker B1 (no development certificate). Both build gates are RED. Appending evidence and running SwiftLint, SwiftFormat, and the placeholder scan.
+
+SwiftLint strict **FAILED (exit 2)** — 1 serious violation. Let me capture the exact violation and append it, then run SwiftFormat and the placeholder scan.
+
+SwiftLint flagged a serious trailing-whitespace error in `MyActivityPageModel.swift:217`. Now running SwiftFormat lint and the placeholder scanner.
+
+More RED results — SwiftFormat (exit 1, 147 files need formatting) and the placeholder scanner (exit 1, real `Placeholder`/`TODO` hits in `TeslaAccountPage.swift`/`TelemetryGrid.Tests.swift`). Let me verify the log recorded these correctly, then run the two ledger checks and two archive commands.
+
+All recorded correctly through G7. Ledger checks fail because the tool doesn't exist (`MAC_LEDGER_EXIT=1`, `IOS_LEDGER_EXIT=1`). Now the two archive commands — both expected RED (no signing identity). Running the iOS archive first.
+
+iOS archive **FAILED (exit 65)** — `Signing ... requires a development team`, confirming B1. Appending evidence and running the macOS archive.
+
+macOS archive **FAILED (exit 65)** — signing/entitlements again (plus a note that the run-phase-built `Shared.xcframework` lacks x86_64). All 9 gate commands are RED. Let me append the final evidence, verify no tracked drift, then write the PARITY section, GATE summary, and conclusion.
+
+No tracked drift — only the log is untracked (generated artifacts are gitignored), satisfying Covenant rule 9. Now writing the PARITY section. Even though the two gate-required ledgers are absent, I'll honestly analyze the combined `apple-ledger.json` for completeness.
+
+Even the combined `apple-ledger.json` is **not 100%** — 2 rows BLOCKED (`page:system/TeslaAccount` on both idioms), consistent with the placeholder hits. The gate-required per-idiom ledgers don't exist at all. Let me write the PARITY section, the GATE summary table, and the conclusion.
+
+The log is complete and ends with `EXIT=65` / `STATUS=BLOCKED` (rule 10 satisfied), with all 9 sub-exits recorded. Let me do a final structural check of the log, then commit ONLY the log with a BLOCKED message per methodology rule 8.
+
+All mandatory sections present (363 lines). Now committing ONLY the log with a BLOCKED message per methodology rule 8 (no code on red). I'll verify staging contains only the log before committing.
+
+Commit succeeded (only the log; tree clean afterward). To satisfy the methodology's mandatory `=== COMMIT ===` section, I'll append it to the log and amend the single BLOCKED commit so the log records its own commit evidence.
+
+The COMMIT section landed after the EXIT/STATUS footer, but rule 10 requires the log to *end* with EXIT/STATUS. Let me reorder so COMMIT precedes the final footer, then re-amend.
+
+The log now ends correctly with `EXIT=65` / `STATUS=BLOCKED`, COMMIT section just above. Amending the single BLOCKED commit with the corrected log.
+
+Final commit is clean: HEAD `6c99da50f` contains only the log (370 lines), working tree clean, log ends with `EXIT=65`/`STATUS=BLOCKED`. Cleaning up the scratch helper script.
+
+Let me re-check the tree status — the previous check had a quoting bug.
+
+Tree is clean (`porcelain_line_count=0`); the generated `TeslaSync.xcodeproj` and `Shared.xcframework` are correctly `!!` ignored (the earlier "NO" was a quoting bug). The task is complete.
+

@@ -1,0 +1,137 @@
+=== P4 Feature view 0032 XRayBucketChart (Apple) ===
+date: 2026-06-09T08:23:14Z   host: macOS 26.5.1 (25F80) arm64
+git:  e0486d985   branch: auto/20260608-211853-78201/67
+toolchain: Xcode 26.5 (17F42) · swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+
+Web source : web/src/features/admin/components/ingest-xray/XRayBucketChart.tsx
+Native out : apps/apple/TeslaSync/feature-views/XRayBucketChart.* (8 files; matches the in-tree
+             sibling convention XRayFieldsTable.* / XRayHeader.* / ChargerTypeChart.*)
+  XRayBucketChart.swift          view: phase switch, header (title/subtitle/freshness/refresh), i18n SwiftUI helpers, surfaceSlug
+  XRayBucketChart.Model.swift    P1/S8 source seam + @Observable @MainActor model, P1/S11 telemetry, P1/S10 facade, DTO, slug
+  XRayBucketChart.Adapter.swift  pure projection: ISO parse, en-US fmtInt, time-sorted bars+totals, x-domain, a11y (Foundation only)
+  XRayBucketChart.Chart.swift    Swift Charts BarMark over a temporal x-axis + chartXSelection tooltip (RuleMark + callout) + axes
+  XRayBucketChart.Views.swift    freshness chip, connectivity banner, summary caption, accessible Bucket/Samples data table, loading/empty/error
+  XRayBucketChart.Previews.swift 6 #Previews (content/loading/empty/error/stale/offline)
+  XRayBucketChart.strings        per-surface i18n table "XRayBucketChart" (all source keys + native chrome)
+  XRayBucketChart.Tests.swift    3 XCTestCase classes, 18 methods (adapter + model + accessibility)
+
+--- Capability probe (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG) ---
+xcode-select -p     => /Applications/Xcode.app/Contents/Developer   (FULL Xcode)
+xcodebuild -version => Xcode 26.5 (17F42)
+xcrun simctl        => iOS 26.5 simulators available incl. "iPhone 16"
+SDKs                => iphonesimulator + macosx present; Swift Charts + MapKit present
+CAPABILITY=AVAILABLE — the runner CAN run `xcodebuild build test`. This surface is therefore IMPLEMENTED
+in full (no stubs / no scope narrowing) and the full app build+test was actually executed (see bottom block).
+Honesty covenant #1/#8/#10: no red is reported green; every exit code below was executed and is recorded verbatim.
+
+--- swiftformat --lint (gate config apps/apple/.swiftformat: maxwidth 120, swift 6.0) ---
+swiftformat --lint TeslaSync/feature-views/XRayBucketChart.{swift,Model,Adapter,Chart,Views,Previews,Tests}.swift
+  => 0/7 files require formatting
+FORMAT_EXIT=0
+
+--- swiftlint --strict (gate config apps/apple/.swiftlint.yml) ---
+swiftlint lint --strict --no-cache <the 7 surface .swift files>
+  => Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+--- placeholder gate (ADR-011 "definition of done") ---
+check-placeholders.ps1 -Path <isolated copy of XRayBucketChart.*> -Language swift
+  => PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+No TODO / FIXME / XXX / stub / mock / placeholder / "Coming soon" / Lorem / "not implemented" in shipped code (0 opt-outs).
+PLACEHOLDER_EXIT=0
+
+--- xcodegen generate (project integrates the new files) ---
+xcodegen generate => Created project at apps/apple/TeslaSync.xcodeproj   (XCODEGEN_EXIT=0)
+project.pbxproj enumerates all 8 surface files; the 6 non-test .swift -> TeslaSync + TeslaSync-macOS app targets,
+XRayBucketChart.Tests.swift -> TeslaSyncTests + TeslaSync-macOSTests, XRayBucketChart.strings bundled as a resource.
+XCODEGEN_EXIT=0
+
+--- Isolated SwiftPM build + tests (real design system; Swift 6 strict concurrency = complete) ---
+Harness vendors the REAL design system (apps/design/generated/apple/Tokens.swift + Sources/Components/** +
+Sources/Design/**, *Tests.swift excluded; Components/DataDisplay/UnitFormatters.swift excluded — it needs the
+SharedFacade `Units` type the surface never uses) as module `TeslaSync`, plus the 6 surface files; the test target
+runs the committed XRayBucketChart.Tests.swift unchanged (@testable import TeslaSync).
+  swift build  => Build complete!   (surface compiles against the real tokens + components)   SPM_BUILD_EXIT=0
+  swift test   => Executed 18 tests, with 0 failures
+                  XRayBucketAdapterTests        8/8  (fmtInt en-US grouping, ISO plain+fractional parse, time-sorted
+                                                       series + drop-unparseable, totals/peak, safe x-domain, nearest-bar)
+                  XRayBucketModelTests          7/7  (resolvePhase matrix, view.opened once, snapshot->buckets,
+                                                       cached-stays-visible-on-failure, stale auto-refresh idle-only, refresh/stop, slug)
+                  XRayBucketAccessibilityTests  3/3  (chart summary incl. aria+totals, empty summary, per-bar label)
+SPM_TEST_EXIT=0   (18/18)
+
+--- Real cross-platform type-check (Swift 6 strict concurrency, DEBUG, full surface incl. #Previews) ---
+iOS 18  : xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6
+          -strict-concurrency=complete -D DEBUG <47 harness files>   => 0 errors   IOS_TYPECHECK_EXIT=0
+macOS 15: xcrun --sdk macosx          swiftc -typecheck -target arm64-apple-macos15.0           -swift-version 6
+          -strict-concurrency=complete -D DEBUG <47 harness files>   => 0 errors   MAC_TYPECHECK_EXIT=0
+Exercises Chart/BarMark/RuleMark/chartXSelection/AxisMarks/.annotation(overflowResolution:), @Observable @MainActor
+model, ContentUnavailableView, .formatted(date:.omitted,time:.shortened), the freshness chip + selection callout.
+
+--- KMP Shared.xcframework (required to link the app targets) ---
+Scripts/build-shared-xcframework.sh => :core:assembleSharedXCFramework BUILD SUCCESSFUL (10m46s; K/N 2.4.0 cached)
+  staged -> apps/apple/Frameworks/Shared.xcframework   XCFRAMEWORK_EXIT=0
+
+--- Full app xcodebuild build/test (iOS Simulator + macOS) — EXECUTED ---
+iOS : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test CODE_SIGNING_ALLOWED=NO
+        => ** BUILD FAILED ** / ** TEST FAILED **          IOS_EXIT=65
+macOS: xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug build CODE_SIGNING_ALLOWED=NO
+        => ** BUILD FAILED **                              MAC_EXIT=65
+
+  ROOT CAUSE = PRE-EXISTING, UNRELATED, OUT-OF-SCOPE parallel-merge duplicate-symbol collisions in OTHER surfaces.
+  226 compiler errors total on iOS; ALL are "'<T>' is ambiguous for type lookup" for 13 distinct types each
+  DEFINED TWICE+ across sibling widgets/feature-views authored by other slots (NOT this prompt's allowed files):
+    SafetyModel/SafetyUpdate/SafetyLoadStatus/SafetyConnection  (SafetyHistoryWidget.* + SafetyFeaturesWidget.*)
+    ChargeStatusProjection/ChargeStatusUpdate/ChargeLoadStatus/ChargeConnection/ChargeStateDTO/ChargeSessionDTO/
+    ChargeUnitPrefs/ChargeDistanceUnit                          (ChargeStatusLiveWidget.* + ChargeStatusWidget.*)
+    FleetStatsBarModel                                          (FleetStatsBarWidget.* + FleetStatsBar.Model.swift)
+  These are the same parallel-merge collisions catalogued in apps/macos-pending-verifications.md for the prior P4
+  Apple surfaces. They are forbidden to touch by this prompt ("Out of Scope: Other surfaces in the same feature";
+  global rule: do not fix pre-existing issues unrelated to the task).
+
+  EVIDENCE THAT THIS SURFACE IS NOT THE CAUSE AND IS ITSELF GREEN:
+    errors whose file path contains "XRayBucketChart": 0   (iOS) / 0 (macOS)
+    The app-target SwiftCompile log shows all six XRayBucketChart.*.swift compiled with zero diagnostics before the
+    unrelated files failed whole-module type lookup. The isolated SwiftPM app-module build (above) + the iOS-18 and
+    macOS-15 SDK type-checks compile this surface to 0 errors against the real design system.
+
+  These two gate lines are NOT claimed green. They are blocked by pre-existing tree breakage outside this surface's
+  allowed-files scope and are DEFERRED to p4-apple/P99-0001-apple-acceptance-gate, which runs on a de-collided
+  merge of the slot branches (the macos-pending-verifications.md model). Re-run there to clear IOS_EXIT/MAC_EXIT.
+
+===================== ACCEPTANCE CRITERIA =====================
+[x] Surface renders every state from the web source + the feature-view template states: loading (bar skeleton),
+    empty (ContentUnavailableView no-data, never a blank box), error (icon + message + Retry), stale (chip +
+    auto-refresh-on-edge + banner), offline (chip + cached banner), content (Swift Charts BarMark histogram over a
+    temporal axis). Cached buckets stay visible during refresh/failure/offline (ADR-009). chartXSelection RuleMark +
+    callout reproduces the web Recharts <Tooltip> (labelFormatter time + [fmtInt, "Samples"]). 6 #Previews.
+[x] Hooks bind via the shared P1/S8 state-holder seam (XRayBucketSource -> @Observable XRayBucketChartModel);
+    NO HTTP in the view. useTranslation -> XRayBucketStrings facade; useDateFormat -> injectable formatTime
+    (defaults to locale short time). Shared-free so it host-builds + unit-tests in isolation (live KMP source is
+    separate wiring, mirroring the in-tree sibling XRayFieldsTable).
+[x] Every web i18n key has a matching catalog key (table "XRayBucketChart"): admin.xray.chart.title, .subtitle,
+    .ariaLabel, .cols.bucket, .cols.count, .tooltip — plus native chrome keys. No hardcoded English in the view.
+[x] Accessibility: chart carries the ariaLabel + a combined summary (buckets + total samples); the data table is a
+    real accessible table (per-row "{time}: {N} samples"); freshness chip + banner + tooltip use .combine; the
+    refresh control has an a11y label; decorative glyphs are hidden. Dynamic Type via Font.TS tokens; chart animation
+    respects accessibilityReduceMotion.
+[x] Tests: adapter unit (ISO parse incl. fractional, time sort, drop-unparseable, totals/peak, x-domain, nearest-bar,
+    en-US grouping) + model state (phase matrix, snapshot, cached-on-failure, stale auto-refresh idle-only,
+    telemetry-once, slug) + accessibility (summary/empty/bar label). 18 methods, executed 18/18 green via SwiftPM.
+[x] Telemetry: view.opened surface=XRayBucketChart emitted once on .onAppear via the P1/S11 XRayBucketTelemetry seam
+    (OSLog default sink, redaction-safe slug); asserted by testStartEmitsTelemetryOnce.
+[x] No TODO / stub / mock / placeholder / Lorem (placeholder gate PLACEHOLDER_COUNT=0, 0 opt-outs).
+[x] swiftformat --lint clean; swiftlint --strict clean; iOS-18 + macOS-15 SDK type-check 0-error; isolated SwiftPM
+    build + 18/18 tests green; xcodegen integrates all 8 files into the four targets.
+[~] iOS + macOS `xcodebuild build test`: EXECUTED, IOS_EXIT=65 / MAC_EXIT=65 — BLOCKED by 13 PRE-EXISTING, UNRELATED,
+    out-of-scope duplicate-symbol collisions in other slots' surfaces (evidenced above). 0 XRayBucketChart errors.
+    Deferred to the P99 apple-acceptance-gate (de-collided merge), per the macos-pending-verifications.md model.
+
+Honesty covenant: no red reported as green. FORMAT_EXIT/LINT_EXIT/PLACEHOLDER_EXIT/XCODEGEN_EXIT/SPM_BUILD_EXIT/
+SPM_TEST_EXIT/IOS_TYPECHECK_EXIT/MAC_TYPECHECK_EXIT/XCFRAMEWORK_EXIT = 0 (executed, recorded). The only non-green
+steps are the mandated full-app xcodebuild build/test (IOS_EXIT=65, MAC_EXIT=65) — recorded RED, never claimed
+green — whose sole cause is pre-existing duplicate-symbol breakage in OTHER surfaces this prompt may not touch; the
+XRayBucketChart surface itself compiles to 0 errors everywhere it is compiled and is shipped COMPLETE.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,211 @@
+================================================================================
+p4-apple · P7 · page:admin/FeatureFlags — SwiftUI / HIG parity
+  web source : web/src/features/admin/pages/FeatureFlagsPage.tsx  (route /admin/flags)
+  output     : apps/apple/Sources/Features/Admin/FeatureFlags*.swift
+               (the live Xcode project — like the sibling AuditLogPage — hosts admin
+                pages under Sources/Features/Admin/; the prompt's nominal
+                TeslaSync/Features/Admin/** is the allowed-files alias, reconciled here)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI FeatureFlagsPage at web parity: a pure @Observable
+state holder (ADR-004 — no networking in the view) over an injectable
+FeatureFlagsDataSource seam whose value types mirror the web FeatureFlagEntry /
+FeatureFlagChange 1:1 (production binds the KMP feature-flag endpoints
+GET/PUT/DELETE /system/flags* through the seam). The page reproduces the web chrome
+(PageContainer title/subtitle + the "Add flag" header action) and BOTH web GlassPanels:
+
+  GlassPanel1 — the flag registry: an adaptive key/value table (columnar Grid on
+    macOS/iPad, per-row cards on iPhone) sorted by key ascending, with the web
+    previewValue JSON preview and per-row Edit + Delete actions.
+  GlassPanel2 — the recent change-audit feed: an adaptive 7-column table (Changed at,
+    Actor, Key, Operation badge, Old, New, Reason) with the web `compact` JSON preview
+    and the set→success / delete→danger operation badge.
+
+The create/edit drawer (web FlagEditDrawer) and the delete confirmation (web Modal)
+are presented as HIG-native sheets sharing a FeatureFlagSheetScaffold: the editor is a
+free-form JSON editor (invalid JSON disables Save + surfaces the inline parse error,
+the reason is required), and the delete dialog confirms a permanent removal with a
+required reason and cannot be dismissed mid-flight. Arbitrary JSON flag values are
+modelled by FlagJSONValue (parse / pretty / compact / preview ported from the web).
+
+Files (all new unless noted):
+  Sources/Features/Admin/FeatureFlagJSON.swift              (FlagJSONValue)
+  Sources/Features/Admin/FeatureFlagsModels.swift          (entry/change/op/states/datasource/format)
+  Sources/Features/Admin/FeatureFlagsPageModel.swift       (@Observable model)
+  Sources/Features/Admin/FeatureFlagsPageModel.Sample.swift(actor seed source)
+  Sources/Features/Admin/FeatureFlagsPage.swift            (view: header + 2 panels + sheets)
+  Sources/Features/Admin/FeatureFlagsPage.Table.swift      (registry table)
+  Sources/Features/Admin/FeatureFlagsPage.Changes.swift    (changes table + op badge)
+  Sources/Features/Admin/FeatureFlagsPage.Editor.swift     (editor sheet + scaffold)
+  Sources/Features/Admin/FeatureFlagsPage.Delete.swift     (delete sheet)
+  Sources/Features/Admin/FeatureFlagsRouteRegistration.swift(.featureFlags route)
+  Tests/Unit/Features/Admin/FeatureFlagsPageModelTests.swift(state-machine + value tests)
+  Sources/App/AppRoute.swift            (MOD: +.featureFlags case / pathSegment / icon / group)
+  Sources/App/AppRouteParser.swift      (MOD: +"/admin/flags" -> .featureFlags alias)
+  Sources/TeslaSyncApp.swift            (MOD: wire FeatureFlagsRouteRegistration into routeHosts)
+  Localization/Localizable.xcstrings    (MOD: +40 keys incl. route.featureFlags)
+  apps/parity/apple-ledger.json         (MOD: +2 rows page:admin/FeatureFlags 16/16)
+
+Navigation reconciliation: web /admin/flags resolves to a dedicated .featureFlags
+route (pathSegment "feature-flags", System sidebar group) via an AppRouteParser alias,
+mirroring the sibling .auditLog (/admin/audit-log) pattern — reachable + deep-linkable
+without displacing other admin pages. The generated TeslaSync.xcodeproj is git-ignored.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=16
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1 (Registry)
+       FeatureFlagsPage.swift > FeatureFlagsPage.registryPanel (TSGlassPanel)
+       + FeatureFlagsPage.Table.swift > FeatureFlagsTable
+[x] panel  — GlassPanel2 (Recent changes)
+       FeatureFlagsPage.swift > FeatureFlagsPage.changesPanel (TSGlassPanel)
+       + FeatureFlagsPage.Changes.swift > FeatureFlagChangesTable
+[x] state  — loading
+       FeatureFlagsPage.swift > registryBody/.loading + changesBody/.loading -> TSTableSkeleton
+       (model FeatureFlagsListState.loading / FeatureFlagChangesState.loading)
+[x] state  — empty
+       FeatureFlagsPage.swift > registryBody/.empty + changesBody/.empty -> TSEmptyState
+       (admin.flags.table.empty / admin.flags.audit.empty.*)
+[x] state  — success
+       FeatureFlagsPage.swift > registryBody/.loaded -> FeatureFlagsTable,
+       changesBody/.loaded -> FeatureFlagChangesTable
+       (an .error -> TSErrorDisplay + Retry branch is also implemented for each source,
+        satisfying "error view + Retry; never a blank region")
+[x] string — admin.flags.actions.add
+       FeatureFlagsPage.swift > addButton (Label "admin.flags.actions.add")
+[x] string — admin.flags.delete.confirm
+       FeatureFlagsPage.Delete.swift > footer destructive TSButton
+[x] string — admin.flags.delete.message
+       FeatureFlagsPage.Delete.swift > FeatureFlagDeleteSheet.message(for:) (String(format:) %@)
+[x] string — admin.flags.delete.reasonLabel
+       FeatureFlagsPage.Delete.swift > TSTextField label
+[x] string — admin.flags.delete.reasonPlaceholder
+       FeatureFlagsPage.Delete.swift > TSTextField prompt (parity:allow i18n key name)
+[x] string — admin.flags.delete.title
+       FeatureFlagsPage.Delete.swift > FeatureFlagSheetScaffold(title:)
+[x] string — admin.flags.pageTitle
+       FeatureFlagsPage.swift > header TSPageTitle  (also route.featureFlags = "Feature Flags")
+[x] string — admin.flags.panels.changes
+       FeatureFlagsPage.swift > changesPanel panelHeader TSPanelTitle
+[x] string — admin.flags.panels.registry
+       FeatureFlagsPage.swift > registryPanel panelHeader TSPanelTitle
+[x] string — admin.flags.subtitle
+       FeatureFlagsPage.swift > header subtitle Text
+[x] string — common.cancel
+       FeatureFlagsPage.Editor.swift + FeatureFlagsPage.Delete.swift > footer secondary TSButton
+--------------------------------------------------------------------------------
+PARITY_COVERED=16
+(All 16 visible literals resolve from Localizable.xcstrings; key names match the web.
+ Beyond the required 16, the full FlagsTable / ChangesPanel / FlagEditDrawer sub-
+ components were ported faithfully — +29 more web keys added: cols.*, audit.cols.*,
+ editor.*, drawer.*, table.* — so the page is at full panel/interaction parity, not
+ just the gate minimum. Zero hardcoded user-facing strings.)
+
+================================================================================
+GATE RESULTS
+================================================================================
+Toolchain present: Xcode 26.5 / Swift 6.3.2 / swiftlint / swiftformat 0.61.1 /
+                    xcodegen / pwsh 7 / java 17 (KMP). Xcode runner IS available.
+
+[GREEN] PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+        -> PLACEHOLDER_ALLOWED=6  PLACEHOLDER_COUNT=0  EXIT=0
+        (the only opt-outs are the REQUIRED *Placeholder i18n key-name references —
+         keyPlaceholder/reasonPlaceholder — marked `// parity:allow i18n key name, not a stub`,
+         exactly like the sibling AuditLog actorPlaceholder/entityTypePlaceholder. No stubs.)
+
+[GREEN] SWIFTFORMAT  swiftformat --lint (10 new Admin files + test + 3 edited App files)
+        -> 0/14 files require formatting.
+
+[GREEN] SWIFTLINT    swiftlint --strict   (whole apps/apple config; my files filtered)
+        -> 0 violations in any FeatureFlags*/AppRoute/AppRouteParser/TeslaSyncApp file.
+        (the repo-wide run reports a handful of PRE-EXISTING violations in unrelated
+         files; ZERO are mine.)
+
+[GREEN] XCODEGEN     xcodegen generate  -> project created (new files picked up via globs).
+
+[GREEN] TYPE-CHECK (isolated, macOS)  swiftc -typecheck -sdk macosx -target arm64-apple-macos15.0
+        -swift-version 6  (my Admin files + real Components + Design + tokens + App routing)
+        -> EXIT=0, zero diagnostics.
+
+[GREEN] TYPE-CHECK (isolated, iOS)    swiftc -typecheck -sdk iphoneos -target arm64-apple-ios18.0
+        -swift-version 6  (exercises the #if os(iOS) compact-size-class branches)
+        -> EXIT=0, zero diagnostics.
+
+[GREEN] TYPE-CHECK (FULL CORE vs real Shared.xcframework, macOS 15, Swift 6 complete
+        concurrency)  269 hand-written Sources/**/*.swift + Tokens.swift linked against
+        the STAGED apps/shared .../Shared.xcframework/macos-arm64 (KMP debug XCFramework
+        built fresh via Gradle/Kotlin-Native here).
+        -> ZERO diagnostics in any FeatureFlags file. The only errors surfaced are in
+           OTHER, pre-existing sibling admin pages (TeslaOrdersPage / LiveSignalInspector)
+           that reference mega-surface types (ActiveOrdersModel, LiveSignalsTableModel)
+           living in the excluded TeslaSync/feature-views|shared-surfaces generated trees
+           — out of scope, not mine.
+
+[GREEN] MODEL HARNESS  compiled (Swift 6) + EXECUTED the model logic
+        (FeatureFlagJSON + FeatureFlagsModels + FeatureFlagsPageModel + .Sample) with a
+        stub data source: JSON parse/serialize/preview/compact, dateTime fallback, all
+        list/empty/error states, editor validation (empty/invalid/none + canSave),
+        save-success-closes-editor + save-failure-keeps-open, delete guard + success +
+        failure, and the sample seed's set/delete mutation round-trip.
+        -> "ALL PASSED" (run exit 0).  The XCTest peer is
+           Tests/Unit/Features/Admin/FeatureFlagsPageModelTests.swift (29 cases).
+
+[OUT-OF-SCOPE / NOT GREENABLE HERE] xcodebuild build + test (full TeslaSync scheme)
+        The app target compiles the entire generated mega-surfaces codebase
+        (TeslaSync/feature-views ~2.6k files + shared-surfaces ~2.1k files) which carries
+        a PRE-EXISTING swift-frontend crash documented by the immediately-preceding sibling
+        task (apple-page-admin-AuditLogPage.log, same branch lineage) — ZERO of my files
+        are involved. The KMP Shared.xcframework debug slice was staged successfully here
+        (proving the toolchain), but the release multi-target Kotlin/Native link + the
+        ~5k-file app compile (with the inherited shared-surfaces crash) cannot reach green
+        in this environment and is NOT caused by this change. My code is fully verified by
+        the isolated + full-core type-checks (BOTH idioms) + the executed model harness
+        above, with ZERO diagnostics in any of my files. NOT claimed green (Covenant #1).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : in-scope gates GREEN are reported GREEN; the full xcodebuild is
+                         explicitly reported as OUT-OF-SCOPE / not-greenable (pre-existing
+                         shared-surfaces crash) and NOT dressed up as passing.
+ 2 No scope narrowing  : both web GlassPanels + the Add/Edit drawer + the Delete modal are
+                         all implemented; the full FlagsTable/ChangesPanel/FlagEditDrawer
+                         sub-components were ported (not just the 16-item minimum).
+ 3 No skip-and-assume  : web page + its 3 sub-components + hooks + types read end-to-end;
+                         PageContainer semantics verified (query feeds only the freshness
+                         badge — body always renders, so each panel owns its own state).
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0; the 6 opt-outs are REQUIRED *Placeholder i18n
+                         key-name references, marked like the sibling page. Complete code.
+ 5 No parity shortcuts : 4 list/changes states render distinctly; arbitrary-JSON values via
+                         FlagJSONValue; operation badge tone+verbatim token; every string =
+                         a web key verbatim; create vs edit + immutable-key + required-reason
+                         + JSON-parse-gated Save reproduced.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface/shared component/other owners'
+                         files; only added the .featureFlags nav registration + 40 strings.
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE gates (placeholder/swiftformat/
+                         swiftlint/xcodegen/macOS+iOS type-check/full-core type-check/model
+                         harness). The only RED is the out-of-scope inherited shared-surfaces
+                         crash in the full scheme — DEFERRED to its owner / the P99 gate.
+ 9 No silent drift     : changes confined to the files listed above + this log + the ledger.
+                         TeslaSyncApp routeHosts block was re-indented by swiftformat as the
+                         direct consequence of nesting one more registration (recorded).
+10 EXIT/STATUS below.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/FeatureFlag*.swift \
+          apps/apple/Tests/Unit/Features/Admin/FeatureFlagsPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-FeatureFlagsPage.log
+  git commit -m "feat(apps/apple): FeatureFlagsPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

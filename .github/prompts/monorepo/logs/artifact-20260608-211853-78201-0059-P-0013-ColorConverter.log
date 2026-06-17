@@ -1,0 +1,125 @@
+=== P4 Feature view 0013 ColorConverter (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/ColorConverter.*
+Web spec: web/src/features/admin/components/devtools/tools/ColorConverter.tsx
+Host    : macOS (Darwin) · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1
+ADR refs: ADR-002 (shared SwiftUI source), ADR-004 (Shared.xcframework), ADR-009
+
+Files shipped (7):
+  ColorConverter.Adapter.swift   — pure projection: RGBColor/HSLColor/SwatchComponents,
+                                    ColorParser (port of the useMemo: strip-first-#, 6-char gate,
+                                    lenient parseInt(base16) per channel), RGBToHSL (port of
+                                    devtools/helpers.ts rgbToHsl incl. Math.round parity via jsRound),
+                                    surface slug, VoiceOver summary.
+  ColorConverter.Model.swift     — P1/S11 telemetry seam (view.opened), P1/S10 i18n facade,
+                                    P1/S8 @MainActor @Observable state holder (owns hex, derives result).
+  ColorConverter.Views.swift     — header, hex field (leading glyph) + live swatch, RGB/HSL/HEX result
+                                    panels with copy affordances, empty + invalid states, copy button.
+  ColorConverter.swift           — composed view + content/empty/invalid state switch.
+  ColorConverter.Previews.swift  — #if DEBUG previews: content(blue/green/no-hash), empty, invalid.
+  ColorConverter.Tests.swift     — adapter parity + model + accessibility + telemetry spy (20 tests).
+  ColorConverter.strings         — per-surface i18n table "ColorConverter".
+
+States reproduced (web source has only useTranslation — no fetch; states = the useMemo branches):
+  content (valid hex → RGB/HSL/HEX panels), empty (no hex → friendly hint), invalid (hex !→ 6 channels).
+  Web hides the panels on null; native always renders a state (never a blank box).
+
+------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (surface-scoped) — all green
+------------------------------------------------------------------------------
+
+[1] Parity oracle — web rgbToHsl/parse run in Node, expectations matched verbatim:
+      #3b82f6 -> rgb(59,130,246) hsl(217,91,60)   #22c55e -> rgb(34,197,94) hsl(142,71,45)
+      #ffffff/#000000/#808080/#ff0000/#00ff00/#0000ff confirmed;  parseInt("3g",16)===3 (lenient);
+      ##ffffff/#12/#1234567/#zzzzzz -> null.
+    PARITY_OK=1
+
+[2] Isolated SwiftPM build (module TeslaSync, Swift 6 language mode = strict concurrency complete,
+    tokens + 5 source files):
+      Build complete! (11.99s)
+    SPM_BUILD_EXIT=0
+
+[3] Isolated SwiftPM tests (swift test):
+      Executed 20 tests, with 0 failures (0 unexpected)
+      Suites: RGBToHSLTests(6) ColorParserTests(7) ColorChannelFormattingTests(2)
+              ColorConverterModelTests(3) ColorConverterAccessibilityTests(3) [+spy]
+    SPM_TEST_EXIT=0
+
+[4] Real-SDK type-check (swiftc -typecheck -swift-version 6) of the 5 source files + tokens:
+      iOS 18  (arm64-apple-ios18.0-simulator)  IOS_TYPECHECK_EXIT=0
+      macOS 15 (arm64-apple-macos15.0)         MAC_TYPECHECK_EXIT=0
+
+[5] swiftlint --strict (6 files, .swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0
+
+[6] swiftformat --lint (6 files, .swiftformat):
+      0/6 files require formatting.
+    FORMAT_EXIT=0
+
+[7] check-placeholders.ps1 (gate-exact path + real scan of the 6 .swift files, -Language swift):
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[8] xcodegen generate — project regenerated; all 7 files enumerated into the iOS+macOS app and
+    test targets (9 refs each across targets):
+      ColorConverter.Adapter/Model/Views/Previews/swift/Tests/strings  -> present
+    XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------
+FULL-APP xcodebuild build test (gate steps) — BLOCKED by pre-existing, unrelated repo state
+------------------------------------------------------------------------------
+
+Both app targets were actually built end-to-end on this runner: the KMP Shared.xcframework was
+assembled via Gradle (Kotlin/Native toolchain present + warm) and STAGED into
+apps/apple/Frameworks/Shared.xcframework, so the ADR-004 framework dependency resolved. The app
+target's Swift module (including ColorConverter) compiled past SwiftEmitModule. The builds then failed
+on faults that exist independently of this surface:
+
+[iOS] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+      ** BUILD FAILED **   IOS_EXIT=65
+      76 compile errors — ALL in TeslaSync/dashboard-widgets/ ; 0 in ColorConverter/feature-views.
+      Cause: "<T> is ambiguous for type lookup" — duplicate type declarations across dashboard-widget
+      files (parallel-merge collisions). Ambiguous types observed:
+        ChargeConnection, ChargeDistanceUnit, ChargeLoadStatus, ChargeSessionDTO, ChargeStateDTO,
+        ChargeStatusProjection, ChargeStatusUpdate, ChargeUnitPrefs, FleetStatsBarModel.
+      Failing files (sample): ChargeSessionChartWidget.*, ChargeStatusLiveWidget.*, ChargeStatusWidget.*,
+        FleetStatsBarWidget.*, PositionHeatmapWidget.*, PowerFlowHistoryWidget.*, RecentDrivesWidget.*.
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build
+      ** BUILD FAILED **   MAC_EXIT=65
+      2 errors — both code-signing; 0 in ColorConverter/feature-views:
+        "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing with a
+        development certificate (no signing identity on this runner; DEVELOPMENT_TEAM is empty).
+
+Evidence that the surface is NOT the blocker:
+  grep "error: " (iOS log) | grep -i "ColorConverter|feature-views"  -> 0
+  grep "error: " (macOS log) | grep -i "ColorConverter|feature-views" -> 0
+  All 76 iOS errors localize to TeslaSync/dashboard-widgets/ (a different source group).
+
+These two blockers (dashboard-widgets duplicate-type collisions + macOS development-signing) are the
+exact, pre-existing items tracked for the macos-latest acceptance gate in
+apps/macos-pending-verifications.md. They are not introduced by, and cannot be fixed from within, the
+allowed file set (apps/apple/TeslaSync/feature-views/ColorConverter.*).
+
+------------------------------------------------------------------------------
+Acceptance criteria
+------------------------------------------------------------------------------
+[x] All web states reproduced (content / empty / invalid) — never a blank surface.
+[x] No direct HTTP in the view; pure local transform via the P1/S8 state holder (mirrors useMemo).
+[x] Every web i18n key present in the surface catalog (Color Converter / Color Converter Desc / Hex Color).
+[x] Accessibility labels on every interactive element (hex field, each copy button); swatch decorative+hidden.
+[x] Tests: adapter unit tests + model tests + a11y tests + telemetry spy (20/20 green).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0, 0 opt-outs).
+[~] Full-app xcodebuild build test EXIT=0 — BLOCKED by pre-existing unrelated dashboard-widgets
+    type collisions (iOS) and macOS development-signing (macOS); ZERO ColorConverter errors. Deferred to
+    the macos-latest acceptance gate, consistent with apps/macos-pending-verifications.md.
+
+Summary markers:
+  PARITY_OK=1  SPM_BUILD_EXIT=0  SPM_TEST_EXIT=0  IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  XCODEGEN_EXIT=0
+  IOS_EXIT=65 (pre-existing dashboard-widgets collisions)  MAC_EXIT=65 (pre-existing macOS dev-signing)
+
+EXIT=65
+STATUS=BLOCKED

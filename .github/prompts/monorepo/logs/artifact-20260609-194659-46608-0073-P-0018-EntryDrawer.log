@@ -1,0 +1,155 @@
+=== P4 Modal / dialog 0018 EntryDrawer (Apple) ===
+date: 2026-06-10T07:25Z
+host: macOS 26.5.1 (25F80) | Xcode 26.5 Build 17F42 | Swift 6.3.2 | swiftlint 0.63.3 | swiftformat 0.61.1 | xcodegen 2.45.4 | pwsh 7.6.2
+web source: web/src/features/admin/components/dlq-inspector/EntryDrawer.tsx
+native output: apps/apple/TeslaSync/modals-dialogs/EntryDrawer.*
+
+Honesty note (Covenant rules 1/8/10): the full-app iOS/macOS 'xcodebuild build test' from the
+prompt Gate is DEFERRED in this environment by surface-independent causes, exactly as the 400+
+prior P4-apple surfaces (see p4-apple-modals-dialogs-0005-JobProgressDrawer.log +
+apps/macos-pending-verifications.md). They are NOT defects in this surface:
+  (1) the KMP Shared.xcframework (ADR-004 app-target dependency) is unstaged
+      (apps/apple/Frameworks/ holds only .gitkeep); its Gradle/Kotlin-Native assemble is run as
+      a scheme pre-action. On THIS runner the assemble is cache-warm and DID stage successfully,
+      so the long-pole is not the blocker here — see the captured evidence below.
+  (2) the `modals-dialogs` tier is still not registered in apps/apple/project.yml (the four
+      source lists). `grep -c modals-dialogs apps/apple/project.yml = 0`. Adding the tier is a
+      one-time bootstrap owned by integration / the P4 acceptance gate, OUTSIDE this prompt's
+      Allowed-files (`EntryDrawer.*` + this log). So xcodebuild does not compile/test EntryDrawer
+      at all here.
+  (3) NEW, captured this run: with the framework staged, the full-app build red-stops on a
+      PRE-EXISTING duplicate-type collision between two already-committed surfaces —
+      `RecentDrivesModel` / `RecentDrivesUpdate` / `RecentDrivesLoadStatus` / `RecentDrivesConnection`
+      are each declared TWICE (TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift AND
+      TeslaSync/feature-views/RecentDrivesSection.{Adapter,Model,Seams}.swift) -> "ambiguous for
+      type lookup". Those files are untouched by this prompt (git status clean for them) and
+      EntryDrawer references zero RecentDrives symbols. Fixing them is outside Allowed-files.
+This surface is verified GREEN here by the host-runnable, surface-scoped gates below.
+
+########## Surface files (non-blank LOC) ##########
+  EntryDrawer.swift                 86   (main drawer View: header + phase body + footer)
+  EntryDrawer.Adapter.swift        331   (pure projection core; web decodeBase64Utf8/fmtInt/rows/phase ports)
+  EntryDrawer.Seams.swift          228   (telemetry, i18n, date, clipboard, replay, P1/S8 source)
+  EntryDrawer.Model.swift          228   (@Observable state holder)
+  EntryDrawer.States.swift         171   (loading/empty/error/inline-error/freshness chip/banner)
+  EntryDrawer.Views.swift          269   (header, KVList panel, tabs+copy+pre payload panel, footer)
+  EntryDrawer.Previews.swift       136   (10 #Preview states)
+  EntryDrawer.strings               44   (P1/S10 catalog, table "EntryDrawer")
+  EntryDrawer.ModelTests.swift     317   (20 state-holder tests)
+  EntryDrawer.Tests.swift          234   (18 adapter + a11y tests)
+  total non-blank: 2044 ; 9 swift files + 1 .strings catalog
+
+Parity surface map (web -> native):
+  props summary/full/loading/replay* -> EntryDrawerSource (P1/S8 seam) push EntryDrawerUpdate -> EntryDrawerModel
+  head = full ?? summary             -> EntryDrawerModel.head (full.summary wins) -> KVList rows + title
+  decodeBase64Utf8 (TextDecoder fatal)-> EntryDrawerPayloadDecoder.decodeUTF8 (strict UTF-8; ""-on-binary/invalid)
+  fmtInt(parsed_redeliveries)        -> EntryDrawerIntFormatter.grouped (locale separators; "12,345")
+  KVList (8 rows + em-dash fallbacks)-> EntryDrawerProjection.rows (mono/muted flags, TimeStamp absolute facade)
+  Tabs inner/raw                     -> EntryDrawerTab + EntryDrawerTabBar
+  <pre> + binary {{n}} fallback      -> EntryDrawerProjection.displayText (per-tab byte-size message)
+  CopyButton (Copy/Copied)           -> EntryDrawerClipboard seam + EntryDrawerCopyButton (copyText -> raw b64 fallback)
+  onReplay + replayDisabled (4 gates)-> EntryDrawerReplayAction seam + EntryDrawerProjection.replayDisabled
+  onClose (Drawer X + footer Close)  -> host onClose closure (header X + footer secondary button)
+  @/components/ui                    -> TSGlassPanel / TSFadeIn + Color.TS / Font.TS / TSSpacing / TSRadius (P1/S9)
+  useTranslation                     -> EntryDrawerStrings (P1/S10, table "EntryDrawer")
+States rendered (no hidden surfaces): loading (web spinner), empty(+friendly), error(+retry),
+  content, inline-error (cached head + failed reload), stale (chip+banner+1x auto-refresh),
+  offline (chip+banner+cached), summary-only-while-loading spinner, replay-in-flight, replay-disabled.
+Telemetry: view.opened emitted once with slug "EntryDrawer" (P1/S11) — covered by test.
+Accessibility: .isModal dialog label, header-close / footer-Close / Replay / copy / payload-region /
+  tab VoiceOver labels, .isSelected on the active tab, value-selectable monospace payload.
+
+########## [1/8] swiftformat --lint (surface) ##########
+$ swiftformat --lint TeslaSync/modals-dialogs/EntryDrawer.{swift,Adapter,Seams,Model,States,Views,Previews,ModelTests,Tests}.swift
+  (config apps/apple/.swiftformat — --swiftversion 6.0, --maxwidth 120, wrap before-first)
+SwiftFormat completed. 0/9 files require formatting.
+FORMAT_EXIT=0
+
+########## [2/8] swiftlint --strict (surface) ##########
+$ swiftlint lint --strict --config apps/apple/.swiftlint.yml --no-cache <9 EntryDrawer swift files>
+Done linting! Found 0 violations, 0 serious in 9 files.
+  (Note: the repo .swiftlint.yml `included:` list does not yet name modals-dialogs — same as the
+   tier-bootstrap gap in [Honesty note (2)] — so the strict run is invoked with the files scoped
+   in explicitly. ModelTests was kept under the 400-line file_length / 250-line type_body_length
+   budgets via a loadedFull() fixture helper.)
+LINT_EXIT=0
+
+########## [3/8] swiftc -typecheck — iOS 18 simulator SDK (Swift 6) ##########
+$ xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+    -sdk iPhoneSimulator26.5.sdk -swift-version 6 -D DEBUG \
+    <Shared-free closure: design/generated/apple/Tokens.swift + Sources/Components/** +
+     Sources/Design/** (minus UnitFormatters.swift, the only SharedFacade-coupled component) +
+     EntryDrawer.{swift,Adapter,Seams,Model,States,Views,Previews}>
+  (EntryDrawer imports no `Shared` symbol — the KMP framework is not on the view typecheck path.)
+IOS_TYPECHECK_EXIT=0 (0 errors)
+
+########## [4/8] swiftc -typecheck — macOS 15 SDK (Swift 6) ##########
+$ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -sdk MacOSX26.5.sdk \
+    -swift-version 6 -D DEBUG <same closure>
+MAC_TYPECHECK_EXIT=0 (0 errors)
+
+########## [5/8] isolated SwiftPM build + test (Swift 6 mode, macOS 15) ##########
+Throwaway package (module named TeslaSync so the deliverable test files' `@testable import
+TeslaSync` compiles UNCHANGED): library = EntryDrawer non-test files + the Shared-free
+Components/Design/Tokens closure; test target = EntryDrawer.ModelTests + EntryDrawer.Tests verbatim.
+$ swift build   -> Build complete!
+$ swift test
+  EntryDrawerModelTests   — 20 tests (telemetry once+idempotent; loading / summary-only-loading /
+                            background-loading-with-full / content+rows+title / empty+fallback-title /
+                            error / failed-with-head inline-error; head=full.summary; em-dash rows +
+                            timestamp; grouped redeliveries; UTF-8 decode + copy; binary fallback +
+                            base64 copy; tab switch resets copied; clipboard seam; replay seam +
+                            server-off no-op + while-loading; stale 1x-then-rearm; offline keeps content)
+  EntryDrawerAdapterTests — 18 tests (tab keys; decoder empty/UTF-8/non-UTF-8/malformed; int grouping;
+                            title; rows order/labels/em-dash/flags; displayText decoded+binary per tab;
+                            copyText base64 fallback; resolvePhase matrix; inlineFailure; replayDisabled
+                            4-gate matrix; accessibility summary/close/replay/payload/copy labels)
+  Executed 38 tests, with 0 failures (0 unexpected).
+SWIFT_TEST_EXIT=0
+
+########## [6/8] placeholder / stub gate (ADR-011) ##########
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs
+PLACEHOLDER_ALLOWED=2   (pre-existing `// parity:allow` markers in OTHER surfaces; none in EntryDrawer)
+PLACEHOLDER_COUNT=0     (no TODO/FIXME/Placeholder/Lorem/stub/not-implemented in EntryDrawer.*)
+PLACEHOLDER_EXIT=0
+
+########## [7/8] xcodegen generate — spec validity ##########
+$ xcodegen generate   -> Created apps/apple/TeslaSync.xcodeproj (then removed; it is .gitignored).
+The repo project.yml spec remains valid with the 10 new files on disk.
+XCODEGEN_EXIT=0
+
+########## [8/8] surface collision audit (introduces no symbol defined elsewhere) ##########
+$ grep -rnE "(struct|enum|class|protocol|actor)[[:space:]]+EntryDrawer[A-Za-z]*" --include=*.swift . \
+    | grep -v "TeslaSync/modals-dialogs/EntryDrawer."
+  -> 0 external definitions. Every type is `EntryDrawer*`-prefixed and unique to this surface
+     (the prefix is deliberately specific — contrast the pre-existing generic `RecentDrives*`
+     names that collide between two surfaces in [Honesty note (3)]).
+COLLISION_EXIT=0
+
+########## Full-app xcodebuild build test — DEFERRED (macOS-pending), evidence captured ##########
+iOS:   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+macOS: xcodebuild -scheme TeslaSync-macOS build test
+Captured this run (iOS scheme, `build`):
+  - scheme pre-action "Stage Shared.xcframework" -> Gradle :core:assembleSharedXCFramework ran
+    cache-warm (tasks UP-TO-DATE) and STAGED Frameworks/Shared.xcframework successfully.
+  - app compile then ** BUILD FAILED ** (RC=65) on PRE-EXISTING, surface-independent errors:
+      RecentDrivesListWidget.* / RecentDrivesSection.* : 'RecentDrivesModel' / 'RecentDrivesUpdate'
+      / 'RecentDrivesLoadStatus' / 'RecentDrivesConnection' is ambiguous for type lookup
+    (duplicate public type names across two committed surfaces; untouched by this prompt).
+  - EntryDrawer is NOT in project.yml sources (Honesty note 2) -> not compiled/tested by xcodebuild.
+IOS_EXIT=deferred   # blocked by pre-existing RecentDrives* collision + unwired modals-dialogs tier
+MAC_EXIT=deferred   # same surface-independent causes
+
+########## Summary ##########
+Surface-acceptance gates (host-runnable, surface-scoped) — ALL GREEN:
+  FORMAT_EXIT=0  LINT_EXIT=0  IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  SWIFT_TEST_EXIT=0 (38/38)
+  PLACEHOLDER_EXIT=0  XCODEGEN_EXIT=0  COLLISION_EXIT=0
+Full-app xcodebuild (iOS+macOS): DEFERRED to the p4-apple acceptance gate on macos-latest —
+  pre-existing RecentDrives* collision + the modals-dialogs project.yml tier bootstrap, both
+  surface-independent and outside this prompt's Allowed-files.
+Working tree: only apps/apple/TeslaSync/modals-dialogs/EntryDrawer.* added (10 files) + this log;
+  no shared file (project.yml, .swiftlint.yml, .swiftformat) modified.
+
+All surface-acceptance gates GREEN. Surface complete; full-app build deferred per protocol.
+EXIT=0
+STATUS=DONE

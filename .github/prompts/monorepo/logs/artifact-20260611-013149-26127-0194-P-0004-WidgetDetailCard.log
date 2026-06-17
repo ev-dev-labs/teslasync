@@ -1,0 +1,138 @@
+=== P4 Widget primitive 0004 WidgetDetailCard (Apple) ===
+Surface : apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.*
+Web spec: features/dashboard/widgets/shared/WidgetDetailCard.tsx
+Host    : Darwin (Apple Silicon), Xcode 26.5 (17F42), Swift 6.3.2,
+          swiftlint 0.x (/opt/homebrew/bin), swiftformat (/opt/homebrew/bin),
+          xcodegen 2.45.4, iPhone 16 simulator (booted), JDK 17 + Gradle (KMP).
+Capability: SwiftUI + Swift Charts + MapKit toolchain PRESENT (this surface is
+          pure presentational: no chart/map; SwiftUI only). NOT a capability block.
+
+----------------------------------------------------------------------
+SUMMARY
+----------------------------------------------------------------------
+The WidgetDetailCard widget primitive is shipped complete, at parity, and is
+independently verified green (typecheck + macOS compile + lint + format +
+placeholder + executed logic harness). The two full-module `xcodebuild build
+test` gate steps exit 65 for PRE-EXISTING, OUT-OF-SCOPE reasons only — neither
+failure originates in this surface or its allowed files:
+
+  • iOS  : one Swift expression type-check timeout in a SIBLING feature-views
+           preview file (RecentDrivesSection.Previews.swift), byte-identical to
+           HEAD, not in this prompt's allowed files.
+  • macOS: code-signing / entitlements require a development certificate (none
+           on this host) — fails at provisioning BEFORE any Swift compilation.
+
+Per the Honesty Covenant rule 10 this is reported as STATUS=BLOCKED with the
+platform/infra evidence below. Zero gate failures are attributable to
+WidgetDetailCard.
+
+======================================================================
+GATE STEPS (prompt order)
+======================================================================
+
+--- STEP 1: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+Shared.xcframework pre-action: Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL; staged (ios-arm64, ios-arm64-simulator, macos-arm64).
+Module compiled in Debug (-Onone, -enable-batch-mode -incremental, -swift-version 6) over 4795 files in slot-194 (verified: 11287 log refs to .../slot-194/apps/apple).
+Result: ** BUILD FAILED ** then ** TEST FAILED ** (tests never executed — build failed first).
+The ONLY compiler `error:` in the entire build (unique, full path stripped to apps/apple):
+    TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+Attribution:
+    - This file is in feature-views (a different surface / different prompt), NOT in this prompt's allowed files.
+    - `git diff --stat HEAD -- .../RecentDrivesSection.Previews.swift` => EMPTY (byte-identical to HEAD; pre-existing).
+    - `git cat-file -e HEAD:.../RecentDrivesSection.Previews.swift` => EXISTS-AT-HEAD.
+    - This change set is purely additive (new widget-primitives/ dir + 4 project.yml source-path lines + 1 .swiftlint.yml include). It does not touch feature-views; the WidgetDetail* type names are collision-free (verified). A local expression-complexity type-check timeout in another file is independent of additive sibling files.
+    - grep for widget-primitives / WidgetDetail in error|warning context across the whole iOS build => NONE.
+IOS_EXIT=65   (pre-existing sibling compile timeout; NOT this surface)
+
+--- STEP 2: xcodebuild -scheme TeslaSync-macOS build test
+Result: ** BUILD FAILED ** then ** TEST FAILED **, at the provisioning/entitlements stage, BEFORE Swift compilation.
+Blocking errors (count = 8 across build + test actions):
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS')
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. (in target 'TeslaSyncWidgets-macOS')
+Attribution:
+    - Environmental: no Apple development signing identity on this host (the macOS targets ship hardened-runtime entitlements). This is the same macOS dev-signing limitation tracked in apps/macos-pending-verifications.md and cited by sibling P4 surface logs.
+    - Fails before compilation, so it neither validates nor invalidates any Swift source (incl. this surface).
+    - The macOS build description path referenced a sibling parallel slot (slot-178) — concurrent multi-slot builds share the parallel harness's derived-data/build-service; further confirms an environmental condition, not a surface defect.
+    - grep for widget-primitives / WidgetDetail in error context across the macOS build => NONE.
+MAC_EXIT=65   (pre-existing macOS dev-signing/entitlements; environmental; NOT this surface)
+
+--- STEP 3: swiftlint --strict
+"Done linting! Found 0 violations, 0 serious in 4795 files." (full project, including the new TeslaSync/widget-primitives added to .swiftlint.yml `included`).
+LINT_EXIT=0
+
+--- STEP 4: swiftformat --lint apps/apple  (verified on the surface scope)
+"0/8 files require formatting." (the 8 surface files + dir; whole-tree style honored).
+FORMAT_EXIT=0
+
+--- STEP 5: apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(No TODO/FIXME/stub/placeholder/Lorem/"not implemented" in shipped code.)
+
+======================================================================
+SURFACE-SCOPED VERIFICATION (this surface is green in isolation)
+======================================================================
+
+--- A) Isolated typecheck — iOS sim SDK, Swift 6, strict concurrency complete
+xcrun -sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 -strict-concurrency=complete -D DEBUG \
+   <design Tokens.swift> <Components/UI/Badges.swift> <all 6 surface non-test files incl. Previews>
+TYPECHECK_EXIT=0
+
+--- B) macOS compilation — surface builds clean for the macOS target
+xcrun -sdk macosx swiftc -target arm64-apple-macos15.0 -swift-version 6 \
+   <Tokens.swift> <Badges.swift> <Adapter,Projection,Model,swift,Views> <harness main.swift> -o run
+COMPILE_EXIT=0
+(Proves cross-platform compile — the macOS gate's signing failure prevented the in-gate macOS compile, this stands in for it.)
+
+--- C) Executed logic harness — re-runs the AdapterTests/Tests assertions against the real surface sources
+(Adapter + Projection + Model executed on the main actor; XCTest itself cannot run while the module is blocked by the sibling iOS compile timeout.)
+34 assertions: meta(5) variant(4) value(10) projection(11) model(4)
+   ok - meta.slug / defaultCompact / compactLimit / missingGlyph / emptyFallback
+   ok - variant.success / error / nilFallback / unknownFallback
+   ok - value.text / emptyStaysEmpty / missingEmDash / intDropsFraction / negativeInt / fractional / nan / inf / intLiteral / strLiteral
+   ok - proj.emptyBranch / emptyDefaultViaFacade / emptyOverride / emptyIconCarried / dataRowCount / rowId / rowMap / numberCoerced / nullEmDash / monoFlag / compactCap4
+   ok - model.initEmpty / viewOpenedOnce / syncAdopts / syncIdempotent
+HARNESS_RESULT=ALL_PASS  (RUN_EXIT=0)
+
+======================================================================
+ACCEPTANCE CRITERIA
+======================================================================
+[x] Surface renders all states FROM THE WEB SOURCE — EMPTY branch (entries.length===0 -> friendly empty state w/ optional icon) + DATA branch (rows) incl. its variants: compact 4-row cap, monospace value, per-row badge, value??'—' missing fallback. (Web source is a pure presentational primitive with NO data fetch -> no loading/error/stale/offline axis of its own; documented in Adapter parity note, matching the Toggle/Slider/AnimatedNumber sibling-primitive precedent.)
+[x] No direct HTTP from the view — binds through WidgetDetailCardModel (P1/S8); the web source has no data source.
+[x] Every i18n key from source resolves through the P1/S10 facade — the lone source string ("No details available") => key widgetDetailCard.empty.message in WidgetDetailCard.strings; label/value/badge text are caller data rendered verbatim.
+[x] Accessibility — row is one combined VoiceOver element (label+value+badge), badge carries its own label, empty state is a combined static-text status element; SF Symbol icons are decorative-hidden; Dynamic Type + high-contrast tokens; reduce-motion N/A (no animation).
+[x] Tests — adapter unit tests (WidgetDetailCard.AdapterTests.swift) + projection/model/view tests incl. a11y-content + telemetry (WidgetDetailCard.Tests.swift); executed-harness evidence above (34/34).
+[x] Telemetry — view.opened emitted once with slug "WidgetDetailCard" (P1/S11), verified by harness model.viewOpenedOnce.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders EXIT=0).
+[x] Shared components mapped to native counterparts — web Badge (@/components/ui) -> shared TSTone token + capsule (verbatim data text); web EmptyState (@/components/feedback) -> compact inline empty (TSEmptyState is the heavy full-surface counterpart; web compacts py-16->py-4 in a tile).
+[x] Platform tokens only (P1/S9): Color.TS / Font.TS / TSSpacing / TSRadius / TSTypeMetrics. No ported Tailwind.
+
+======================================================================
+FILES (9 shipped + build wiring)
+======================================================================
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.Adapter.swift
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.Projection.swift
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.Model.swift
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.swift
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.Views.swift
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.Previews.swift
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.strings
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.AdapterTests.swift
+apps/apple/TeslaSync/widget-primitives/WidgetDetailCard.Tests.swift
+Build wiring (additive, required so the gate sees the new directory — same as the VisuallyHidden precedent):
+  apps/apple/project.yml  : TeslaSync/widget-primitives added to both app targets + both XCTest bundles.
+  apps/apple/.swiftlint.yml: TeslaSync/widget-primitives added to `included`.
+
+======================================================================
+EXIT=65
+STATUS=BLOCKED
+----------------------------------------------------------------------
+BLOCKED on two pre-existing / environmental gate conditions, both outside this
+prompt's allowed files and neither attributable to WidgetDetailCard:
+  (1) iOS : Swift type-check timeout in sibling RecentDrivesSection.Previews.swift
+            (feature-views), byte-identical to HEAD.
+  (2) macOS: development-signing certificate required for hardened-runtime
+            entitlements (none on host) — fails before compilation.
+This surface is independently green: TYPECHECK_EXIT=0, macOS COMPILE_EXIT=0,
+LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0, HARNESS=ALL_PASS.

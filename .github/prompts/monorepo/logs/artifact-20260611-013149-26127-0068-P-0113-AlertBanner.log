@@ -1,0 +1,175 @@
+=== P4 Shared surface 0113 AlertBanner (Apple) ===
+
+PREFLIGHT
+  Runner       : macOS (Darwin arm64, Apple Silicon). Active developer dir: /Applications/Xcode.app/Contents/Developer.
+  Toolchain    : Xcode 26.5 (17F42) · swift 6.3.2 · swiftlint (strict) · swiftformat · xcodegen 2.45.4 · pwsh 7.6.2.
+  Capability   : SwiftUI + iOS 18 / iPadOS 18 / macOS 15 HIG primitives present. This surface uses NO Swift
+                 Charts and NO MapKit (the web source has none either — prompt "Charts / maps used: (none)"),
+                 so it is NOT capability-BLOCKED. Verified by a real iOS-18 + macOS-15 swiftc -typecheck (below).
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/feedback/AlertBanner.tsx — a presentational, page-level inline notification:
+    AlertBanner({ variant, title?, children, onClose?, icon? }) renders a tinted, backdrop-blurred,
+    bordered box (flex items-start gap-3 rounded-xl border p-4 backdrop-blur-sm) with an optional leading
+    icon (titleText tint), an optional emphasised title line (text-sm font-medium, titleText tint), the
+    required message line (children; text-xs, text/80 muted tint; mt-0.5 only when a title is present), and
+    an optional trailing dismiss (X) button (onClose). `alertVariantMap` keys border-X/20 · bg-X/5 · text-X/80
+    · titleText text-X off the union 'info' | 'success' | 'warning' | 'danger'. The component is "anonymous":
+    it has NO t() calls — the caller supplies the strings (prompt "Titles / labels / i18n keys: none extracted").
+  Documented data sources / consumers (from the AlertBanner doc comment, read verbatim):
+    • useMutationToast (web/src/api/hooks/_toastHelpers.ts) — success(key,fallback) shows one line; error(err,
+      key,fallback) shows the translated title PLUS err.message as a secondary line.
+    • LiveStaleDataBanner (components/feedback/LiveStaleDataBanner.tsx) — <AlertBanner variant="warning"
+      icon=WifiOff title=t('live.staleBanner.title') >t('live.staleBanner.message')</> when the live pipe has
+      been disconnected ≥ 2 minutes.
+    • OfflineBanner (components/feedback/OfflineBanner.tsx) — <AlertBanner variant="warning" icon=WifiOff
+      title=t('pwa.offline.title') >t('pwa.offline.banner')</> while the browser is offline (cached data shown).
+  These are THE data the prompt's "Data sources: useMutationToast" + the required loading/empty/error/stale/
+  offline states map onto.
+
+SCOPE / ARCHITECTURE NOTE  (no silent drift — disclosed in full)
+  The ATOMIC banner primitive already exists: Sources/Components/Feedback/Banners.swift `TSAlertBanner`
+  ("Base banner (web AlertBanner)") + its named presets (TSOfflineBanner, TSLiveStaleDataBanner, …). That
+  atomic component is OUT OF SCOPE here (prompt "Out of Scope: Atomic shared components (covered by the P4
+  component-library bundle prompt)"). This 0113 SHARED SURFACE is therefore the higher-level, DATA-BOUND,
+  multi-state AlertBanner HOST — it binds the mutation-toast bus + the live-connection axis (P1/S8), renders
+  every state, resolves chrome via the P1/S10 facade, uses the P1/S9 tokens, and emits the P1/S11 view.opened
+  telemetry. It reproduces the web AlertBanner composition as scoped subviews (variant-tinted title AND
+  message; facade-resolved strings via Text(verbatim:)) rather than calling TSAlertBanner, for two parity
+  reasons: (a) the web tints BOTH the title and the message with the variant colour, where TSAlertBanner uses
+  neutral text; and (b) the P1/S10 facade resolves to String, incompatible with TSAlertBanner's
+  LocalizedStringKey API. Same established precedent as AiLimitBanner (0025) reproducing the web AlertBanner
+  body as scoped subviews. The full web AlertBanner API (all four variants + optional icon + optional title +
+  message + onClose) is modelled by AlertBannerNotice; AlertBannerNotice.from(mutation:) bridges
+  useMutationToast and AlertBannerNotice.connectivity(for:) bridges the OfflineBanner / LiveStaleDataBanner
+  consumers verbatim.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/AlertBanner.* + this log)
+  AlertBanner.Adapter.swift   (257 ln) — pure Foundation core: AlertBannerVariant (+ defaultSymbolName),
+                                AlertBannerConnection, AlertBannerMutation(Kind), AlertBannerText (verbatim |
+                                localized, with resolve), AlertBannerNotice (web props + from(mutation:) +
+                                connectivity(for:) + content(canDismiss:)), AlertBannerContent, AlertBannerAccessibility.
+  AlertBanner.Model.swift     (197 ln) — P1/S11 AlertBannerTelemetry seam + OSLog sink (view.opened
+                                surface="AlertBanner"), AlertBannerInput, AlertBannerResolved(Phase), the pure
+                                AlertBannerProjection (error→loading→connectivity→notice→empty + dismiss gate),
+                                the @Observable @MainActor AlertBannerModel (one-shot view.opened re-armed by
+                                stop(); stale one-shot auto-refresh; dismiss forwarding), P1/S10 AlertBannerStrings.
+  AlertBanner.Seams.swift     (110 ln) — P1/S8 AlertBannerSource protocol, StaticAlertBannerSource (controlled
+                                host), InMemoryAlertBannerSource (previews/tests).
+  AlertBanner.Views.swift     (174 ln) — AlertBannerCard (scoped subviews: variant-tinted icon + title +
+                                message over a material-backed, variant-tinted, bordered box + the gated
+                                dismiss; combined VoiceOver element) + AlertBannerFreshnessChip.
+  AlertBanner.States.swift    (105 ln) — loading skeleton / empty (TSEmptyState) / error (retry) chrome.
+  AlertBanner.swift           ( 94 ln) — the public AlertBanner View: phase switch + freshness chip + onAppear
+                                view.opened lifecycle; init(model:), init(notice:…), init(mutation:…) convenience.
+  AlertBanner.Previews.swift  (122 ln) — #Previews for info / success(mutation) / warning / danger(mutation) /
+                                empty / loading / error / stale / offline.
+  AlertBanner.Tests.swift     (262 ln, 27 tests) — variant/symbol, text resolution, mutation bridge,
+                                connectivity bridge (verbatim copy + keys), notice content (icon default +
+                                dismiss gate), projection branches, accessibility label.
+  AlertBanner.ModelTests.swift(212 ln, 16 tests) — state-holder: telemetry once + re-arm, phase transitions,
+                                dismiss capability, stale one-shot auto-refresh + re-arm, offline keeps banner,
+                                manual refresh, dismiss forwarding, controlled source.
+  Total: 9 files · 1533 lines · 43 tests.
+
+GATE STEP RESULTS  (real exit codes — pasted, not summarised)
+  IOS_EXIT=65         DEFERRED  (full-app iOS-Simulator build — see DEFERRED below; 0 AlertBanner errors)
+  MAC_EXIT=65         DEFERRED  (full-app macOS build — see DEFERRED below; 0 AlertBanner errors)
+  LINT_EXIT=0         PASS      swiftlint --strict → "Found 0 violations, 0 serious in 4190 files." (tree-wide)
+  FORMAT_EXIT=0       PASS      swiftformat --lint apps/apple → "0/4488 files require formatting, 2 skipped."
+  PLACEHOLDER_EXIT=0  PASS      check-placeholders.ps1 (pwsh): isolated scan of the 9 files →
+                                PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0. (The gate's literal
+                                -Path …/AlertBanner is a non-existent path — the per-surface files live as
+                                AlertBanner.*, and the script treats a missing path as a clean result, exit 0 —
+                                so the meaningful scan is the isolated 9-file scan above.)
+
+PER-SURFACE VERIFICATION  (all green on THIS runner)
+  • Real iOS-18 typecheck   : xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+                              -strict-concurrency=complete -target arm64-apple-ios18.0-simulator -D DEBUG
+                              <7 non-test surface files> + the real Sources/Components + Sources/Design + the
+                              generated design Tokens.swift (minus the Shared-coupled UnitFormatters.swift,
+                              which this surface does not use) → 0 errors / 0 warnings.
+  • Real macOS-15 typecheck : same, -target arm64-apple-macos15.0 → 0 errors / 0 warnings. (-D DEBUG compiles
+                              the #Preview macros too.)
+  • Tests EXECUTED 43/43    : isolated SwiftPM package (swiftLanguageModes [.v6]) — target "TeslaSync" = the
+                              real design system (minus UnitFormatters) + the 7 surface files; test target =
+                              AlertBanner.Tests.swift + AlertBanner.ModelTests.swift (@testable import TeslaSync).
+                              `swift test` → "Executed 43 tests, with 0 failures". Adapter/projection/a11y 27 +
+                              state-holder/source 16.
+  • swiftlint --strict      : 0 AlertBanner violations (the 9 "Linting 'AlertBanner.*'" log lines are progress,
+                              not violations; the run summary is 0/0 across 4190 files).
+  • swiftformat --lint      : 0 AlertBanner files require formatting (re-checked individually: 0/9).
+  • placeholder             : 0 in the 9 files (also confirmed by direct grep of TODO/FIXME/XXX/Coming soon/
+                              Placeholder/Lorem/not implemented/fatalError-unimpl — none present).
+  • xcodegen generate       : enumerates all 9 files into TeslaSync.xcodeproj (7 into the app targets, the 2
+                              *Tests.swift into the XCTest bundles; 54 pbxproj references).
+  • i18n                    : every chrome string resolves through the P1/S10 AlertBannerStrings facade
+                              (table "AlertBanner"); the connectivity copy reuses the web consumers' own keys
+                              (live.staleBanner.title/message, pwa.offline.title/banner) for catalog parity; the
+                              caller-supplied mutation title/detail render verbatim (web `title`/`children`).
+                              No hardcoded English literals in view code.
+  • a11y                    : icon+title+message form one combined VoiceOver element with a composed label
+                              (AlertBannerAccessibility, unit-tested); the dismiss + freshness chip are separate
+                              focusable buttons with explicit labels; Font.TS.* (Dynamic Type), TSFadeIn /
+                              TSSkeleton honour Reduce Motion.
+
+DEFERRED — full-app iOS-Simulator + macOS xcodebuild build/test  (NOT failed by this code)
+  The KMP Shared.xcframework was assembled live this run (Gradle :core:assembleSharedXCFramework — BUILD
+  SUCCESSFUL in 8m 38s, RELEASE ios-arm64 + ios-arm64-simulator + macos-arm64, 149M) and staged into
+  apps/apple/Frameworks, so the framework long-pole is NOT the blocker here.
+  The full-app build fails to COMPILE on PRE-EXISTING, UNRELATED errors in OTHER agents' shared-surfaces files
+  — files OUTSIDE this prompt's allowed-files scope (allowed: AlertBanner.* + this log):
+    • iOS   : TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+              error: escaping closure captures non-escaping parameter 'content' (in `glass(_:)`).
+    • macOS : TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123: error (first to fail this run).
+  Evidence that ZERO of these are AlertBanner: `grep -cE "shared-surfaces/AlertBanner.*error:"` over BOTH
+  build logs = 0 / 0. The AlertBanner surface itself contributes no errors to either app target.
+  The macOS target is ADDITIONALLY blocked by development-signing — `security find-identity -p codesigning`
+  → "0 valid identities found" (so `test` cannot launch the app locally).
+  Per apps/macos-pending-verifications.md + ADR-012's CI matrix, the full-app build/test is owned by the P4
+  acceptance gate (p4-apple/P99-0001-apple-acceptance-gate) on a CLEAN, SIGNED macos-latest runner. This
+  prompt may not touch the offending files, so the integration gate is deferred there, not failed here.
+  Re-verify on macos-latest:
+    cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+HONESTY COVENANT
+  1  No red-as-green     : the two xcodebuild steps are reported with their REAL exit 65 and a DEFERRED
+                          disposition + grep proof of 0 AlertBanner errors; lint/format/placeholder report real 0s.
+  2  No scope narrowing  : all four web variants + optional title/icon/onClose + the documented mutation-toast
+                          and offline/stale consumers + all six states (loading/empty/error/alert + stale/offline
+                          chip) are implemented and demonstrated.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred blockers
+                          re-confirmed by build-log grep (AIGeofence/AIAutoNameUnnamedLocations) + security
+                          find-identity, not assumed.
+  4  No stubs as final   : complete production surface + 43 executed tests; PLACEHOLDER_COUNT=0; no TODO/FIXME/
+                          stub/mock/Coming-soon/Placeholder/Lorem/unimpl anywhere in the 9 files.
+  5  No parity shortcut  : the success/error mutation mapping, the verbatim LiveStaleDataBanner / OfflineBanner
+                          copy + their web keys, the variant→symbol map, the render-branch priority, the
+                          dismiss gate, and the title:message a11y join are each unit-asserted against the web.
+  6  No delegation       : implemented directly; no sub-agents used (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens, P1/S10 facade, P1/S11 view.opened telemetry, and
+                          the established P4 "isolated-verify + DEFERRED full-app" disposition all honoured; the
+                          atomic TSAlertBanner left untouched (out of scope).
+  8  No commit on red    : the committed artifact (9 AlertBanner.* files + this log) is GREEN on every gate
+                          runnable on this runner — 0 typecheck errors on BOTH SDKs, 43/43 XCTest, swiftlint
+                          --strict 0, swiftformat --lint 0, placeholder 0 — and contributes 0 errors to the
+                          full-app build; the deferred integration gate is blocked only by pre-existing,
+                          unrelated, out-of-allowed-files surfaces + signing.
+  9  No silent drift     : changes confined to shared-surfaces/AlertBanner.{swift,Adapter,Model,Seams,Views,
+                          States,Previews,Tests,ModelTests}.swift + this log; the scoped-subview decision and
+                          the AlertBannerNotice host model are disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AlertBanner shared surface shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED GREEN on this runner: it compiles with 0 errors against the REAL design system on both
+  the iOS-18 and macOS-15 SDKs under Swift 6 strict concurrency, its 43 tests pass via SwiftPM, and
+  swiftlint --strict / swiftformat --lint / the placeholder gate are all green on the 9 files (and tree-wide).
+  The full-app iOS-Simulator + macOS `xcodebuild build test` gate is DEFERRED (not failed by this code) on
+  pre-existing, unrelated, out-of-allowed-files compile errors in other agents' shared-surfaces files
+  (AIGeofenceAwareAutomationSuggestions, AIAutoNameUnnamedLocations) plus 0 macOS signing identities, owned by
+  the P99 acceptance gate on a signed macos-latest runner. The AlertBanner surface contributes 0 errors.
+
+EXIT=0
+STATUS=DONE

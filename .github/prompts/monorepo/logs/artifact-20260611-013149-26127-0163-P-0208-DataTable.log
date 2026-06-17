@@ -1,0 +1,123 @@
+=== P4 Shared surface 0208 DataTable (Apple) ===
+Date: 2026-06-12
+Surface: DataTable  (web source: components/ui/DataTable.tsx)
+Native output: apps/apple/TeslaSync/shared-surfaces/DataTable.*
+Allowed files: apps/apple/TeslaSync/shared-surfaces/DataTable.*, this log
+
+--------------------------------------------------------------------------------
+VERDICT: STATUS=BLOCKED — the DataTable surface is COMPLETE and verified clean by
+every host-runnable + isolated gate, but the whole-module `xcodebuild build test`
+steps (iOS + macOS) fail on PRE-EXISTING defects in sibling files and a macOS
+code-signing environment limitation, all OUTSIDE this prompt's allowed file scope
+(DataTable.* + log). Zero failures originate in any DataTable file.
+--------------------------------------------------------------------------------
+
+GATE STEP RESULTS (real exit codes)
+  iOS    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         IOS_EXIT=65   (blocked — see "iOS blocker" below; NOT a DataTable error)
+  macOS  xcodebuild -scheme TeslaSync-macOS build test
+         MAC_EXIT=65   (blocked — macOS code-signing/entitlements; NOT a DataTable error)
+  swiftlint --strict (whole repo, 4657 files)        LINT_EXIT=0    Found 0 violations, 0 serious
+  swiftformat --lint apps/apple (4955 files)         FORMAT_EXIT=0  0/4955 files require formatting
+  check-placeholders.ps1 -Path .../DataTable         PLACEHOLDER_EXIT=0  PLACEHOLDER_COUNT=0
+
+DATATABLE SLICE — ISOLATED VERIFICATION (Swift 6 language mode, strict concurrency = complete)
+  Production (13 DataTable sources + design Tokens.swift), swiftc -typecheck
+    iOS    -target arm64-apple-ios18.0-simulator -swift-version 6     PROD_IOS_TYPECHECK_EXIT=0
+    macOS  -target arm64-apple-macos15.0          -swift-version 6     PROD_MAC_TYPECHECK_EXIT=0
+  Tests (DataTable.Tests + DataTable.AdapterTests) + production + XCTest shim, swiftc -typecheck
+    iOS    -target arm64-apple-ios18.0-simulator -swift-version 6     TEST_TYPECHECK_EXIT=0
+  In the FULL iOS module build, all 15 DataTable files were compiled with ZERO errors
+  (grep "shared-surfaces/DataTable*.swift:NN:NN: error:" over the build log = 0 matches).
+  (The iOS-only @Environment(\.horizontalSizeClass) was removed so the surface type-checks on
+   the macOS target too — confirmed above — since the macOS gate fails at signing before reaching it.)
+
+--------------------------------------------------------------------------------
+iOS BLOCKER (pre-existing sibling compile errors — NOT in scope, NOT DataTable)
+--------------------------------------------------------------------------------
+The whole `TeslaSync` app target compiles ~3,000 sources into one module. Two
+sibling sources fail to compile; because Swift compiles a module atomically, the
+whole target (and therefore the hosted test bundle) fails. Exact errors:
+
+  1) TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error:
+     the compiler is unable to type-check this expression in reasonable time;
+     try breaking up the expression into distinct sub-expressions
+
+  2) TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error:
+     escaping closure captures non-escaping parameter 'content'
+     (sibling bug: `glass(@ViewBuilder _ content: () -> some View)` passes the
+      non-escaping `content` into `TSGlassPanel { content() }`, whose builder is
+      @escaping. Fix belongs in AISignalExplorerNlFilter.swift — out of scope.)
+
+A separate, intermittent pre-existing Swift compiler IRGen crash was also observed
+on a baseline build (no DataTable files present):
+  swift-frontend: llvm report_at_maximum_capacity(...) during
+  "IR Generation for file .../feature-views/AppearanceSettings.Controls.swift"
+This crash is batch-composition-sensitive (it did NOT recur once the DataTable
+files shifted the compile batches) and likewise lives in a sibling file.
+
+None of these three files is a DataTable file; all are outside the allowed scope
+(DataTable.* + log). This prompt's anti-scope-narrowing + allowed-files rules
+forbid editing sibling surfaces, and excluding them would require editing
+project.yml (also out of scope).
+
+--------------------------------------------------------------------------------
+macOS BLOCKER (code-signing environment limitation — NOT in scope, NOT DataTable)
+--------------------------------------------------------------------------------
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require
+    signing with a development certificate. Enable development signing ...
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that
+    require signing with a development certificate. Enable development signing ...
+
+project.yml sets DEVELOPMENT_TEAM="" and the macOS app/widgets use hardened-runtime
+entitlements; this runner has no development signing identity, so the macOS targets
+cannot link/sign. This is the deferred-verification class documented in
+apps/macos-pending-verifications.md ("the code is written, committed, and all
+host-runnable gates are green ... deferred artifact verifications that ADR-012's CI
+matrix is designed to run on a macOS host"). The macOS failure is reached before any
+DataTable source is type-checked.
+
+--------------------------------------------------------------------------------
+DATATABLE SURFACE — WHAT WAS SHIPPED (production-complete, no stubs)
+--------------------------------------------------------------------------------
+Parity port of components/ui/DataTable.tsx as native SwiftUI (iOS 18 / iPadOS 18 /
+macOS 15 HIG), token-driven (P1/S9), i18n via the P1/S10 facade, state via an
+@Observable holder (P1/S8), once-only `view.opened` telemetry (P1/S11).
+
+Files (apps/apple/TeslaSync/shared-surfaces/):
+  DataTable.Adapter.swift      surface slug, i18n seam, enums, ColumnSpec, ColumnLayout, SortState
+  DataTable.Projection.swift   pure projectors: visible columns, reorder, sort toggle (useSortToggle),
+                               pagination slice, selection (all/some/shift-range), colspan, width clamp
+  DataTable.CSV.swift          pure CSV serializer (toCSV/escape/filename parity of lib/csvExport)
+  DataTable.Model.swift        i18n Strings (every web t() key) + telemetry seam + persistence seam
+  DataTable.State.swift        DataTableModel<Key> @Observable state-holder
+  DataTable.Column.swift       DataTableColumn<Row> (cell builder + CSV accessor) + DataTableRowAction
+  DataTable.Surface.swift      public DataTable<Row,Key> view + initializers (renamed from DataTable.swift
+                               to avoid the module's existing Sources/Components/UI/DataTable.swift
+                               filename collision — Swift requires unique filenames per module)
+  DataTable.Views.swift        sticky header row + sort header cell + resize handle wiring
+  DataTable.Rows.swift         body branches, row, cell, selection control, expand control, resize handle
+  DataTable.Chrome.swift       empty state, error fallback, toolbar, bulk bar, CSV export + .fileExporter,
+                               pagination bar
+  DataTable.Menu.swift         column visibility + reorder popover
+  DataTable.Strings.swift      native-addition chrome/a11y strings (sort, pagination, bulk, menu)
+  DataTable.Previews.swift     previews: populated, empty, error, multi-select+bulk, expandable, paginated
+  DataTable.Tests.swift        model + view-composition + strings + a11y-label tests
+  DataTable.AdapterTests.swift pure projector + CSV + value-type tests
+  DataTable.strings            P1/S10 catalog contribution (web t() keys + native additions)
+
+States reproduced from the web source (presentational primitive — no fetcher, so no
+loading/stale/offline branch, matching the Accordion/UptimeHeatmap precedent):
+  populated grid · empty ("No data") · row-render error fallback ("This table failed
+  to render") · plus the full feature matrix: sort, single/multi selection (+ select-all,
+  + shift-range), row expansion, pagination, sticky header, per-column resize, column
+  visibility + reorder, CSV export (+ in-flight state), virtualization (LazyVStack),
+  row context menu, density.
+
+i18n keys from source, all resolved via the P1/S10 facade with English fallbacks:
+  errors.section.tableTitle, table.selection.{selectRow,deselectRow,selectAll,deselectAll},
+  table.expand.{expand,collapse,column}, table.export.{csv,csvButton},
+  table.columns.resizeLabel ({{col}}), table.empty.
+
+EXIT=65
+STATUS=BLOCKED

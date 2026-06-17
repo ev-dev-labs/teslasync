@@ -1,0 +1,121 @@
+=== P4 Shared surface 0055 AITripPlannerLLMAgent (Apple) ===
+Date: 2026-06-13 23:46:05 -0700
+Host: macOS 26.5.1 | arm64 | 20 cores / 64 GB
+Xcode: Xcode 26.5 Build version 17F42 
+Swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+Honesty Covenant: 1 No red-as-green 2 No scope narrowing 3 No skip-and-assume 4 No stubs as final
+  5 No parity shortcuts 6 No delegation 7 No predecessor bypass 8 No commit on red 9 No silent drift
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+Web source (THE spec): web/src/components/ai/AITripPlannerLLMAgent.tsx
+  hooks: useTranslation + useAiStream ; wrapped by withAiFeature('trip-planner-llm-agent')
+  shared comps: AIFeatureCard + withAiFeature ; charts/maps: none
+  stream: POST /ai/trips/plan/draft (static) ; body: {vehicle_id, origin{lat,lng,name},
+    destination{lat,lng,name}, current_soc, charge_limit_soc, min_arrival_soc, speed_factor}
+  gate: haveInputs = !!vehicleId && origin != null && destination != null
+
+Native output (11 files, apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.*):
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Adapter.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.AdapterTests.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Chrome.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Model.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Previews.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Projection.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Request.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.strings
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Tests.swift
+  apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.Views.swift
+
+Architecture: parity of sibling 0017 AIDriveCoaching (withAiFeature+AIFeatureCard+useAiStream)
+  + structured-body sibling 0008 AIBatteryHealthForecastNarrative. Type prefix TripPlannerAgent
+  (TripPlanner* taken by feature-views/TripPlannerMap). i18n table 'AITripPlannerLLMAgent'.
+  States: gated / loading / error / ready(empty,thinking,prose,failed) x live/stale/offline.
+
+================ HOST-RUNNABLE SURFACE GATES (all green) ================
+
+---- [1] swiftlint --strict (surface, 10 files) ----
+Linting 'AITripPlannerLLMAgent.Previews.swift' (8/10)
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+
+---- [2] swiftformat --lint (surface, 10 files) ----
+SwiftFormat completed in 12.04s.
+0/10 files require formatting.
+FORMAT_EXIT=0
+
+---- [3] check-placeholders (honest scan of the 11 surface files) ----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+(gate-literal invocation scans the filename-prefix path, which is not a directory => scans nothing => EXIT=0:)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+---- [4] i18n parity (web source t() keys present in .strings) ----
+  OK tripPlanner.aiAgent.title
+  OK tripPlanner.aiAgent.description
+  OK tripPlanner.aiAgent.generateButton
+  OK tripPlanner.aiAgent.badge
+  i18n: 4/4 web keys present, 0 missing, 0 dead
+
+---- [5] xcodegen generate enumerates the surface files ----
+  pbxproj references to AITripPlannerLLMAgent: 66
+
+---- [6] real iOS-18 swiftc -typecheck (Swift 6, -strict-concurrency=complete) ----
+  set: 7 surface sources (.swift/.Adapter/.Request/.Model/.Projection/.Views/.Chrome) + real
+  Tokens.swift + minimal TSButton/TSSkeleton/TSFadeIn shims. (.Previews #if DEBUG + the 2 *Tests
+  files are covered by the executed harness [8] and the deferred full-app gate.)
+IOS18_TYPECHECK_EXIT=0
+
+---- [7] real macOS-15 swiftc -typecheck (Swift 6, -strict-concurrency=complete) ----
+MAC15_TYPECHECK_EXIT=0
+
+---- [8] executed logic harness (built + run on macOS-15 host) ----
+  mirrors the shipped *Tests.swift: request body/gate/SSE/reducer/output/action/projection +
+  @MainActor model wiring (telemetry-once, stale auto-refresh+re-arm, offline, delegation).
+HARNESS: passed=86 failed=0
+HARNESS_EXIT=0
+
+================ DEFERRED FULL-APP GATE (environment-blocked on this runner) ================
+
+---- [9] Shared.xcframework (KMP/Kotlin-Native) staged via Gradle ----
+  build-shared-xcframework.sh => Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL,
+  staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-sim-arm64 + macos-arm64).
+
+---- [10] iOS-Simulator full-app 'xcodebuild build test' (gate cmd) ----
+  cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  - The app-target BUILD action compiled ALL sources INCLUDING the 11 new surface files cleanly.
+  - The TEST action's testability rebuild (whole 2000+-file app re-emitted with ENABLE_TESTABILITY)
+    was killed under parallel-compile memory pressure on this SHARED runner:
+      total ': error:' diagnostics in the whole build log: 0
+      'AITripPlannerLLMAgent' lines containing 'error': 0
+      failing cmd: 'SwiftCompile ... Compiling AnnouncerRegion.Views.swift, AnomalyInlineRow.*'
+        (a PRE-EXISTING, UNRELATED WMO batch) with NO diagnostic => SIGKILL/OOM signature, not a
+        compile error. Non-deterministic: run 1's BUILD action compiled that same batch cleanly.
+      IOS_EXIT=65 (action failure; zero errors attributable to this surface)
+
+---- [11] macOS full-app 'xcodebuild -scheme TeslaSync-macOS build test' ----
+  Structurally blocked by code-signing on this runner (independent of this surface):
+      security find-identity -p codesigning => 0 valid identities found
+  => macOS bundles cannot be signed/launched here; deferred to P99 (macos-latest w/ identities).
+
+================ CONCLUSION ================
+Production-polished native parity of web/src/components/ai/AITripPlannerLLMAgent.tsx. Every
+host-runnable surface gate is GREEN:
+  [1] swiftlint --strict 0/10   [2] swiftformat --lint 0/10   [3] placeholder COUNT=0
+  [4] i18n 4/4 web keys         [5] xcodegen 66 pbxproj refs  [6] iOS-18 typecheck 0 err
+  [7] macOS-15 typecheck 0 err  [8] executed harness 86/86    (+ app-target compile: 0 surface errs)
+The full-app 'xcodebuild build test' (iOS + macOS) cannot reach EXIT=0 on THIS runner due to
+PRE-EXISTING / ENVIRONMENTAL factors ONLY (shared-runner OOM during the testability rebuild of an
+UNRELATED batch with zero diagnostics; macOS code-signing '0 valid identities found'), deferred to
+p4-apple/P99-0001-apple-acceptance-gate on macos-latest per the repo's documented macOS-pending
+convention (apps/macos-pending-verifications.md). No surface-attributable failure exists.
+
+LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  IOS18_TYPECHECK_EXIT=0  MAC15_TYPECHECK_EXIT=0  HARNESS=86/86
+IOS_EXIT=65 (env OOM, 0 surface errors)   MAC_EXIT=blocked (code-signing: 0 valid identities)
+EXIT=65
+STATUS=BLOCKED (full-app iOS+macOS xcodebuild build test environment-blocked on this runner; surface
+  verified green by all 8 host-runnable gates; deferred to P99 macos-latest acceptance gate)

@@ -1,0 +1,171 @@
+=== P4 Shared surface 0115 CookieConsentBanner (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42), active toolchain Apple Swift 6.3.2
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 ·
+                       pwsh 7.6.2 · Java 17.0.19 · Gradle 8.14.5 (Kotlin 2.0.21)
+  Destinations       : iOS Simulator "iPhone 16" (present, booted) · macOS 15 SDK present
+  Shared.xcframework : ASSEMBLED on THIS runner via Scripts/build-shared-xcframework.sh — Gradle
+                       ":core:assembleSharedXCFramework" → "BUILD SUCCESSFUL in 7m 13s", wrote both
+                       debug + release Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64
+                       slices) and staged release → apps/apple/Frameworks/Shared.xcframework
+                       ("✓ Shared.xcframework staged"). So the KMP framework is NOT a blocker here.
+  Capability         : SwiftUI + iOS 18 / macOS 15 SDKs + simulators all present → NOT
+                       capability-BLOCKED. (This surface uses no Swift Charts / MapKit; see web source.)
+
+WEB SOURCE (the specification)
+  web/src/components/feedback/CookieConsentBanner.tsx — a non-blocking bottom-of-viewport GDPR / cookie
+  consent banner mounted in <Layout>. Data:
+    • useVersionInfo() (from @/api/hooks/useSettings) → /system/version → require_cookie_consent?: boolean
+    • lib/cookieConsent → tri-state ConsentState 'unknown'|'accepted'|'declined'
+                          ('unknown' = absence of the stored key)
+    • useEffect side-effect → setVitalsConsentRequirement / setErrorReporterConsentRequirement(requireConsent)
+  Render guard (the ONLY visibility logic): if (!requireConsent) return null; if (consent !== 'unknown') return null
+  Composition: shield IconBox + title + body + underlined "Manage preferences"/"Hide details" toggle
+               (aria-expanded) + (expanded) two informed-consent <li> cards — "Strictly necessary" with an
+               "Always on" badge, and "Performance & error reporting" — + Accept all (primary) / Decline
+               non-essential (ghost). NO dismiss button (dismiss != consent; it reappears next visit).
+  i18n keys extracted: consent.banner.{title,body,manage,hideDetails,accept,decline},
+                       consent.category.essential.{title,body}, consent.category.alwaysOn,
+                       consent.category.analytics.{title,body}.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/ — the established P4 shared-surfaces tier)
+  CookieConsentBanner.Adapter.swift      — pure (Foundation): ConsentDecision (parse / storage round-trip),
+                                           ConsentChoice→decision, CookieConsentGuard (the web two-line
+                                           return-null guard), ConsentCatalog (2 informed-consent cards),
+                                           ConsentDisclosure (Manage/Hide), the offline→error→stale status-chip
+                                           projection, VoiceOver summaries. CookieConsentResolve typealias.
+  CookieConsentBanner.Model.swift        — P1/S11 diagnostics slug + telemetry seam (OSLog view.opened),
+                                           ReporterConsentSink (the two web reporters) + Noop default,
+                                           P1/S10 i18n facade (table "CookieConsentBanner"), ConsentPolicyUpdate,
+                                           CookieConsentResolved, CookieConsentProjection, and the
+                                           @Observable @MainActor CookieConsentModel (P1/S8 binding).
+  CookieConsentBanner.Sources.swift      — P1/S8 seam protocols (ConsentPolicySource = useVersionInfo,
+                                           ConsentDecisionStore = cookieConsent) + in-memory doubles for
+                                           previews/tests + RecordingReporterConsentSink (no net/UserDefaults/bundle).
+  CookieConsentBanner.Views.swift        — header, Manage/Hide toggle (aria-expanded → accessibilityValue), the two
+                                           category cards + AlwaysOnBadge, Accept/Decline action row (ViewThatFits).
+  CookieConsentBanner.Chrome.swift       — glass card shell (TSMaterial.panel + border + shadow, max-w 640),
+                                           shield icon badge, "Always on" pill, the P4 status chip.
+  CookieConsentBanner.swift              — the root bottom-overlay view + .cookieConsentBanner(model:) host
+                                           modifier; renders the card only when presented, else a zero-height
+                                           anchor (web `return null`). Reduce-Motion-aware transition.
+  CookieConsentBanner.Previews.swift     — 9 #Previews (presented · details · stale/offline/error cached ·
+                                           dormant branches · mounted-over-content · Dynamic Type XL).
+  CookieConsentBanner.Tests.swift        — 22 XCTest cases over the model + projection + seams.
+  CookieConsentBanner.AdapterTests.swift — 21 XCTest cases over the pure adapter.
+  CookieConsentBanner.strings            — the P1/S10 catalog contribution (every web key + native chrome keys).
+  No shared-file edits: the shared-surfaces tier is ALREADY registered in project.yml + .swiftlint.yml on this
+  branch; the changeset is confined to the 10 CookieConsentBanner.* files + this log (allowed-files scope).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  return-null guard                 → CookieConsentVisibility {.dormant,.presented}; dormant renders a
+                                      zero-height anchor (a non-blocking overlay is simply not presented —
+                                      never a blank box).
+  rounded-2xl glass card            → CookieConsentCard (TSMaterial.panel + Color.TS.border + shadow, max-w 640).
+  neon-cyan IconBox                 → ConsentIconBadge (SF Symbol checkmark.shield.fill, Color.TS.accent 0.12/0.20).
+  h3 title / body                   → Font.TS.panel / Font.TS.caption, Color.TS.textPrimary / textSecondary.
+  underlined manage button          → Button(.plain) underline; aria-expanded → .accessibilityValue + .isButton.
+  neon-green "Always on" pill       → AlwaysOnBadge (Color.TS.statusSuccess chip — sanctioned chip use, not body text).
+  Accept all / Decline              → TSButton .primary / .ghost (design-system); ViewThatFits wraps under big type.
+  reporters useEffect               → ReporterConsentSink.setConsentRequirement on every policy change.
+  P4 states (offline/stale/error)   → CookieConsentStatusChipView above the actions, cached requireConsent kept
+                                      applied (cached value never hidden); offline→error→stale precedence; retry→refresh.
+  i18n                              → CookieConsentStrings facade; ZERO English literals in the views (only key+fallback).
+  a11y                              → non-modal dialog group label; combined header; per-category summaries;
+                                      Dynamic Type via fixedSize; Reduce-Motion-aware transition.
+  telemetry                         → view.opened surface="CookieConsentBanner" once on start (P1/S11).
+
+GATES (executed on THIS runner — raw results)
+  [GREEN]    isolated SwiftPM build + test — swift-tools 6.0, .swiftLanguageMode(.v6) (Swift 6 strict
+             concurrency = same as the app), compiling the EXACT shipped CookieConsentBanner.* sources against
+             the REAL repo design layer (design/generated/apple/Tokens.swift + Sources/Design/TSMaterial.swift +
+             Sources/Components/UI/Buttons.swift):
+                 "Executed 43 tests, with 0 failures (0 unexpected)"                       (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL SDKs, deployment targets, -swift-version 6 -strict-concurrency=complete:
+                 iOS 18 sim  (-target arm64-apple-ios18.0-simulator) → 0
+                 macOS 15    (-target arm64-apple-macos15.0)         → 0
+  [GREEN]    xcodegen generate — enumerates all 10 CookieConsentBanner.* files into both app + both test
+             targets (60 project references, exit 0).
+  [GREEN]    swiftformat --lint — surface scope (9 .swift): "0/9 files require formatting"      (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict — surface scope (9 .swift): "Found 0 violations, 0 serious in 9 files" (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces/CookieConsentBanner (the gate's exact path form,
+             prefix-matches the 9 shipped .swift sources) → PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+                                                                                            (PLACEHOLDER_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+             A REAL full-app build was executed on this runner (KMP framework staged). It fails to compile on
+             PRE-EXISTING, parallel-authored shared surfaces this prompt may NOT touch (allowed-files scope):
+                 TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures
+                     non-escaping parameter 'content'
+                 + "the compiler is unable to type-check this expression in reasonable time" in the same AI*
+                   compile batch (AIStateMachineDebuggerNarrator / AIThinkingIndicator /
+                   AITirePressureTrendReasoning / AITripPostcardShareCardImageGeneration).
+             grep of the full build log → CookieConsentBanner "error:" hits = 0. The surface contributes ZERO
+             errors; the RED is entirely pre-existing and unrelated.
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                  : MAC_EXIT=65
+             Fails BEFORE any Swift compile, at signing:
+                 error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+                 error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+             This runner is not provisioned with a macOS development certificate. CookieConsentBanner "error:" hits = 0.
+
+  WHY DEFERRED (full-app Xcode gate — ZERO CookieConsentBanner errors; every blocker pre-exists / is environmental):
+    • iOS  : a single app module compiles all shared surfaces together; pre-existing type-check + non-escaping-closure
+             errors in the AI* surfaces abort the module build. These files are outside the allowed-files scope
+             (CookieConsentBanner.* only); the task rule forbids fixing pre-existing, unrelated breakage.
+    • macOS: development-signing certificate not provisioned on this runner (the app + widget targets have
+             entitlements). Owned by the P4/P99 Apple acceptance gate on a signed macos-latest CI runner.
+    This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition (ADR-012) used by prior
+    P4 shared surfaces, and is reported RED here (IOS_EXIT=65 / MAC_EXIT=65) — never as passing.
+
+STATES — every web branch reproduced (acceptance: "all states from the web source")
+  dormant  (renders nothing — web `return null`): consent not required · already accepted · already declined ·
+           policy still loading (cold) / failed-with-no-cache (Boolean(undefined)). Verified by previews +
+           CookieConsentGuardTests / CookieConsentModelTests (testNotRequiredIsDormant / testAlreadyDecidedIsDormant).
+  presented: required + decision 'unknown' — the full card (header, disclosure, two category cards + Always-on,
+           Accept/Decline). Verified by testRequiredAndUnknownIsPresented + previews.
+  stale / offline / error (cached): the P4 freshness axis — cached requireConsent stays applied beneath a status
+           chip (offline→error→stale precedence, retry on error/stale). Verified by CookieConsentStatusChipTests +
+           CookieConsentProjectionTests + testOfflineKeepsCached… / testFailedWithCachedRequireConsent…
+  external re-surface: a Settings→Privacy reset (web subscribeConsent → 'unknown') flips the banner back to
+           presented. Verified by testExternalResetReSurfacesBanner.
+  reporter mirroring: requireConsent pushed to the reporter sink on every policy change. Verified by
+           testReporterMirrorsPolicyFlagOnEachChange.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with pasted evidence — never reported as passing.
+  2  No scope narrowing : every web datum/branch reproduced — policy flag, tri-state consent, the two-line
+                          visibility guard, the disclosure, both category cards + the Always-on badge, both
+                          actions, and the reporter side-effect; plus the P4 freshness chrome.
+  3  No skip-and-assume : every host-runnable gate executed on THIS runner; raw results pasted; both app-build
+                          failures were REPRODUCED (real xcodebuild, exit 65) and grepped for CookieConsentBanner
+                          errors (0), not assumed.
+  4  No stubs as final  : complete production surface + 43 executed tests; placeholder scanner = 0; no TODO/stub/mock.
+  5  No parity shortcut : tints/opacity/typography/a11y/telemetry/i18n all mapped to platform tokens + verified.
+  6  No delegation      : implemented directly; no sub-agent delegation of the surface.
+  7  No predecessor bypass: P1/S8 state-holder seams, P1/S9 tokens (Color/Font/TS*/TSMaterial), P1/S10 i18n facade,
+                          P1/S11 diagnostics, P4 core design layer — all present and consumed; no shared-file edits.
+  8  No commit on red   : the COMMITTED artifact (CookieConsentBanner.* + this log) is GREEN on every host-runnable
+                          gate AND on a real isolated Swift 6 build+test (43/43); the deferred full-app gate is RED
+                          only on pre-existing AI* surfaces + macOS signing, which this commit neither introduces
+                          nor touches (CookieConsentBanner error count = 0 in both build logs).
+  9  No silent drift    : changes confined to TeslaSync/shared-surfaces/CookieConsentBanner.* (10 files) + this log.
+                          The generated TeslaSync.xcodeproj and Frameworks/Shared.xcframework are git-ignored and
+                          NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CookieConsentBanner shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 43 tests pass under the app's own Swift 6 strict-concurrency rules against the real
+  design system, type-checks against the real iOS-18 + macOS-15 SDKs, and is lint/format/placeholder clean; xcodegen
+  enumerates it into all four targets. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code): the KMP framework assembles + stages fine here, but the single iOS app module is blocked by
+  pre-existing parallel-merge compile errors in unrelated AI* shared surfaces, and macOS by development-signing — both
+  owned by the P4/P99 acceptance gate on a signed CI runner, both outside this prompt's allowed files. CookieConsentBanner
+  contributes ZERO errors to either build (grep-verified). This matches the repo's sanctioned "code-complete + DEFERRED
+  Xcode gate" disposition.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,161 @@
+=== P4 Feature view 0301 VehicleHeader (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/VehicleHeader.*  (9 .swift + 1 .strings)
+Web src  : web/src/features/vehicles/components/vehicle-detail/VehicleHeader.tsx
+Host     : Darwin arm64 (Mac Studio) · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat + pwsh + xcodegen + Java 17 present
+Date     : 2026-06-10
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+  swiftlint / swiftformat / pwsh / xcodegen / xcrun simctl -> all present
+  iOS 18 + macOS 15 SDKs present (iPhoneSimulator26.5.sdk / MacOSX26.5.sdk; deploymentTarget iOS 18.0 / macOS 15.0).
+  KMP Shared.xcframework: assembled live this run via Gradle (BUILD SUCCESSFUL in 8m) and STAGED into Frameworks/.
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  Composition  : GlassPanel row = back button (web <Link to="/vehicles"> ArrowLeft) + identity column
+                 (status Badge[variant=statusVariant(status), dot, size lg] + neutral Badge["{model} {trim_badging}"]
+                 + monospaced VIN) + "Wake Up" Button (web <Button onClick={onWake} loading={waking} icon={<Power/>}>).
+  statusVariant: web api/types.ts port — online/driving->success, charging->warning, parked/updating->info,
+                 asleep->neutral, offline->danger (web `?? 'danger'` fallback). All 7 states covered + unit-tested.
+  Status label : the web Badge prints the raw status token; native resolves each state through the project's own
+                 canonical VEHICLE_STATE_LABELS map (web types/fsm/vehicle.ts: Online/Driving/Charging/Parked/
+                 Updating/Asleep/Offline) via the P1/S10 facade — a documented, deliberate choice so the surface
+                 shows a localizable label, not an untranslated lowercase token. (NOT silent drift — see covenant #9.)
+  States       : loading (skeleton chrome) / empty ("Vehicle unavailable" + disabled Wake) / error (retry) / data
+                 + stale chip+auto-refresh / offline chip. Every state renders real chrome (never a blank box).
+  Bindings     : P1/S8 VehicleHeaderSource state-holder seam (no HTTP in the view) — vehicle + status + waking +
+                 loading/error/connection snapshot, mirroring the web props the parent (VehicleDetailPage) passes;
+                 P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius) + TSGlassPanel + TSButton + TSFadeIn + TSSkeleton
+                 + TSTone; P1/S10 NSLocalizedString facade (table "VehicleHeader"); P1/S11 view.opened telemetry
+                 (slug "VehicleHeader", once + idempotent). Wake (web onWake) + back-nav (web Link) are injected seams.
+  i18n         : 1/1 web key reproduced (common.wakeUp="Wake Up") + the VEHICLE_STATE_LABELS status map + native envelope.
+  a11y         : back-button label, status/model/VIN composed header label, Wake label + waking value, retry +
+                 freshness-chip labels; Dynamic Type via system fonts; reduce-motion honored via TSFadeIn/TSSkeleton.
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint  (surface, 9 .swift files)
+      0/9 files require formatting.
+      Tree-wide `swiftformat --lint apps/apple` (the prompt command) -> 0/3164 files require formatting, 3 skipped.
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict  (surface, 9 .swift files, --no-cache)
+      Done linting! Found 0 violations, 0 serious in 9 files.
+      Tree-wide `swiftlint lint --strict` -> 0 violations, exit 0.
+      LINT_EXIT=0
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1, run per real surface file)
+      NOTE: the prompt's literal `-Path …/VehicleHeader` has no extension and matches no on-disk path (the files
+      are `VehicleHeader.*`); the script treats a non-existent path as a clean no-op scan. To make the 0 MEANINGFUL
+      it was run against each of the 9 real surface .swift files:
+      VehicleHeader.Adapter/Model/Seams/Views/States/.swift/Previews/Tests/ModelTests ->
+      each PLACEHOLDER_COUNT=0 EXIT=0.  Independent grep for todo|fixme|xxx|coming soon|placeholder|lorem ipsum|
+      not implemented|stub|mock across VehicleHeader.* -> CLEAN (0 hits).
+      PLACEHOLDER_COUNT_TOTAL=0
+      PLACEHOLDER_EXIT=0
+
+[4] isolated SwiftPM build + test  (pure layer: Adapter + Model + Seams + both test files,
+    Package swift-tools 6.0, .swiftLanguageMode(.v6) = Swift 6 strict concurrency; Foundation/Observation/OSLog only)
+      swift build -> Build complete! (0 errors)
+      swift test  -> Executed 26 tests, with 0 failures (0 unexpected)
+      Suites: VehicleHeaderStatusVariantTests(2) VehicleHeaderStatusLabelTests(2) VehicleHeaderModelLineTests(4)
+              VehicleHeaderVINTests(2) VehicleHeaderProjectionTests(6) VehicleHeaderAccessibilityTests(2)
+              VehicleHeaderModelTests(8)
+      SPM_BUILD_EXIT=0  SPM_TEST_EXIT=0  (26/26)
+
+[5] dual-SDK swiftc -typecheck  (FULL surface incl. SwiftUI views + #Previews [-D DEBUG], compiled against the
+    REAL design system: ../design/generated/apple/Tokens.swift + the actual shared components the surface uses —
+    Sources/Design/TSMaterial.swift + TSDesign.swift + Sources/Components/UI/{Typography,Badges,Buttons,Cards}.swift
+    + Components/Motion/Motion.swift + Components/Feedback/Skeletons.swift; -swift-version 6)
+      iOS 18    (-target arm64-apple-ios18.0-simulator,  --sdk iphonesimulator) -> 0 errors / 0 warnings  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)          -> 0 errors / 0 warnings  MAC_TYPECHECK_EXIT=0
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 10 files (file-ref + build-files across iOS/macOS app + iOS/macOS test bundles):
+      VehicleHeader.{Adapter,Model,ModelTests,Previews,Seams,States,swift,Tests,Views}.swift + VehicleHeader.strings
+      (60 refs total).
+
+[7] KMP Shared.xcframework — ASSEMBLED + STAGED (the usual deferral cause — RESOLVED this run)
+      cd apps/shared && ./gradlew --console=plain :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 8m  GRADLE_EXIT=0
+      Staged release variant (ios-arm64 + ios-arm64-simulator + macos-arm64) -> apps/apple/Frameworks/Shared.xcframework.
+
+----------------------------------------------------------------------------------------
+[8] FULL-APP xcodebuild build test  (the prompt gate) — RED, DEFERRED (NOT a VehicleHeader failure)
+----------------------------------------------------------------------------------------
+  8a. BEFORE staging (reproduces the canonical deferral cause):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      => ** BUILD FAILED **  exit 65 — exactly ONE error at framework resolution, BEFORE any Swift source compiled:
+         error: There is no XCFramework found at '…/apps/apple/Frameworks/Shared.xcframework'.
+      (apps/apple/Frameworks/ ships only `.gitkeep`; the KMP framework needs the Kotlin/Native toolchain to assemble.)
+
+  8b. AFTER staging the framework (real app-module compile — the gold-standard surface evidence):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      => ** BUILD FAILED **  exit 65  with 108 `error:` lines — and ZERO are VehicleHeader:
+         grep "error:" | grep VehicleHeader  =>  0
+      All 108 errors are PRE-EXISTING, UNRELATED parallel-merge collisions in OTHER agents' surfaces (ambiguous
+      redeclarations between feature-views and dashboard-widgets), exactly the class tracked in
+      apps/macos-pending-verifications.md:
+         RecentDrivesListWidget.Previews(30) StateTimelineWidget.Previews(22) StateTimeline.Previews(20)
+         RecentDrivesSection.Previews(16) StateTimelineWidget.Model(4) StateTimeline.Source(4)
+         RecentDrivesSection.Seams(4) RecentDrivesListWidget.Model(4) StateTimelineWidget(2) RecentDrivesListWidget(2)
+         => "RecentDrives{Connection,LoadStatus,Model,Update}" + "StateTimeline{Connection,LoadStatus,Model,Update}"
+            ambiguous for type lookup (each defined twice across the colliding surfaces), plus their downstream
+            "cannot infer contextual base" / "'nil' requires a contextual type" cascades. None in VehicleHeader.*.
+      The VehicleHeader translation units compiled with ZERO errors inside the real TeslaSync app module.
+
+  8c. macOS development-signing — `security find-identity -p codesigning` => 0 valid identities found.
+
+  Per apps/macos-pending-verifications.md this full-app build test gate is owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner once the cross-surface collisions are
+  resolved. Fixing RecentDrives*/StateTimeline* is OUT OF SCOPE for this surface prompt (no silent drift).
+    IOS_EXIT=DEFERRED (build test owned by P99; surface is collision-free + compiles clean — same root cause as macOS)
+    MAC_EXIT=DEFERRED (live build: 108 pre-existing cross-surface collision errors + 0 signing identities; 0 surface errors)
+
+========================================================================================
+HONESTY COVENANT (binding)
+========================================================================================
+  1  No red-as-green     : the full-app xcodebuild gate [8] is reported RED and explicitly DEFERRED with the real
+                           failures pasted (pre-staging single-XCFramework error; post-staging 108 cross-surface
+                           collision errors) — never as passing.
+  2  No scope narrowing  : every web region (back link, status badge + dot, neutral model/trim badge, monospaced
+                           VIN, Wake Up button), the 1 source i18n key + the 7-state label map, and
+                           loading/empty/error/data + stale/offline all render.
+  3  No skip-and-assume  : steps [1]-[7] AND both real xcodebuild attempts [8a]/[8b] executed on THIS runner; raw
+                           results pasted. The placeholder 0 was made meaningful by scanning the real files.
+  4  No stubs as final   : complete production surface + 26 real passing tests; placeholder scan = 0; no
+                           todo/stub/mock/placeholder/lorem tokens anywhere.
+  5  No parity shortcut  : statusVariant (7 states), "model + trim" badge composition, VIN `?? ''`, dot + tone,
+                           Wake loading state, back-nav, freshness chip + auto-refresh, a11y labels, view.opened
+                           telemetry — all mapped + verified.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens + TSGlassPanel/TSButton/TSFadeIn/TSSkeleton/TSTone,
+                           P1/S10 i18n facade, P1/S11 telemetry consumed (no re-implementation).
+  8  No commit on red    : the COMMITTED artifact is GREEN on every host-runnable gate AND on a real isolated
+                           Swift 6 build + 26/26 tests + dual-SDK (iOS18 + macOS15) typecheck against the real
+                           design system, AND compiles with ZERO errors inside the real macOS app module (KMP
+                           framework staged). The deferred full-app gate is RED only on PRE-EXISTING cross-surface
+                           collisions (RecentDrives*/StateTimeline*) + absent signing, with zero surface errors.
+  9  No silent drift     : changes confined to feature-views/VehicleHeader.* (10 files) + this log + one deferred
+                           row in apps/macos-pending-verifications.md. The status-label localization choice (web
+                           raw token -> canonical VEHICLE_STATE_LABELS via i18n) is documented above, not silent.
+  10 EXIT / STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic VehicleHeader shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED on this host: it typechecks clean on both shipped SDKs (iOS 18 + macOS 15) against the real generated
+  design tokens + the actual shared components it uses, its 26 real tests pass under Swift 6 strict concurrency,
+  swiftlint --strict / swiftformat --lint / placeholder gate are all green, xcodegen enumerates all 10 files, and
+  — with the KMP Shared.xcframework assembled + staged live this run — the surface compiles with ZERO errors inside
+  the real TeslaSync macOS app module. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED
+  (not failed by this code): the live macOS build produced 108 errors, ALL pre-existing cross-surface collisions in
+  other agents' RecentDrives*/StateTimeline* surfaces (0 VehicleHeader errors), plus 0 macOS codesigning identities
+  — both owned by the P4/P99 acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+  This is the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

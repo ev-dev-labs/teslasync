@@ -1,0 +1,142 @@
+=== P4 Shared surface 0131 OnboardingWizard (Apple) ===
+Date:    2026-06-13
+Runner:  macOS (Darwin, arm64)
+Toolc.:  Xcode 26.5 (17F42), Apple Swift 6.3.2 (swiftlang-6.3.2.1.108), xcodegen 2.45.4,
+         swiftlint + swiftformat (Homebrew), pwsh
+Web src: web/src/components/feedback/OnboardingWizard.tsx (THE specification)
+Native:  apps/apple/TeslaSync/shared-surfaces/OnboardingWizard.*
+
+-------------------------------------------------------------------------------
+SURFACE DELIVERED (10 files, all under the allowed OnboardingWizard.* prefix)
+-------------------------------------------------------------------------------
+  OnboardingWizard.Adapter.swift      Foundation core — surface slug (P1/S11), constants (verbatim
+                                      web ONBOARDED_KEY + 1.5s reveal), OnboardingWizardStepAccent
+                                      (+ verbatim web hex), OnboardingWizardStep, four-step catalog,
+                                      projection, projector (web handleNext / step-indicator rules),
+                                      accessibility label builders.
+  OnboardingWizard.Seams.swift        P1/S8 source (gate + timed reveal + broadcast) + completion
+                                      store (UserDefaults, verbatim "teslasync-onboarded" key) +
+                                      cross-scene broadcast (NotificationCenter, ignore-own-post) +
+                                      reveal scheduler (Task.sleep) + in-memory/controlled doubles +
+                                      .live() production factory.
+  OnboardingWizard.Model.swift        P1/S8 @Observable @MainActor state-holder, P1/S11 telemetry
+                                      seam (view.opened), P1/S10 facade, input snapshot.
+  OnboardingWizard.swift              Public SwiftUI surface (presents overlay or renders nothing).
+  OnboardingWizard.Views.swift        Backdrop, glass card, progress dots, step content, actions,
+                                      completion leaf (never-a-blank-box), accent->token, motion.
+  OnboardingWizard.Previews.swift     Every real state: steps 1-4 + empty-catalog leaf + hidden.
+  OnboardingWizard.strings            P1/S10 i18n — web copy verbatim + native a11y additions.
+  OnboardingWizard.AdapterTests.swift Pure-core unit tests (catalog parity, projector, a11y, equality).
+  OnboardingWizard.Tests.swift        State-holder + view-composition + facade tests.
+  OnboardingWizard.SeamsTests.swift   Store + broadcast + scheduler + source tests.
+
+Parity notes:
+  * Faithful SwiftUI port of the web pure-presentational first-run wizard. The web source has NO fetch,
+    NO React-Query cache, NO Promise — it is gated only by a localStorage flag, a 1.5s setTimeout reveal,
+    a cross-tab broadcast, and a local step index. Per the blessed pure-presentational precedent already
+    established in this codebase by 22 sibling surfaces (Accordion 0203, InlineCallout 0124, MetricCard
+    0095, StaggerItem 0194, ...), this surface reproduces ONLY the source's REAL states and does NOT
+    fabricate loading/error/stale/offline chrome the source does not have. REAL states reproduced:
+    hidden (already onboarded / before the timed reveal -> web `if (!visible) return null`), the four
+    presented steps, the first/middle "Next" vs the final "Get Started" primary action, the progress
+    indicators, dismissal (Skip / close / Escape / backdrop -> persist + broadcast), plus a calm
+    completion leaf for the degenerate empty-catalog case (native "never a blank box").
+  * Data bound via the shared P1/S8 state-holder layer (OnboardingWizardModel over an
+    OnboardingWizardSource); no direct HTTP/storage/timer in the view.
+  * Every string resolves through the P1/S10 facade (OnboardingWizardStrings); web copy verbatim; no
+    English literals in Swift.
+  * Tokens via P1/S9 (Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion); the web per-step hex maps
+    to themeable brand tokens (accent / statusSuccess / statusWarning / chartSeriesPower).
+  * Telemetry: emits view.opened with slug "OnboardingWizard" once, on the real present (P1/S11).
+  * Accessibility: VoiceOver modal label + spoken step position + combined title/description, Dynamic
+    Type, Reduce-Motion honoured at the reveal + step boundaries, Escape (.cancelAction) to dismiss.
+
+-------------------------------------------------------------------------------
+GATE RESULTS
+-------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   ** TEST FAILED ** — BLOCKED by a PRE-EXISTING toolchain compiler crash (NOT this surface)
+    Evidence:
+      "Command SwiftCompile failed with a nonzero exit code"
+      "Please submit a bug report (https://swift.org/contributing/#reporting-bugs) ... Stack dump:"
+      8  swift-frontend  report_at_maximum_capacity(unsigned long)
+      9  swift-frontend  llvm::SmallVectorBase<unsigned int>::grow_pod(...)
+      10 swift-frontend  (anon)::SyncCallEmission::setArgs(...)
+      11 swift-frontend  (anon)::IRGenSILFunction::visitFullApplySite(...)
+      15 swift-frontend  swift::irgen::IRGenerator::emitLazyDefinitions()
+      The following build commands failed:
+        SwiftCompile ... Compiling AnomalyInlineRow.Model.swift, AnomalyInlineRow.Previews.swift,
+        AnomalyInlineRow.Seams.swift, AnomalyInlineRow.States.swift, AnomalyInlineRow.Views.swift, ...
+    Root cause: a deterministic swift-frontend IRGen crash (report_at_maximum_capacity) on PRE-EXISTING
+      surfaces in TeslaSync/feature-views/ — AnomalyInlineRow.* and (after isolating it) ApiPlaygroundPageModel.swift.
+    Key facts proving this is NOT this surface and is pre-existing/environmental:
+      - The TeslaSync Swift module TYPE-CHECKS: "EmitSwiftModule normal arm64 (in target 'TeslaSync')"
+        SUCCEEDED on every attempt, i.e. all OnboardingWizard.* files type-check within the full module;
+        the crash is in backend code generation of UNRELATED files.
+      - REPRODUCED AT HEAD WITHOUT THIS SURFACE: moving all 10 OnboardingWizard.* files out of the tree,
+        regenerating the project, and rebuilding crashes IDENTICALLY on AnomalyInlineRow.Model.swift ->
+        the crash exists independently of this change (which is purely additive; git status shows only
+        the 10 new OnboardingWizard.* files, nothing else modified).
+      - REPRODUCED IN BOTH COMPILATION MODES: default batch mode and SWIFT_COMPILATION_MODE=singlefile
+        both crash on the same batch -> it is a compiler IRGen defect, not transient OOM.
+      - These files are OUTSIDE this prompt's allowed files (OnboardingWizard.* + this log); they cannot
+        be fixed here.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   BLOCKED — same pre-existing IRGen crash, on arm64-apple-macos, plus a signing gap
+    Evidence:
+      - The same report_at_maximum_capacity crash reproduces for the macOS target:
+        "The following build commands failed: SwiftCompile ... Compiling AnomalyInlineRow.Model.swift ...
+         Building project TeslaSync with scheme TeslaSync-macOS (2 failures)".
+        With AnomalyInlineRow temporarily isolated for diagnosis, the next PRE-EXISTING file
+        (ApiPlaygroundPageModel.swift) crashes with the identical signature -> systemic, multi-file.
+      - Additionally, the out-of-the-box command needs a development signing certificate not provisioned
+        on this runner: "TeslaSync-macOS has entitlements that require signing with a development
+        certificate." (also reproduced at HEAD before any change). Building with CODE_SIGNING_ALLOWED=NO
+        gets past signing but still hits the same pre-existing IRGen crash.
+
+[3] swiftlint --strict
+    LINT_EXIT=2   "Found 3 violations, 3 serious in 5044 files" — ALL pre-existing, none in this surface
+    Pre-existing: TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52-54
+                  (identifier_name: variable names 'a' / 'b' / 'c').
+    THIS SURFACE: swiftlint --strict over the 9 OnboardingWizard.*.swift files ->
+                  "Done linting! Found 0 violations, 0 serious in 9 files."  (PASS)
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=1   "1/5342 files require formatting" — pre-existing, not this surface
+    Pre-existing: TeslaSync/feature-views/RecentDrivesSection.Previews.swift:27-28 (redundantType).
+    THIS SURFACE: swiftformat --lint over the 9 OnboardingWizard.*.swift files ->
+                  "0/9 files require formatting."  (PASS)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/OnboardingWizard
+    PLACEHOLDER_EXIT=0   PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    No TODO / FIXME / stub / mock / placeholder / Lorem in the shipped surface.  (PASS)
+
+-------------------------------------------------------------------------------
+VERIFICATION SUMMARY — this surface (everything evaluable in isolation passes)
+-------------------------------------------------------------------------------
+  Type-check within the full TeslaSync module ........ PASS  (EmitSwiftModule succeeded)
+  swiftlint --strict (OnboardingWizard.* 9 files) .... PASS  (0 violations)
+  swiftformat --lint (OnboardingWizard.* 9 files) .... PASS  (0 require formatting)
+  check-placeholders (OnboardingWizard) .............. PASS  (count 0)
+  Change is purely additive .......................... PASS  (git status: only 10 new files)
+  All real web states reproduced ..................... PASS  (hidden / 4 steps / Next vs Get Started /
+                                                              dismissal / completion leaf)
+
+-------------------------------------------------------------------------------
+BLOCKER
+-------------------------------------------------------------------------------
+The Apple build+test gate cannot reach EXIT=0 on this runner because the repository does not compile at
+HEAD under the installed toolchain (Xcode 26.5 / Apple Swift 6.3.2): multiple PRE-EXISTING surfaces
+(TeslaSync/feature-views/AnomalyInlineRow.*, TeslaSync/feature-views/ApiPlaygroundPageModel.swift, and
+at least the next file revealed when those are isolated) trigger a deterministic swift-frontend IRGen
+crash, report_at_maximum_capacity. This was reproduced at HEAD with this surface removed, in both batch
+and single-file compilation modes, for both the iOS-simulator and macOS targets — so it is neither caused
+by nor fixable within this prompt's allowed files (OnboardingWizard.* + this log). The whole-tree
+swiftlint and swiftformat legs are likewise red on unrelated pre-existing files. The OnboardingWizard
+surface itself is complete and passes every gate that can be evaluated in isolation (type-check, lint,
+format, placeholder), follows the established P1/S8/S9/S10/S11 architecture and the pure-presentational
+precedent, reproduces all real states of the web source, and is a purely additive change.
+
+EXIT=65
+STATUS=BLOCKED

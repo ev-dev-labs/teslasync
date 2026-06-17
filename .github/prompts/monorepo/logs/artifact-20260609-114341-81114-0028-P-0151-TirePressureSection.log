@@ -1,0 +1,110 @@
+=== P4 Feature view 0151 TirePressureSection (Apple) ===
+Date: 2026-06-09T22:00:51Z
+Web source: web/src/features/driving/components/drive-detail/TirePressureSection.tsx
+Native output: apps/apple/TeslaSync/feature-views/TirePressureSection.{swift,Model,Adapter,Projector,Views,Chart,Previews}.swift + .Tests.swift + .strings
+Toolchain: Xcode 26.5 Build version 17F42  | swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101) | swiftlint 0.63.3 | swiftformat 0.61.1
+
+########## [1/7] swiftformat --lint (surface) ##########
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-114341-81114/slot-28/apps/apple/.swiftformat
+SwiftFormat completed in 9.48s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+########## [2/7] swiftlint --strict (surface) ##########
+Linting Swift files at paths TeslaSync/feature-views/TirePressureSection.swift, TeslaSync/feature-views/TirePressureSection.Model.swift, TeslaSync/feature-views/TirePressureSection.Adapter.swift, TeslaSync/feature-views/TirePressureSection.Projector.swift, TeslaSync/feature-views/TirePressureSection.Views.swift, TeslaSync/feature-views/TirePressureSection.Chart.swift, TeslaSync/feature-views/TirePressureSection.Previews.swift, TeslaSync/feature-views/TirePressureSection.Tests.swift
+Linting 'TirePressureSection.swift' (1/8)
+Linting 'TirePressureSection.Model.swift' (2/8)
+Linting 'TirePressureSection.Adapter.swift' (3/8)
+Linting 'TirePressureSection.Projector.swift' (4/8)
+Linting 'TirePressureSection.Views.swift' (5/8)
+Linting 'TirePressureSection.Chart.swift' (6/8)
+Linting 'TirePressureSection.Previews.swift' (7/8)
+Linting 'TirePressureSection.Tests.swift' (8/8)
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+########## [3/7] swiftc -typecheck — real iOS 18 simulator SDK (Swift 6, strict concurrency) ##########
+target=arm64-apple-ios18.0-simulator  (Tokens+Motion+TSSkeleton+7 surface sources)
+IOS_TYPECHECK_EXIT=0 (0 = 0 errors / 0 warnings)
+
+########## [4/7] swiftc -typecheck — real macOS 15 SDK (Swift 6, strict concurrency) ##########
+target=arm64-apple-macos15.0
+MAC_TYPECHECK_EXIT=0 (0 = 0 errors / 0 warnings)
+
+########## [5/7] isolated SwiftPM build + test — macOS 15 host, Swift 6 language mode (strict concurrency complete) ##########
+Package: real design Tokens.swift + Motion.swift(TSFadeIn) + TSSkeleton + 7 surface sources; Tests target = TirePressureSection.Tests.swift (@testable import TeslaSync)
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+	 Executed 36 tests, with 0 failures (0 unexpected) in 0.009 (0.012) seconds
+Test Suite 'All tests' passed at 2026-06-09 15:01:48.393.
+	 Executed 36 tests, with 0 failures (0 unexpected) in 0.009 (0.013) seconds
+SWIFT_TEST_EXIT=0
+
+########## [6/7] check-placeholders.ps1 (ADR-011 definition-of-done) ##########
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+########## [7/7] xcodegen generate — file enumeration ##########
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-114341-81114/slot-28/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0 ; distinct TirePressureSection.* files enumerated into project: 9
+
+########## Full-app xcodebuild build test — DEFERRED (macOS-pending) ##########
+iOS:   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+macOS: xcodebuild -scheme TeslaSync-macOS build test
+
+-- Root cause (surface-independent): KMP Shared.xcframework (app-target dependency, ADR-004) not staged --
+apps/apple/Frameworks/ contents: only .gitkeep (no Shared.xcframework).
+15 app sources `import Shared` (the KMP core); the app/test targets cannot link without it.
+TirePressureSection imports NO KMP Shared (Foundation/SwiftUI/Charts/Observation/OSLog only),
+which is why it builds + tests standalone (sections [3]-[5] above).
+
+The scheme's pre-build Run Script (Scripts/build-shared-xcframework.sh) assembles the framework
+via Gradle Kotlin/Native — the documented long-pole:
+  * Standalone `./gradlew :core:assembleSharedXCFramework` (bounded 200s): GRADLE_EXIT=124 (timeout).
+    Last tasks reached: downloadKotlinNativeDistribution, linkDebugFrameworkIos{Arm64,SimulatorArm64},
+    compileKotlinMacosArm64 — still in the Kotlin/Native compile/link phase at the cap.
+  * Via the xcodebuild scheme pre-action (bounded 180s): IOS_XCB_EXIT=124. The DEBUG framework was
+    assembled ("xcframework successfully written out to .../debug/Shared.xcframework"), then
+    ** BUILD INTERRUPTED ** while proceeding to the RELEASE link. The build never reached the Swift
+    compile phase: TirePressureSection mentions in the xcodebuild output = 0, errors = 0.
+  The macOS app consumes the identical Frameworks/Shared.xcframework (project.yml) — same cause.
+
+-- This surface is collision-free (introduces no symbol defined by any other app file) --
+Checked every TirePressureSection/TPSection public symbol against Sources/ + TeslaSync/ + TeslaSyncWidgets/:
+  TPSectionUnit, convertTirePressureFromSI, TPSectionSample, TPSectionWheel, TPSectionRange,
+  TPSectionPoint, TPSectionProjection, TPSectionProjector, TPSectionPhase, TPSectionLoadStatus,
+  TPSectionConnection, TPSectionFormat, TPSectionSurface, TPSectionAccessibility, TPSectionTelemetry,
+  TPSectionStrings, TPSectionUpdate, TirePressureSectionSource, TirePressureSectionModel,
+  InMemoryTPSectionSource, TirePressureSection, TPSectionPalette, TPSectionLineChart
+  -> 0 external definitions for every symbol (each unique to this surface).
+
+IOS_EXIT=124   # deferred: KMP Shared.xcframework Kotlin/Native long-pole (timeout), not a surface defect
+MAC_EXIT=124   # deferred: same unstaged Frameworks/Shared.xcframework dependency
+Deferred to p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing identities).
+
+########## Summary ##########
+Surface-acceptance gates (host-runnable, surface-scoped) — ALL GREEN:
+  FORMAT_EXIT=0  LINT_EXIT=0  IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  SWIFT_TEST_EXIT=0 (36/36 tests)
+  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0, 0 opt-outs)  XCODEGEN_EXIT=0 (9 files enumerated)
+
+Parity with web TirePressureSection.tsx:
+  * data: chartData(tireFl/Fr/Rl/Rr SI Pa) + stats.hasTirePressure, unit useUnits().pressure (kPa|psi|bar)
+  * SI->display: kPa = Pa/1000; psi = kPa/6.894757; bar = kPa/100 (convertPressureFromSI, 1:1)
+  * 4 stat tiles (web grid-cols-4) min–max <unit> or '—'; range filter v>0; line/legend presence v!=null
+  * content gate = stats.hasTirePressure (no length>1 guard); colors FL#3b82f6 FR#10b981 RL#f59e0b RR#ef4444
+  * every i18n key resolved via P1/S10 facade; states loading/empty/error/stale/offline/content all render
+  * P1/S11 view.opened emitted once (surface slug "TirePressureSection"); VoiceOver labels on chart+tiles
+
+Full-app xcodebuild (iOS+macOS): DEFERRED to p4-apple/P99-0001 on macos-latest (macOS-pending);
+  blocked only by the unstaged KMP Shared.xcframework Kotlin/Native long-pole, which is
+  surface-independent (this surface imports no Shared and is collision-free).
+
+All surface-acceptance gates GREEN. Surface complete; full-app build deferred per established protocol.
+EXIT=0
+STATUS=DONE

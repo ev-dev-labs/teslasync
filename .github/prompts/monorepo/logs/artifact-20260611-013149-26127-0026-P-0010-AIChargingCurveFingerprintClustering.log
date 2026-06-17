@@ -1,0 +1,129 @@
+=== P4 Shared surface 0010 AIChargingCurveFingerprintClustering (Apple) ===
+host: Darwin Atuls-Mac-Studio.local 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:38:56 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6000 arm64
+xcode: Xcode 26.5 Build version 17F42 
+date: Thu Jun 11 05:00:16 PDT 2026
+KMP Shared.xcframework: staged (present)
+
+================================================================================
+P4 · Shared surface · 0010 — AIChargingCurveFingerprintClustering (Apple)
+Parity of web/src/components/ai/AIChargingCurveFingerprintClustering.tsx
+================================================================================
+
+CAPABILITY (per prompt): SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG.
+  - Xcode 26.5 (17F42), Swift 6.3.2, iOS 18+/macOS 15+ SDKs present.
+  - This surface uses NO charts and NO maps (web source: "Charts/maps used: (none)").
+    It is a withAiFeature-gated Helix card (AIFeatureCard + AiOutputPanel + useAiStream).
+  - SwiftUI capability CONFIRMED available: my files type-check + compile against the
+    real iOS-18 simulator + macOS-15 module (see VERIFICATION below).
+
+FILES DELIVERED (allowed scope = AIChargingCurveFingerprintClustering.* + this log):
+  AIChargingCurveFingerprintClustering.Adapter.swift       (pure core: request/SSE/reducer/output/action/gate)
+  AIChargingCurveFingerprintClustering.Model.swift         (P1/S8 state holder, P1/S10 i18n facade, P1/S11 telemetry)
+  AIChargingCurveFingerprintClustering.Projection.swift    (pure resolve + localized AiOutputPanel branches)
+  AIChargingCurveFingerprintClustering.swift               (SwiftUI surface struct + card chrome + slug)
+  AIChargingCurveFingerprintClustering.Chrome.swift        (freshness chip / refresh / banner / loading / gate-error)
+  AIChargingCurveFingerprintClustering.Views.swift         (Helix badge / Ask-Helix button / thinking / output / ready)
+  AIChargingCurveFingerprintClustering.Previews.swift      (10 state previews)
+  AIChargingCurveFingerprintClustering.strings             (P1/S10 i18n catalog, 20 keys)
+  AIChargingCurveFingerprintClustering.AdapterTests.swift  (Foundation-only adapter unit tests)
+  AIChargingCurveFingerprintClustering.Tests.swift         (projection / model / a11y unit tests)
+  Convention mirrors sibling AIMLChargingCurveClustering (same page, same web hooks).
+
+PARITY DELTAS vs sibling template (faithful to the web source):
+  - request body = { vehicle_id }  ONLY  (NO lookback_days)   POST /ai/charging/curves/clusters/explain
+  - canStart = haveInputs = Number.isFinite(n) && n > 0   (present AND positive; modelled (vehicleID ?? 0) > 0)
+  - i18n table AIChargingCurveFingerprintClustering, keys charging.aiClustering.* (title/description/generateButton/badge)
+  - States reproduced: gated / loading / error(gate) / ready{ idle-empty / no-vehicle / thinking / prose / stream-error }
+    + connectivity axis live/stale/offline (chip + banner + one-shot stale auto-refresh). view.opened telemetry (deferred past gate).
+  - All strings via P1/S10 facade (no hardcoded English in code). A11y labels on every interactive element; Dynamic Type; reduce-motion.
+
+--------------------------------------------------------------------------------
+SURFACE-ISOLATED VERIFICATION  (every check that can be scoped to this surface — ALL GREEN)
+--------------------------------------------------------------------------------
+[1] swiftformat --lint (9 surface .swift files) ............ 0/9 require formatting   -> PASS
+[2] swiftlint --strict (9 surface .swift files) ............ 0 violations, 0 serious   -> PASS
+[3] swiftlint --strict (WHOLE apps/apple tree) ............. 0 violations (4227 files)  -> LINT_EXIT=0
+[4] swiftformat --lint (WHOLE apps/apple tree) ............. 0/4227 require formatting   -> FORMAT_EXIT=0
+[5] check-placeholders.ps1 -Path .../AIChargingCurveFingerprintClustering
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   -> PLACEHOLDER_EXIT=0
+        (independent grep of all 10 files: zero TODO/FIXME/stub/mock/placeholder/Lorem/fatalError markers)
+[6] KMP Shared.xcframework assembled + staged via Gradle (scheme pre-build action):
+        ./Scripts/build-shared-xcframework.sh -> "BUILD SUCCESSFUL in 7m 46s", "Shared.xcframework staged"
+[7] xcodegen generate ..................................... Created TeslaSync.xcodeproj (10 files enumerated)
+[8] Standalone Swift 6 compile (strict concurrency) of Adapter+Model+Projection (real sources):
+        swiftc -swift-version 6 -target arm64-apple-macos15.0  ->  COMPILE_EXIT=0 (no diagnostics)
+        harness executes the surface's full XCTest assertion set  ->  HARNESS_PASSED=106  HARNESS_FAILED=0
+        (request body/encoding, the n>0 gate, SSE parse, stream reducer, output+action derivation,
+         projection phases, localized output branches, @MainActor model wiring/telemetry-once/
+         stale-auto-refresh+re-arm/offline-no-refresh/generate-cancel-refresh-stop delegation, a11y labels)
+[9] Real-module swiftc -typecheck — ALL 7 app-target files as -primary-file, full TeslaSync module
+    + Shared.xcframework + design tokens + SwiftUI/Observation visible (iphonesimulator, arm64-apple-ios18):
+        TYPECHECK_MINE_EXIT=0   0 errors   0 warnings referencing AIChargingCurveFingerprintClustering.*
+    (typecheck runs the full semantic pass on my files against the real module; it precedes IRGen,
+     so it isolates my surface's correctness from the unrelated IRGen crash below.)
+
+--------------------------------------------------------------------------------
+LITERAL GATE STEPS
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build-for-testing
+    ** TEST BUILD FAILED **   IOS_EXIT=65
+    Sole failure: "Command SwiftCompile failed with a nonzero exit code" — swift-frontend ABORTED
+    (Abort trap: 6) in IR generation, NOT a type error. Crash signature:
+        While evaluating request IRGenRequest(IR Generation for file
+          ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+        While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"  (a reabstraction thunk)
+        report_fatal_error -> report_at_maximum_capacity(unsigned long)  [LLVM SmallVector cap]
+    Zero `error:` diagnostics anywhere; zero diagnostics referencing AIChargingCurveFingerprintClustering.*.
+    The crashing file (AppearanceSettings.Controls.swift) is a SIBLING feature-view, OUTSIDE this
+    prompt's allowed-files scope, which I did not create or modify.
+
+PROOF the iOS crash is PRE-EXISTING and INDEPENDENT of this surface:
+    git status --porcelain  -> only ADDITIONS (the 10 surface files + this log); zero modifications;
+                               AppearanceSettings / AuditPanel / Auth / Sources were NOT touched.
+    Controlled experiment on the captured failing swift-frontend invocation:
+      RUN 1  (module filelist WITH my 7 files)    -> Abort trap: 6, exit 134, report_at_maximum_capacity
+      RUN 2  (same command, my 7 files REMOVED    -> Abort trap: 6, exit 134, report_at_maximum_capacity
+              from the -filelist; 3181 -> 3174)        IDENTICAL crash, same AppearanceSettings.Controls.swift
+    => Removing this surface from the module does NOT change the crash. The surface is exonerated.
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65
+    Failure cause = macOS development-signing (NOT a compile error, NOT this surface):
+      error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    project.yml sets DEVELOPMENT_TEAM="" and macOS hardened-runtime + entitlements; no signing identity
+    exists on this runner. This is the documented "macOS-pending" environment limitation in
+    apps/macos-pending-verifications.md (the P4 acceptance gate p4-apple/P99-0001 runs on macos-latest
+    WITH signing identities). Zero diagnostics referencing AIChargingCurveFingerprintClustering.*.
+
+$ swiftlint --strict                 -> LINT_EXIT=0
+$ swiftformat --lint apps/apple      -> FORMAT_EXIT=0
+$ check-placeholders.ps1 (surface)   -> PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The AIChargingCurveFingerprintClustering surface is COMPLETE and production-polished at full parity
+with the web source, and is independently VERIFIED GREEN: it compiles under Swift 6 strict
+concurrency, type-checks cleanly against the real iOS-18 + macOS-15 module (0 errors/0 warnings),
+passes 106/106 of its own behavioural assertions, and is clean under swiftlint --strict /
+swiftformat --lint / the placeholder gate.
+
+The two literal full-app `xcodebuild build test` steps cannot reach EXIT=0 due to factors that are
+(a) PRE-EXISTING and unrelated — a swift-frontend IRGen crash in the sibling file
+AppearanceSettings.Controls.swift (proven independent of this surface by the with/without-filelist
+experiment), and (b) an ENVIRONMENT capability limit — macOS development-signing — both OUTSIDE this
+prompt's allowed-files scope (apps/apple/TeslaSync/shared-surfaces/AIChargingCurveFingerprintClustering.*).
+This matches the accepted "macOS-pending" disposition recorded for ~10 sibling P4 surfaces in
+apps/macos-pending-verifications.md, whose full-app gate is deferred to p4-apple/P99-0001 on a
+macos-latest runner with signing identities. Honesty covenant #1 (no red-as-green): the aggregate
+gate is therefore reported BLOCKED, not DONE — the block is not in this surface.
+
+IOS_EXIT=65  (pre-existing IRGen crash in AppearanceSettings.Controls.swift — unrelated)
+MAC_EXIT=65  (macOS development-signing — environment; macOS-pending)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED

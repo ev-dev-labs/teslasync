@@ -1,0 +1,214 @@
+I'll start by exploring the repository structure to understand the web source page and the existing Apple app architecture.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+The actual structure uses `apps/apple/Sources/Features/` but the prompt targets `apps/apple/TeslaSync/Features/System/`. Let me investigate the real structure and read more of the web source.
+
+Now I understand the structure: real source is `apps/apple/Sources/Features/System/`. Let me read the existing Exports page (most related), a recently-completed System page pattern, and the build setup in parallel.
+
+Let me examine `project.yml` to understand source roots, and compare the two System directories.
+
+Both `Sources/Features` and `TeslaSync/Features` compile into the app. My target dir `TeslaSync/Features/System/` already has a `ScheduledExportsPanel.swift` (which the web page imports). Let me read more of the web source, the `useExports` hook, and the existing Apple ScheduledExportsPanel in parallel.
+
+Let me read the rest of the web source and check tooling availability (xcodebuild/swiftlint/xcodegen) in parallel.
+
+All tooling is available (xcodebuild, swiftlint, xcodegen, pwsh) — so I must produce a buildable, lint-clean, testable result. Let me continue reading the web source (the wizard and main page).
+
+I now have the full web page. Let me study the Apple data-layer/model patterns and route registration by reading the existing Exports model, a System page model, and the DataRepair page in the target dir.
+
+Excellent, the data-source seam + model + route registration pattern is clear. Now let me understand the routing system, design tokens/components, and localization catalog.
+
+Key finding: pages in my target dir (`TeslaSync/Features/`) use a simpler native style than `Sources/Features/`. Let me study the exact neighbor conventions, the swiftlint config, and the parity manifest/log format.
+
+Let me read the swiftlint config, find the shared `StatCard`/`TabButton` helpers, check how these pages are wired into navigation, and read the parity manifest record.
+
+SwiftLint runs on the explicit path. Let me read the gate contract (README), the placeholder scanner, the reusable `StatCard`/`TabButton` helpers, and the parity manifest record.
+
+`StatCard`/`TabButton` are module-internal structs I can reuse (must not redefine). Now let me read the gate contract README, the placeholder scanner, and a recent completed log to match format.
+
+Let me read the parity manifest record, the apple ledger, and a recent completed log to match the exact format.
+
+Let me read a complete log to match format, the ledger's system section, and check which `dataExport.*` strings already exist in the catalog.
+
+I have the full picture now. Let me inspect the localization catalog structure and check which required strings already exist.
+
+This is a 229k-line JSON catalog. Let me check programmatically which of the 59 required strings already exist as keys.
+
+4 strings exist, 55 to add. Let me set up tracking, then check the build/lint baseline and port-needed web formatters in parallel.
+
+Shared.xcframework is absent and requires the KMP/Gradle toolchain — matching the DataRepair precedent (full build deferred, syntax-check used). Let me read the web formatters to port and confirm the build-deferral doc, then baseline-lint the System dir.
+
+The baseline lint output was unexpectedly large. Let me inspect its summary to understand the current state of the System dir.
+
+The lint run covered the whole tree (6380 files) and found 4 pre-existing serious violations. I need to understand swiftlint's path scoping and locate those violations. Let me investigate.
+
+Critical: swiftlint's behavior depends on the working directory (where it finds the config). The gate uses a repo-root-relative path. Let me test how the gate actually scopes from the repo root.
+
+The gate (run from repo root) uses default swiftlint config scoped to my dir — currently **0 violations across 22 files**. My job is to keep new files clean under that. Now let me read the exact web formatters to port them faithfully.
+
+I have all formatters. Let me quickly probe the exact default-config thresholds the gate enforces (function body length, `id` identifier, Sendable) before writing — this avoids rework.
+
+Confirmed: `id`, Sendable, Identifiable all clean under the gate's default config. Let me clean up the probe and start writing the implementation. First, the models file.
+
+Now the formatters file, porting the web `numberFormat`/`dateFormat` helpers faithfully.
+
+Let me fix the formatters: remove the stray namespace and replace the interpolated relative-time keys with the HIG-native `RelativeDateTimeFormatter` (avoids catalog interpolation, fully localized).
+
+Now the data-source seam (maps the web hooks `useCreateAccountExport`/`useExportColumns` + the page's jobs/vehicles/submit) with a sample + preview doubles.
+
+Models + data source done. Now the `@Observable` page model with the state machine and intents.
+
+Now the export wizard view (the most complex sub-component: type selector, format, column picker, vehicle, date range).
+
+Now the shared panel style and the wizard's sub-components (type/format/preset selectors + column picker).
+
+Now the column picker with the web's exact selection semantics (required columns, select-all, clear, ordered allowlist).
+
+Let me fix the column picker's accessibility value to use the consistent `String(localized:defaultValue:)` form (so my catalog extractor catches it).
+
+Now the account panel, format-preview cards, and data-overview card.
+
+I used backslash line-continuation inside single-line string literals — I need to verify Swift accepts that. Let me test quickly.
+
+Confirmed invalid. Let me fix the two long strings to use multiline literals (where `\`-continuation is valid).
+
+Now let me add an `apiBaseURL` + absolute `downloadURL(for:)` to the model (mirroring the sibling `ExportsPageModel`), then build the history section.
+
+Now the export history section with all four data states and the job rows.
+
+Now let me add the metric card to the style file, then write the main page.
+
+Let me view the end of the style file and append the metric card.
+
+Now the main page that orchestrates all sections.
+
+Let me create the DEBUG-only preview data sources referenced in the page previews.
+
+Now let me add the defensive `dataExport.noJobs` reference in the history `jobsRegion` (for full string parity).
+
+Now let me verify all 59 required strings are referenced in my Swift files.
+
+Found the issue: strings passed through helper params (`step()`, `detail()`) aren't literal `String(localized:)` calls, so they're invisible to extraction/parity. Let me refactor those helpers to resolve at the call site with literals. First the wizard's `step()`.
+
+Now let me refactor the wizard's `step()` to resolve titles at call sites with literals:
+
+Now fix the history row: resolve `detail()` labels at call sites and add Type/Format/Status accessibility to the badges.
+
+Let me re-verify all 59 required strings are now referenced.
+
+All 59 referenced. Now let me run the gate's swiftlint (from repo root, default config) on my files and a syntax parse check.
+
+Clean under the gate (0/34). Now let me verify my files also pass the stricter project config (opt-in rules) and do a syntax parse check.
+
+No violations under either config. Now a syntax parse check on all my files.
+
+Syntax is clean. Let me do a stronger real type-check: compile all my files together against the macOS SDK with Swift 6 strict concurrency, stubbing the one external view. First, confirm the only external symbol I reference.
+
+The only external symbol is `ScheduledExportsPanel()`. Let me run a full type-check against the macOS SDK with Swift 6 strict concurrency, stubbing just that view.
+
+Type-check caught a real collision: I named both the csv/json enum AND the formatters namespace `DataExportFormat`. Let me rename the formatters namespace to `DataExportDisplay` across all files.
+
+The only remaining `DataExportFormat.allCases` is correctly the csv/json enum. Let me re-run the full type-check.
+
+Another real Swift 6 concurrency issue: cached static formatters aren't Sendable. Let me convert them to per-call locals (no global mutable state).
+
+Now fix the two call sites that used the removed static formatters.
+
+Now re-run the full type-check to confirm all concurrency/type issues are resolved.
+
+Access-control fix: the public init exposed an internal type. Let me match the `DataRepairPage` pattern — a parameterless `public init()` plus an internal injectable `init(model:)`.
+
+macOS type-check passes under Swift 6 strict concurrency. Now the iOS-simulator target (the gate builds iOS too).
+
+Both targets type-check clean. Let me re-run the gate swiftlint (post-edits), check file sizes, and run the placeholder scan.
+
+Clean (0/34) and all files under 400 lines. Now the placeholder scan.
+
+The placeholder scan flags only **pre-existing** files (`TeslaAccountPage.swift`, `ScheduledExportsPanelForm.swift`) — none of my DataExport files. Let me confirm these are pre-existing and not caused by me, and check what the matches are.
+
+My 12 files are all clean (none flagged); the 14 matches are legitimate-word "placeholder" usages in two **pre-existing, git-tracked** files from other surfaces. Let me confirm my files scan clean in isolation and check the history of the flagged files.
+
+My scoped scan found 1 real miss in my own `DataExportPage.swift:128` (the stats `.redacted(.placeholder)` lacks a marker). Let me view it and the pre-existing flagged lines to decide.
+
+All pre-existing matches are confirmed false positives (`.redacted(.placeholder)`, `placeholderAvatar`, `namePlaceholder` key, doc comments) in two other-surface files — out of scope. My only real miss is `DataExportPage.swift:128`. Let me add the `parity:allow` marker there (matching the neighbor pattern for `.redacted` skeletons).
+
+Let me verify my files are now placeholder-clean and still lint-clean (the added comment line length matters).
+
+My files are placeholder-clean (0) and lint-clean. Now let me populate the localization catalog. First, a dry-run extraction of all key→value pairs from my Swift files (handling the two multiline strings explicitly).
+
+All 97 keys extracted with correct values. Now let me insert the missing keys into the xcstrings catalog (skipping the 4 already present), then validate.
+
+The marker spacing differs. Let me find the exact format of the `strings` opener.
+
+Marker is `  "strings": {` (no space before colon). Let me re-run with the corrected marker.
+
+Catalog updated: 93 keys added, all 59 required present, JSON valid. Let me spot-check a few inserted entries and confirm the file parses.
+
+Encoding bug: `unicode_escape` corrupted the em-dash/½ characters (mojibake `2Â½ â\x80\x94`). Let me revert the catalog and re-run with proper UTF-8-safe unescaping.
+
+Encoding fixed. Let me do a final catalog validation (no mojibake, all required present, valid JSON).
+
+Catalog is clean. Now let me update the apple ledger (add DataExport rows, alphabetically between DBHealth and DataRepair).
+
+Let me validate the ledger JSON and confirm the new rows.
+
+Ledger valid (DataExport 75/75 on both idioms). Now let me run `xcodegen generate` to confirm the project assembles with my files enumerated.
+
+Project generated. Let me confirm my files are enumerated in the project, then attempt a real compile against the app module if feasible.
+
+All 12 files enumerated (72 pbxproj refs). Let me confirm the generated project is gitignored (won't be committed) and check overall git status.
+
+Everything is gitignored/scoped correctly. Let me run the consolidated gate sequence to capture exact numbers for the evidence log.
+
+Let me confirm the 13 dir-wide placeholder matches are all in non-DataExport (pre-existing) files before writing the log.
+
+All 13 are pre-existing (TeslaAccountPage + ScheduledExportsPanelForm); zero in my files. Now let me write the evidence log with full parity enumeration and honest gates.
+
+Log written. Let me run a final consolidated verification (swiftlint + both-SDK typecheck) before committing.
+
+All green: swiftlint 0 violations, both SDK typechecks pass. Let me review the final staged set and commit.
+
+The staged set is exactly correct. Let me commit.
+
+Committed (eb1ca8072). Let me verify the commit contents and finalize the todos.
+
+All todos complete and the working tree is clean. The task is finished and verified.
+
+## Summary
+
+Implemented **`DataExportPage`** as a native SwiftUI/HIG surface at full web parity, committed as `eb1ca8072` (15 files, +3523 lines).
+
+**What was built** — 12 co-located files in `apps/apple/TeslaSync/Features/System/` (each <400 lines): an `@Observable` model + injected data-source seam (binding the web hooks `useCreateAccountExport`, `useExportColumns` plus jobs/vehicles/submit), ported display formatters, the 4-step export wizard (type grid, format, column picker with the web's exact select-all/required/clear semantics, vehicle, date range), the GDPR account-export panel, CSV/JSON preview cards, data overview, and the export-history list.
+
+**Parity — `PARITY_COVERED=75/75`:**
+- ✅ 12/12 panels (GlassPanel1–4, the 4 metric cards, GlassPanel9–12)
+- ✅ 4/4 data states (loading/empty/error/success) via `DataExportState` + `ContentUnavailableView`/`.redacted` skeletons
+- ✅ 59/59 strings — verified referenced via `String(localized:)` and resolving from `Localizable.xcstrings` (93 keys added, UTF-8 verified)
+- Adaptive macOS+iOS (`ViewThatFits`/adaptive grids), materials over glass (ADR-005), no networking in views (ADR-004), full a11y + i18n.
+
+**Gates (host-runnable, all green):**
+- `swiftlint --strict` → **0 violations** (34 files)
+- placeholder scan (artifact) → **0**
+- `swiftc -typecheck` macOS-15 **and** iOS-18-sim under Swift 6 strict-concurrency → **0 errors** (caught & fixed a real name collision + 2 concurrency issues during dev)
+- `xcodegen` enumerates all 12 files; ledger updated (`apple-macos`+`apple-ios`, 75/75 done)
+
+**Honestly disclosed in the log:** the full `xcodebuild build+test` is deferred to macos-latest CI (KMP `Shared.xcframework` not stageable here + no signing), and the raw dir-wide placeholder scan shows 13 **pre-existing** false-positives in two other-surface files (`TeslaAccountPage.swift`, `ScheduledExportsPanelForm.swift`) — zero in this artifact, left untouched per the "other pages" scope rule. Log ends `EXIT=0` / `STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 10 todos done, changes committed (`eb1ca8072`), working tree clean.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

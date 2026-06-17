@@ -1,0 +1,115 @@
+=== P4 Dashboard widget 0048 EnergyStatsWidget (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/dashboard-widgets/0048-EnergyStatsWidget.prompt.md
+Web source (spec): web/src/features/dashboard/widgets/EnergyStatsWidget.tsx
+Registry: registry/energy.ts → id "energy-stats", category "energy", default 2×4, min 1×2, max 4×40
+Runner: macOS 26.5.1 (aarch64), Xcode 26.5 (Build 17F42), Swift 6.3.2,
+        swiftlint + swiftformat (Homebrew), pwsh available. Capability: SwiftUI +
+        Swift Charts + MapKit + iOS 18 / macOS 15 SDKs all present → NOT capability-blocked.
+
+----------------------------------------------------------------------
+SURFACE FILES (apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.*)
+----------------------------------------------------------------------
+  EnergyStatsWidget.Adapter.swift       — pure formatters (fmtNumber/formatEnergy ports) +
+                                          efficiency converter seam + projector + layout + a11y
+  EnergyStatsWidget.Models.swift        — projected value types (StatItem / ChartPoint / Projection)
+  EnergyStatsWidget.Model.swift         — telemetry seam (P1/S11) + state-holder seam (P1/S8) +
+                                          DTOs + @Observable model + registry + i18n facade (P1/S10)
+  EnergyStatsWidget.swift               — SwiftUI surface: header chrome + all state branches
+  EnergyStatsWidget.Chart.swift         — Swift Charts AreaMark daily-usage chart (web Recharts AreaChart)
+  EnergyStatsWidget.Content.swift       — stat grid + stat tile + compact big-number (reuses TSAnimatedNumber)
+  EnergyStatsWidget.Previews.swift      — 9 previews: content 2×4 / wide 3×4(mi) / compact 1×2 /
+                                          no-chart / loading / empty / error / stale / offline
+  EnergyStatsWidget.strings             — i18n catalog (10 parity keys + registry + native chrome/a11y)
+  EnergyStatsWidget.AdapterTests.swift  — format / converter / projector / layout / a11y parity tests
+  EnergyStatsWidget.Tests.swift         — model phase / telemetry / registry tests
+
+States reproduced (all from the web source): loading (skeleton chrome), empty ("No energy data
+available"), error (retry affordance), stale (chip + 30s auto-refresh + banner), offline (cached +
+banner), content (compact big-number OR daily-usage chart + stat grid). isCompact=cols<=1,
+isWide=cols>=3 (adds Total Cost + Net Energy tiles, 3-up grid). All strings via P1/S10 facade; SI
+read directly (energy Wh, efficiency Wh/m) and converted only at the render boundary (formatEnergy →
+kWh, toEfficiencyDisplay → Wh/km|Wh/mi). Telemetry view.opened slug "EnergyStatsWidget".
+
+----------------------------------------------------------------------
+SURFACE-SCOPED GATES (the 0048 surface only) — ALL GREEN
+----------------------------------------------------------------------
+swiftlint --strict  (9 files):  Found 0 violations, 0 serious in 9 files.   LINT_EXIT=0
+swiftformat --lint  (9 files):  0/9 files require formatting.               FORMAT_EXIT=0
+check-placeholders.ps1 (pwsh):  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+xcodegen generate:              Created project; EnergyStatsWidget enumerated (60 pbxproj refs across
+                                app + test targets).                        XCODEGEN_EXIT=0
+
+Isolated SwiftPM build + tests (Swift 6, strict concurrency = complete; pure Adapter/Models/Model +
+shared DashboardWidgetInfra; NSLocalizedString resolves the English fallbacks):
+    Executed 36 tests, with 0 failures (0 unexpected) in 0.018s            SWIFT_TEST_EXIT=0
+  Covers: fmtNumber/formatEnergy parity (Wh→kWh, half-up, grouping, em-dash/0 guards),
+  efficiency Wh/m→Wh/km(×1000)/Wh/mi(×1609.344), the six stat tiles + order + values,
+  compact total_wh/1000, chartData mirror, ?? 0 coalesce, isCompact/isWide, accessibility
+  summaries (standard/wide/compact/chart/empty), model phase matrix, view.opened-once telemetry,
+  refresh + stale auto-refresh wiring, locale tracking, registry id/size + clamp.
+
+Real-SDK typecheck of the FULL view layer (.swift + .Chart + .Content + .Previews with -D DEBUG)
+against the real shared components (Tokens + Components + Design):
+  arm64-apple-ios18.0-simulator  → 0 errors attributable to EnergyStatsWidget files
+  arm64-apple-macos15.0          → 0 errors attributable to EnergyStatsWidget files
+  (residual diagnostics only ever appear in un-closed shared-component deps — TSChartPalette /
+  tsGlassPanel / TSBadge / UnitPreferences — i.e. the full module closure, never in 0048 files.)
+
+----------------------------------------------------------------------
+KMP Shared.xcframework (the historical long-pole blocker) — BUILT THIS RUN
+----------------------------------------------------------------------
+cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+    > Task :core:assembleSharedReleaseXCFramework
+    xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+    BUILD SUCCESSFUL in 10m 27s                                            GRADLE_EXIT=0
+Staged → apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64).
+So unlike the predecessor 0038/0047/… runs, the framework IS present and the app links it.
+
+----------------------------------------------------------------------
+FULL-APP GATE — xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test
+----------------------------------------------------------------------
+APP BUILD: SUCCEEDED. The whole iOS app compiled and LINKED with EnergyStatsWidget integrated —
+  Build/Products/Debug-iphonesimulator/TeslaSync.app produced; EnergyStatsWidget.{Adapter,Model,
+  Models,Content,Chart,swift}.o all compiled in the real app module. Zero errors in any 0048 file.
+
+TEST ACTION: FAILED to COMPILE the shared TeslaSyncTests bundle, on a PRE-EXISTING, OUT-OF-SCOPE
+  duplicate-test-class collision that has nothing to do with this surface:
+      Invalid redeclaration of 'SafetyModelTests'
+      Invalid redeclaration of 'SafetyRegistryTests'
+      Invalid redeclaration of 'SafetyAccessibilityTests'
+  Source of the collision (both declare the same XCTestCase class names):
+      TeslaSync/dashboard-widgets/SafetyFeaturesWidget.ModelTests.swift
+      TeslaSync/dashboard-widgets/SafetyHistoryWidget.ModelTests.swift
+  These are not EnergyStatsWidget files and are NOT in this prompt's allowed-files set
+  (apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.*), so they cannot be touched here
+  (honesty covenant #2 no scope narrowing / #6 no delegation, and the prompt's Allowed-files list).
+  All 8 EnergyStatsWidget test classes are uniquely named (verified 1 file each) and were proven
+  green by the isolated SwiftPM run above (36/36). The test bundle is a single compilation unit, so
+  the pre-existing Safety* redeclaration aborts it before any test executes.
+                                                                            IOS_EXIT=65
+
+FULL-APP GATE — xcodebuild -scheme TeslaSync-macOS build (CODE_SIGNING_ALLOWED=NO)
+  APP BUILD: ** BUILD SUCCEEDED **. The macOS app target compiled and LINKED with EnergyStatsWidget
+  integrated (all 7 EnergyStatsWidget.{Adapter,Models,Model,swift,Chart,Content,Previews}.o built;
+  TeslaSync.app + TeslaSyncWidgets-macOS.appex produced under ad-hoc codesigning). Zero errors in any
+  0048 file.                                                                MAC_BUILD_EXIT=0
+  (CODE_SIGNING_ALLOWED=NO bypasses the Apple Developer signing identity the gate's signed build
+  would require on a CI host; the macOS `build test` would additionally hit the SAME pre-existing
+  Safety* test-bundle redeclaration as the iOS run. The macOS app target itself is green.)
+
+----------------------------------------------------------------------
+ASSESSMENT
+----------------------------------------------------------------------
+The EnergyStatsWidget surface is production-complete and verified green on every surface-scoped gate
+and on a real iOS-18 + macOS-15 compile: it builds and links inside the real app, its 36 unit tests
+pass under Swift 6 strict concurrency, and lint/format/placeholder are clean with 0 opt-outs. The
+only thing standing between this run and IOS_EXIT=0 is a PRE-EXISTING duplicate-XCTestCase-name
+collision in Safety*Widget test files — outside the allowed-files set for prompt 0048 and identical
+in character to the parallel-merge collisions tracked for every prior P4 dashboard-widget /
+feature-view surface in apps/macos-pending-verifications.md. Per honesty covenant #1 (no
+red-as-green) and #8 (no commit on red for the GATE) this run is reported BLOCKED on that unrelated
+external defect, with the full green evidence above; the composite gate is deferred to
+p4-apple/P99-0001-apple-acceptance-gate (macos-latest) exactly as its predecessors.
+
+EXIT=65
+STATUS=BLOCKED

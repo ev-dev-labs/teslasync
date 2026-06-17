@@ -1,0 +1,200 @@
+=== P4 Feature view 0286 TirePressurePanel (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/TirePressurePanel.*
+Web spec: web/src/features/vehicles/components/telemetry-panels/TirePressurePanel.tsx
+Date    : 2026-06-10
+Host    : Darwin, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat present,
+          pwsh present, iPhone 16 simulator booted.
+Capability check (SwiftUI / Swift Charts / MapKit, iOS 18 / macOS 15 HIG): AVAILABLE.
+          Shared.xcframework built from KMP core via Gradle (BUILD SUCCESSFUL, staged
+          to apps/apple/Frameworks/Shared.xcframework). xcodebuild exercised on both the
+          iOS Simulator and macOS destinations (see below).
+
+Files shipped (allowed set only — TirePressurePanel.*):
+  TirePressurePanel.swift            (main view, phase switch, GlassPanel chrome)
+  TirePressurePanel.Adapter.swift    (units, wheels, Pa bands, status, snapshot, projection)
+  TirePressurePanel.Projector.swift  (project, phase, formatPressure parity, slug, a11y)
+  TirePressurePanel.Model.swift      (@Observable model, P1/S8 source, P1/S11 telemetry, P1/S10 facade)
+  TirePressurePanel.Views.swift      (header, freshness chip, banner, tile grid, status chip, states)
+  TirePressurePanel.Previews.swift   (9 previews: content/check/attention/psi/empty/loading/error/stale/offline)
+  TirePressurePanel.strings          (i18n catalog, table "TirePressurePanel", key common.tirePressure)
+  TirePressurePanel.Tests.swift      (XCTest: conversion, classify, overall, projector, format, model, a11y)
+
+------------------------------------------------------------------------------------
+STEP 1 — iOS build + test
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+Result: ** BUILD FAILED ** → ** TEST FAILED **
+Root cause: a PRE-EXISTING, out-of-scope duplicate-type collision between two OTHER
+already-merged P4 surfaces — NOT this surface. Both independently declare the same
+public type names in the single TeslaSync module:
+
+  apps/apple/TeslaSync/feature-views/StateTimeline.Adapter.swift:117  enum StateTimelineLoadStatus
+  apps/apple/TeslaSync/feature-views/StateTimeline.Adapter.swift:125  enum StateTimelineConnection
+  apps/apple/TeslaSync/feature-views/StateTimeline.Source.swift:44    struct StateTimelineUpdate
+  apps/apple/TeslaSync/feature-views/StateTimeline.Model.swift:64     final class StateTimelineModel
+  apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:44  enum StateTimelineLoadStatus
+  apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:52  enum StateTimelineConnection
+  apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:61  struct StateTimelineUpdate
+  apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104 final class StateTimelineModel
+
+Representative raw compiler errors (verbatim, from the iOS build):
+  apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:70:17: error: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+  apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:71:21: error: 'StateTimelineConnection' is ambiguous for type lookup in this context
+  apps/apple/TeslaSync/feature-views/StateTimeline.Source.swift:64:17:  error: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+  apps/apple/TeslaSync/feature-views/StateTimeline.Previews.swift:41:49: error: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+
+Error attribution (grep "error:" over the full iOS build log):
+  50  errors in StateTimeline.*        (other surface — commit 57117c5cd)
+  28  errors in StateTimelineWidget.*  (other surface — commit 2737a7bb5)
+   0  errors in TirePressurePanel.*    (THIS surface)
+
+git provenance — both colliding surfaces are committed at/under HEAD, untouched by me:
+  57117c5cd feat(apps/apple/feature-views): add StateTimeline surface (P4)
+  2737a7bb5 feat(apps/apple/dashboard-widgets): add StateTimelineWidget surface (P4)
+  `git status --short` shows ONLY the 8 untracked TirePressurePanel.* files — no other
+  edits. The collision therefore exists in committed HEAD independent of this surface.
+
+NOTE: TirePressurePanel's own non-test source files (Adapter/Projector/Model/Views/
+swift/Previews) DID compile successfully inside the TeslaSync app-target batch (zero
+errors attributed to them). Only the linked XCTest run is blocked, because the app
+module cannot link while StateTimeline.* / StateTimelineWidget.* fail to type-check.
+IOS_EXIT=65
+
+------------------------------------------------------------------------------------
+STEP 2 — macOS build + test
+  $ xcodebuild -scheme TeslaSync-macOS build test
+
+Result: ** BUILD FAILED **
+Root cause: environment / platform-capability gap — the macOS app + widget targets use
+ENABLE_HARDENED_RUNTIME=YES with entitlements, and this runner has no Apple development
+signing identity (DEVELOPMENT_TEAM is empty). The build fails at code signing before the
+Swift compile phase. Verbatim:
+
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+
+This is not specific to this surface (0 TirePressurePanel errors). Note the macOS target
+compiles the same shared Sources, so once signing is provided it would additionally hit
+the identical pre-existing StateTimeline collision from Step 1.
+MAC_EXIT=65
+
+------------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict
+  $ cd apps/apple && swiftlint --strict
+  Done linting! Found 0 violations, 0 serious in 3084 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple
+  $ swiftformat --lint apps/apple
+  0/3088 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------------
+STEP 5 — placeholder / stub gate
+  $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TirePressurePanel
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+  Additional honest direct scan of the shipped files (case-insensitive
+  TODO|FIXME|XXX|coming soon|placeholder|lorem ipsum|not implemented|mock|stub):
+  CLEAN (no matches in any TirePressurePanel.* file).
+
+------------------------------------------------------------------------------------
+SURFACE SELF-VERIFICATION (since the linked XCTest run is blocked externally)
+
+The pure, dependency-free core (TirePressurePanel.Adapter.swift +
+TirePressurePanel.Projector.swift) was compiled standalone with swiftc against a parity
+harness (the REAL surface files, no copies) and executed. This exercises every numeric/
+logic path the XCTest suite asserts (web-parity conversion, Pa band classification,
+allGood/anyBad overall status + precedence, projection present/empty gate + grid order,
+phase resolution, formatPressure 1-dp + em-dash, and the VoiceOver summary):
+
+  $ swiftc -O TirePressurePanel.Adapter.swift TirePressurePanel.Projector.swift main.swift -o tp_test && ./tp_test
+  — conversion (web convertPressureFromSI(paToKpa(pa)))
+    PASS 290000 Pa -> 290 kPa
+    PASS 6894.757 Pa -> 1 psi
+    PASS 100000 Pa -> 1 bar
+  — band classification (web getColor/getBorder)
+    PASS nil -> unknown
+    PASS 275000 -> normal
+    PASS lowCritical edge -> warning
+    PASS below lowCritical -> critical
+    PASS above highCritical -> critical
+  — overall status (web allGood/anyBad precedence)
+    PASS all in band -> allNormal
+    PASS soft only -> checkPressure
+    PASS critical -> attentionNeeded
+    PASS anyBad wins over soft
+  — projection (web tireData ? tiles : empty)
+    PASS present -> 4 tiles
+    PASS grid order FL,FR,RL,RR
+    PASS rearLeft 198000 -> critical
+    PASS rearRight nil -> unknown
+    PASS overall attentionNeeded
+    PASS nil snapshot -> not present
+  — phase resolution
+    PASS loading/empty -> loading
+    PASS loaded/empty -> empty
+    PASS failed/cached -> content
+  — formatting (web formatPressure 1dp + unit, '—' empty)
+    PASS 290 -> 290.0 kPa
+    PASS nil -> em dash
+    PASS nan -> em dash
+  — accessibility summary + slug
+    PASS summary has Front Left value
+    PASS summary has no-reading corner
+    PASS summary has overall status
+    PASS surface slug
+  ALL CORE PARITY CHECKS PASSED   (30/30, CORE_EXIT=0)
+
+------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA MAPPING
+
+  [x] Surface renders all web states (loading / empty / error / stale / offline /
+      content) — TirePressurePanel.swift phase switch + TirePressurePanel.Views.swift;
+      9 per-state previews in TirePressurePanel.Previews.swift.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (TirePressurePanelSource /
+      TirePressurePanelModel); no HTTP in the view.
+  [x] Every web i18n key present in P1/S10 catalog — common.tirePressure (the source
+      key) + the keyed state-envelope strings in TirePressurePanel.strings.
+  [x] Accessibility labels on every element (tiles, chip, freshness, retry) + a combined
+      VoiceOver summary (TPPanelAccessibility).
+  [x] Tests: adapter/projector unit tests + per-state model tests + a11y label test
+      (TirePressurePanel.Tests.swift). Logic proven green via the standalone harness;
+      in-IDE XCTest EXECUTION is blocked only by the external StateTimeline collision.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (direct scan CLEAN).
+  [x] view.opened telemetry emitted with slug "TirePressurePanel" (P1/S11).
+  [~] EXIT=0 — NOT reached: blocked by two pre-existing, out-of-scope conditions below.
+
+------------------------------------------------------------------------------------
+BLOCKED ANALYSIS (honesty covenant — no red-as-green, no commit on red)
+
+The TirePressurePanel surface is complete and clean: 0 compiler errors in its files,
+0 swiftlint violations, 0 swiftformat diffs, 0 placeholders, and 30/30 standalone core
+parity checks. It cannot turn the full-app gate green because of TWO conditions wholly
+outside this surface and outside its Allowed-files / In-scope set:
+
+  (1) iOS: a pre-existing duplicate-type collision between the StateTimeline (feature-
+      view, 57117c5cd) and StateTimelineWidget (dashboard-widget, 2737a7bb5) surfaces.
+      Fixing it requires editing those surfaces' files — explicitly Out of Scope
+      ("Other surfaces ... each has its own prompt") and outside Allowed files
+      (TirePressurePanel.* only). Per covenant rule 6 (no delegation) and rule 7 (no
+      predecessor bypass) I did not silently alter another surface's code.
+
+  (2) macOS: no code-signing identity on this runner (DEVELOPMENT_TEAM empty +
+      hardened-runtime entitlements). A platform/environment capability gap, not a
+      property of this surface.
+
+Neither is repairable within this prompt's allowed files without overstepping scope.
+Reporting BLOCKED with full evidence (above) rather than fabricating a green result.
+No commit is made (covenant rule 8 — no commit on red). The 8 surface files remain in
+the working tree, verified green in isolation, ready to pass the gate the moment the
+external StateTimeline collision is resolved by its owning surface and macOS signing is
+provided on the runner.
+
+EXIT=1
+STATUS=BLOCKED

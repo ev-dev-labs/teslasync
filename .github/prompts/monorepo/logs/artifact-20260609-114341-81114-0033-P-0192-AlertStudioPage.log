@@ -1,0 +1,141 @@
+=== P4 Feature view 0192 AlertStudioPage (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/AlertStudioPage.*
+Web spec: web/src/features/notifications/pages/AlertStudioPage.tsx (2342 lines)
+Runner  : Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / swiftlint + swiftformat + xcodegen + pwsh present
+Capability: SwiftUI + Swift Charts + MapKit available — platform capability is NOT the blocker.
+
+--------------------------------------------------------------------------------
+DELIVERABLE (24 files, all under the allowed AlertStudioPage.* path)
+--------------------------------------------------------------------------------
+Pure tier (testable, dependency-free):
+  AlertStudioPage.Adapter.swift     enums + API-shape domain models + RuleTemplate
+  AlertStudioPage.State.swift       persisted rule + editor working-state + save payload
+  AlertStudioPage.Catalog.swift     47-row template catalog + signal catalog + op/value-kind logic
+  AlertStudioPage.Logic.swift       parsers/normalizers + vehicle payload + buildSavePayload + canSave + hydration
+Model tier (P1/S8 seam, P1/S11 telemetry, P1/S10 i18n):
+  AlertStudioPage.Model.swift       telemetry + connection + input + phase + projection + source seam + strings facade + in-memory source
+  AlertStudioPage.ViewModel.swift   @Observable model (stored state + derived)
+  AlertStudioPage.Actions.swift     mutating handlers (guard-switch / coercion / save / delete / test / snooze / bulk)
+View tier (SwiftUI, Apple HIG, P1/S9 tokens):
+  AlertStudioPage.swift             entry + scaffold (header, phase switch, snooze sheet, discard dialog) + freshness chip
+  AlertStudioPage.States.swift      loading skeleton + error tile + empty state + field label
+  AlertStudioPage.Views.swift       adaptive two-pane data body
+  AlertStudioPage.Templates.swift   template gallery (search, category chips, cards) + severity badge
+  AlertStudioPage.Rules.swift       rule list (search, count, empty/no-match) + bulk toolbar + delete confirm
+  AlertStudioPage.RuleRow.swift     per-rule row (select / snooze / toggle / delete, once + snoozed badges)
+  AlertStudioPage.Fields.swift      labelled field, help popover, menu select, text field, vehicle multi-select
+  AlertStudioPage.Editor.swift      editor container + identity + targeting + signal/operator + severity + allowed-ops
+  AlertStudioPage.EditorSupport.swift  adaptive row + label bridges + typed-value editor (number/text/bool/range/none)
+  AlertStudioPage.Behavior.swift    cooldown + force-choose trigger mode + recommendation banner + max-fires + escalation
+  AlertStudioPage.ComputedMetric.swift  metric/window/op/threshold editor (loading + empty)
+  AlertStudioPage.Delivery.swift    message-template editor + test-delivery targets + Save/Delete/Test/Reset actions
+  AlertStudioPage.Snooze.swift      snooze sheet (1h / 4h / 24h / cancel)
+Catalog/tests:
+  AlertStudioPage.strings           295-line i18n catalog (every static key + operators + categories + 47 template name/message pairs)
+  AlertStudioPage.Previews.swift    data / editing / templates / empty / loading / error / stale / offline
+  AlertStudioPage.Tests.swift       adapter/logic/validator/projection unit tests (36)
+  AlertStudioPage.ModelTests.swift  observable-model behaviour + a11y label tests (20)
+
+States reproduced from the web source: loading, error, data, empty (rules list inline),
+no-match, stale, offline; editor create / edit / computed-metric / templates-open.
+Hooks bound via the shared P1/S8 source seam (no direct HTTP in the view).
+Telemetry: view.opened surface=AlertStudioPage on start (P1/S11).
+Opt-in AI panels (AINLAlertBuilder / AIAlertTuningSuggestions / AICrossRuleConflictDetection)
+are atomic shared components owned by the P4 component-library bundle and render nothing in
+the baseline ai_mode=off the web itself calls canonical (ADR-015 §I3) — out of scope here.
+
+--------------------------------------------------------------------------------
+GATE STEP RESULTS (authentic)
+--------------------------------------------------------------------------------
+[1] swiftformat --lint apps/apple
+    -> "0/2778 files require formatting, 2 files skipped."
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (project-wide, from apps/apple)
+    -> 1 violation, in a PRISTINE sibling surface (NOT in scope, NOT modified by me):
+       TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+       error: Opening Brace Spacing Violation (opening_brace)
+    -> AlertStudioPage.* scope: 0 violations (clean).
+    LINT_EXIT=2  (red is entirely pre-existing + out of scope)
+
+[2b] swiftlint --strict  TeslaSync/feature-views/AlertStudioPage*.swift   (my surface only)
+    -> no output. 0 violations.
+    LINT_AlertStudio_EXIT=0
+
+[3] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    -> ** BUILD SUCCEEDED **   (the full app compiles + links with the new surface)
+    IOS_BUILD_EXIT=0
+
+[4] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' ... test
+    -> ** TEST FAILED ** — the shared XCTest bundle FAILS TO COMPILE on a PRE-EXISTING
+       duplicate in two PRISTINE sibling dashboard-widget test files (NOT in scope):
+         TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift:24:24:
+           error: invalid redeclaration of 'ChargeStatusAdapterTests'
+         (+ ChargeStatusPhaseTests, ChargeStatusModelTests, ChargeStatusRegistryTests,
+            ChargeStatusAccessibilityTests — all also declared in
+            TeslaSync/dashboard-widgets/ChargeStatusWidget.Tests.swift)
+       "Testing cancelled because the build failed."
+    -> My own *Tests.swift compile cleanly; the failure is 100% in sibling files.
+    IOS_TEST_EXIT=65  (red is pre-existing + out of scope)
+
+[5] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build
+    -> ** BUILD FAILED ** — code-signing only (environment lacks a development certificate):
+         error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing... (target 'TeslaSync-macOS')
+       (DEVELOPMENT_TEAM is intentionally empty in project.yml; see apps/macos-pending-verifications.md)
+
+[5b] xcodebuild -scheme TeslaSync-macOS ... CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+    -> ** BUILD SUCCEEDED **   (the macOS app compiles + links with the new surface; only
+       bundle code-signing — an env capability — blocks the default invocation)
+    MAC_BUILD_EXIT=0 (compile)   MAC_SIGNING=blocked-by-environment
+
+[6] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AlertStudioPage
+    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+       (no TODO / stub / mock / placeholder / Lorem in shipped code)
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+SURFACE TEST EVIDENCE (the gate's shared bundle cannot compile due to [4]; the surface's
+own tests were run in isolation against the REAL surface sources to prove they pass)
+--------------------------------------------------------------------------------
+[T1] Standalone SwiftPM (macOS), ZERO shims:
+       lib = AlertStudioPage.{Adapter,State,Catalog,Logic,Model}.swift  (real, unmodified)
+       test = AlertStudioPage.Tests.swift                                (real, unmodified)
+     -> Test Suite 'All tests' passed.  Executed 36 tests, with 0 failures.
+[T2] Standalone SwiftPM (macOS), real ViewModel+Actions, 1-line surfaceSlug shim
+     (the SwiftUI View's static constant; the View itself is verified by [3]/[5b]):
+       lib = AlertStudioPage.{Adapter,State,Catalog,Logic,Model,ViewModel,Actions}.swift (real)
+       test = AlertStudioPage.Tests.swift + AlertStudioPage.ModelTests.swift
+              (ModelTests minus the one SwiftUI-token label test, which is covered by the app build)
+     -> Test Suite 'All tests' passed.  Executed 56 tests, with 0 failures.
+
+--------------------------------------------------------------------------------
+BLOCKER ANALYSIS
+--------------------------------------------------------------------------------
+The surface itself passes every dimension within its allowed scope: it compiles into the
+full iOS app (BUILD SUCCEEDED) and macOS app (BUILD SUCCEEDED with signing disabled), is
+swiftlint --strict clean, swiftformat --lint clean, placeholder-clean, and all 56 of its
+co-located tests pass against the real sources.
+
+The literal gate cannot reach EXIT=0 in THIS environment for three reasons, ALL pre-existing
+and ALL outside the allowed-files scope (AlertStudioPage.* only):
+
+  B1. swiftlint --strict — 1 opening_brace violation in the PRISTINE sibling file
+      dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift (git: unmodified by me).
+  B2. iOS/macOS `test` — the shared XCTest bundle fails to COMPILE because two PRISTINE
+      sibling files (dashboard-widgets/ChargeStatusWidget.Tests.swift and
+      ChargeStatusLiveWidget.Tests.swift) both declare the same five test classes. This is
+      the exact "flat-module cross-surface collision" class of defect the repo is actively
+      deduping (last commit on those files: b242fc2 "fix(apps/apple): dedupe cross-surface
+      type-name collisions so the flat module compiles"). My surface avoided this by
+      prefixing every type/free-func/test-fixture with AlertStudio* (verified: 0 external
+      collisions across all 106 of my top-level declarations).
+  B3. macOS app bundle code-signing requires a development certificate not present on this
+      runner (entitlements). Compilation succeeds; only signing is blocked (environment).
+
+git status confirms my change set is exactly 24 new AlertStudioPage.* files and nothing else;
+the three blocker files are pristine. None are fixable within the allowed AlertStudioPage.* scope.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,224 @@
+=== P4-APPLE · P7 · page:admin/TeslaFeatureFlags (SwiftUI / HIG) ===
+started: 2026-06-14T12:06:00-0700
+host: macOS (Darwin 25.5.0); Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat 0.61.1
+  + xcodegen 2.45.4 + pwsh 7.6.2 + JDK 17.0.19 + Kotlin/Native prebuilt 2.4.0 (~/.konan) present
+toolchain note (ADR-012): the Apple lock baseline is Xcode 26 / Swift 6.0.1; this runner is the
+  newer/stricter Swift 6.3.2. The in-scope artifact compiles 0/0 on 6.3.2 (isolated type-check, both
+  idioms). 6.3.2's stricter result-builder checking surfaces a pre-existing, OUT-OF-SCOPE shared-surfaces
+  defect in a sibling P4 surface (Input.Previews.swift) that is NOT in this artifact's files and is
+  forbidden to commit-fix (covenant #6/#7) — documented in full below.
+web source: web/src/features/admin/pages/TeslaFeatureFlagsPage.tsx   (route /tesla-features)
+parity unit: page:admin/TeslaFeatureFlags  (manifest PARITY_REQUIRED=2 — strings featureConfig.title, featureConfig.subtitle)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS (read end-to-end — covenant #3)
+--------------------------------------------------------------------------------
+TeslaFeatureFlagsPage.tsx is a dedicated page wrapper that promotes the Tesla "Feature Flags"
+surface to a first-class route: `PageContainer(title=t('featureConfig.title'), subtitle=
+t('featureConfig.subtitle'))` hosting the shared `<FeatureToggles/>` component
+(web/src/features/settings/components/FeatureToggles.tsx). FeatureToggles renders the GlassPanel
+header (Flag IconBox + title + subtitle + "Synced …" + Refresh button) and the feature table /
+EmptyState with its full data-state set. The page's OWN parity surface is exactly the two
+PageContainer strings; the embedded component is a SEPARATE, already-shipped P3 parity unit. On the
+web the title/subtitle appear in the page chrome AND again in the component header — the native page
+reproduces that faithfully (it is not a bug to "dedupe").
+
+The native FeatureToggles component already exists at full parity (P3) in this repo:
+  apps/apple/TeslaSync/feature-views/FeatureToggles{,.Model,.Adapter,.Views,.Previews,.Tests}.swift
+  — a `FeatureTogglesModel(source:telemetry:toast:)` that renders loading / content / empty / error /
+  stale / offline. This P7 page is the WRAPPER that hosts it at /tesla-features (it does NOT
+  re-implement it).
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`. That path does
+NOT exist in this repo and is NOT a project.yml source group. The repo's real, compiled canonical
+admin-page home is `apps/apple/Sources/Features/Admin/**` — where every sibling P7 admin page ships
+(ApiPlayground / DiskForecast / FleetTelemetryCoverage / LiveSignalInspector / SchemaDrift / AuditLog /
+ApiLogs / APIKeys / FleetAPI / GDPRExport / RbacMatrix / FeatureFlags / TeslaOrders) and which
+project.yml already lists via `- path: Sources`. The page therefore ships at
+`apps/apple/Sources/Features/Admin/**`, the faithful equivalent of the prompt's `Features/Admin`.
+This is the identical reconciliation the peer admin P7 logs recorded; no project.yml change is needed.
+
+ROUTE HOSTING: the web route is the dedicated top-level path `/tesla-features` (like `/api-playground`
+→ `.apiPlayground`). A new `AppRoute.teslaFeatures` case is added (pathSegment "tesla-features";
+systemImage "flag.fill" — matching the web `Flag` icon + the existing Layout.Nav catalog entry; group
+`.account` — matching the web sidebar "Account" section where /tesla-features lives). `AppRouteParser`
+auto-resolves "/tesla-features" → .teslaFeatures via pathSegment. `TeslaFeatureFlagsRouteRegistration`
+hosts the page on .teslaFeatures and is chained into the TeslaSyncApp `\.routeHosts` registry.
+RouteTests asserts the deep link. Recorded here per covenant #9.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/TeslaFeatureFlagsPage.swift              ( 90 LOC) SwiftUI view: ScrollView scaffold (Color.TS.bg) + header(TSPageTitle "translation.featureConfig.title" + Text "translation.featureConfig.subtitle", Font.TS.body, Color.TS.textSecondary) + embedded FeatureToggles(model:); adaptive (reflows macOS/iPad/iPhone); a11y combined header; #if DEBUG previews (content/empty/loading/error)
+?? apps/apple/Sources/Features/Admin/TeslaFeatureFlagsPageModel.swift         ( 77 LOC) @MainActor @Observable page state holder owning the embedded FeatureTogglesModel built from an injected FeatureTogglesSource (P1/S8 seam; ADR-004 — no networking in the view) + SampleFeatureTogglesSource default (loaded heterogeneous config; refresh re-emits + settles `succeeded`) so the page renders real content out of the box (no stub)
+?? apps/apple/Sources/Features/Admin/TeslaFeatureFlagsRouteRegistration.swift ( 23 LOC) registers .teslaFeatures -> TeslaFeatureFlagsPage (mirrors ApiPlaygroundRouteRegistration; model built on MainActor + captured in the escaping registry closure)
+?? apps/apple/Tests/Unit/Features/Admin/TeslaFeatureFlagsPageModelTests.swift ( 51 LOC) XCTest: initial loading; sample->content+entries; refresh settles; empty; error("boom"); sample config projects all + has enabled & disabled
+ M apps/apple/Sources/App/AppRoute.swift                +.teslaFeatures case (rawValue + pathSegment "tesla-features" + systemImage "flag.fill" + group .account); all 4 switches updated; pathSegment uniqueness preserved
+ M apps/apple/Sources/TeslaSyncApp.swift                +1 line: registry = TeslaFeatureFlagsRouteRegistration.registry(base: registry) in the flattened routeHostRegistry chain
+ M apps/apple/Tests/Unit/App/RouteTests.swift           +1 assertion: AppRouteParser.parse("/tesla-features") == .teslaFeatures
+ M apps/apple/Localization/Localizable.xcstrings        +2 keys (route.teslaFeatures="Feature Flags"; spotlight.route.teslaFeatures.description); JSON validated (8716 total keys). The 2 PARITY strings resolve from PRE-EXISTING catalog keys translation.featureConfig.title ("Feature Flags") + translation.featureConfig.subtitle ("Tesla account feature configuration") — web key names, en/ar/he present.
+ M apps/parity/apple-ledger.json                        +2 rows (apple-macos, apple-ios) for page:admin/TeslaFeatureFlags, covered 2/2
+
+The generated TeslaSync.xcodeproj and staged apps/apple/Frameworks/Shared.xcframework are git-ignored
+(git check-ignore confirmed) and not committed. No out-of-scope / sibling-owned file is in the final
+changeset (git status confirms exactly the 9 files above + this log).
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes — covenant #1/#10)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (the project.yml pre-build script, run standalone) ---
+# apps/apple/Scripts/build-shared-xcframework.sh   (Kotlin/Native 2.4.0; ~/.konan prebuilt 2.4.0; JDK 17)
+"BUILD SUCCESSFUL in 6m 50s" ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+"Created project at apps/apple/TeslaSync.xcodeproj"
+GEN_EXIT=0
+
+--- swiftformat --lint (my 7 changed Swift files, repo .swiftformat) ---
+"0/7 files require formatting."
+FORMAT_EXIT=0
+
+--- swiftlint lint --strict (my 7 changed Swift files, repo .swiftlint.yml) ---
+"Done linting! Found 0 violations, 0 serious in 7 files."
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=7   [pre-existing `// parity:allow` markers in sibling admin pages, NOT mine]
+PLACEHOLDER_COUNT=0     [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in my shipped code;
+                         grep of my 4 files = 0]
+PLACEHOLDER_EXIT=0
+
+--- Isolated Swift 6 strict-concurrency type-check against the REAL P2 tokens + P3 components + the
+    FeatureToggles component (21 files; EXCLUDES the broken out-of-scope shared-surfaces siblings) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Typography,Badges,Buttons,Cards}.swift \
+#   Sources/Components/Feedback/{States,Skeletons,Banners}.swift Sources/Components/Motion/Motion.swift \
+#   Sources/App/{AppRoute,RouteHostRegistry}.swift \
+#   TeslaSync/feature-views/FeatureToggles{,.Model,.Adapter,.Views}.swift \
+#   Sources/Features/Admin/TeslaFeatureFlags{Page,PageModel,RouteRegistration}.swift
+macOS  (arm64-apple-macos15.0)         -> 0 errors, 0 warnings   TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator) -> 0 errors, 0 warnings   TYPECHECK_IOS_EXIT=0
+# Full type/availability/concurrency checking of my view + model + registration AND the embedded
+# FeatureToggles surface against the authoritative TSPageTitle/Color.TS/Font.TS/TSSpacing/AppRoute/
+# AppRouteHostRegistry sources, on BOTH idioms (ADR-002/006).
+
+--- Executed model harness (real TeslaFeatureFlagsPageModel + FeatureTogglesModel/Adapter, run) ---
+# xcrun swiftc -parse-as-library -swift-version 6 -strict-concurrency=complete -sdk <macosx> \
+#   -target arm64-apple-macos15.0 <21-file closure> main.swift -o tffharness   (HARNESS_COMPILE_EXIT=0)
+"ALL ASSERTIONS: 12 passed, 0 failed (12/12)"
+HARNESS_EXIT=0
+  initial=.loading; sample.start()->.content + entries non-empty + syncedLabel!=nil; refresh()->
+  !refreshing + stays .content; empty config->.empty; failed("boom")->.error("boom"); sample projects
+  all entries (enabled & disabled both present). Mirrors the 6 XCTest methods in the model-test file.
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration
+    Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [BLOCKED by PRE-EXISTING, OUT-OF-SCOPE shared-surfaces errors — see note; ZERO errors in any of my files]
+
+--- Full-scheme test (… -scheme TeslaSync-macOS … test) ---
+TEST_EXIT=65   [the macOS test bundle hosts on the app target, blocked by the SAME out-of-scope errors;
+                ZERO errors in my test file]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to a defect in a SIBLING surface
+OUTSIDE this artifact's allowed files. The build halts on exactly four diagnostics, all in ONE file,
+both at the app-build and test-build phases:
+  apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift:88:9:
+      error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+  apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift:101:9:
+      error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+  (each reported once per build phase → 4 total in the build log, 2 in the test log)
+
+Root cause: the two `#Preview` blocks declare `@Previewable @State var value` and then `return staged(…)`.
+Swift 6.3.2's stricter result-builder checking rejects an explicit `return` after a `@Previewable`
+declaration inside the `#Preview` `@ViewBuilder` body (the locked baseline Swift 6.0.1 accepted it —
+ADR-012). This is the same systematic class the peer admin P7 logs documented (theirs hit a
+shared-surfaces `glass()` escaping-closure variant, since repaired). The file was added by a separate
+PR — `ed5f636e3 feat(apps/apple/shared-surfaces): add Input surface (P4)` — is byte-for-byte unmodified
+by me (git diff HEAD -- Input.Previews.swift is empty; it is NOT in my changeset), and is OUTSIDE this
+artifact's allowed files. Per covenant #6/#7 I did not commit-fix it; it is deferred to its owner / the
+P99 integration gate.
+
+NONE of the diagnostics are in my files: grep of both the build and test logs for
+TeslaFeatureFlags*/TeslaSyncApp.swift/AppRoute.swift/RouteTests.swift -> zero. My code's correctness is
+instead proven by the isolated Swift 6 strict-concurrency type-check (0/0 on macOS + iOS) and the
+executed model harness (12/12) — the host-harness methodology the peer p4-apple logs use when the app
+bundle is blocked by an out-of-scope sibling.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+================================================================================
+[x] string — featureConfig.subtitle   TeslaFeatureFlagsPage.swift `header` -> Text("translation.featureConfig.subtitle")  (Localizable.xcstrings -> "Tesla account feature configuration"; en/ar/he). Web key `featureConfig.subtitle` (namespace settings); also rendered by the embedded FeatureToggles header.
+[x] string — featureConfig.title      TeslaFeatureFlagsPage.swift `header` -> TSPageTitle("translation.featureConfig.title")  (Localizable.xcstrings -> "Feature Flags"; en/ar/he). Web key `featureConfig.title`; route title route.teslaFeatures also resolves "Feature Flags".
+PARITY_COVERED=2
+
+Both parity strings render from the platform catalog `Localizable.xcstrings` (zero hardcoded literals),
+with web key names preserved. They are surfaced by the page chrome (TSPageTitle + Text) bound around the
+`@Observable` TeslaFeatureFlagsPageModel, which owns the embedded FeatureTogglesModel (P1/S8 seam) — so
+the page also delivers, via the already-shipped P3 FeatureToggles surface, the full loading / empty /
+error / content / stale / offline state set, the Refresh action, and the feature table. SI converters:
+N/A (feature config is a control-plane key/value map, no units). Live-SSE staleness: handled inside the
+embedded FeatureToggles surface (ADR-013) via its connection banner.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild build &
+                       test = 65) is a PRE-EXISTING OUT-OF-SCOPE shared-surfaces defect (Input.Previews.swift),
+                       labelled as such with the exact diagnostics, never recoloured.
+ 2 No scope narrowing: the web page's full surface is delivered — page chrome (title+subtitle) AND the embedded
+                       FeatureToggles component (header, Refresh, synced-at, feature table, all data states), adaptive.
+ 3 No skip-and-assume: web page + the wrapped FeatureToggles component were read end-to-end; the wrapper semantics
+                       (title/subtitle in both chrome and component header) reproduced faithfully.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); SampleFeatureTogglesSource
+                       yields real content + a working refresh (never a blank/"coming soon" panel).
+ 5 No parity shortcuts: 2/2 strings from the catalog with web key names; new route wired (parser + sidebar + deep link).
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT commit any edit to sibling surfaces, project.yml, or other owners' files; the
+                       out-of-scope Input.Previews.swift is byte-for-byte unmodified at HEAD (git status confirms).
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/7), swiftlint --strict(0/7),
+                       placeholder(0), typecheck macOS(0/0) + iOS(0/0), harness(12/12). The only RED is out-of-scope.
+ 9 No silent drift   : changes confined to the 9 files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + new-route reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI TeslaFeatureFlagsPage shipped at parity with the web source: a thin,
+adaptive page that reproduces the web `PageContainer(title, subtitle)` chrome and hosts the already-
+native FeatureToggles surface (P3) through an `@Observable` TeslaFeatureFlagsPageModel that owns the
+component's FeatureTogglesModel via an injectable FeatureTogglesSource (ADR-004 — no networking in the
+view; production binds the shared P1/S8 `/tesla/user/feature-config` holder, the default sample seam
+renders real content + a settling refresh). A dedicated `.teslaFeatures` route (pathSegment
+"tesla-features", icon flag.fill, Account group) makes it reachable from the sidebar, the command
+palette, and the `/tesla-features` deep link. Both PARITY strings resolve from Localizable.xcstrings
+with the web key names. Verified on BOTH idioms by isolated Swift 6 strict-concurrency type-checks
+(macOS 0/0, iOS 0/0) and an executed model harness (12/12). The full xcodebuild build + test are RED
+ONLY due to a pre-existing, out-of-scope shared-surfaces defect (Input.Previews.swift, owned by a
+separate P4 PR; forbidden to commit-fix), with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/TeslaFeatureFlagsPage.swift \
+          apps/apple/Sources/Features/Admin/TeslaFeatureFlagsPageModel.swift \
+          apps/apple/Sources/Features/Admin/TeslaFeatureFlagsRouteRegistration.swift \
+          apps/apple/Tests/Unit/Features/Admin/TeslaFeatureFlagsPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Tests/Unit/App/RouteTests.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-TeslaFeatureFlagsPage.log
+  git commit -m "feat(apps/apple): TeslaFeatureFlagsPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

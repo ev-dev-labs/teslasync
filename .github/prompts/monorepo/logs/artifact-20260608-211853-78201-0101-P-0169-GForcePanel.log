@@ -1,0 +1,65 @@
+=== P4 Feature view 0169 GForcePanel (Apple) ===
+run-started-utc=2026-06-09T09:24:07Z
+host=macOS 26.5.1; Xcode 26.5 Build version 17F42 
+swiftlint=0.63.3; swiftformat=0.61.1
+shared-xcframework: staged (present)
+--- pre-build static checks (scoped to surface) ---
+SWIFTFORMAT_LINT_EXIT=0 (0/6 require formatting)
+SWIFTLINT_STRICT: 0 violations, 0 serious in 6 files
+PLACEHOLDER_COUNT=0
+
+--- isolated SwiftUI-free core typecheck (Swift 6, strict concurrency) ---
+CORE_TYPECHECK_EXIT=0  (GForcePanel.Model.swift + GForcePanel.Adapter.swift)
+
+--- integration typecheck vs real shared P4 core (macOS target) ---
+Surface view files compile against Sources/Components + Sources/Design + design tokens.
+(only unrelated failure was Sources/Components/DataDisplay/UnitFormatters.swift needing
+ Sources/SharedFacade 'Units' — a KMP-Shared-backed helper outside the subset; not a GForce error)
+
+--- isolated logic test run (swift test, strict concurrency, arm64-apple-macos) ---
+GForceFormatTests / GForceProjectorTests / GForcePanelModelTests / GForceAccessibilityTests
+HARNESS: Executed 23 tests, with 0 failures (0 unexpected)
+HARNESS_TEST_EXIT=0
+
+=== gate steps ===
+FORMAT_EXIT=0      (swiftformat --lint: 0/6 require formatting)
+LINT_EXIT=0        (swiftlint --strict: 0 violations, 0 serious in 6 files)
+PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+
+--- IOS full-app build (xcodebuild -scheme TeslaSync ... build) ---
+IOS_EXIT=65  (** BUILD FAILED **)
+GForce-attributed errors: 0   (grep -i gforce over all 339 compiler errors => none)
+Root cause: pre-existing compile breakage in OUT-OF-SCOPE sibling surfaces that share the
+TeslaSync module. These exist independently of this purely-additive surface and cannot be
+fixed within the allowed file set (apps/apple/TeslaSync/feature-views/GForcePanel.* + log).
+
+Enumerated pre-existing broken sibling surfaces (sample, non-exhaustive — revealed in waves):
+  dashboard-widgets/ChargeSessionChartWidget   ('ChargeSessionDTO' ambiguous; duplicate defs)
+  dashboard-widgets/ChargeStatusLiveWidget     ('ChargeConnection' ambiguous: defined in 2 widgets)
+  dashboard-widgets/ChargeStatusWidget         ('ChargeConnection' duplicate definition)
+  dashboard-widgets/FleetStatsBarWidget        (type-lookup ambiguity)
+  dashboard-widgets/SafetyFeaturesWidget       ('SafetyConnection'/'SafetyLoadStatus' ambiguous)
+  dashboard-widgets/SafetyHistoryWidget        ('SafetyConnection'/'SafetyLoadStatus' duplicate)
+  feature-views/TimestampTool                  (Previews: main-actor-isolated init in nonisolated ctx)
+  dashboard-widgets/DriveScoreGaugeWidget      ('DriveScoreBand' invalid redeclaration/ambiguous)
+  dashboard-widgets/DriveScoreWidget           ('DriveScoreBand' ambiguous; Equatable conformance)
+
+Control proof that GForcePanel itself is sound: with the broken siblings temporarily moved
+aside (no GForcePanel edits), the TeslaSync app target compiled => '** BUILD SUCCESSFUL **',
+i.e. GForcePanel.{swift,Model,Adapter,Views,Previews}.swift build inside the real app module
+with zero diagnostics. Files were restored; git tree shows ONLY the 7 new GForcePanel.* files.
+
+--- MAC build (xcodebuild -scheme TeslaSync-macOS ... build) ---
+MAC_EXIT=65  (blocked by the SAME shared-module pre-existing sibling breakage above)
+macOS coverage for THIS surface: logic suite executed green on arm64-apple-macos (harness),
+and the SwiftUI-free core typechecks for macOS 15 under Swift 6 strict concurrency.
+
+=== verdict ===
+GForcePanel surface: COMPLETE & GREEN on every in-scope, runnable check
+  (parity, i18n, all states, a11y, format, lint, placeholder, typecheck, 23/23 logic tests,
+   app-target compile).
+Whole-app gate: RED solely from pre-existing OUT-OF-SCOPE sibling surfaces (not GForcePanel).
+Honesty covenant: not reporting red-as-green; not committing on red.
+
+EXIT=65
+STATUS=BLOCKED

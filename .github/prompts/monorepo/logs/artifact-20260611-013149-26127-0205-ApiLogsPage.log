@@ -1,0 +1,163 @@
+================================================================================
+ p4-apple · P7 · page:admin/ApiLogs — SwiftUI / HIG parity
+ Log: .github/prompts/monorepo/logs/apple-page-admin-ApiLogsPage.log
+ Generated: 2026-06-12T10:13:36-07:00
+================================================================================
+
+TARGET(S)     : apple (apple-macos + apple-ios, adaptive single SwiftUI layer)
+WEB SOURCE    : web/src/features/admin/pages/ApiLogsPage.tsx  (route /api-logs)
+OUTPUT        : apps/apple/TeslaSync/Features/Admin/
+DELEGATION    : none (FORBIDDEN per prompt) — implemented directly
+
+ENVIRONMENT
+  macOS host (Darwin), Xcode 26.5 (17F42)
+  swiftlint 0.63.3
+  xcodegen, pwsh 7 available
+  Shared.xcframework: built + staged via apps/apple/Scripts/build-shared-xcframework.sh
+    (Gradle :core:assembleSharedXCFramework — iosArm64 + iosSimulatorArm64 + macosArm64)
+
+FILES ADDED (apps/apple/TeslaSync/Features/Admin/)
+  ApiLogsPage.Model.swift        — typed wire models, service catalog, deriveServiceOptions
+  ApiLogsPage.DataSource.swift   — ApiLogsDataSource port + Unavailable/JSON/Preview impls
+  ApiLogsPageModel.swift         — @Observable @MainActor page model (state/filters/format)
+  ApiLogsPage.swift              — top-level SwiftUI View (chrome + state orchestration)
+  ApiLogsPage.Views.swift        — stats grid, by-service chips, filters, table, pagination
+  ApiLogsPage.Rows.swift         — log row + expanded detail + JSON viewer
+  ApiLogsPage.Registration.swift — hosts ApiLogsPage at the .admin route
+  ApiLogsPage.Previews.swift     — previews for success/empty/error/loading (DEBUG)
+  ApiLogsPage.Tests.swift        — co-located unit tests (model + pure logic)
+FILES EDITED (navigation registration + strings + build wiring)
+  apps/apple/Sources/TeslaSyncApp.swift     — compose AdminApiLogsRouteRegistration
+  apps/apple/Sources/App/AppRouteParser.swift — deep link "/api-logs" -> .admin
+  apps/apple/Localization/Localizable.xcstrings — +30 i18n keys (apiLogs.* + error.loadFailed)
+  apps/apple/project.yml          — register TeslaSync/Features in app + test targets
+  apps/apple/.swiftlint.yml       — include TeslaSync/Features
+
+================================================================================
+ GATE
+================================================================================
+
+[1] PLACEHOLDER SCAN (ADR-011)
+    & ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0                                            -> PASS
+
+[2] SWIFTLINT (strict)
+    swiftlint --strict apps/apple/TeslaSync/Features/Admin
+    Done linting! Found 0 violations, 0 serious in 9 files.
+    LINT_EXIT=0                                                   -> PASS
+
+[3] TYPECHECK (pure-logic layer, standalone evidence)
+    swiftc -typecheck -sdk <macosx> TeslaSync/Features/Admin/ApiLogsPage.Model.swift
+    TYPECHECK_EXIT=0                                              -> PASS
+
+[4] XCODEBUILD BUILD (whole app target)  — macOS + iOS
+    xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build
+      ** BUILD FAILED ** — 1 error, NOT in this page:
+      shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+        error: escaping closure captures non-escaping parameter 'content'
+    xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS Simulator' build
+      ** BUILD FAILED ** — 1 error, NOT in this page:
+      feature-views/RecentDrivesSection.Previews.swift:24:20:
+        error: the compiler is unable to type-check this expression in reasonable time
+    BUILD_EXIT=65                                                 -> BLOCKED (pre-existing baseline)
+
+[5] XCODEBUILD TEST                                               -> BLOCKED
+    The XCTest bundle links the app target; it cannot build until [4] does.
+    ApiLogsPage.Tests.swift is written (model decode, deriveServiceOptions, badge
+    tones, filter/pagination, loading/empty/error/success transitions, export).
+
+WHY [4]/[5] ARE BLOCKED (honesty covenant #1 — no red-as-green):
+  - The failures are pre-existing, systemic baseline compile errors in files OUTSIDE
+    this page's scope/allowed-files. ZERO errors across the full-app compile are
+    attributable to any ApiLogsPage file or the two navigation edits (verified: grep
+    of both build logs for Features/Admin|ApiLogs|AppRouteParser|TeslaSyncApp = none).
+  - The non-@escaping @ViewBuilder pattern that fails on macOS recurs in 71+ pre-existing
+    files; iOS fails on an unrelated type-check-timeout file. The Apple app target was
+    never compiled on a dev host — apps/macos-pending-verifications.md documents the
+    Xcode build/test as a deferred macOS-CI-only verification ("code is written,
+    committed, and all host-runnable gates are green").
+  - Per p4-apple/README.md ("prompts that can't run their gate are BLOCKED, not DONE")
+    and the prompt's own BLOCKED provision, the build/test sub-gates are reported BLOCKED.
+  - This page's own host-runnable gates ([1][2][3]) are GREEN.
+
+================================================================================
+ === PARITY ===
+================================================================================
+PARITY_REQUIRED=43
+
+-- panels (9) --
+[x] panel  GlassPanel1   -> ApiLogsJSONViewer (TSGlassPanel)            ApiLogsPage.Rows.swift
+[x] panel  Total-Calls   -> ApiLogsStatsSection TSStatCard apiLogs.totalCalls   ApiLogsPage.Views.swift
+[x] panel  Error-Rate    -> ApiLogsStatsSection TSStatCard apiLogs.errorRate    ApiLogsPage.Views.swift
+[x] panel  Avg-Duration  -> ApiLogsStatsSection TSStatCard apiLogs.avgDuration  ApiLogsPage.Views.swift
+[x] panel  Last-24h      -> ApiLogsStatsSection TSStatCard apiLogs.last24h      ApiLogsPage.Views.swift
+[x] panel  GlassPanel6   -> ApiLogsFiltersPanel (TSGlassPanel)          ApiLogsPage.Views.swift
+[x] panel  GlassPanel7   -> ApiLogsTablePanel (TSGlassPanel)            ApiLogsPage.Views.swift
+[x] panel  GlassPanel8   -> ApiLogsLogDetail.requestURLSection (TSGlassPanel)   ApiLogsPage.Rows.swift
+[x] panel  GlassPanel9   -> ApiLogsLogDetail.errorSection (TSGlassPanel)        ApiLogsPage.Rows.swift
+
+-- data states (4) --
+[x] state  loading -> ApiLogsTablePanel.loadingState (TSSpinner + apiLogs.loading)   ApiLogsPage.Views.swift
+[x] state  empty   -> ApiLogsTablePanel.emptyState (TSEmptyState apiLogs.noLogsFound) ApiLogsPage.Views.swift
+[x] state  error   -> ApiLogsTablePanel.errorState (TSErrorDisplay) + ApiLogsPage.errorBanner (TSAlertBanner)
+[x] state  success -> ApiLogsTablePanel.logList ForEach -> ApiLogsLogRow            ApiLogsPage.Views.swift/.Rows.swift
+
+-- strings (30) — all resolve from Localizable.xcstrings, web key names preserved --
+[x] string apiLogs.adjustFilters    -> ApiLogsTablePanel.emptyState (TSCaption)
+[x] string apiLogs.allMethods       -> ApiLogsFiltersPanel.methodOptions
+[x] string apiLogs.allServices      -> ApiLogsPageModel.serviceOptions
+[x] string apiLogs.allStatus        -> ApiLogsFiltersPanel.statusOptions
+[x] string apiLogs.avgDuration      -> ApiLogsStatsSection TSStatCard
+[x] string apiLogs.byService        -> ApiLogsStatsSection.byServiceChips (TSCaption)
+[x] string apiLogs.clear            -> ApiLogsFiltersPanel.header (TSButton)
+[x] string apiLogs.error            -> ApiLogsLogDetail.errorSection (sectionLabel)
+[x] string apiLogs.errorRate        -> ApiLogsStatsSection TSStatCard
+[x] string apiLogs.exportJson       -> ApiLogsTablePanel.exportLabel (ShareLink)
+[x] string apiLogs.filterEndpoint   -> ApiLogsFiltersPanel (TSTextField prompt)
+[x] string apiLogs.filters          -> ApiLogsFiltersPanel.header (TSCaption)
+[x] string apiLogs.last24h          -> ApiLogsStatsSection TSStatCard
+[x] string apiLogs.loading          -> ApiLogsTablePanel.loadingState
+[x] string apiLogs.next             -> ApiLogsPaginationFooter (TSButton)
+[x] string apiLogs.noData           -> ApiLogsPageModel.noDataText / ApiLogsJSONViewer
+[x] string apiLogs.noLogs           -> ApiLogsTablePanel.tableHeader
+[x] string apiLogs.noLogsFound      -> ApiLogsTablePanel.emptyState (TSEmptyState)
+[x] string apiLogs.pageOf           -> ApiLogsPageModel.pageOfText / ApiLogsPaginationFooter
+[x] string apiLogs.previous         -> ApiLogsPaginationFooter (TSButton)
+[x] string apiLogs.requestBody      -> ApiLogsLogDetail JSON viewer label
+[x] string apiLogs.requestUrl       -> ApiLogsLogDetail.requestURLSection (sectionLabel)
+[x] string apiLogs.responseBody     -> ApiLogsLogDetail JSON viewer label
+[x] string apiLogs.serviceCount     -> ApiLogsPageModel.serviceCountText / FiltersPanel.serviceField
+[x] string apiLogs.serviceFilterAria-> ApiLogsFiltersPanel.serviceField (.accessibilityLabel)
+[x] string apiLogs.showing          -> ApiLogsPageModel.showingText / TablePanel.tableHeader
+[x] string apiLogs.subtitle         -> ApiLogsPage.header
+[x] string apiLogs.title            -> ApiLogsPage.header (TSPageTitle)
+[x] string apiLogs.totalCalls       -> ApiLogsStatsSection TSStatCard
+[x] string error.loadFailed         -> ApiLogsPage.errorBanner (TSAlertBanner) + TablePanel.errorState
+
+PARITY_COVERED=43
+PARITY_REQUIRED == PARITY_COVERED : 43 == 43  -> OK
+
+================================================================================
+ NOTES (design decisions)
+================================================================================
+- Manifest marks the page "no API data sources — renders from navigation values /
+  local state". The @Observable ApiLogsPageModel binds through an injected
+  ApiLogsDataSource (Sendable, async load()/refresh()); the default Unavailable source
+  yields a real empty state (never a fake row, ADR-011), a JSON-decoding source bridges
+  the shared AdminStore.apiLogs/apiLogStats feeds (networking stays in the KMP core,
+  P4 rule #3), and a Preview source drives all four states in previews + tests.
+- HIG-native + adaptive (ADR-002): one scrolling column reflowing via adaptive grids;
+  materials/tokens only (Color.TS/Font.TS/TSSpacing/TSRadius), shared components only
+  (TSGlassPanel/TSStatCard/TSBadge/TSButton/TSSelect/TSTextField/TSEmptyState/
+  TSErrorDisplay/TSAlertBanner/TSSpinner/TSCode/TSFadeIn). No web cloning, no inline
+  hardcoded colours/typography, no raw HTML analogue.
+- The web header RangePicker is not among the 9 enumerated panels and has no authorized
+  string in the 30-key set; reproducing it would require either hardcoded literals or
+  un-authorized keys, so it is out of the binding contract for this unit.
+
+================================================================================
+EXIT=65
+STATUS=BLOCKED
+================================================================================

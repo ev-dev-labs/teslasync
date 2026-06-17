@@ -1,0 +1,134 @@
+=== P4 Feature view 0252 ServiceHealthSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ServiceHealthSection.*
+Web src : web/src/features/system/components/status/ServiceHealthSection.tsx
+Tier    : Feature view (composed system-status accordion below page level)
+ADRs    : ADR-002 (shared SwiftUI source) · ADR-004 (KMP Shared core) · ADR-009
+Host    : macOS (Darwin) · Xcode 26.5 (17F42) via DEVELOPER_DIR · Swift 6.3.2
+          xcodegen 2.x · swiftlint · swiftformat · pwsh · iOS 26.5 + macOS 26.5 SDKs
+          (deployment targets iOS 18.0 / macOS 15.0)
+
+--- CAPABILITY (prompt clause: SwiftUI + Swift Charts + MapKit, iOS18/macOS15 HIG) ---
+  Full Xcode 26.5 IS installed on this host → xcodebuild / simctl / XCTest / the
+  #Preview macro plugin are all available (not a CLT-only runner). The surface uses
+  SwiftUI only (no Charts / no MapKit per the web source). Capability is satisfied;
+  this is NOT a STATUS=BLOCKED capability case.
+
+--- WHAT SHIPPED (9 files, established feature-view multi-file pattern) --------------
+  ServiceHealthSection.Adapter.swift   (350 ln) pure DTOs (TelemetryStatusDTO,
+        StreamingVehicleDTO, AggregateStatsDTO) + streaming-state classification
+        (web row Badge is_streaming) + ServiceVehicleRow projection + activeCount
+        tally (web Object.values + filter) + formatters int/rate/latency/dateTime
+        (ports of numberFormat.ts fmtInt/fmtNumber + dateFormat.ts formatDateTime) +
+        a11y builders + surface slug. Foundation-only.
+  ServiceHealthSection.Model.swift     (307 ln) P1/S11 telemetry seam, connection
+        axis, input snapshot, resolved view-state + projection (loading/content/
+        empty/error), P1/S8 source seam + in-memory source, @Observable model
+        (one-shot stale auto-refresh), P1/S10 strings facade. No SwiftUI.
+  ServiceHealthSection.swift           (174 ln) main View: accordion chrome
+        (Satellite icon/title/description/Enabled+streaming badges/freshness chip/
+        chevron) + connectivity banner + phase switch. surfaceSlug.
+  ServiceHealthSection.Views.swift     (310 ln) i18n + tone bridges, header badges
+        (Enabled/Disabled pill + "{n} streaming"), freshness chip + banner, the
+        four-tile metric grid (Mode · Vehicles Connected · Total Signals · Avg
+        Signals/s as TSStatCard w/ web lucide→SF Symbols), loading/empty/error chrome.
+  ServiceHealthSection.Table.swift     (156 ln) streaming-vehicles TSDataTable — six
+        web columns (VIN·Status·Signals·Signals/s·Latency·Last Received) + sortable
+        Signals/VIN comparators + Streaming/Idle status pill + inline "No vehicles
+        connected" empty row + per-row VoiceOver label.
+  ServiceHealthSection.Previews.swift  (124 ln) data / no-vehicles / loading / empty /
+        error / stale / offline previews (DEBUG).
+  ServiceHealthSection.strings         (i18n) table "ServiceHealthSection": 29 keys
+        (19 verbatim web t() keys + 10 native chrome: freshness/loading/error/a11y).
+  ServiceHealthSection.Tests.swift     (249 ln) pure suites: format/date/streaming-
+        state/vehicles/projection/resolved.
+  ServiceHealthSection.ModelTests.swift(204 ln) state-holder + accessibility suites.
+        Tests total: 34 (9 suites).
+
+  States reproduced (no hidden surface): loading (web <Skeleton h-48>) · content
+  (metric grid + vehicle table, table owns its inline "No vehicles connected") ·
+  empty (web !data <EmptyState> "No telemetry data available") · error (web
+  <QueryError> + retry) · stale + offline (freshness chip + banner + one-shot
+  auto-refresh on the stale transition).
+
+  Shared components (P1/S9): TSGlassPanel · TSFadeIn · TSIconBox · TSStatCard ·
+  TSDataTable/TSColumn · TSStatusPill · TSBadge · TSSkeleton · TSEmptyState ·
+  TSButton · TSTone + Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion tokens.
+
+--- HOST-RUNNABLE GATES (all green) ------------------------------------------------
+  swiftformat --lint <surface> ................ 0/8 require formatting               FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious        LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_ALLOWED=0
+                                                PLACEHOLDER_COUNT=0                   PLACEHOLDER_EXIT=0
+        (per-file over all 8 .swift + the .strings; -SelfTest PASS — gate proven to
+         detect stubs: dirty tree → COUNT=4, opt-out-without-reason → violation)
+  swiftc -typecheck iPhoneSimulator (target arm64-apple-ios18.0-simulator,
+        -swift-version 6, -strict-concurrency=complete, -DDEBUG, REAL SDK +
+        40 real Sources/Components+Design files + Tokens) .......................... IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (target arm64-apple-macos15.0,
+        -swift-version 6, -strict-concurrency=complete, -DDEBUG, REAL SDK) ......... MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 mode,
+        bound against the REAL shared Components + design Tokens) ................. 34/34 passed, TEST_EXIT=0
+      → ServiceHealthFormatNumberTests · ServiceHealthFormatDateTests ·
+        ServiceStreamingStateTests · ServiceHealthVehiclesTests ·
+        ServiceHealthProjectionTests · ServiceHealthResolvedTests ·
+        ServiceHealthModelTests · ServiceHealthAccessibilityTests
+  xcodegen generate (project spec with the 9 new files; wired into the iOS +
+        macOS app targets + XCTest bundles — 54 pbxproj references) ............... XCODEGEN_EXIT=0
+
+--- DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ------------
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED infra state in the
+    shared app target — ZERO of which originates in this surface. A deterministic
+    single-target build emits exactly one error, and it is the framework:
+
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator \
+                 -configuration Debug build CODE_SIGNING_ALLOWED=NO
+        → error: There is no XCFramework found at
+          '/…/apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync')
+        ** BUILD FAILED **   (BUILD_RC=65)
+
+    Honest staging attempt on this full-Xcode host:
+      apps/shared/gradlew :core:assembleSharedXCFramework  → GRADLE_RC=124 (240 s
+      timeout; Kotlin/Native link is the long-pole). Frameworks/ still holds only
+      .gitkeep. This is the P1/S3 artifact already tracked macOS-pending in
+      apps/macos-pending-verifications.md (deferred to p5-hardening/H8 on
+      macos-latest with a warm K/N cache).
+
+    Additional pre-existing app-target gaps shared by ALL ported surfaces: the
+    co-located *.Tests.swift / *.ModelTests.swift are assigned to the app target by
+    the current XcodeGen spec and `@testable import TeslaSync` into it, and there is
+    no macOS development-signing identity (ADR-012).
+
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15
+    SDKs (typechecks above, EXIT=0 both) and its logic runs green (34/34 XCTest under
+    Swift 6). The full-app build/test is the same deferral recorded for
+    p4-apple/feature-views/0242-DataPipelineSection and its siblings; it belongs to
+    the p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner with signing.
+
+--- ACCEPTANCE CRITERIA ------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading/content/empty/
+      error/stale/offline + inline no-vehicles).
+  [x] Hooks (useQuery getTelemetryStatus) bind to the shared P1/S8 source seam; no
+      direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog
+      (ServiceHealthSection.strings — 19 verbatim web keys + 10 native chrome = 29).
+  [x] Accessibility labels present on every interactive element (accordion toggle,
+      retry) + per-row + section VoiceOver summaries; Dynamic Type + reduce-motion
+      honoured via shared components.
+  [x] Tests: adapter/format/projection unit tests + model per-state/lifecycle tests +
+      a11y label tests (34 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unstaged
+      Shared.xcframework; host-runnable equivalents — real-SDK typecheck both
+      platforms + 34/34 XCTest + lint/format/placeholder + xcodegen — all green).
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+TEST_EXIT=0
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE

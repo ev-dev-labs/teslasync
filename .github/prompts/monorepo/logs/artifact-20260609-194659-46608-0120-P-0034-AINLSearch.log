@@ -1,0 +1,172 @@
+=== P4 Shared surface 0034 AINLSearch (Apple) ===
+Artifact : P4 · Shared surface · 0034 — AINLSearch (Apple)
+Web src  : web/src/components/ai/AINLSearch.tsx  (THE specification)
+Native   : apps/apple/TeslaSync/shared-surfaces/AINLSearch.*
+Runner   : Darwin (Apple Silicon) · Xcode 26.5 (Build 17F42) · Apple Swift 6.3.2
+Tooling  : xcodebuild, xcodegen 2.x, swiftlint, swiftformat, pwsh (all present)
+iOS sim  : iPhone 16 (booted) · iOS 18 deployment target
+
+Surface  : production-polished SwiftUI parity of AINLSearch — withAiFeature gate +
+           AIFeatureCard scaffold (title + cyan Helix badge + description + query
+           inputSlot + universal "Ask Helix" action) + streamed AiOutputPanel.
+           Binds through NLSearchModel (P1/S8 state-holder seam); no networking in the
+           view. Read-only NL search (POST /ai/search/query, body { prompt }) via the
+           source seam, faithful to the web useAiStream({ url, body }) wiring.
+Files shipped (11):
+  AINLSearch.swift            — feature surface: state switch + freshness chip + banner
+  AINLSearch.Adapter.swift    — surface identity + request projection (web body {prompt})
+  AINLSearch.Logic.swift      — phase/connection/gate enums + button/output logic + a11y
+  AINLSearch.Model.swift      — telemetry seam + stream event + source protocol + @Observable model + i18n facade
+  AINLSearch.Source.swift     — InMemoryNLSearchSource (previews/tests)
+  AINLSearch.Views.swift      — header + Helix badge + query field + Ask-Helix button
+  AINLSearch.Chrome.swift     — AiOutputPanel + error row + thinking indicator + gate chrome
+  AINLSearch.Previews.swift   — 9 #Preview states (idle/query/streaming/results/stream-error/gate-loading/gate-error/stale/offline)
+  AINLSearch.strings          — P1/S10 i18n table (web-parity keys + Helix scaffold + native chrome)
+  AINLSearch.Tests.swift      — adapter/logic/a11y/i18n unit tests
+  AINLSearch.ModelTests.swift — state-holder wiring tests
+
+States reproduced (every one renders; AI-Off gate renders nothing per ADR-015 = web withAiFeature null):
+  gateLoading · ready/idle · streaming · results · stream-error · gateError · stale · offline · gatedOff
+
+i18n keys from web source (all resolve through the P1/S10 facade — no English literals in Swift):
+  search.aiSearch.title / .description / .searchButton / .badge / .placeholder
+  + shared Helix scaffold (helix.askHelix/.thinking/.tooltip/.ariaLabel/.errorLabel, ai.common.errorUnknown)
+  + native chrome (search.aiSearch.inputLabel/.emptyHint/.resultsReady/.loadingA11y/.errorTitle/.retry/.live/.stale/.offline/.staleBanner/.offlineBanner/.refresh)
+
+=====================================================================================
+STEP 1 — iOS build+test
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+-------------------------------------------------------------------------------------
+Pre-build KMP Shared.xcframework assembled via Gradle: BUILD SUCCESSFUL (iosArm64,
+iosSimulatorArm64, macosArm64) and staged to apps/apple/Frameworks/Shared.xcframework.
+AINLSearch.strings validated (Unicode UTF-8) and CopyStringsFile succeeded.
+
+** TEST FAILED **  (build failed → testing cancelled)
+The compile failures are ALL in pre-existing sibling surfaces — NONE in AINLSearch.*:
+
+  error: 'StateTimelineModel'      is ambiguous for type lookup in this context
+  error: 'StateTimelineUpdate'     is ambiguous for type lookup in this context
+  error: 'StateTimelineConnection' is ambiguous for type lookup in this context
+  error: 'StateTimelineLoadStatus' is ambiguous for type lookup in this context
+  error: 'RecentDrivesModel'       is ambiguous for type lookup in this context
+  error: 'RecentDrivesUpdate'      is ambiguous for type lookup in this context
+  error: 'RecentDrivesConnection'  is ambiguous for type lookup in this context
+  error: 'RecentDrivesLoadStatus'  is ambiguous for type lookup in this context
+  error: cannot infer contextual base in reference to member 'live'/'stale'/'offline'/'loading'/'loaded'/'failed'
+
+Root cause (pre-existing, OUTSIDE this artifact's allowed file scope): the same public
+types are declared twice in the TeslaSync app module by two pairs of sibling surfaces
+(both dirs compile into one target):
+  StateTimelineModel/Connection/LoadStatus/Update —
+    apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+    apps/apple/TeslaSync/feature-views/StateTimeline.{Model,Adapter,Source}.swift
+  RecentDrivesModel/Connection/LoadStatus/Update —
+    apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+    apps/apple/TeslaSync/feature-views/RecentDrivesSection.{Model,Adapter,Seams}.swift
+
+Evidence these are NOT introduced by this artifact:
+  • grep of the iOS build log for 'AINLSearch'|'NLSearch' + 'error' → 0 matches (my files compile clean).
+  • git status --short → only the 11 new AINLSearch.* files are added; nothing else changed.
+  • The colliding files are tracked baseline files owned by other artifacts; editing them is
+    forbidden by this artifact's "Allowed files: AINLSearch.*, the log" constraint (and by the
+    global rule "don't fix pre-existing issues unrelated to your task").
+IOS_EXIT=65
+
+=====================================================================================
+STEP 2 — macOS build+test
+  $ xcodebuild -scheme TeslaSync-macOS build test
+-------------------------------------------------------------------------------------
+** TEST FAILED **  (build failed → testing cancelled)
+The macOS build fails earlier, at code-signing — a RUNNER capability limitation, not a
+code defect (no compile errors of any kind appear in the macOS log, including none in
+AINLSearch.*):
+
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing in the Signing & Capabilities editor.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+
+The project sets DEVELOPMENT_TEAM="" and CODE_SIGN_STYLE=Automatic; this runner has no
+Apple development signing identity, so the entitled macOS app/widget bundles cannot be
+signed and the verbatim gate (which performs a signed build) cannot complete.
+MAC_EXIT=65
+
+=====================================================================================
+STEP 3 — swiftlint --strict   (gate scope: whole apps/apple)
+  $ swiftlint --strict
+-------------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 3437 files.
+LINT_EXIT=0
+
+=====================================================================================
+STEP 4 — swiftformat --lint apps/apple
+  $ swiftformat --lint apps/apple
+-------------------------------------------------------------------------------------
+0/3667 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+=====================================================================================
+STEP 5 — placeholder / stub gate
+-------------------------------------------------------------------------------------
+(A) verbatim gate invocation:
+  $ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AINLSearch
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+(B) real per-file scan of the shipped AINLSearch *.swift files (stronger check):
+  $ ./apps/tools/check-placeholders.ps1 -Path <copy of AINLSearch*.swift> -Language swift
+  /tmp/.../AINLSearch.Views.swift:123: Placeholder   ← the web-parity i18n key
+                                                        "search.aiSearch.placeholder"
+  PLACEHOLDER_ALLOWED=1   (opted out: "// parity:allow web i18n key from AINLSearch.tsx, not a stub")
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+No TODO / FIXME / stub / mock / "Coming soon" / Lorem in shipped code; the single match is
+the mandatory web-parity key name, sanctioned via the script's parity:allow mechanism.
+PLACEHOLDER_EXIT=0
+
+=====================================================================================
+SUPPLEMENTARY VERIFICATION OF THE AINLSearch SURFACE (since the two build+test steps are
+blocked by issues unrelated to this surface, the surface was verified directly):
+
+(i) Isolated swiftc -typecheck of the surface against the REAL shared P1/S9 tokens +
+    components, iphonesimulator SDK, -swift-version 6, run in four widening configurations.
+    In EVERY configuration the error count attributable to AINLSearch.*/NLSearch* was 0;
+    the only diagnostics were missing symbols from app files deliberately not included in
+    the isolated set (e.g. TSChartPalette / tsGlassPanel defined in further Sources files).
+      MY_FILE_TYPECHECK_ERRORS=0
+
+(ii) Standalone behavioural self-test: the four SwiftUI-free layers (Adapter + Logic +
+     Model + Source) were compiled (swiftc -swift-version 6) into an executable together
+     with a harness mirroring AINLSearch.Tests.swift + AINLSearch.ModelTests.swift, and
+     RUN. Result: 44/44 assertions passed, including the web-parity specifics —
+       • request body carries the RAW prompt verbatim (web `body = { prompt }`)
+       • canStart uses the TRIMMED query (web `prompt.trim().length > 0`)
+       • no upper length bound (web Textarea has no maxLength)
+       • stream path = /ai/search/query ; feature id = nl-search ; slug = AINLSearch
+       • telemetry view.opened emitted exactly once with the surface slug
+       • gate render axis (gatedOff > gateError > gateLoading > ready); gatedOff wins over error
+       • search() clears prior results, forwards the raw body, no-ops while busy/empty/offline
+       • delta accumulation; stale → one-shot auto-refresh; offline disables the action
+     SELFTEST: ALL SELFTESTS PASSED (RUN_EXIT=0)
+
+=====================================================================================
+GATE STEP SUMMARY
+  IOS_EXIT=65          BLOCKED — pre-existing duplicate-symbol collision in sibling
+                        surfaces (StateTimeline*/RecentDrives*), outside allowed scope.
+  MAC_EXIT=65          BLOCKED — runner has no Apple development signing identity
+                        (entitled macOS bundles cannot be signed).
+  LINT_EXIT=0          PASS
+  FORMAT_EXIT=0        PASS
+  PLACEHOLDER_EXIT=0   PASS
+  (surface typecheck)  PASS (0 errors in AINLSearch.*)
+  (surface self-test)  PASS (44/44)
+
+The AINLSearch surface itself is complete, parity-faithful, lint-clean, format-clean,
+placeholder-clean, type-correct, and behaviourally verified. The two build+test steps
+cannot reach EXIT=0 in this environment for reasons entirely external to this surface and
+its allowed file scope (a pre-existing cross-artifact type collision on iOS; the absence of
+a code-signing identity on macOS). Per the Honesty Covenant (#1 no red-as-green, #8 no
+commit on red claimed green), the build+test steps are reported red and the artifact is
+marked BLOCKED rather than DONE.
+
+EXIT=1
+STATUS=BLOCKED

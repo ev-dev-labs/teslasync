@@ -1,0 +1,134 @@
+=== P4 Shared surface 0048 AISoftwareUpdateChangelogSummarizer (Apple) ===
+Host: macOS 26.5.1 | Xcode 26.5 | swift version 6.3.2
+Generated: 2026-06-10T15:41:22-0700
+Web spec: web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx
+Files shipped (10): AISoftwareUpdateChangelogSummarizer.{swift,Model,Adapter,Projection,Views,Chrome,Previews,AdapterTests,Tests}.swift + .strings
+
+############################################################
+# SURFACE-SCOPED GATES (host-runnable) — all green
+############################################################
+
+=== swiftformat --lint (surface) ===
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-194659-46608/slot-134/apps/apple/.swiftformat
+SwiftFormat completed in 5.43s.
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+=== swiftlint --strict (surface) ===
+Linting 'AISoftwareUpdateChangelogSummarizer.Tests.swift' (9/9)
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+=== placeholder gate (check-placeholders.ps1, surface, swift) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== isolated SwiftPM build + unit tests (full surface vs REAL design system) ===
+Package: 10 surface files + 41 KMP-Shared-free design files (Sources/Components + Sources/Design + generated Tokens.swift).
+Excluded 1 design file UnitFormatters.swift (couples to KMP Shared 'UnitPreferences'; surface does not use it).
+swift test result:
+    Test Suite 'All tests' passed — Executed 73 tests, with 0 failures (0 unexpected)
+    (adapter SSE/reducer/output/action 30 + projection phases/ready/output 20 + model wiring/telemetry/freshness 16 + input→request 3 + a11y 4)
+ISOLATED_TEST_EXIT=0
+
+=== real cross-platform typecheck (6 surface sources + 41 design files vs device SDKs) ===
+  swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator   -> 0 errors
+  swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0           -> 0 errors
+IOS18_TYPECHECK_EXIT=0   MAC15_TYPECHECK_EXIT=0
+
+=== xcodegen generate enumerates the 10 files (refs in TeslaSync.xcodeproj/project.pbxproj) ===
+  swift        6 refs
+  Model.swift  6 refs
+  Adapter.swift 6 refs
+  Projection.swift 6 refs
+  Views.swift  6 refs
+  Chrome.swift 6 refs
+  Previews.swift 6 refs
+  strings      6 refs
+  AdapterTests.swift 6 refs
+  Tests.swift  6 refs
+XCODEGEN_EXIT=0  (6 refs each = iOS app + macOS app + 2 XCTest bundles file/build refs)
+
+=== i18n parity (every web t() key resolves; description verbatim) ===
+  OK   softwareUpdates.aiNarration.title
+  OK   softwareUpdates.aiNarration.description
+  OK   softwareUpdates.aiNarration.button
+  OK   softwareUpdates.aiNarration.badge
+  OK   softwareUpdates.aiNarration.noVehicleHint
+  WEB_KEYS=5  MISSING=0  (description byte-identical to web L129; verified via diff)
+
+############################################################
+# FULL-APP GATE (xcodebuild build test) — BLOCKED (evidence)
+############################################################
+
+Step A: KMP Shared.xcframework (scheme pre-build) — assembled live this run.
+  apps/apple/Scripts/build-shared-xcframework.sh -> Gradle :core:assembleSharedXCFramework
+  BUILD SUCCESSFUL in 7m 8s ; staged -> apps/apple/Frameworks/Shared.xcframework
+  STAGE_EXIT=0
+
+Step B: real iOS app-target compile (framework staged, signing disabled):
+  xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator \
+             -configuration Debug build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+  IOS_BUILD_EXIT=65
+  total error: lines           = 54
+  errors referencing THIS surface (AISoftwareUpdateChangelogSummarizer) = 0
+  -> ZERO build errors reference this surface.
+
+  This surface's .strings WAS processed successfully by the real Xcode build:
+    CopyStringsFile apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.strings (in target 'TeslaSync' from project 'TeslaSync')
+        builtin-copyStrings --validate --outputencoding binary --outfilename AISoftwareUpdateChangelogSummarizer.strings --outdir apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.strings
+    apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TeslaSync' from project 'TeslaSync')
+
+  The 54 errors are PRE-EXISTING, UNRELATED parallel-merge collisions in OTHER
+  agents' surfaces (outside this prompt's allowed-files scope), redeclaring the same
+  type names across a dashboard-widget and a feature-view in the same module:
+    TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+    TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift
+    TeslaSync/dashboard-widgets/RecentDrivesListWidget.swift
+    TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+    TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift
+    TeslaSync/dashboard-widgets/StateTimelineWidget.swift
+    TeslaSync/feature-views/RecentDrivesSection.Previews.swift
+    TeslaSync/feature-views/RecentDrivesSection.Seams.swift
+    TeslaSync/feature-views/StateTimeline.Previews.swift
+    TeslaSync/feature-views/StateTimeline.Source.swift
+  distinct ambiguous types:
+    'RecentDrivesConnection' is ambiguous
+    'RecentDrivesLoadStatus' is ambiguous
+    'RecentDrivesModel' is ambiguous
+    'RecentDrivesUpdate' is ambiguous
+    'StateTimelineConnection' is ambiguous
+    'StateTimelineLoadStatus' is ambiguous
+    'StateTimelineModel' is ambiguous
+    'StateTimelineUpdate' is ambiguous
+
+Step C: macOS app-target / both-scheme 'build test' additionally blocked by code-signing:
+  security find-identity -p codesigning -> 0 valid identities found
+  (macOS app sets ENABLE_HARDENED_RUNTIME=YES; XCTest 'test' needs a signed host.)
+  IOS_EXIT (build test, scheme) = BLOCKED   MAC_EXIT (build test, scheme) = BLOCKED
+
+############################################################
+# CONCLUSION
+############################################################
+Surface AISoftwareUpdateChangelogSummarizer is COMPLETE and verified GREEN on every
+host-runnable, surface-scoped gate: swiftformat 0, swiftlint --strict 0, placeholder 0,
+73/73 unit tests, iOS-18 + macOS-15 swiftc -typecheck 0 errors, xcodegen enumerates all
+10 files, i18n 5/5 web keys (description verbatim). A real iOS app-target compile against
+the freshly-built KMP Shared.xcframework produced ZERO errors for this surface and copied
+its .strings successfully.
+
+The full two-scheme 'xcodebuild build test' cannot go green in this environment due to
+(1) pre-existing, unrelated cross-surface type-name collisions in RecentDrives* and
+StateTimeline* (files NOT in this prompt's allowed scope — fixing them is forbidden here),
+and (2) zero macOS code-signing identities. These are platform/parallel-merge blockers,
+deferred to p4-apple/P99-0001 apple acceptance gate on a macos-latest runner with signing.
+
+FORMAT_EXIT=0 LINT_EXIT=0 PLACEHOLDER_EXIT=0 ISOLATED_TEST_EXIT=0 IOS18_TYPECHECK_EXIT=0 MAC15_TYPECHECK_EXIT=0 XCODEGEN_EXIT=0 I18N_MISSING=0
+IOS_EXIT=65 (pre-existing cross-surface collisions; 0 this-surface errors)  MAC_EXIT=BLOCKED (no signing identity)
+
+EXIT=1
+STATUS=BLOCKED

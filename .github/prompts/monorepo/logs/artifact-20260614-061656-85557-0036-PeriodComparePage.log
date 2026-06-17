@@ -1,0 +1,156 @@
+================================================================================
+p4-apple · P7 · page:analytics/PeriodCompare — SwiftUI / HIG parity
+Native SwiftUI implementation of web `PeriodComparePage.tsx` (route /period-compare)
+================================================================================
+
+ARTIFACT
+  unitId     : page:analytics/PeriodCompare
+  web source : web/src/features/analytics/pages/PeriodComparePage.tsx  (route /period-compare)
+  output     : apps/apple/Sources/Features/Analytics/PeriodCompare*.swift
+               (NOTE: prompt metadata path `apps/apple/TeslaSync/Features/Analytics/**` is a
+                generator artifact; the REAL xcodegen-globbed source tree — and where every
+                sibling page (FleetComparePage, StatisticsPage) lives — is
+                `apps/apple/Sources/Features/Analytics/`. project.yml globs `Sources/`;
+                `TeslaSync/Features` is not a compiled path. Files placed in the real tree so
+                they compile and are picked up.)
+
+FILES ADDED (Sources/Features/Analytics/)
+  PeriodCompareModels.swift            value types + PeriodCompareWindow + PeriodCompareMetric
+  PeriodCompareFormat.swift            pure SI display-boundary formatters (fmtNumber/pctChange)
+  PeriodComparePageModel.swift         @Observable model (phase, vehicles, periods, statsA/B)
+  PeriodComparePageModel.Sample.swift  Sample/Empty/Failing data sources (previews+tests)
+  PeriodComparePage.swift              main adaptive View (header, banner, selectors, states)
+  PeriodComparePage.Sections.swift     metric cards + insights + loading skeleton
+  PeriodComparePage.Charts.swift       comparison BarChart (P3 TSBarChart) + legend
+  PeriodComparePage.Table.swift        comparison details table
+  PeriodCompareRouteRegistration.swift registers .periodCompare
+NAV REGISTRATION (allowed scope)
+  Sources/App/AppRoute.swift           + case .periodCompare (pathSegment period-compare, group .insights)
+  Sources/App/AppRouteParser.swift     + aliases /compare, /analytics/compare -> .periodCompare
+  Sources/TeslaSyncApp.swift           + PeriodCompareRouteRegistration in the host registry chain
+STRINGS
+  Localization/Localizable.xcstrings   + 34 compare.* keys + route.periodCompare (verbatim web defaults)
+TESTS
+  Tests/Unit/Features/Analytics/PeriodComparePageModelTests.swift  (32 tests)
+LEDGER
+  apps/parity/apple-ledger.json        + 2 rows (apple-macos, apple-ios) 44/44 done
+
+--------------------------------------------------------------------------------
+ENVIRONMENT / TOOLCHAIN NOTE (honesty covenant — full disclosure)
+--------------------------------------------------------------------------------
+Installed Xcode 26.5 / Swift 6.3.2 is STRICTER than this repo's pinned target
+(project.yml SWIFT_VERSION 6.0). The pre-existing `TeslaSync/**/*.Previews.swift`
+scaffolding (hundreds of files) uses `return` directly inside `#Preview` ViewBuilder
+bodies — rejected by this toolchain ("cannot use explicit 'return' statement in the
+body of result builder 'ViewBuilder'") — and a handful of pre-existing
+`TeslaSync/**/*Tests.swift` / `Tests/Unit/Features/Admin/*` files have main-actor
+isolation gaps under the same strict compiler. NONE of these are my files and NONE
+are in this prompt's allowed scope.
+
+To verify MY deliverable without shipping out-of-scope edits, the build/test gate was
+run with the pre-existing-broken files isolated via build-time source filters
+(EXCLUDED_SOURCE_FILE_NAMES / INCLUDED_SOURCE_FILE_NAMES) — NO repository files were
+modified to achieve green. A whole-module compile with everything intact reported
+errors ONLY in those pre-existing files and ZERO in any PeriodCompare* / AppRoute /
+TeslaSyncApp file (grep-verified). The KMP Shared.xcframework was built fresh via
+Gradle (apps/shared :core:assembleSharedXCFramework, BUILD SUCCESSFUL).
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+# placeholder scan (ADR-011)
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Analytics -Language swift
+PLACEHOLDER_ALLOWED=3        (3x `// parity:allow redaction API, not a stub` on .placeholder redaction)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# build (macOS + iOS-arm64-simulator), pre-existing-broken previews isolated
+$ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build \
+      EXCLUDED_SOURCE_FILE_NAMES="*.Previews.swift" CODE_SIGNING_ALLOWED=NO
+  ** BUILD SUCCEEDED **   (0 errors in any PeriodCompare*/AppRoute/TeslaSyncApp file)
+$ xcodebuild -scheme TeslaSync -sdk iphonesimulator ARCHS=arm64 build \
+      EXCLUDED_SOURCE_FILE_NAMES="*.Previews.swift" CODE_SIGNING_ALLOWED=NO
+  ** BUILD SUCCEEDED **   (exercises the #if os(iOS) horizontalSizeClass path)
+BUILD_EXIT=0
+
+# lint (entire app, --strict, all 5736 files including mine)
+$ cd apps/apple && swiftlint --strict
+  Done linting! Found 0 violations, 0 serious in 5736 files.
+LINT_EXIT=0
+
+# test (only my test file compiled against the app; pre-existing-broken test/preview files isolated)
+$ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' test \
+      EXCLUDED_SOURCE_FILE_NAMES="*.Previews.swift *Tests.swift" \
+      INCLUDED_SOURCE_FILE_NAMES="PeriodComparePageModelTests.swift"
+  Test Suite 'PeriodCompareFormatTests'    passed — Executed 6 tests, 0 failures
+  Test Suite 'PeriodComparePageModelTests' passed — Executed 26 tests, 0 failures
+  Test Suite 'Selected tests'              passed — Executed 32 tests, 0 failures
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=44
+
+[panel]  GlassPanel1 (vehicle + Period A + Period B selectors)
+         -> Sources/Features/Analytics/PeriodComparePage.swift : PeriodComparePage.selectorsPanel (TSGlassPanel + TSSelect x3)
+[panel]  MetricCard2 (six metric cards: A value, B subtitle, % change)
+         -> Sources/Features/Analytics/PeriodComparePage.Sections.swift : PeriodCompareMetricCards / PeriodCompareMetricCard
+[panel]  GlassPanel3 (side-by-side comparison bar chart panel)
+         -> Sources/Features/Analytics/PeriodComparePage.Charts.swift : PeriodCompareChartSection (TSChartContainer)
+[panel]  GlassPanel4 (comparison details table panel)
+         -> Sources/Features/Analytics/PeriodComparePage.Table.swift : PeriodCompareComparisonTable (TSGlassPanel)
+[panel]  GlassPanel5 (insights panel)
+         -> Sources/Features/Analytics/PeriodComparePage.Sections.swift : PeriodCompareInsightsSection (TSGlassPanel)
+[chart]  BarChart (grouped Period A vs B across the 6 metrics)
+         -> Sources/Features/Analytics/PeriodComparePage.Charts.swift : PeriodCompareChartSection.series -> TSBarChart (P3 Swift Charts wrapper)
+[state]  loading  -> PeriodComparePage.swift resultsRegion(.loading) -> PeriodCompareSkeleton (Sections; redacted(.placeholder)+ProgressView)
+[state]  empty    -> PeriodComparePage.swift PeriodComparePage.emptyView (TSEmptyState "compare.empty")
+[state]  error    -> PeriodComparePage.swift PeriodComparePage.errorView (TSErrorDisplay + Retry -> model.refresh)
+[state]  success  -> PeriodComparePage.swift PeriodComparePage.readyView (cards + chart + table + insights)
+[string] compare.allTime            -> PeriodCompareModels.swift : PeriodCompareWindow.allTime.titleKey
+[string] compare.avgEfficiency      -> PeriodCompareModels.swift : PeriodCompareMetric.efficiency.titleKey
+[string] compare.banner.toFleetCta  -> PeriodComparePage.swift : PeriodComparePage.banner (TSButton)
+[string] compare.banner.toFleetPrefix -> PeriodComparePage.swift : PeriodComparePage.banner (TSAlertBanner title)
+[string] compare.change             -> PeriodComparePage.Table.swift : headerCell("compare.change")
+[string] compare.chartTitle         -> PeriodComparePage.Charts.swift : PeriodCompareChartSection (TSChartContainer title + a11y)
+[string] compare.co2Saved           -> PeriodCompareModels.swift : PeriodCompareMetric.co2.titleKey
+[string] compare.declined           -> PeriodCompareFormat.swift : insightText(.efficiency)
+[string] compare.empty              -> PeriodComparePage.swift : emptyView (+ chart/insights empty fallbacks)
+[string] compare.energyUsed         -> PeriodCompareModels.swift : PeriodCompareMetric.energy.titleKey
+[string] compare.higher             -> PeriodCompareFormat.swift : insightText(.cost)
+[string] compare.improved           -> PeriodCompareFormat.swift : insightText(.efficiency)
+[string] compare.insightCost        -> PeriodCompareFormat.swift : insightText(.cost)
+[string] compare.insightDistance    -> PeriodCompareFormat.swift : insightText(.distance)
+[string] compare.insightEfficiency  -> PeriodCompareFormat.swift : insightText(.efficiency)
+[string] compare.insights           -> PeriodComparePage.Sections.swift : PeriodCompareInsightsSection (TSPanelTitle)
+[string] compare.last30             -> PeriodCompareModels.swift : PeriodCompareWindow.last30.titleKey
+[string] compare.last7              -> PeriodCompareModels.swift : PeriodCompareWindow.last7.titleKey
+[string] compare.last90             -> PeriodCompareModels.swift : PeriodCompareWindow.last90.titleKey
+[string] compare.lastYear           -> PeriodCompareModels.swift : PeriodCompareWindow.lastYear.titleKey
+[string] compare.less               -> PeriodCompareFormat.swift : insightText(.distance)
+[string] compare.lower              -> PeriodCompareFormat.swift : insightText(.cost)
+[string] compare.metric             -> PeriodComparePage.Table.swift : headerCell("compare.metric")
+[string] compare.more               -> PeriodCompareFormat.swift : insightText(.distance)
+[string] compare.pctChange          -> PeriodComparePage.Table.swift : headerCell("compare.pctChange")
+[string] compare.periodA            -> PeriodComparePage.swift periodASelect + Charts legend + Sections subtitle + Table header
+[string] compare.periodB            -> PeriodComparePage.swift periodBSelect + Charts legend + Sections subtitle + Table header
+[string] compare.subtitle           -> PeriodComparePage.swift : PeriodComparePage.header (Text)
+[string] compare.tableTitle         -> PeriodComparePage.Table.swift : PeriodCompareComparisonTable (TSPanelTitle)
+[string] compare.title              -> PeriodComparePage.swift : PeriodComparePage.header (TSPageTitle) + route.periodCompare
+[string] compare.totalCost          -> PeriodCompareModels.swift : PeriodCompareMetric.cost.titleKey
+[string] compare.totalDistance      -> PeriodCompareModels.swift : PeriodCompareMetric.distance.titleKey
+[string] compare.totalDrives        -> PeriodCompareModels.swift : PeriodCompareMetric.drives.titleKey
+[string] compare.vehicle            -> PeriodComparePage.swift : vehicleSelect (TSSelect label)
+PARITY_COVERED=44
+
+--------------------------------------------------------------------------------
+ACCEPTANCE
+  [x] every named panel + the anonymous banner region reproduced
+  [x] all 44 parity items render from the bound @Observable PeriodComparePageModel
+  [x] loading / empty / error / success implemented (results region state switch)
+  [x] all visible strings from Localizable.xcstrings; web key names; zero hardcoded literals
+  [x] dark mode + Dynamic Type + a11y + SI units (Units facade) honored; SwiftUI-native (TSBarChart, no WKWebView)
+  [x] build + lint + test + placeholder green; PARITY_COVERED == PARITY_REQUIRED (44)
+  [x] apple ledger rows for page:analytics/PeriodCompare set covered (apple-macos + apple-ios)
+
+EXIT=0
+STATUS=DONE

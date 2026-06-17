@@ -1,0 +1,112 @@
+=== P4 Shared surface 0232 Typography (Apple) ===
+Date: 2026-06-12  ·  Runner: macOS 26.5 (Darwin arm64)  ·  Xcode 26.5 (17F42)  ·  Swift 6.3.2
+Toolchain: swiftlint (Homebrew), swiftformat (Homebrew), xcodegen, pwsh, Gradle 8.14.5 / JDK 17, Kotlin/Native 2.4.0
+
+Artifact:        components/ui/Typography.tsx  →  apps/apple/TeslaSync/shared-surfaces/Typography.*
+Allowed files:   apps/apple/TeslaSync/shared-surfaces/Typography.* , this log
+Shipped files (10):
+  Typography.Adapter.swift       (Foundation-only: surface slug, heading levels, 13 roles + per-role attrs, size/weight/colour axes)
+  Typography.Projection.swift    (TypographyInput, TypographyStyle, TypographyStyleResolver — pure role/granular projection)
+  Typography.Model.swift         (TypographyTelemetry seam + @Observable TypographyModel, once-only view.opened)
+  Typography.Views.swift         (TypographyStyledText renderer; weight/colour → Font.Weight/Color.TS; Dynamic Type via @ScaledMetric; lifecycle modifier)
+  Typography.Surface.swift       (public enum Typography: Heading, Text — namespaced to avoid SwiftUI Text/Label + atomic TS* clash; .Surface suffix per ChartContainer/MapTileLayer precedent)
+  Typography.Roles.swift         (11 convenience peers: PageTitle/SectionTitle/PanelTitle/Subhead/Caption/HelperText/ErrorText/Label/MetricValue/MetricLabel/Code)
+  Typography.Previews.swift      (DEBUG previews for every real branch)
+  Typography.strings             (anonymous source — 0 owned keys; content is caller LocalizedStringKey)
+  Typography.AdapterTests.swift  (pure-core coverage)
+  Typography.Tests.swift         (model + view + token-mapping + accessibility coverage)
+
+Parity scope (faithful): components/ui/Typography.tsx is a PURE presentational primitive set (Heading + Text + 11
+role peers) with NO data, hooks, fetch, or Promise. Per the documented sibling precedent (Delta 0081, MetricCard 0095,
+InlineCallout 0124, Accordion 0203), a pure presentational surface reproduces ONLY the source's REAL branches and does
+NOT fabricate loading/empty/error/stale/offline chrome (there is nothing to fetch, fail, age, or lose connectivity to).
+Real branches reproduced: 4 heading levels × 13 composed roles × granular size/weight/colour/mono × monospace/tabular.
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEPS (run verbatim where the runner permits; real exit codes recorded)
+────────────────────────────────────────────────────────────────────────────────
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Pre-build: Shared.xcframework assembled via Gradle/Kotlin-Native — BUILD SUCCESSFUL (7m11s), staged OK.
+    Result: ** TEST BUILD FAILED **   IOS_EXIT=65
+    Cause (NOT Typography): a PRE-EXISTING compile error in an unrelated sibling surface —
+      TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:
+        error: escaping closure captures non-escaping parameter 'content'
+      Root cause: TSGlassPanel.init is `@ViewBuilder content: @escaping () -> Content` (stored), but
+      AISuggestNewGeofences (and >=3 peer files using the identical `func glass(@ViewBuilder _ content: () -> some View)`
+      signature) pass a NON-escaping closure into it. This is a sibling-surface defect under Swift 6.3.2, outside this
+      prompt's allowed files (other surfaces are explicitly Out of Scope). git status confirms AISuggestNewGeofences.* is
+      UNMODIFIED by this prompt.
+    Typography-specific errors in the full-module compile: 0 (the only error reported is the sibling file above).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Result: ** TEST BUILD FAILED **   MAC_EXIT=65
+    Cause (NOT Typography, environment): code-signing gap on this runner —
+      error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    No development signing identity is available on this runner; the macOS scheme fails before compilation. This is a
+    platform/runner capability limitation, not a Typography defect.
+
+[3] swiftlint --strict
+    Done linting! Found 0 violations, 0 serious in 4753 files.   LINT_EXIT=0   ✅ (whole app, incl. all 10 Typography files)
+
+[4] swiftformat --lint apps/apple
+    0/5051 files require formatting, 3 files skipped.             FORMAT_EXIT=0 ✅ (whole app, incl. all 10 Typography files)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Typography
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                    PLACEHOLDER_EXIT=0 ✅
+    (Also scanned the actual shipped files explicitly: PLACEHOLDER_COUNT=0 — no TODO/FIXME/stub/placeholder/Lorem.)
+
+────────────────────────────────────────────────────────────────────────────────
+TYPOGRAPHY-SCOPED VERIFICATION (in-scope deliverable — all green)
+────────────────────────────────────────────────────────────────────────────────
+
+[A] Standalone type-check of all 7 Typography source files + design Tokens.swift (one module, macOS SDK, -swift-version 6, -D DEBUG):
+      swiftc -typecheck ... Typography.{Adapter,Projection,Model,Views,Surface,Roles,Previews}.swift Tokens.swift
+      TYPECHECK_EXIT=0  ✅  (includes @Observable + #Preview macros under Swift 6 strict concurrency)
+
+[B] Full-module iOS build integration: the ONLY Typography-related issue the app build surfaced was a leaf-filename
+    clash — the bare Typography.swift collided with the atomic Sources/Components/UI/Typography.swift (Swift requires
+    unique leaf names per target). Resolved by renaming the entry file Typography.swift → Typography.Surface.swift,
+    exactly as the existing ChartContainer.Surface.swift / MapTileLayer.Surface.swift handle the same clash. After the
+    rename the app build reports no Typography diagnostics (it halts on the unrelated sibling error in [1]); the actual
+    in-module type-check of every Typography file is proven independently in [A] (standalone) and [C] (SwiftPM).
+
+[C] Executable tests — both shipped test files run on the real macOS toolchain via an isolated SwiftPM harness
+    (byte-identical to the shipped tests except `@testable import TeslaSync` → the harness module). The Typography
+    surface depends on NEITHER the broken sibling files NOR Shared.xcframework, so it builds + runs cleanly:
+      swift test → Executed 36 tests, with 0 failures (0 unexpected).   SWIFT_TEST_EXIT=0  ✅
+      Suites: TypographySurfaceTests, TypographyHeadingLevelTests, TypographySizeTests, TypographyRoleSizeAndWeightTests,
+              TypographyRoleColorAndFlagsTests, TypographyStyleResolverTests, TypographyValueTypeTests,
+              TypographyModelTests, TypographyTokenMappingTests, TypographyViewTests, TypographyAccessibilityTests.
+    These same 36 tests are the cases that would execute under step [1]'s `test` action once the unrelated sibling
+    compile errors are resolved (out of scope here).
+
+Acceptance criteria:
+  [x] Surface renders all REAL branches from the web source (4 heading levels, 13 roles, granular axes, mono/tabular).
+  [x] Hooks bind via the shared state-holder layer (TypographyModel, P1/S8); no direct HTTP (none exists — presentational).
+  [x] i18n: source owns 0 t() keys; content flows through SwiftUI LocalizedStringKey (P1/S10). No hardcoded English.
+  [x] Accessibility: heading roles carry the VoiceOver .isHeader trait; no interactive elements exist to label.
+       Dynamic Type honoured via @ScaledMetric; Reduce Motion N/A (no animation in this presentational surface).
+  [x] Tests: pure adapter/projection unit tests + per-branch view composition + a11y header-trait test + telemetry test (36 total, green).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate clean).
+  [ ] Aggregate `xcodebuild build test` EXIT=0 — BLOCKED by out-of-scope factors (see [1] sibling compile error, [2] macOS signing).
+
+────────────────────────────────────────────────────────────────────────────────
+SUMMARY
+────────────────────────────────────────────────────────────────────────────────
+SURFACE: COMPLETE & VERIFIED — Typography parity shipped; swiftlint --strict (0/4753), swiftformat (0/5051),
+         check-placeholders (0), standalone type-check (0), and 36/36 executable tests on the real toolchain all PASS.
+GATE BLOCKERS (both external to this surface, both outside allowed files Typography.*):
+  • iOS  build test: pre-existing compile error in sibling surface AISuggestNewGeofences.swift (+>=3 peers) — UNMODIFIED by this prompt.
+  • macOS build test: runner lacks a development signing certificate for the macOS app/widgets entitlements.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_EXIT=0
+SURFACE_TESTS_EXIT=0   (36/36 passed)
+EXIT=65
+STATUS=BLOCKED

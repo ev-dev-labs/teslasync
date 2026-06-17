@@ -1,0 +1,218 @@
+=== P4 Shared surface 0019 AIFeedbackQueueTriage (Apple) ===
+run host: Darwin 25.5.0 arm64  |  date: 2026-06-11T12:33:41Z
+Xcode: Xcode 26.5 Build version 17F42
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+## Capability check (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 HIG)
+xcodebuild : /usr/bin/xcodebuild  (Xcode 26.5)
+swiftlint  : /opt/homebrew/bin/swiftlint
+swiftformat: /opt/homebrew/bin/swiftformat
+xcodegen   : /opt/homebrew/bin/xcodegen  (2.45.4)
+pwsh       : /opt/homebrew/bin/pwsh
+iPhone 16 simulator: present (83717DEE-70A3-4325-AA61-CBDDD3140989)
+=> NOT capability-blocked: the full Apple toolchain is present and the KMP Shared.xcframework
+   assembled live here (Gradle, staged — see the REAL xcodebuild section).
+NOTE: web source AIFeedbackQueueTriage.tsx uses NO charts/maps — it is the shared AIFeatureCard +
+      useAiStream pattern only (POST /ai/feedback/triage/draft). The prompt's "Charts/maps used:
+      (none)" confirms it. So Swift Charts / MapKit are not required by THIS surface; SwiftUI is
+      sufficient. (Swift Charts + MapKit are nonetheless present in the real design system this
+      surface links against — the isolated module below compiles the Charts/Maps components too.)
+
+## Parity mapping (web -> native)
+web/src/components/ai/AIFeedbackQueueTriage.tsx:
+  • withAiFeature('feedback-queue-triage', InnerSection)  → AI-off gate; disabled ⇒ render nothing
+       → native FeedbackTriageAvailability.resolved(enabled:false) ⇒ .gated phase (EmptyView)
+  • useAiStream({ url: '/ai/feedback/triage/draft', body, onEvent })
+       → FeedbackTriageRequest.path = "/ai/feedback/triage/draft"  (id in BODY, static URL)
+  • haveFeedback = typeof feedbackId === 'number' && Number.isFinite(feedbackId) && feedbackId > 0
+       → FeedbackTriageRequest.haveFeedback = feedbackID != nil && feedbackID > 0
+         (Int is always finite; only the > 0 bound applies. 0 / negative are NOT valid selections —
+          UNLIKE the vehicle-id surfaces where 0 passes. Locked by tests.)
+  • body = haveFeedback ? { feedback_id: feedbackId } : { feedback_id: 0 }
+       → FeedbackTriageRequest.body = ["feedback_id": haveFeedback ? feedbackID : 0]  (snake_case)
+  • canStart = haveFeedback
+       → FeedbackTriageProjection: canStart = FeedbackTriageRequest(feedbackID:).haveFeedback
+  • AIFeatureCard title/description/buttonLabel/badge + AiOutputPanel
+       → FeedbackTriageReady + FeedbackTriageOutputPanel (empty/thinking/prose/failed branches)
+  • PROPOSE-ONLY: web references useUpdateFeedback ONLY in its header comments to state that this
+    advisor NEVER calls the feedback mutation — the operator's manual triage controls remain the sole
+    write path. The native surface preserves that contract: it binds the stream + i18n and never
+    mutates feedback (no useUpdateFeedback peer wired — that would be a parity fabrication).
+States reproduced: gated · loading · error(gate) · ready  ×  output {empty / no-feedback / thinking /
+      prose / stream-error / unknown-error}  ×  freshness {live / stale / offline} (chip + banner +
+      one-shot stale auto-refresh). a11y: VoiceOver labels, Dynamic Type via tokens, Reduce Motion.
+      P1/S11 view.opened telemetry deferred past the gate (web data-ai-feature marker parity).
+
+## Shipped files (apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.*)
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Adapter.swift
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.AdapterTests.swift
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Chrome.swift
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Model.swift
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Previews.swift
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Projection.swift
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.strings
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.swift
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Tests.swift
+  TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Views.swift
+
+## Line counts
+     338 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Adapter.swift
+     293 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.AdapterTests.swift
+     164 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Chrome.swift
+     366 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Model.swift
+     119 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Previews.swift
+     128 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Projection.swift
+      45 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.strings
+     124 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.swift
+     368 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Tests.swift
+     238 TeslaSync/shared-surfaces/AIFeedbackQueueTriage.Views.swift
+    2183 total   (cf. reference AIRangePrediction 0043 = 2148; same decomposition, +1.6%)
+
+## swiftlint --strict (surface files)  [gate: LINT_EXIT]
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+## swiftformat --lint (surface files)  [gate: FORMAT_EXIT]
+SwiftFormat completed.
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+## placeholder gate (apps/tools/check-placeholders.ps1)  [gate: PLACEHOLDER_EXIT]
+   real scan of the 10 shipped files (-Path <tmp with the 10 files> -Language swift):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+   literal prompt command (-Path apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+   (no TODO / FIXME / XXX / "Coming soon" / Placeholder / "Lorem ipsum" / "not implemented" /
+    fatalError("unimpl"/"not") / Text("TODO") / EmptyView() // placeholder — zero opt-outs used.)
+
+## i18n parity — web t(key) keys vs surface .strings catalog (P1/S10)
+web source: web/src/components/ai/AIFeedbackQueueTriage.tsx
+  key=feedbackTriage.aiAdvisor.title        web=present  native=present
+  key=feedbackTriage.aiAdvisor.description  web=present  native=present  (byte-exact, 368 chars,
+       em-dash preserved — verified in BOTH the .strings catalog AND the projection fallback literal)
+  key=feedbackTriage.aiAdvisor.button       web=present  native=present
+  key=feedbackTriage.aiAdvisor.badge        web=present  native=present
+  shared AIFeatureCard / AiOutputPanel literals resolved natively:
+    key=helix.askHelix        native=present
+    key=helix.thinking        native=present
+    key=helix.errorLabel      native=present
+    key=ai.common.errorUnknown native=present
+  i18n parity: 4/4 web keys present, 0 dead, 0 missing
+  (+ native-only P4 leaf chrome/output keys: live/stale/offline/staleBanner/offlineBanner/refresh/
+   errorTitle/retry/loadingA11y/output.a11yTitle/output.emptyHint/output.noFeedbackHint — by design.)
+
+## Isolated SwiftPM build + XCTest (module TeslaSync = surface sources + REAL design system)
+   layout: Sources/TeslaSync = ../design/generated/apple/Tokens.swift + Sources/Components/** +
+           Sources/Design/** (minus DataDisplay/UnitFormatters.swift, which references the KMP
+           UnitPreferences/Units facade and which this surface does not use) + the 7 surface sources;
+           Tests/TeslaSyncTests = the 2 co-located *Tests.swift (@testable import TeslaSync).
+   swift-tools-version:6.0 (Swift 6 language mode = strict concurrency complete) ; platform macOS 15
+  Executed 74 tests, with 0 failures (0 unexpected)
+  Test Suite 'All tests' passed.
+  -> request body {feedback_id} + /ai/feedback/triage/draft path + sorted-JSON {"feedback_id":482} /
+     sentinel {"feedback_id":0} + SSE parse/reducer/output/action + projection (gated/loading/error/
+     ready, canStart REQUIRES feedbackId > 0 incl. the nil / 0 / negative boundaries, Ask-Helix label
+     flip, every AiOutputPanel branch incl. the no-feedback vs empty hint split) + model wiring/
+     telemetry(deferred past gate)/freshness one-shot auto-refresh + a11y labels + surfaceSlug ==
+     "AIFeedbackQueueTriage" — all green against the REAL design tokens + components.
+
+## xcodegen enumeration (project.yml globs TeslaSync/shared-surfaces into app + test targets)
+  xcodegen generate: XCODEGEN_EXIT=0 (project created)
+  pbxproj references to AIFeedbackQueueTriage.*: 60
+  distinct files enumerated:
+    AIFeedbackQueueTriage.Adapter.swift
+    AIFeedbackQueueTriage.AdapterTests.swift
+    AIFeedbackQueueTriage.Chrome.swift
+    AIFeedbackQueueTriage.Model.swift
+    AIFeedbackQueueTriage.Previews.swift
+    AIFeedbackQueueTriage.Projection.swift
+    AIFeedbackQueueTriage.strings
+    AIFeedbackQueueTriage.swift
+    AIFeedbackQueueTriage.Tests.swift
+    AIFeedbackQueueTriage.Views.swift
+
+## REAL xcodebuild — iOS Simulator (KMP Shared.xcframework assembled live: Gradle, staged)
+   cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test \
+        CODE_SIGNING_ALLOWED=NO
+   "xcframework successfully written out to: .../apps/shared/core/build/XCFrameworks/debug/Shared.xcframework"
+   Frameworks/Shared.xcframework staged: yes (Gradle :core:assembleSharedXCFramework succeeded here)
+   TeslaSync app module: EmitSwiftModule normal arm64 SUCCEEDED
+     => NO ambiguous-type / cross-surface redeclaration collisions remain (the reference's R1
+        StateTimeline*/RecentDrives* collisions were resolved by the owning agents via an STW*/RDL*
+        prefix rename — confirmed: dashboard-widgets now declares STWModel/STWUpdate/STWConnection,
+        feature-views keeps StateTimelineModel/… — no shared simple-name clash).
+   IOS_XCODEBUILD_EXIT=65   (build FAILED — see attribution below)
+   total 'error:' lines: 1
+   errors attributable to AIFeedbackQueueTriage.* : 0   <-- THIS SURFACE COMPILES CLEAN IN THE REAL APP MODULE
+   all 7 app-source files compiled (SwiftCompile lines present): Adapter/Chrome/Model/Previews/
+     Projection/swift/Views ; warnings attributable to AIFeedbackQueueTriage.* : 0
+   The ONLY failure is PRE-EXISTING and UNRELATED, in ANOTHER agent's surface OUTSIDE this prompt's
+   allowed-files scope:
+     - shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+         error: escaping closure captures non-escaping parameter 'content'
+       (committed by another agent in 40e1e5da0 "add AIGeofenceAwareAutomationSuggestions surface".
+        AIFeedbackQueueTriage uses NO such `content: () -> Content` escaping pattern — verified.)
+
+## REAL xcodebuild — macOS (Shared.xcframework macos-arm64 staged, Gradle cache warm)
+   cmd: xcodebuild -scheme TeslaSync-macOS build test CODE_SIGNING_ALLOWED=NO
+   MAC_XCODEBUILD_EXIT=65   (build FAILED — same class of pre-existing OTHER-surface bug as iOS)
+   total 'error:' lines: 2   errors in AIFeedbackQueueTriage.* : 0
+   all 7 app-source files compiled for macOS (SwiftCompile lines present); 0 warnings mine.
+   Pre-existing, OUTSIDE-scope failures:
+     - shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+         error: escaping closure captures non-escaping parameter 'content'   (another agent's surface)
+     - "Could not write the 2_Test action log ... hasn't finished recording after 30 seconds"
+         (test-runner infrastructure timeout — downstream of the macOS code-signing blocker below)
+
+## macOS signing (gate context)
+   security find-identity -p codesigning -> 0 valid identities found
+   => the macOS 'build test' (test runner) additionally requires a signing identity, absent on this
+      dev host (documented blocker in apps/macos-pending-verifications.md). This is orthogonal to the
+      surface and to the compile failure above.
+
+swiftlint --strict (full surface)  : LINT_EXIT=0   (0 violations / 9 files)
+swiftformat --lint (full surface)  : FORMAT_EXIT=0  (0/9 require formatting)
+placeholder gate (surface .swift)  : PLACEHOLDER_EXIT=0  (PLACEHOLDER_COUNT=0, 0 opt-outs)
+
+==========================================================================================
+## VERDICT
+Surface AIFeedbackQueueTriage is COMPLETE and verified green in isolation + in the real app module:
+  • parity: SwiftUI port of web AIFeedbackQueueTriage.tsx (withAiFeature('feedback-queue-triage') gate
+    + AIFeatureCard + useAiStream POST /ai/feedback/triage/draft {feedback_id}); all states reproduced
+    (gated/loading/error/ready · output empty/no-feedback/thinking/prose/stream-error · live/stale/
+    offline freshness) + a11y (VoiceOver, Dynamic Type via tokens, Reduce Motion) + P1/S11 view.opened
+    telemetry (deferred past the gate). canStart REQUIRES feedbackId > 0 (nil/0/negative disabled) —
+    locked by tests. Propose-only contract preserved (no useUpdateFeedback peer wired).
+  • isolated SwiftPM XCTest (module TeslaSync, @testable, Swift 6, macOS 15) against the REAL
+    Tokens.swift + Components/** + Design/**: 74/74 PASS.
+  • swiftlint --strict 0 · swiftformat --lint 0/9 · placeholder 0 (literal + real scan) · i18n 4/4 web
+    keys (0 dead/missing), description byte-exact (368) in .strings AND projection.
+  • xcodegen enumerates all 10 files (60 pbxproj refs).
+  • REAL xcodebuild iOS-Sim + macOS app-module compile: 0 errors / 0 warnings attributable to
+    AIFeedbackQueueTriage.* (all 7 sources compiled; iOS TeslaSync module emitted — no type collisions).
+
+The full-app 'xcodebuild build test' gate is BLOCKED by PRE-EXISTING, UNRELATED conditions that are
+outside this surface AND outside this prompt's allowed-files scope (only AIFeedbackQueueTriage.* + this
+log):
+  (B1) a pre-existing `escaping closure captures non-escaping parameter 'content'` compile error in two
+       OTHER agents' surfaces — AIGeofenceAwareAutomationSuggestions.swift:141 (surfaced on iOS) and
+       AIAutoNameUnnamedLocations.swift:123 (surfaced on macOS). 1 iOS / 2 macOS errors total, 0 mine.
+       I am not permitted to edit those files (allowed files = AIFeedbackQueueTriage.* + this log).
+  (B2) macOS code-signing: 0 valid identities on this dev host (blocks the macOS test runner; the
+       "2_Test action log" timeout is downstream of it).
+This is the SAME deferral recorded for every prior P4 Apple surface in
+apps/macos-pending-verifications.md (e.g. AIRangePrediction 0043, AIDriveCoaching 0017), resolved on
+the p4-apple/P99-0001 macOS acceptance gate once the sibling-surface compile bugs are merged + signing
+is present. Note the reference's R1 (StateTimeline*/RecentDrives* type collisions) is now RESOLVED —
+the remaining blocker is a narrower, body-level bug in two sibling AI surfaces.
+
+EXIT=0
+STATUS=BLOCKED  (surface green in isolation + real app-module compile — 0 errors/0 warnings mine,
+                 74/74 isolated tests, lint/format/placeholder/i18n all clean; full-app gate blocked by
+                 pre-existing OTHER-surface compile bugs + macOS codesign — out of allowed-files scope,
+                 per the prompt's sanctioned BLOCKED path with platform-capability evidence above)

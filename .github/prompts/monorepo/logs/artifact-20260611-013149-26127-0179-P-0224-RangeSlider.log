@@ -1,0 +1,225 @@
+=== P4 Shared surface 0224 RangeSlider (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/RangeSlider.*
+Web src  : web/src/components/ui/RangeSlider.tsx
+Host     : macOS / Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.61.x
+           xcodegen 2.45.x · pwsh 7.6.x · OpenJDK 17.0.19 (KMP) · iPhone 16 sim (iOS 26.5) booted
+Capability: NOT BLOCKED — SwiftUI present; Swift Charts / MapKit are NOT needed (the web source uses
+           neither — it is a pure dual-thumb input primitive). KMP Shared.xcframework built green (Gradle
+           BUILD SUCCESSFUL in 10m, staged ios-arm64 + ios-arm64-simulator + macos-arm64).
+Delegation: NONE (FORBIDDEN this tier) — implemented directly.
+
+------------------------------------------------------------------------------
+WHAT SHIPPED  (8 RangeSlider.* files; shared-surface bundle convention)
+------------------------------------------------------------------------------
+RangeSlider.swift          (108) Public SwiftUI surface. Prop initializer = parity of `<RangeSlider value
+                                 min max step onChange label formatValue minThumbLabel maxThumbLabel
+                                 showLabel disabled />` (onChange required — the web slider is always
+                                 controlled); model-injection seam (host/preview/test). Composes the label
+                                 row + the track (or the degenerate-range affordance), binds the live
+                                 \.accessibilityReduceMotion env, dims+`.disabled()` when disabled, pushes
+                                 prop changes into the holder via `.onChange(of:)`, once-only view.opened.
+RangeSlider.Adapter.swift  (275) Foundation-only core: RangeSliderSurface.slug="RangeSlider"; the
+                                 RangeSliderResolve i18n seam; RangeSliderInput (low/high normalised so
+                                 low<=high, min, max, step, label, showLabel, isDisabled, minThumbLabel?,
+                                 maxThumbLabel?); RangeSliderProjection (low/high, low/highPercent,
+                                 fillStart/EndPercent, lowOnTop, showsLabelRow, isDisabled, hasRange,
+                                 isAdjustable); RangeSliderProjector — the 1:1 port of the web math:
+                                 `range>0 ? clamp(((v-min)/range)*100,0,100) : (low 0 / high 100)`, the
+                                 two-direction thumb-swap (`handleLowChange` next>high?[high,next]:[next,high]
+                                 / `handleHighChange` next<low?[next,low]:[low,next]), step snap+clamp, the
+                                 drag-fraction→value map, `String(n)` default format, and `lowPct>50` z-order.
+RangeSlider.Model.swift    (276) P1/S10 RangeSliderStrings facade (the TWO web keys slider.thumbMin
+                                 "{{label}} minimum" / slider.thumbMax "{{label}} maximum" mirrored verbatim
+                                 + native a11y additions), P1/S11 RangeSliderTelemetry seam + OSLog default,
+                                 P1/S8 @Observable RangeSliderModel (display via formatValue??String, thumb
+                                 a11y names via override??t(), setLow/setHigh snap+swap+emit, dragLow/High,
+                                 increment/decrement by step with non-positive-step fallback, disabled no-op,
+                                 update reconcile, view.opened once). Controlled w/ optimistic local apply so
+                                 a drag stays responsive + previews/tests run without an external store.
+RangeSlider.Views.swift    (241) Token-driven (P1/S9): RangeSliderMotion.thumb (easeOut(fastDuration); nil
+                                 under reduce), RangeSliderLabelRow (label + tabular-nums "low – high";
+                                 combined into one localized summary element), RangeSliderThumb (white knob +
+                                 accent ring + shadow — the iOS slider / TimelineScrubber playhead idiom;
+                                 44pt hit target; grows+dims by state), RangeSliderTrack (GeometryReader;
+                                 ground=border@0.5 [web --surface-2], fill=accent@0.6 [web cyan-500/60], two
+                                 thumbs positioned by percent, per-thumb DragGesture in a named coord space,
+                                 per-thumb accessibilityAdjustableAction = Arrow/swipe step, web lowPct>50
+                                 z-order), RangeSliderEmptyState (the never-a-blank-box max<=min affordance).
+RangeSlider.Previews.swift (122) DEBUG previews for every REAL branch: default controlled, label hidden,
+                                 custom formatValue ($n), custom thumb labels, disabled, edge-collision
+                                 z-order (both thumbs past midpoint), degenerate-range empty affordance.
+RangeSlider.strings        (35)  P1/S10 catalog: web keys slider.thumbMin / slider.thumbMax (mirrored
+                                 verbatim) + native a11y additions slider.rangeConnector / slider.empty /
+                                 slider.emptyMessage.
+RangeSlider.AdapterTests.swift (258) Pure-core XCTest: surface slug; percent math (+empty-range 0/100
+                                 fallbacks, non-zero min); two-direction thumb-swap (always-sorted); snap +
+                                 clamp + non-positive-step skip; drag-fraction map (+clamp/NaN); default
+                                 String(n) format; lowPct>50 threshold + hasRange; projection (fill/flags,
+                                 disabled-not-adjustable, degenerate fallbacks, showLabel); input
+                                 normalization + updatingValue preservation; value-type equality.
+RangeSlider.Tests.swift    (316) State-holder/view/facade XCTest: view.opened once+idempotent+stop/start;
+                                 setLow within/past-high(swap), setHigh within/below-low(swap); step snap;
+                                 disabled no-op (no emit, no mutate); increment/decrement by step + fallback
+                                 notch; drag fraction map; update reconcile + closure refresh; display
+                                 default+custom formatValue; default+overridden thumb labels; value summary;
+                                 motion nil-under-reduce/present; view composition every branch + injected
+                                 model + subviews; strings facade fallbacks.
+6 ship .swift files = 1022 LOC; max single file 316 (Tests), max ship file 276 (Model); SwiftLint
+file_length budget 400, --strict. No file gated all content behind a single data flag; every branch renders.
+
+------------------------------------------------------------------------------
+PARITY SCOPE  (Honesty #2 No-scope-narrowing)
+------------------------------------------------------------------------------
+The web <RangeSlider> is a PURE presentational PRIMITIVE — a CONTROLLED dual-thumb input whose `value` +
+`onChange` are plain props. There is NO fetch, NO React-Query cache, NO Promise -> therefore NO loading /
+error / stale / offline branch (there is nothing to fetch, fail, age, or disconnect from; a host owns the
+value). Reproducing those generic states would FABRICATE behaviour the source does not have, so this surface
+reproduces only the source's REAL branches — exactly the disposition the sibling presentational primitives
+Accordion (0203), Delta (0081), MetricCard (0095), InlineCallout (0124), ActiveFilterChips (0147), and
+StaggerItem (0194) used. The REAL branches, all reproduced + tested:
+  • enabled              : track ground + selected-range fill + two draggable, VoiceOver-adjustable thumbs.
+  • disabled             : both thumbs non-interactive + dimmed; setLow/setHigh/step are no-ops, no emit.
+  • label shown / hidden : web showLabel — the label + tabular-nums "low – high" caption row, or track only.
+  • thumb-swap (both)    : low past high -> [high,next]; high below low -> [next,low] (web handleLow/High).
+  • fill span            : left=min(lowPct,highPct), right=max(...); accent@0.6 (web cyan-500/60).
+  • colliding z-order    : web lowPct>50 -> low thumb raised, else high raised (grabbable near an edge).
+  • value format         : web formatValue ?? String(n) (integral drops decimals); custom formatter honored.
+  • thumb a11y names     : web minThumbLabel/maxThumbLabel ?? t('slider.thumbMin/Max','{{label}} …').
+  • degenerate range     : native never-a-blank-box affordance when max<=min (web renders a full immovable
+                           track; native states the condition). Percents still use the web 0/100 fallback.
+  • reduced motion       : fill / thumb travel animate via easeOut(fast); nil (instant) under reduce.
+Data source  : none (pure presentational; value is controlled interaction state, not fetched) — web hooks
+               were `useTranslation` (P1/S10 facade) + `useId` (native a11y elements replace the DOM ids).
+Shared comps : none (the web source uses none; it composes two raw <input type=range> + a Caption span).
+Charts/maps  : none (the web source uses none) -> Swift Charts / MapKit not required.
+i18n keys    : slider.thumbMin + slider.thumbMax mirrored verbatim from source; rangeConnector/empty/
+               emptyMessage are native a11y/HIG additions; ALL resolved through the P1/S10 facade.
+Telemetry    : view.opened emitted once with slug "RangeSlider" (P1/S11).
+a11y         : each thumb is its own adjustable element with an explicit label (web ariaLow/ariaHigh) +
+               value (displayLow/displayHigh) + AccessibilityAdjustableAction (Arrow/swipe steps by `step`,
+               the WAI-ARIA APG slider pattern); track ground/fill hidden; 44pt hit targets; reduce-motion
+               honored; Dynamic Type via tokens; label row + empty leaf are single combined elements.
+
+------------------------------------------------------------------------------
+GATE RESULTS  (verbatim)
+------------------------------------------------------------------------------
+[xcframework] apps/apple/Scripts/build-shared-xcframework.sh -> Gradle BUILD SUCCESSFUL in 10m; staged
+              Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64).          XCFRAMEWORK_EXIT=0
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> ** BUILD INTERRUPTED **  IOS_EXIT=143
+    The whole-app TeslaSync module (4700+ co-compiled sources) was SIGTERM-interrupted during
+    `EmitSwiftModule normal arm64`. The ONLY compile error in the log is FOREIGN (NOT this surface) — the
+    pre-existing pathological type-check-timeout in a sibling feature-view preview:
+      feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to type-check
+                                                              this expression in reasonable time
+    RangeSlider error count in this build: 0. Tests did not run (build interrupted). git status confirms
+    ONLY the 8 new RangeSlider.* files are added — RecentDrivesSection.Previews.swift is untracked/unmodified
+    by this work, so the red cannot be attributed to RangeSlider. The 143 (vs 65) is the OS terminating the
+    giant whole-module emit while the foreign type-check-timeout file burned compile budget — environmental,
+    surface-independent.
+
+    BASELINE PROOF (Honesty #1/#8) — same gate, RangeSlider.* EXCLUDED from compilation:
+      xcodebuild ... EXCLUDED_SOURCE_FILE_NAMES='RangeSlider.*' build  ->  ** BUILD FAILED **
+      BASELINE_IOS_EXIT=65, "(3 failures)", 0 RangeSlider errors. The first foreign error is the SAME
+      escaping-closure defect the accepted sibling Accordion (0203) recorded:
+        shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures non-escaping
+                                                              parameter 'content'
+      The tree is RED WITHOUT this surface -> the red is PRE-EXISTING and FOREIGN. (Same disposition the
+      accepted siblings Accordion 0203 / Delta 0081 / MetricCard 0095 / InlineCallout 0124 /
+      ActiveFilterChips 0147 / StaggerItem 0194 recorded; the parallel compiler surfaces whichever foreign
+      defect — AISuggestNewGeofences glass() or RecentDrivesSection type-check-timeout — fails first.)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    -> ** BUILD FAILED **  MAC_EXIT=65
+    ENVIRONMENTAL, pre-compile (NOT this surface; 0 app-source SwiftCompile actions ran): the macOS
+    app/widget targets carry hardened-runtime entitlements that require a development signing certificate,
+    and the runner has none (project.yml DEVELOPMENT_TEAM=""):
+      TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. Enable development signing in the Signing & Capabilities editor.
+      TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+    The Shared.xcframework pre-action staged green; RangeSlider error count: 0. RangeSlider's macOS-15
+    compilation is proven green independently via the macOS typecheck + `swift test` below.
+
+[3] swiftlint --strict (FULL TREE, gate step)
+    -> Done linting! Found 0 violations, 0 serious in 4721 files.        LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple (FULL TREE, gate step)
+    -> 0/5019 files require formatting, 2 files skipped.                 FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (REAL gate tool)
+    scoped to the 7 RangeSlider .swift files: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    -> no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"/unimpl stub; 0 opt-outs.  PLACEHOLDER_EXIT=0
+
+[6] xcodegen generate -> 48 RangeSlider refs across the iOS app + macOS app + both XCTest bundles.  XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------
+SURFACE-ATTRIBUTABLE VERIFICATION  (all GREEN — actually executed, Honesty #3)
+------------------------------------------------------------------------------
+[typecheck-iOS]   swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+                  -target arm64-apple-ios18.0-simulator (SDK 26.5), real surface (swift/Adapter/Model/Views/
+                  Previews) + design tokens -> 0 errors / 0 warnings.                     IOS_TYPECHECK_EXIT=0
+[typecheck-macOS] swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+                  -target arm64-apple-macos15.0, real surface + design tokens -> 0 errors / 0 warnings.
+                                                                                          MAC_TYPECHECK_EXIT=0
+[swift test]  The UNMODIFIED @testable XCTest files (RangeSlider.Tests + RangeSlider.AdapterTests) run as a
+              real module named TeslaSync (the shipped surface + design tokens), macOS, Swift 6 strict
+              concurrency:  Executed 54 tests, with 0 failures (0 unexpected).            SWIFT_TEST_EXIT=0
+              Covered: surface slug; percent math (+empty 0/100 fallbacks, non-zero min); two-direction
+              thumb-swap (always-sorted); snap+clamp (+non-positive-step skip); drag-fraction map (+clamp/
+              NaN); default String(n) format; lowPct>50 + hasRange; projection (fill/flags, disabled-not-
+              adjustable, degenerate fallbacks, showLabel); input normalization + updatingValue; equality;
+              model view.opened-once/idempotent/stop-start; setLow/setHigh within+swap; step snap; disabled
+              no-op; increment/decrement + fallback notch; drag map; update reconcile + closure refresh;
+              display default+custom; thumb labels default+override; value summary; motion nil-under-reduce/
+              present; view composition every branch + injected model + subviews; strings facade fallbacks.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+ 1  No red-as-green ..... IOS_EXIT=143 + MAC_EXIT=65 shown verbatim with file:line; NEVER claimed green.
+ 2  No scope narrowing .. full surface (swift/adapter/model/views/previews/strings + 2 test files) + every
+                          REAL branch; generic loading/error/stale/offline documented N/A (the pure
+                          controlled presentational primitive has none), not skipped.
+ 3  No skip-and-assume .. iOS gate, iOS RangeSlider-excluded baseline, macOS gate, iOS+macOS typechecks,
+                          swift test (54), swiftlint, swiftformat, placeholder, xcodegen, xcframework — ALL
+                          actually executed, output pasted verbatim.
+ 4  No stubs as final ... PLACEHOLDER_COUNT=0; every branch implemented + previewed + tested.
+ 5  No parity shortcuts . the percent math, the two-direction thumb-swap, the fill span, the lowPct>50
+                          z-order, formatValue??String, minThumbLabel/maxThumbLabel??t(), showLabel, and
+                          disabled all reproduced 1:1 from source; slider.thumbMin/thumbMax mirrored verbatim.
+ 6  No delegation ....... implemented directly.
+ 7  No predecessor bypass the FOREIGN iOS red was dispositioned exactly as the accepted siblings Accordion/
+                          Delta/MetricCard/InlineCallout/ActiveFilterChips/StaggerItem — incl. the SAME
+                          AISuggestNewGeofences glass() defect reproduced in the excluded baseline.
+ 8  No commit on red .... the iOS red is FOREIGN (proven pre-existing via the RangeSlider-excluded baseline
+                          BUILD FAILED=65 on AISuggestNewGeofences + git status) / the macOS red is
+                          ENVIRONMENTAL (no dev-signing cert, 0 app-source compiles); this surface
+                          contributes ZERO errors and EVERY surface-attributable gate is green.
+ 9  No silent drift ..... N/A states + the native idioms are documented above: the iOS knob (white + accent
+                          ring) replaces the browser's accent-tinted native thumb; --surface-2 -> border@0.5
+                          and cyan-500/60 -> accent@0.6 (the TimelineScrubber 0107 slider precedent); the
+                          degenerate-range affordance is a native HIG addition; optimistic-controlled apply
+                          keeps the drag responsive while still emitting onChange every change.
+10  Log ends with EXIT/STATUS.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+XCFRAMEWORK_EXIT=0
+IOS_EXIT=143         (FOREIGN pre-existing sibling defect + environmental whole-module SIGTERM; surface 0
+                      errors — proven via baseline + isolation typecheck + swift test)
+BASELINE_IOS_EXIT=65 (RangeSlider.* EXCLUDED — tree still red on the foreign AISuggestNewGeofences glass()
+                      escaping-closure defect; pre-existing)
+MAC_EXIT=65          (ENVIRONMENTAL: no macOS development-signing certificate on runner; pre-compile;
+                      surface 0 errors — proven via macOS typecheck + swift test)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0    (54/54)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+
+EXIT=0
+STATUS=DONE

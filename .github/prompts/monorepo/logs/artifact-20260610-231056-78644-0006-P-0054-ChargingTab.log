@@ -1,0 +1,137 @@
+=== P4 Feature view 0054 ChargingTab (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ChargingTab.*
+Web spec: web/src/features/analytics/components/analytics/ChargingTab.tsx
+Toolchain: Xcode 26.5 (17F42), swiftlint + swiftformat (Homebrew), xcodegen, pwsh — all present.
+Scope   : ChargingTab.tsx own content (6 summary MetricCards + 3 charts). ChargingDetailSection
+          is a separate surface (P-0053, already present) and is intentionally out of scope, per
+          "Out of Scope: Other surfaces in the same feature (each has its own prompt)" and the
+          extracted i18n-key list (which contains only ChargingTab.tsx's own keys).
+
+--- Files shipped (apps/apple/TeslaSync/feature-views/) ---
+ChargingTab.swift            (surface view + phase switch + i18n Text/label bridge)
+ChargingTab.Model.swift      (P1/S8 source seam, formatting seam, P1/S11 view.opened telemetry, model)
+ChargingTab.Data.swift       (domain DTOs + metric/chart value types)
+ChargingTab.Adapter.swift    (pure projector: safe / fmtInt / fmtNumber / formatCurrency / PIE_COLORS)
+ChargingTab.Accessibility.swift (VoiceOver metric + chart summaries)
+ChargingTab.Views.swift      (freshness chip, stale/offline banner, panel, metric cards, loading/error)
+ChargingTab.Charts.swift     (donut / distribution bars / hourly composed dual-axis + legends)
+ChargingTab.Previews.swift   (content / empty / loading / error / stale / offline)
+ChargingTab.Tests.swift      (adapter + state-holder + accessibility unit tests)
+ChargingTab.strings          (P1/S10 "ChargingTab" table — all source i18n keys + native chrome)
+
+================================================================================
+STATIC GATES (scoped to the shipped surface)
+================================================================================
++ swiftformat --lint <9 ChargingTab swift files>
+  SwiftFormat completed. 0/9 files require formatting.
+  FORMAT_EXIT=0
+
++ swiftlint lint --strict --config .swiftlint.yml <9 ChargingTab swift files>
+  Done linting! Found 0 violations, 0 serious in 9 files.
+  LINT_EXIT=0
+
++ check-placeholders.ps1 (per shipped file, -Language swift)  AND  literal gate path
+  ChargingTab.Accessibility.swift PLACEHOLDER_COUNT=0
+  ChargingTab.Adapter.swift       PLACEHOLDER_COUNT=0
+  ChargingTab.Charts.swift        PLACEHOLDER_COUNT=0
+  ChargingTab.Data.swift          PLACEHOLDER_COUNT=0
+  ChargingTab.Model.swift         PLACEHOLDER_COUNT=0
+  ChargingTab.Previews.swift      PLACEHOLDER_COUNT=0
+  ChargingTab.swift               PLACEHOLDER_COUNT=0
+  ChargingTab.Tests.swift         PLACEHOLDER_COUNT=0
+  ChargingTab.Views.swift         PLACEHOLDER_COUNT=0
+  (literal gate `-Path .../ChargingTab`) PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+================================================================================
+BUILD PREREQUISITES
+================================================================================
++ Scripts/build-shared-xcframework.sh  (KMP shared core -> Shared.xcframework, ADR-004)
+  BUILD SUCCESSFUL in 8m 58s ; Shared.xcframework staged.
+  XCFRAMEWORK_EXIT=0
++ xcodegen generate
+  Created project at apps/apple/TeslaSync.xcodeproj ; 60 ChargingTab refs picked up via the
+  TeslaSync/feature-views glob.
+  XCODEGEN_EXIT=0
+
+================================================================================
+FULL SCHEME GATE (prescribed)
+================================================================================
++ xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  Result: build-for-testing FAILED (3 failures). IOS_EXIT=65
+  ChargingTab compile errors: 0   <-- the shipped surface compiles clean.
+  The failing units are PRE-EXISTING DEBUG #Preview files in OTHER surfaces (NOT in the
+  allowed-files scope, NOT modified by this prompt):
+    RecentDrivesListWidget.Previews.swift:133  error: cannot infer contextual base in member 'failed'
+    RecentDrivesSection.Previews.swift:76       error: cannot infer contextual base in member 'failed'
+    StateTimeline.Previews.swift:110            error: cannot infer contextual base in member 'failed'
+    StateTimelineWidget.Previews.swift:104,122  error: cannot infer contextual base in member 'failed'
+
+  PROOF #1 (files removed) the failures are pre-existing and independent of ChargingTab:
+  the 10 ChargingTab files were moved out of the tree, `xcodegen generate` was re-run (0
+  ChargingTab refs), and `xcodebuild build-for-testing` was repeated. It FAILED IDENTICALLY:
+    BASELINE_EXIT=65 ; same four files report `cannot infer contextual base` (loading/loaded/
+    failed/stale/offline/live). i.e. the shared app/test target is red in this worktree
+    regardless of this surface. The files were then restored.
+
+  PROOF #2 (root cause) with the four broken DEBUG preview files temporarily moved aside and the
+  iOS app target rebuilt, 27 failures surfaced — ALL in the sibling RecentDrives* surface, none
+  in ChargingTab (chargingtab_errors=0). The real defect is DUPLICATE / AMBIGUOUS TYPE
+  DEFINITIONS in that surface (pre-existing parallel-work breakage), e.g.:
+    error: 'RecentDrivesConnection' is ambiguous for type lookup in this context
+    error: 'RecentDrivesLoadStatus' is ambiguous for type lookup in this context
+    error: 'RecentDrivesModel'/'RecentDrivesUpdate'/'RecentDrivesSource'/'RecentDrivesStrings' …
+           is ambiguous for type lookup in this context
+    (31 in RecentDrivesListWidget.Model.swift, 18 RecentDrivesSection.Views.swift, 17
+     RecentDrivesSection.States.swift, 13 RecentDrivesListWidget.Adapter.swift, …)
+  That ambiguity is why the preview `.failed`/`.loading`/… literals could not infer their base.
+  These files are NOT in the allowed-files scope and were NOT modified by this prompt; they were
+  restored after the check. `git status` confirms only ChargingTab.* + this log are new/changed.
+
++ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build test
+  Result: build FAILED (1 failure). MAC_EXIT=65
+  ChargingTab compile errors: 0   <-- the shipped surface compiles clean on macOS too.
+  Failure is an ENVIRONMENT CAPABILITY limit (code signing), not a code defect:
+    error: "TeslaSync-macOS" has entitlements that require signing with a development
+           certificate. Enable development signing in the Signing & Capabilities editor.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+           certificate.
+  (project.yml ships DEVELOPMENT_TEAM="" ; no signing identity is provisioned on this runner.)
+
+================================================================================
+SURFACE VERIFICATION (isolated, since the shared target is blocked externally)
+================================================================================
++ swift test on an isolated SwiftPM package containing the four Foundation-only ChargingTab
+  sources (Model + Data + Adapter + Accessibility) + ChargingTab.Tests.swift verbatim:
+    Test Suite 'ChargingTabFormattingTests'   passed (4 tests)
+    Test Suite 'ChargingTabAdapterTests'      passed
+    Test Suite 'ChargingTabModelTests'        passed (11 tests)
+    Test Suite 'ChargingTabAccessibilityTests' passed
+    Executed 29 tests, with 0 failures (0 unexpected)
+  SWIFT_TEST_EXIT=0
+  (The SwiftUI per-state snapshot views in ChargingTab.Views/Charts/Previews compiled with 0
+   errors inside the full app build above; only their host test target is blocked by the
+   pre-existing sibling-preview breakage.)
+
+================================================================================
+CONCLUSION
+================================================================================
+The ChargingTab surface is COMPLETE and independently VERIFIED:
+  - compiles clean on iOS and macOS (0 ChargingTab errors in the full app build),
+  - swiftformat --lint 0/9, swiftlint --strict 0 violations, placeholder gate 0,
+  - 29 adapter/state-holder/accessibility unit tests pass,
+  - all web-source i18n keys + all six states + VoiceOver labels + view.opened telemetry present.
+
+The prescribed combined `xcodebuild ... build test` gate cannot reach EXIT=0 in THIS worktree
+for reasons OUTSIDE the allowed-files scope and unrelated to this surface:
+  (1) iOS  : pre-existing compile errors in four sibling DEBUG #Preview files (proven via the
+             with-files-removed baseline that fails identically), and
+  (2) macOS: development code-signing certificate not available on this runner (platform
+             capability), per the acceptance clause "STATUS=BLOCKED with platform-capability
+             evidence". No edit within ChargingTab.* can resolve either blocker, and editing the
+             sibling files / project signing is forbidden by the allowed-files list.
+Per Honesty Covenant rule 8 ("No commit on red") the commit step is intentionally withheld while
+the shared gate is red; the verified surface files remain in the working tree.
+
+EXIT=65
+STATUS=BLOCKED

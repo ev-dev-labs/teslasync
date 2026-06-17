@@ -1,0 +1,119 @@
+=== P4 Feature view 0054 ChargingTab (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/ChargingTab.*
+Web source of truth: web/src/features/analytics/components/analytics/ChargingTab.tsx
+Runner: Darwin (arm64), Xcode 26.5 (build 17F42), Apple Swift 6.3.2, swiftlint + swiftformat + pwsh + xcodegen + JDK 17 present.
+Date: 2026-06-09
+
+────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (9; all match the allowed glob ChargingTab.*)
+────────────────────────────────────────────────────────────────────────
+  ChargingTab.swift            — main view (phase switch + composition)
+  ChargingTab.Model.swift      — P1/S8 source seam, P1/S11 telemetry, formatting facade, @Observable model, P1/S10 strings
+  ChargingTab.Adapter.swift    — pure projection (DTOs → datasets), phase, a11y summaries (Foundation-only)
+  ChargingTab.Views.swift      — panel chrome, freshness chip, stale/offline banner, empty/error/skeleton
+  ChargingTab.Summary.swift    — six summary tiles (web MetricCard grid) + donut legend chip
+  ChargingTab.Charts.swift     — Swift Charts: Charger Types donut + Start Battery bar + Hourly composed
+  ChargingTab.Previews.swift   — previews for content/empty/loading/error/stale/offline (DEBUG)
+  ChargingTab.Tests.swift      — adapter + formatting + model + a11y XCTest coverage
+  ChargingTab.strings          — i18n catalog (15 web-parity keys + native chrome keys)
+
+Parity coverage of the web source:
+  • 6 summary tiles : Sessions / Total Energy (kWh) / Total Cost ($) / Avg Power (kW) / Avg Duration (min) / Charge Efficiency (%)
+  • Charger Types donut (web PieChart, innerRadius 55/95→ratio 0.58, paddingAngle→angularInset) + Legend
+  • Start Battery Distribution (web BarChart, CHART_COLORS[1])
+  • Hourly Charging Pattern (web ComposedChart: bars=charges CHART_COLORS[0] + line=energy CHART_COLORS[3])
+  • States: loading skeleton / surface empty / error+retry / stale chip+auto-refresh / offline cached+chip / content
+  • Every visible string resolves through the P1/S10 facade (NSLocalizedString table "ChargingTab"); no English literals in views.
+  • Telemetry: view.opened emitted once with surface slug "ChargingTab" (P1/S11).
+  • <ChargingDetailSection> (Charger Brands/Monthly Trend/Cost Analysis/Cost by Type) is sibling prompt 0053 (already native);
+    slots in below these panels at integration time — same precedent as 0056 DrivingTab (siblings not instantiated here).
+
+All 41 public ChargingTab* type names verified declared ONLY in ChargingTab files (0 module-wide collisions).
+
+────────────────────────────────────────────────────────────────────────
+HOST-RUNNABLE GATES (deterministic, fully in-scope) — ALL GREEN
+────────────────────────────────────────────────────────────────────────
+[swiftformat]  swiftformat --lint apps/apple
+               → 0/2972 files require formatting, 3 files skipped.  FORMAT_EXIT=0
+               (ChargingTab contribution: 0 files require formatting)
+
+[swiftlint]    swiftlint lint --strict   (config: apps/apple/.swiftlint.yml)
+               → 0 violations across the whole project.  LINT_EXIT=0
+               (ChargingTab contribution: 0 violations; file_length budget respected — Views 257, Summary 180, Adapter 379)
+
+[placeholder]  pwsh check-placeholders.ps1 -Path <ChargingTab swift files> -Language swift
+               → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0.  PLACEHOLDER_EXIT=0
+               (no TODO/FIXME/stub/mock/placeholder/Lorem/"not implemented"; 0 sanctioned opt-outs)
+
+[xcodegen]     xcodegen generate
+               → Created TeslaSync.xcodeproj.  XCODEGEN_EXIT=0
+               → all 9 ChargingTab files enumerated into the app + test targets:
+                 ChargingTab.swift / .Adapter / .Charts / .Model / .Previews / .Summary / .Views / .Tests / .strings
+
+[typecheck]    xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 -strict-concurrency=complete
+                 <7 non-test surface files + real generated Tokens.swift + thin design-system shims>
+               → 0 errors / 0 warnings.  MAC_TYPECHECK_EXIT=0
+               xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 -strict-concurrency=complete
+                 <same set>
+               → 0 errors / 0 warnings.  IOS_TYPECHECK_EXIT=0
+
+[exec harness] swiftc (compile+link macOS executable) of the full surface + a Foundation assertion harness, then RUN it
+               → HARNESS_OK: 38/38 logic assertions passed (projection, presence rule, safe-guard, resolvePhase matrix,
+                 DefaultChargingTabFormatting number/int/currency parity, donut/distribution/count accessibility summaries).
+               → proves the XCTest expectations in ChargingTab.Tests.swift hold under Swift 6 strict concurrency.  HARNESS_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+FULL-APP xcodebuild build test — the surface compiles clean; the full app is
+BLOCKED by PRE-EXISTING, UNRELATED platform/toolchain conditions (per ADR-012
+CI matrix + apps/macos-pending-verifications.md). Evidence below is REAL.
+────────────────────────────────────────────────────────────────────────
+KMP Shared.xcframework (ADR-004): apps/apple/Frameworks held only .gitkeep (unstaged).
+  → cd apps/shared && ./gradlew --no-daemon :core:assembleSharedXCFramework
+     BUILD SUCCESSFUL in 4m 54s — DEBUG + RELEASE Shared.xcframework produced (ios-arm64, ios-arm64-simulator, macos-arm64).
+  → staged RELEASE xcframework into apps/apple/Frameworks/Shared.xcframework (git-ignored).
+
+[iOS]  DEVELOPER_DIR=…/Xcode.app xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+       → ChargingTab: all 7 non-test files scheduled into the real app-target compile; 0 errors / 0 warnings (CTAB_DIAG_COUNT=0).
+       → BUILD FAILED — IOS_EXIT=65 — caused by a swift-frontend 6.3.2 COMPILER CRASH (NOT a source error):
+           "Please submit a bug report … include the crash backtrace.  Stack dump:
+            0. Program arguments: …/swift-frontend -frontend -c … -primary-file …/feature-views/AnomalyInlineRow.Adapter.swift …
+            1. Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)"
+         The crash is in the pre-existing AnomalyInlineRow.* batch (a different surface). ChargingTab is NOT in the crashing
+         primary-file batch (0). 0 of the project's error-diagnostics are in ChargingTab files.
+
+[macOS] DEVELOPER_DIR=…/Xcode.app xcodebuild -scheme TeslaSync-macOS build
+       → BUILD FAILED — MAC_EXIT=65 — at the project SIGNING phase, before any Swift source compiles:
+           'TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development
+            certificate. Enable development signing in the Signing & Capabilities editor.'
+           'TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.'
+         Corroborated by:  security find-identity -p codesigning -v  →  "0 valid identities found".
+         ChargingTab is never reached (CTAB_DIAG_COUNT=0); this is a host-capability (code-signing identity) blocker.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+DISPOSITION
+────────────────────────────────────────────────────────────────────────
+The ChargingTab surface is verified green on every host-runnable gate (swiftformat,
+swiftlint --strict, placeholder, xcodegen enumeration, real iOS-18 + macOS-15
+swiftc -typecheck, an executed 38/38 logic harness) AND compiles with 0 errors / 0
+warnings in the real iOS-Simulator app-target build. The full-app `build test` cannot
+reach 0 on this host because of two PRE-EXISTING, UNRELATED conditions, both of which
+ADR-012's CI matrix runs on a signed macos-latest runner:
+  (1) a swift-frontend 6.3.2 compiler crash on the unrelated AnomalyInlineRow.Adapter.swift, and
+  (2) zero macOS code-signing identities (development-signing required by the app/widget entitlements).
+This is the same "macOS-pending" disposition recorded for every prior P4 feature-view
+surface in apps/macos-pending-verifications.md. Per the Honesty Covenant, the terminal
+state is BLOCKED with platform-capability evidence (no red reported as green; the
+surface itself is complete and clean).
+
+Deferred verification (unchanged, runs on macos-latest with signing identities):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,155 @@
+=== P4 Shared surface 0145 TourOverlay (Apple) ===
+Run: 2026-06-11T23:06:17Z
+Host: arm64 (Apple Silicon)
+Toolchain (runner): Xcode 26.5 (Build 17F42), Apple Swift version 6.3.2
+Toolchain (locked, apps/versions.lock.md / ADR-012): Xcode 26, Swift 6.0.1 (strict concurrency)
+Web source spec: web/src/components/feedback/TourOverlay.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/TourOverlay.*
+
+----------------------------------------------------------------------
+GATE STEPS (run verbatim per the prompt; CWD = apps/apple for xcodebuild/
+swiftlint, repo root for the placeholder script, as each tool requires)
+----------------------------------------------------------------------
+
+[0] xcodegen generate
+    -> Created project at apps/apple/TeslaSync.xcodeproj   (OK)
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Shared.xcframework pre-action (Gradle KMP assembleSharedXCFramework): BUILD SUCCESSFUL
+    Swift compile (arm64) FAILED on a PRE-EXISTING, NON-ALLOWED file:
+      TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+        error: escaping closure captures non-escaping parameter 'content'
+    ** TEST FAILED **
+    IOS_EXIT=65
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Code-signing pre-flight FAILED (no development certificate in this environment):
+      error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    ** TEST FAILED **
+    MAC_EXIT=65
+    (Reachability check — same target, signing disabled — confirms macOS compile then hits the SAME
+     systematic pre-existing error class in another NON-ALLOWED file:
+      TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+        error: escaping closure captures non-escaping parameter 'content')
+
+[3] swiftlint --strict            (CWD apps/apple, gate scope = all included dirs)
+    -> Done linting! Found 0 violations, 0 serious in 4360 files.
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    -> 0/4658 files require formatting, 3 files skipped.
+    FORMAT_EXIT=0
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/TourOverlay
+    -> PLACEHOLDER_ALLOWED=0
+    -> PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------
+BLOCKED ANALYSIS — platform-capability evidence
+----------------------------------------------------------------------
+The two xcodebuild gate steps cannot reach exit 0 in THIS environment for reasons that are
+(a) outside this prompt's allowed files and (b) attributable to a runner toolchain newer than
+the locked baseline. They are NOT caused by the TourOverlay surface:
+
+1. TOOLCHAIN DELTA. apps/versions.lock.md (ADR-012) pins Swift 6.0.1 / Xcode 26; the runner has
+   Swift 6.3.2 / Xcode 26.5. The newer frontend:
+     - CRASHES during IRGen while building the x86_64 simulator slice of the app module
+       (swift-frontend: llvm::report_fatal_error in IRGenRequest "While emitting IR SIL function",
+        triggered compiling the pre-existing Sources/Platform/Settings + Sources/App + Sources/Auth
+        batch — none of them TourOverlay files). A compiler that aborts is an unsuitable toolchain.
+     - Emits "escaping closure captures non-escaping parameter 'content'" on MULTIPLE pre-existing
+       sibling surfaces (AIGeofenceAwareAutomationSuggestions.swift:141, AISignalExplorerNlFilter.swift:142,
+       and others sharing that generated pattern).
+
+2. SCOPE. This prompt's allowed files are TourOverlay.* + this log only. The failing files above are
+   pre-existing and OUTSIDE that scope, so they cannot be fixed here. `git status --porcelain` confirms
+   the entire change set is exactly the 7 untracked TourOverlay.* files and nothing else:
+     ?? apps/apple/TeslaSync/shared-surfaces/TourOverlay.Adapter.swift
+     ?? apps/apple/TeslaSync/shared-surfaces/TourOverlay.Model.swift
+     ?? apps/apple/TeslaSync/shared-surfaces/TourOverlay.Previews.swift
+     ?? apps/apple/TeslaSync/shared-surfaces/TourOverlay.Tests.swift
+     ?? apps/apple/TeslaSync/shared-surfaces/TourOverlay.Views.swift
+     ?? apps/apple/TeslaSync/shared-surfaces/TourOverlay.strings
+     ?? apps/apple/TeslaSync/shared-surfaces/TourOverlay.swift
+
+3. macOS additionally requires a development code-signing certificate that is not provisioned in this
+   environment (hardened-runtime + entitlements on TeslaSync-macOS / TeslaSyncWidgets-macOS).
+
+----------------------------------------------------------------------
+SURFACE VERIFICATION — TourOverlay is COMPLETE and CORRECT on the runner toolchain
+----------------------------------------------------------------------
+Because the whole app module cannot link on the runner toolchain (pre-existing, non-allowed files),
+the TourOverlay surface was compiled AND unit-tested in ISOLATION against its real design-system
+dependencies (apps/design/generated/apple/Tokens.swift; Sources/Design/TSDesign.swift -> TSAnimation;
+Sources/Components/UI/Buttons.swift -> TSButton) on the SAME toolchain and language settings the app
+uses (Swift 6.3.2, .swiftLanguageMode(.v6) => strict concurrency = complete):
+
+    swift test  (SwiftPM, target arm64-apple-macos)
+    -> Test Suite 'All tests' passed
+    -> Executed 23 tests, with 0 failures (0 unexpected)
+    swift_test EXIT=0
+
+  Coverage (23 tests):
+    - Geometry: spotlight grows the anchor by 6pt on every edge (web `spotlightPadding`).
+    - TooltipMetrics: maxWidth cap; clampLeft / clampTop; resolved origin for bottom/top/left/right
+      placements (web `getTooltipPosition`), all deterministic.
+    - Progress dots: past/current/upcoming classification; empty when no steps.
+    - Accessibility: "Tour step {{current}} of {{total}}" interpolation.
+    - Projection: inactive (web !targetRect) vs active; counter "n / N"; first-step Back gating;
+      last-step "Get Started!" finish label; resolved close/skip/back/progress labels.
+    - Model: once-only `view.opened` (idempotent across stop/start); props-update guard; derived
+      projection; next/prev/skip handler forwarding (web onNext/onPrev/onSkip).
+
+  NOTE: this isolated build CAUGHT and FIXED two real defects before they could ship:
+    - a stray `.environment(\.accessibilityReduceMotion, ...)` write (get-only key path on this SDK), and
+    - a non-@Sendable top-level test closure (Swift 6 strict-concurrency global-var rule).
+
+Per-surface gate sub-results (TourOverlay files only):
+    swiftlint --strict (7 files)        -> 0 violations
+    swiftformat --lint (7 files)        -> 0 require formatting
+    check-placeholders (TourOverlay)    -> PLACEHOLDER_COUNT=0
+
+Files shipped (7; 1371 lines):
+    TourOverlay.Adapter.swift  (347)  pure core: slug, placement, step, input, geometry,
+                                      tooltip metrics, progress dots, a11y, projection, projector
+    TourOverlay.Views.swift    (263)  scrim+cutout, spotlight ring, tooltip card, progress dots
+    TourOverlay.Tests.swift    (321)  adapter/geometry/projection/model + a11y unit tests
+    TourOverlay.Model.swift    (148)  P1/S10 i18n facade, P1/S11 telemetry seam, @Observable holder
+    TourOverlay.Previews.swift (143)  DEBUG previews: inactive, first/middle/last, placements, reduce-motion
+    TourOverlay.swift          (123)  public surface (prop init + model init), full-screen composition
+    TourOverlay.strings        (26)   i18n catalog contribution
+
+i18n keys (all resolve through the P1/S10 facade; web English fallbacks):
+    tour.dialogLabel, tour.close, tour.skip, tour.prev, tour.next, tour.finish, tour.progressA11y
+
+States reproduced from the web source (every real branch):
+    inactive  (web `if (!targetRect) return null`)
+    active    x {first step (no Back), middle step (Back+Next), last step (Get Started!, no chevron)}
+              x placement {top, bottom, left, right}
+    There is intentionally NO loading/error/stale/offline branch: the web TourOverlay is a controlled,
+    fetch-free presentational component, so inventing those would fabricate states the source lacks.
+    This follows the established components/feedback/* sibling precedent InlineCallout (0124),
+    documented in TourOverlay.Adapter.swift's faithful-parity header note.
+
+Charts/maps: none in the web source -> none here. Telemetry: `view.opened` slug "TourOverlay" (P1/S11).
+
+----------------------------------------------------------------------
+RESULT
+----------------------------------------------------------------------
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+swift_test(isolated)=0
+
+EXIT=1
+STATUS=BLOCKED
+Reason: runner Swift toolchain 6.3.2 (locked baseline 6.0.1) cannot link the app module due to a
+pre-existing IRGen compiler crash + pre-existing "escaping closure captures non-escaping parameter"
+errors in NON-ALLOWED sibling surfaces (git-proven not introduced here), plus an unprovisioned macOS
+signing certificate. The TourOverlay surface itself compiles cleanly and passes 23/23 unit tests on
+the runner toolchain in isolation, and is green on swiftlint --strict, swiftformat --lint, and the
+placeholder gate. No commit performed (Honesty Covenant #8: no commit on red).

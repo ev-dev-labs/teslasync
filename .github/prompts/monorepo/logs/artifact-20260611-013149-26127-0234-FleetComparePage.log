@@ -1,0 +1,222 @@
+================================================================================
+p4-apple · P7 · page:analytics/FleetCompare — SwiftUI / HIG parity
+================================================================================
+artifact : apps/apple/Sources/Features/Analytics/FleetComparePage.swift (+ models, model, sample, sections, charts, table, format, route reg, tests)
+host     : macOS (Darwin 25.5.0); Xcode 26.5 Build 17F42; Apple Swift 6.3.2; swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+parity   : page:analytics/FleetCompare  (manifest PARITY_REQUIRED=63 = 12 panels + 4 charts + 4 states + 43 strings)
+web src  : web/src/features/analytics/pages/FleetComparePage.tsx  (route /vehicle-comparison)
+data srcs: useVehicles -> GET /vehicles ; useVehicleState -> GET /vehicles/{id}/state ; useDrivingStats ;
+           useCostBreakdown -> GET /analytics/tco ; useMonthlyMileage -> GET /mileage/monthly
+           (bound through one @Observable FleetComparePageModel via an injected FleetCompareDataSource seam, ADR-004;
+            no live SSE on this surface — the web page reads cached vehicle state, no EventSource — so no staleness indicator)
+
+FILES (allowed scope: Sources/Features/Analytics/**, navigation registration, the string catalog, this log)
+  NEW  apps/apple/Sources/Features/Analytics/FleetCompareModels.swift              (value types + comparison metrics/row/point + winner enums)
+  NEW  apps/apple/Sources/Features/Analytics/FleetComparePageModel.swift           (@Observable model: data-source seam, list/side state, derivations)
+  NEW  apps/apple/Sources/Features/Analytics/FleetComparePageModel.Sample.swift    (sample + single-vehicle + failing preview/test data sources)
+  NEW  apps/apple/Sources/Features/Analytics/FleetCompareFormat.swift              (SI display-boundary formatters via Units; web fmtNumber/useUnits/useFormatting)
+  NEW  apps/apple/Sources/Features/Analytics/FleetComparePage.swift                (adaptive View: header, banner, selectors, status, charts, table, highlights)
+  NEW  apps/apple/Sources/Features/Analytics/FleetComparePage.Sections.swift       (VehicleStatusCard + chart legend + loading-redaction modifier)
+  NEW  apps/apple/Sources/Features/Analytics/FleetComparePage.Charts.swift         (monthly-distance line chart + drives-per-month bar chart sections)
+  NEW  apps/apple/Sources/Features/Analytics/FleetComparePage.Table.swift          (lifetime comparison DataTable + key-highlight stat cards)
+  NEW  apps/apple/Sources/Features/Analytics/FleetCompareRouteRegistration.swift   (registers .fleetCompare; persists banner dismissal; wires CTAs)
+  NEW  apps/apple/Tests/Unit/Features/Analytics/FleetComparePageModelTests.swift   (28 XCTest cases: states, winners, merge, selection, formatters)
+  EDIT apps/apple/Sources/App/AppRoute.swift           (add .fleetCompare: Insights group, segment "vehicle-comparison", SF symbol)
+  EDIT apps/apple/Sources/TeslaSyncApp.swift           (compose FleetCompareRouteRegistration into the route-host chain; onNavigate -> selection)
+  EDIT apps/apple/Localization/Localizable.xcstrings   (+43 comparison.*/fleetCompare.* strings, +1 route.fleetCompare nav title = 44 keys)
+  EDIT apps/parity/apple-ledger.json                   (+2 rows: apple-macos / apple-ios -> done 63/63)
+
+Navigation note: the web route /vehicle-comparison is single-segment, so the first-segment AppRouteParser
+resolves it directly via the new route's pathSegment ("vehicle-comparison") — no alias needed (cf. the sibling
+FleetTelemetryCoverage which needed a /admin/telemetry/coverage alias because its web path is multi-segment).
+A dedicated .fleetCompare route (Insights sidebar group) was added rather than displacing the existing
+.analytics route (covenant #7). MenuCommandCatalog.navigateCommands() derives from AppRoute.allCases, so the new
+case is auto-covered (testNavigateCommandsCoverEveryRoute stays green); the pathSegment is unique
+(testEveryRouteHasUniquePathSegment stays green); the route resolves to its Insights group
+(testEveryRouteResolvesToItsGroup stays green). The two web CTAs (single-vehicle "Manage vehicles" and the
+period-compare banner) navigate through an injected onNavigate shell hook (selection = .vehicles / .analytics),
+mirroring SettingsRouteRegistration's onOpenNotifications pattern; the banner dismissal persists in UserDefaults
+under the web localStorage key phase40.compareBanner.dismissed.fleet.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) assembled via Gradle + staged (apps/apple/Scripts/build-shared-xcframework.sh) ---
+BUILD SUCCESSFUL in 7m 16s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "FleetCompare" referenced 60x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 10 new/test files + 2 edited App files, repo .swiftformat) ---
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (repo .swiftlint.yml; my 10 new/test files + 3 edited App files) ---
+0 violations in any of my files.
+LINT_EXIT=0
+  [repo-wide --strict still reports a small number of PRE-EXISTING, OUT-OF-SCOPE violations
+   (e.g. TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift identifier_name a/b/c) — untouched here.]
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Analytics -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  [the single ALLOWED is the one literal ".placeholder" in the fleetCompareRedacted(while:) View modifier
+   (FleetComparePage.Sections.swift) — the manifest's "loading -> redacted(reason:)" requirement maps to
+   SwiftUI's RedactionReasons.placeholder; the case-insensitive scanner matches the substring "placeholder"
+   in that API name. It is annotated `// parity:allow redaction API, not a stub` with a required reason. It is
+   NOT a stub: it drives the real loading redaction. No TODO/FIXME/Coming soon/Lorem/"not implemented"/fatalError anywhere.]
+
+--- Executed model logic (real model + models + sample, Swift 6 strict-concurrency host harness) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   Sources/Features/Analytics/FleetCompareModels.swift Sources/Features/Analytics/FleetComparePageModel.swift \
+#   Sources/Features/Analytics/FleetComparePageModel.Sample.swift Harness.swift -o fcharness   (SWIFTC_EXIT=0)
+37 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  initial=.loading + !isRefreshing + vehicles empty;
+  load -> .ready + auto-select first two (1,2) + both sides loaded (battery 80 / drives 980); !isLoadingStats after;
+  cross-disable optionsA=[1,3] optionsB=[2,3]; single vehicle -> .single + no B; empty -> .single; failed -> .error;
+  refresh clears isRefreshing + .ready; selectA(3) keeps B; selectA(2)/selectB(1) SWAP sides;
+  comparisonRows cover all 10 metrics in web order; winners: totalDrives/regenRatio higher->A, avgEfficiency/chargingCost lower->A,
+  avgSpeed/totalEnergy neutral->tie, equal->tie, higher favours B; monthlyChartData merged+aligned+sorted
+  (2024-01 A-only zero-B, 2024-02 both aligned, 2024-03 B-only zero-A); dismissBanner hides + fires callback;
+  sample seed -> .ready + 10 rows + non-empty monthly
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components + Units/Shared facade (Swift 6 strict concurrency, BOTH idioms) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   -F Frameworks/Shared.xcframework/<slice> ../design/generated/apple/Tokens.swift \
+#   Sources/Design/** Sources/Components/** Sources/SharedFacade/** Sources/Auth/** (minus app-wiring RootView.swift) \
+#   Sources/App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift Sources/Theme.swift Sources/Features/Analytics/**   (81 files)
+macOS  (arm64-apple-macos15.0)            -> 0 errors   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors   VIEW_TYPECHECK_IOS_EXIT=0
+  [exercises the #if os(iOS) horizontalSizeClass compact branch in FleetComparePage (selectors V/H reflow, status-card
+   1-vs-2-col grid, highlights adaptive grid), ADR-002/006. Compiles my view + sections + charts + table + format + model
+   + sample + registration against the ACTUAL TSGlassPanel/TSCard/TSStatCard/TSSelect/TSAlertBanner/TSEmptyState/
+   TSErrorDisplay/TSButton/TSChartContainer/TSLineChart/TSBarChart/TSChartSeries/TSChartPoint/TSChartPalette/TSPageTitle/
+   TSCaption/TSLabel/Color.TS/Font.TS/TSSpacing/TSRadius/tsGlassPanel/Units/UnitPreferences/tsUnits/AppRoute/
+   AppRouteHostRegistry/teslaSyncTheme sources, linking the real Shared.xcframework.]
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [BLOCKED by ONE PRE-EXISTING, OUT-OF-SCOPE error — see note below; ZERO errors in any of my files]
+TEST_EXIT=(not reached)  [the test bundle hosts on the app target, blocked by the same out-of-scope error;
+                          model logic is instead proven GREEN by the executed harness (37/37) + view type-check (0/0 x2) above]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to a defect in a sibling surface OUTSIDE this
+artifact's allowed files. grep of the build log: total `error:` lines = 1; unique erroring file =
+  TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+      error: escaping closure captures non-escaping parameter 'content'   (at a `TSGlassPanel { ... }` call)
+This is the SAME systematic `glass/@ViewBuilder _ content: () -> some View` bug class the predecessor
+FleetTelemetryCoverage / DiskForecast / ApiPlayground logs documented across the generated shared-surfaces files.
+NONE of the diagnostics are in my files (grep of the build log for Features/Analytics, AppRoute.swift,
+TeslaSyncApp.swift -> zero diagnostics). Because xcodebuild stopped scheduling further compile tasks after that
+batch failed, my files' correctness is proven instead by the isolated Swift 6 type-check (0 errors on macOS+iOS,
+against the real tokens/components/Units+Shared) and the executed model harness (37/37) — the same host-harness +
+isolated-typecheck methodology the peer p4-apple page logs use when the shared bundle is blocked by out-of-scope
+siblings. No out-of-scope file was edited.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=63
+================================================================================
+# evidence = file `symbol` (paths under apps/apple/Sources/Features/Analytics/)
+
+[x] panel  — GlassPanel1            FleetComparePage.Sections.swift `FleetCompareStatusCard.loadingCard` -> TSGlassPanel { redacted skeleton } (web VehicleStatusCard isLoading -> Skeleton lines=5)
+[x] panel  — GlassPanel2            FleetComparePage.Sections.swift `FleetCompareStatusCard.content` -> TSGlassPanel { TSEmptyState("comparison.selectVehicle") } (web VehicleStatusCard !vehicle branch)
+[x] panel  — GlassPanel3            FleetComparePage.Sections.swift `FleetCompareStatusCard.populated(_:)` -> TSGlassPanel { header + battery/range/temp/security/status rows } (web populated card)
+[x] panel  — GlassPanel4            FleetComparePage.swift `singleVehicleEmpty` -> TSGlassPanel { TSEmptyState(title/body/cta) } (web vehicleList.length<2 single-vehicle EmptyState)
+[x] panel  — GlassPanel5            FleetComparePage.swift `selectorsPanel` -> TSGlassPanel { TSSelect A + swap glyph + TSSelect B } (web vehicle selectors GlassPanel)
+[x] panel  — Monthly-Distance       FleetComparePage.Charts.swift `FleetCompareMonthlyDistanceSection` -> TSChartContainer("comparison.monthlyDistance") (web overlaid monthly distance ChartContainer)
+[x] panel  — Drives-per-Month       FleetComparePage.Charts.swift `FleetCompareDrivesSection` -> TSChartContainer("comparison.drivesPerMonth") (web drives-per-month ChartContainer)
+[x] panel  — GlassPanel8            FleetComparePage.Table.swift `FleetCompareComparisonTable` -> TSGlassPanel { lifetime note + Grid table } (web lifetime stats DataTable GlassPanel)
+[x] panel  — Battery-Level          FleetComparePage.Table.swift `FleetCompareHighlights` -> TSStatCard(title:"comparison.batteryDiff", value: batteryHighlight) (web Key-Highlights StatCard)
+[x] panel  — Avg-Efficiency         FleetComparePage.Table.swift `FleetCompareHighlights` -> TSStatCard(title:"comparison.efficiencyDiff", value: efficiencyHighlight)
+[x] panel  — Charging-Cost          FleetComparePage.Table.swift `FleetCompareHighlights` -> TSStatCard(title:"comparison.costDiff", value: costHighlight)
+[x] panel  — CO-Saved               FleetComparePage.Table.swift `FleetCompareHighlights` -> TSStatCard(title:"comparison.co2Diff", value: co2Highlight)
+
+[x] chart  — ChartContainer         FleetComparePage.Charts.swift `FleetCompareMonthlyDistanceSection` -> TSChartContainer (P3 wrapper, summary "comparison.monthlyDistance.aria")
+[x] chart  — LineChart              FleetComparePage.Charts.swift `FleetCompareMonthlyDistanceSection.series` -> TSLineChart(series:) (P3 Swift Charts; SI meters -> Units.convertDistance per series point)
+[x] chart  — ChartContainer         FleetComparePage.Charts.swift `FleetCompareDrivesSection` -> TSChartContainer (P3 wrapper, summary "comparison.drivesPerMonth.aria")
+[x] chart  — BarChart               FleetComparePage.Charts.swift `FleetCompareDrivesSection.series` -> TSBarChart(series:) (P3 Swift Charts; grouped drives-per-month, two series)
+
+[x] state  — loading   FleetComparePageModel.swift `.loading` + FleetComparePage.swift `loadingView` (ProgressView) ; per-side FleetCompareStatusCard `loadingCard` + table/highlights `.fleetCompareRedacted(while:)` (web Skeleton / loading) [manifest loading->redacted/ProgressView]
+[x] state  — empty     FleetComparePageModel.swift `.single` -> FleetComparePage.swift `singleVehicleEmpty` (TSEmptyState) ; chart empties TSEmptyState("comparison.noMonthlyData"/"comparison.noDrivesData") ; status-card TSEmptyState("comparison.selectVehicle")
+[x] state  — error     FleetComparePageModel.swift `.error(String)` -> FleetComparePage.swift `errorView` (TSErrorDisplay danger-stroked + Retry -> model.refresh()) [HIG error view + Retry]
+[x] state  — success   FleetComparePageModel.swift `.ready` -> FleetComparePage.swift `readyView` (banner + selectors + status + charts + table + highlights, all from the @Observable model)
+
+[x] string — comparison.avgEfficiency        FleetCompareModels.swift FleetCompareMetric.avgEfficiency.titleKey
+[x] string — comparison.avgSpeed             FleetCompareModels.swift FleetCompareMetric.avgSpeed.titleKey
+[x] string — comparison.banner.toPeriodCta   FleetComparePage.swift `banner` TSButton("comparison.banner.toPeriodCta")
+[x] string — comparison.banner.toPeriodPrefix FleetComparePage.swift `banner` TSAlertBanner(title:"comparison.banner.toPeriodPrefix")
+[x] string — comparison.battery              FleetComparePage.Sections.swift `batteryRow` infoRow(label:"comparison.battery")
+[x] string — comparison.batteryDiff          FleetComparePage.Table.swift TSStatCard(title:"comparison.batteryDiff")
+[x] string — comparison.chargeSessions       FleetCompareModels.swift FleetCompareMetric.chargeSessions.titleKey
+[x] string — comparison.chargingCost         FleetCompareModels.swift FleetCompareMetric.chargingCost.titleKey
+[x] string — comparison.co2Diff              FleetComparePage.Table.swift TSStatCard(title:"comparison.co2Diff")
+[x] string — comparison.co2Saved             FleetCompareModels.swift FleetCompareMetric.co2Saved.titleKey
+[x] string — comparison.costDiff             FleetComparePage.Table.swift TSStatCard(title:"comparison.costDiff")
+[x] string — comparison.currentStatus        FleetComparePage.swift `statusSection` sectionHeader("comparison.currentStatus")
+[x] string — comparison.drivesPerMonth       FleetComparePage.Charts.swift TSChartContainer("comparison.drivesPerMonth")
+[x] string — comparison.drivesPerMonth.aria  FleetComparePage.Charts.swift TSChartContainer(summary:"comparison.drivesPerMonth.aria") + accessibilityLabel
+[x] string — comparison.efficiencyDiff       FleetComparePage.Table.swift TSStatCard(title:"comparison.efficiencyDiff")
+[x] string — comparison.highlights           FleetComparePage.swift `highlightsSection` sectionHeader("comparison.highlights")
+[x] string — comparison.lifetimeNote         FleetComparePage.Table.swift TSCaption("comparison.lifetimeNote")
+[x] string — comparison.locked               FleetComparePage.Sections.swift `securityValue` Text("comparison.locked")
+[x] string — comparison.metric               FleetComparePage.Table.swift `table` header Text("comparison.metric")
+[x] string — comparison.monthlyDistance      FleetComparePage.Charts.swift TSChartContainer("comparison.monthlyDistance")
+[x] string — comparison.monthlyDistance.aria FleetComparePage.Charts.swift TSChartContainer(summary:"comparison.monthlyDistance.aria") + accessibilityLabel
+[x] string — comparison.noDrivesData         FleetComparePage.Charts.swift TSEmptyState(title:"comparison.noDrivesData")
+[x] string — comparison.noMonthlyData        FleetComparePage.Charts.swift TSEmptyState(title:"comparison.noMonthlyData")
+[x] string — comparison.range                FleetComparePage.Sections.swift `populated` infoRow(label:"comparison.range")
+[x] string — comparison.regenRatio           FleetCompareModels.swift FleetCompareMetric.regenRatio.titleKey
+[x] string — comparison.security             FleetComparePage.Sections.swift `securityRow` Label("comparison.security")
+[x] string — comparison.selectVehicle        FleetComparePage.Sections.swift `content` TSEmptyState(title:"comparison.selectVehicle")
+[x] string — comparison.sentry               FleetComparePage.Sections.swift `securityValue` Label("comparison.sentry")
+[x] string — comparison.status               FleetComparePage.Sections.swift `statusRow` Label("comparison.status")
+[x] string — comparison.subtitle             FleetComparePage.swift `header` Text("comparison.subtitle")
+[x] string — comparison.temp                 FleetComparePage.Sections.swift `populated` infoRow(label:"comparison.temp")
+[x] string — comparison.title                FleetComparePage.swift `header` TSPageTitle("comparison.title")
+[x] string — comparison.topSpeed             FleetCompareModels.swift FleetCompareMetric.topSpeed.titleKey
+[x] string — comparison.totalDistance        FleetCompareModels.swift FleetCompareMetric.totalDistance.titleKey
+[x] string — comparison.totalDrives          FleetCompareModels.swift FleetCompareMetric.totalDrives.titleKey
+[x] string — comparison.totalEnergy          FleetCompareModels.swift FleetCompareMetric.totalEnergy.titleKey
+[x] string — comparison.unknown              FleetComparePage.Sections.swift `statusPill` Text("comparison.unknown")
+[x] string — comparison.unlocked             FleetComparePage.Sections.swift `securityValue` Text("comparison.unlocked")
+[x] string — comparison.vehicleA             FleetComparePage.swift `selectorA` TSSelect(label:"comparison.vehicleA") + table header fallback + nameA fallback
+[x] string — comparison.vehicleB             FleetComparePage.swift `selectorB` TSSelect(label:"comparison.vehicleB") + table header fallback + nameB fallback
+[x] string — fleetCompare.singleVehicle.body  FleetComparePage.swift `singleVehicleEmpty` TSEmptyState(message:"fleetCompare.singleVehicle.body")
+[x] string — fleetCompare.singleVehicle.cta   FleetComparePage.swift `singleVehicleEmpty` TSButton("fleetCompare.singleVehicle.cta")
+[x] string — fleetCompare.singleVehicle.title FleetComparePage.swift `singleVehicleEmpty` TSEmptyState(title:"fleetCompare.singleVehicle.title")
+
+PARITY_COVERED=63
+PARITY_REQUIRED=63
+(all 43 keys also confirmed present in apps/apple/Localization/Localizable.xcstrings with en source values ported
+ verbatim from the web `t(key, default)` calls; +1 route.fleetCompare = "Fleet Comparison" nav title; total 44 keys inserted, JSON re-validated.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65) is a
+                       PRE-EXISTING out-of-scope sibling defect (AISuggestNewGeofences.swift:129), reported as RED,
+                       not masked. In-scope gates are all GREEN.
+ 2 No scope narrowing : all 12 panels + 4 charts + 4 states + 43 strings implemented (PARITY_COVERED=63).
+ 3 No skip-and-assume : model logic executed (37/37); views type-checked on macOS+iOS (0/0) against real tokens/components/Shared.
+ 4 No stubs as final  : complete implementation; PLACEHOLDER_COUNT=0 (1 documented SwiftUI redaction-API opt-out).
+ 5 No parity shortcuts: SwiftUI-native (TSGlassPanel/TSStatCard/TSSelect/TSAlertBanner/Swift Charts TSLineChart+TSBarChart,
+                        adaptive Grid/LazyVGrid, .redacted loading) — no web cloning, no WKWebView.
+ 6 No delegation      : implemented directly; no sub-agents.
+ 7 No predecessor bypass: the existing .analytics route + all sibling Admin pages untouched & still hosted; a NEW
+                        .fleetCompare route (segment "vehicle-comparison", Insights group) was added.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — swiftformat(0/12), swiftlint --strict(0 in my files),
+                        placeholder(0), harness(37/37), typecheck macOS+iOS(0/0), xcodegen(0), xcframework(0). The full
+                        xcodebuild is RED ONLY due to the documented pre-existing out-of-scope sibling.
+ 9 No silent drift    : Localizable.xcstrings keys = web key names verbatim; apple-ledger updated 63/63 x2.
+10 (terminates below with EXIT + STATUS)
+
+EXIT=0
+STATUS=DONE

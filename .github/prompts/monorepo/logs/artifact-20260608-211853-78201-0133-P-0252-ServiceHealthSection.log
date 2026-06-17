@@ -1,0 +1,165 @@
+=== P4 Feature view 0252 ServiceHealthSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ServiceHealthSection.*
+Web spec: web/src/features/system/components/status/ServiceHealthSection.tsx
+Host    : Darwin (Apple Silicon) · Xcode 26.5 (Build 17F42) · Swift 6.3.2
+Toolchain capability: AVAILABLE — xcodebuild, swift, swiftlint, swiftformat,
+                      xcodegen 2.45.4, pwsh, JDK 17, booted iPhone 16 simulator,
+                      KMP Shared.xcframework assembled + staged (see PART B.0).
+
+Files shipped (8):
+  ServiceHealthSection.swift           (accordion view + phase switch)
+  ServiceHealthSection.Adapter.swift   (pure models, formatters, status, a11y)
+  ServiceHealthSection.Model.swift     (P1/S8 seam, P4 connection axis, projection,
+                                        @Observable model, P1/S11 telemetry, P1/S10 facade)
+  ServiceHealthSection.Views.swift     (header badges, freshness chip/banner, ready
+                                        content, metric grid, loading/error/empty chrome)
+  ServiceHealthSection.Table.swift     (streaming-vehicles TSDataTable, 6 columns)
+  ServiceHealthSection.Previews.swift  (8 states)
+  ServiceHealthSection.Tests.swift     (adapter + projection + model + a11y)
+  ServiceHealthSection.strings         (P1/S10 catalog contribution)
+
+Parity reproduced (every web branch + i18n key):
+  States  : loading (skeleton) · error (QueryError peer + retry) · !data empty
+            ("No telemetry data available") · ready (4 metric cards + vehicles table,
+            or "No vehicles connected") · + P4 leaf stale/offline freshness axis.
+  Metrics : Mode · Vehicles Connected (active count) · Total Signals (fmtInt) ·
+            Avg Signals/s (server string, verbatim).
+  Table   : VIN · Status (Streaming/Idle dot) · Signals (sortable, fmtInt) ·
+            Signals/s (1dp) · Latency (0dp + " ms") · Last Received (formatDateTime).
+  i18n    : all 19 web t() keys + native-chrome keys present in the .strings table.
+
+############################################################################
+PART A — SURFACE VERIFIED GREEN IN ISOLATION  (the ServiceHealthSection work)
+############################################################################
+
+A.1  xcodegen generate
+     → Created TeslaSync.xcodeproj · all 8 ServiceHealthSection files enumerated
+       (swift/Adapter/Model/Views/Table/Previews in app+test targets,
+        Tests in the XCTest bundles, .strings as a resource).
+     XCODEGEN_EXIT=0
+
+A.2  swiftc -typecheck — iOS 18 simulator SDK, -swift-version 6 (strict concurrency)
+     target arm64-apple-ios18.0-simulator
+     closure = design tokens + Sources/Design/* + Sources/Components/*
+               (minus the KMP-coupled UnitFormatters.swift, which this surface
+               does not use) + the 6 ServiceHealthSection non-test files.
+     → 0 errors / 0 warnings
+     IOS_TYPECHECK_EXIT=0
+
+A.3  swiftc -typecheck — macOS 15 SDK, -swift-version 6 (strict concurrency)
+     target arm64-apple-macos15.0 · same closure
+     → 0 errors / 0 warnings
+     MAC_TYPECHECK_EXIT=0
+
+A.4  Isolated SwiftPM build + test (swift-tools 6.0, .macOS(.v15), Swift 6 language mode)
+     module "TeslaSync" = tokens + Design + Components(-UnitFormatters) + surface;
+     test target = ServiceHealthSection.Tests.swift.
+     → Test Suite 'All tests' passed.
+       Executed 27 tests, with 0 failures (0 unexpected).
+       Suites: FormatNumber(5) FormatDate(2) StatusKind(3) ActiveCount(2)
+               Projection(5) Model(8) Accessibility(2).
+     SWIFT_TEST_EXIT=0
+
+A.5  swiftlint --strict — ServiceHealthSection files
+     → Done linting! Found 0 violations, 0 serious in 7 files.
+     SURFACE_LINT_EXIT=0
+
+A.6  swiftformat --lint — ServiceHealthSection files
+     → 0/7 files require formatting.
+     SURFACE_FORMAT_EXIT=0
+
+A.7  check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ServiceHealthSection
+     → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+     PLACEHOLDER_EXIT=0
+
+A.8  Type-name uniqueness — every type ServiceHealthSection declares is declared
+     exactly once across the whole app target (no collisions introduced):
+       TelemetrySnapshot, StreamingVehicleItem, ServiceHealthModel,
+       ServiceHealthConnection, ServiceHealthInput, ServiceHealthResolved,
+       ServiceHealthProjection, ServiceHealthSource, ServiceHealthStatusKind,
+       ServiceHealthTone, ServiceHealthFormat, ServiceHealthStrings,
+       ServiceHealthSection, ServiceHealthTelemetry, InMemoryServiceHealthSource,
+       ServiceHealthColumnCompare  → 16/16 decls=1.
+
+PART A RESULT: the surface compiles on both shipping SDKs under Swift 6 strict
+concurrency, all 27 unit tests pass, lint/format/placeholder are clean, and the
+surface introduces no symbol collisions. The ServiceHealthSection work is GREEN.
+
+############################################################################
+PART B — FULL-APP ACCEPTANCE GATE (canonical commands)
+############################################################################
+
+B.0  Pre-build: KMP Shared.xcframework
+     cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+     → BUILD SUCCESSFUL in 9m 40s — release + debug XCFrameworks produced;
+       staged to apps/apple/Frameworks/Shared.xcframework
+       (ios-arm64, ios-arm64-simulator, macos-arm64). GRADLE_EXIT=0.
+     (Note: this is the long-pole step the precedent records as timing out under
+      parallel-slot contention; here it completed.)
+
+B.1  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     → ** TEST FAILED ** — build failed during whole-module Swift compile.
+       Failure cause: PRE-EXISTING duplicate-type declarations across OTHER
+       parallel-merged surfaces (NOT ServiceHealthSection). 240x
+       "is ambiguous for type lookup" over 15 distinct duplicated types +
+       168 cascading "Cannot infer contextual base" + 2 "Cannot use explicit
+       'return' statement". Duplicated types include:
+         FleetStatsBarModel  (dashboard-widgets/FleetStatsBarWidget.Model.swift
+                               AND feature-views/FleetStatsBar.Model.swift)
+         SafetyModel, SafetyUpdate, SafetyLoadStatus, SafetyConnection
+                              (SafetyHistoryWidget.Model + SafetyFeaturesWidget.Model)
+         ChargeConnection, ChargeStatusProjection, ChargeStatusUpdate,
+         ChargeSessionDTO, ChargeStateDTO, ChargeLoadStatus, ChargeUnitPrefs,
+         ChargeDistanceUnit, DrivingCoachConnection, DrivingCoachLoadStatus.
+       ServiceHealthSection error lines: 0 (zero). The 6 ServiceHealthSection
+       non-test files were compiled in the module (observed in a SwiftCompile
+       batch) and produced no diagnostics.
+     IOS_EXIT=65
+
+B.2  xcodebuild -scheme TeslaSync-macOS build test
+     → ** TEST FAILED ** — "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have
+       entitlements that require signing with a development certificate
+       (no signing identity available on this runner). Environment/signing
+       limitation, deferred to a macos-latest runner with signing identities.
+       Not a ServiceHealthSection issue.
+     MAC_EXIT=65
+
+B.3  swiftlint --strict   (tree-wide, 2497 files)
+     → Found 1 violation, 1 serious. The single violation is PRE-EXISTING and
+       unrelated to this surface:
+         TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+         error: Opening Brace Spacing Violation (opening_brace)
+       ServiceHealthSection violations: 0.
+     LINT_EXIT=2
+
+B.4  swiftformat --lint apps/apple   (tree-wide, 2501 files)
+     → 0/2501 files require formatting (2 skipped). ServiceHealthSection: clean.
+     FORMAT_EXIT=0
+
+B.5  check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ServiceHealthSection
+     → PLACEHOLDER_COUNT=0
+     PLACEHOLDER_EXIT=0
+
+############################################################################
+PROVENANCE / HONESTY
+############################################################################
+- The ServiceHealthSection surface is verified GREEN in isolation (PART A):
+  iOS 18 + macOS 15 typecheck, 27/27 isolated unit tests, swiftlint/swiftformat/
+  placeholder clean, zero symbol collisions.
+- The full-app gate (PART B) is RED for reasons OUTSIDE this surface and outside
+  this prompt's allowed-files scope (apps/apple/TeslaSync/feature-views/
+  ServiceHealthSection.* + this log):
+    B.1 iOS  — pre-existing duplicate-type collisions in OTHER surfaces
+               (FleetStatsBar*, Safety*, Charge*, DrivingCoach*).
+    B.2 macOS — development-signing identities not present on this runner.
+    B.3 lint — one pre-existing opening_brace error in LiveSignalSparklinesWidget.
+- This matches the documented precedent in apps/macos-pending-verifications.md
+  (rows P-0010-ToolCard, 0180-AlertMessageEditor, 0231-FSMTimelineChart,
+   0167-DrivingCoachSection, 0168-DrivingTips): surface green in isolation,
+  full-app xcodebuild build test deferred to the P99 acceptance gate on
+  macos-latest (signing identities + de-duplicated parallel-merge surfaces).
+- No red has been reported as green. No ServiceHealthSection file produced any
+  build, lint, format, or placeholder diagnostic.
+
+EXIT=65
+STATUS=BLOCKED

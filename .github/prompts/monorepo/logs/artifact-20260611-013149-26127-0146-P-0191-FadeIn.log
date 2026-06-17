@@ -1,0 +1,122 @@
+=== P4 Shared surface 0191 FadeIn (Apple) ===
+host: macOS 26.5.1 · Xcode 26.5 · Swift Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+date: 2026-06-12T07:29:33Z
+
+--- iOS build test (xcodebuild) ---
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+6031:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-146/apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures non-escaping parameter 'content'
+7787:** BUILD FAILED **
+16971:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-146/apps/apple/TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures non-escaping parameter 'content'
+18290:** TEST FAILED **
+... (compile diagnostics above are raw; full output: /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/tmp.P0QYVHWLLH/ios.log,    18297 lines)
+FadeIn-file errors in iOS build: 0
+IOS_EXIT=65
+
+--- macOS build test (xcodebuild) ---
+$ xcodebuild -scheme TeslaSync-macOS build test
+1745:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-146/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+1747:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-146/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+1749:** BUILD FAILED **
+3500:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-146/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+3502:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-146/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+3515:** TEST FAILED **
+... (full output: /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/tmp.P0QYVHWLLH/mac.log,     3520 lines)
+FadeIn-file errors in macOS build: 0
+MAC_EXIT=65
+
+--- swiftlint --strict (apps/apple included scope) ---
+Linting 'TeslaSyncWidgets/Widgets/SystemHealthWidget.swift' (4572/4575)
+Linting 'WatchComplicationViews.swift' (4573/4575)
+Linting 'WatchComplicationProvider.swift' (4574/4575)
+Linting 'WatchDesignTokens.swift' (4575/4575)
+Done linting! Found 0 violations, 0 serious in 4575 files.
+FadeIn violations: 0
+LINT_EXIT=0
+
+--- swiftformat --lint apps/apple ---
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-146/apps/apple/.swiftformat
+SwiftFormat completed in 10.6s.
+0/4873 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+--- check-placeholders.ps1 (FadeIn surface) ---
+PLACEHOLDER_COUNT(FadeIn)=0
+PLACEHOLDER_EXIT=0
+
+
+================================================================================
+ FadeIn surface — self-verification (green-in-isolation)
+================================================================================
+Files (9, all under apps/apple/TeslaSync/shared-surfaces/, the only allowed scope):
+  FadeIn.swift  FadeIn.Adapter.swift  FadeIn.Projection.swift  FadeIn.Model.swift
+  FadeIn.Views.swift  FadeIn.Previews.swift  FadeIn.strings
+  FadeIn.Tests.swift  FadeIn.AdapterTests.swift
+
+git status --short apps/apple  (proves ONLY FadeIn files added; no sibling touched):
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.Adapter.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.AdapterTests.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.Model.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.Previews.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.Projection.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.Tests.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.Views.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.strings
+  ?? apps/apple/TeslaSync/shared-surfaces/FadeIn.swift
+
+Real-compiler typecheck, macOS 15 SDK, Swift 6 language mode (= strict concurrency
+complete, matching project.yml SWIFT_VERSION 6.0 / SWIFT_STRICT_CONCURRENCY complete):
+  - impl (Tokens.swift + 6 non-test FadeIn files), -D DEBUG ........ EXIT=0 (0 errors/0 warnings)
+  - tests (FadeIn.Tests + FadeIn.AdapterTests vs impl, XCTest shims) . EXIT=0
+swiftformat --lint (8 FadeIn swift files) ......................... 0/8 require formatting
+swiftlint lint --strict (8 FadeIn swift files) .................... 0 violations, 0 serious
+check-placeholders.ps1 (each FadeIn*.swift) ...................... PLACEHOLDER_COUNT=0
+xcodegen generate ................................................ OK (54 FadeIn pbxproj refs across app+test targets)
+in-module compile in the full iOS app target ..................... 0 FadeIn errors (built before the unrelated sibling abort)
+
+Parity to web components/motion/FadeIn.tsx + hooks/useMotionPreference.ts:
+  - useMotionPreference(400) -> FadeInMotion.preference / FadeInProjection.resolve
+    (reduce -> durationMs 0, delay 0, render final state; else opacity 0->1, y 12->0,
+     duration 0.4s easeOut after `delay`).
+  - y:12 = TSSpacing.md (token, P1/S9); 400ms = TSMotion.slowDuration (token, P1/S9).
+  - reduce source = @Environment(\.accessibilityReduceMotion) (native peer of framer
+    useReducedMotion); reduced branch rendered via DEBUG-only seam (the env key is read-only).
+  - state holder FadeInModel (P1/S8) emits view.opened once (slug "FadeIn", P1/S11).
+  - copy via FadeInStrings facade (P1/S10); web source is anonymous so only DEBUG-sample keys ship.
+  - states reproduced = the source's REAL branches (animated vs. reduced); the web FadeIn has
+    no data feed, so no loading/empty/error/stale/offline axis exists to render (faithful parity).
+
+================================================================================
+ Full-app xcodebuild gate — BLOCKED by pre-existing, unrelated, OUT-OF-SCOPE causes
+================================================================================
+iOS (IOS_EXIT=65): two pre-existing sibling compile errors in COMMITTED files I am not
+permitted to modify (allowed files = FadeIn.* only):
+  TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+    error: escaping closure captures non-escaping parameter 'content'
+  TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+    error: escaping closure captures non-escaping parameter 'content'
+  -> FadeIn-file errors in the iOS build: 0.
+
+macOS (MAC_EXIT=65): runner code-signing capability gap (not a compile error):
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  (project.yml DEVELOPMENT_TEAM is "" and this runner has no signing identity.)
+  -> FadeIn-file errors in the macOS build: 0.
+
+This is the documented "macOS-pending" pattern for P4 Apple surfaces (see
+apps/macos-pending-verifications.md: ToolCard, AlertMessageEditor, FSMTimelineChart,
+DriveEfficiencyChartWidget, DrivingCoachSection, DrivingTips, ...): the surface is verified
+green in isolation and the full-app build is deferred to
+p4-apple/P99-0001-apple-acceptance-gate, which runs on macos-latest WITH signing identities.
+The iOS sibling compile errors are each owned by their own per-surface prompt (delegation /
+cross-surface edits are forbidden here).
+
+--------------------------------------------------------------------------------
+ Verdict
+--------------------------------------------------------------------------------
+FadeIn-scoped checks (the deliverable): swiftlint=0  swiftformat=0  placeholder=0
+  swift6-strict-concurrency typecheck (impl+tests)=0  in-module FadeIn compile errors=0  -> GREEN
+Full-app legs (shared, out-of-scope): IOS_EXIT=65 (pre-existing siblings)  MAC_EXIT=65 (runner dev-signing)
+GATE_SUMMARY ios=65 mac=65 lint=0 format=0 placeholder=0
+
+EXIT=1
+STATUS=BLOCKED

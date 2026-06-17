@@ -1,0 +1,120 @@
+=== P4 Dashboard widget 0045 EnergyFlowAnimatedWidget (Apple) ===
+Date: 2026-06-11
+Host: Darwin, Xcode 26.5 (Build 17F42), Swift 6.3.2, swiftlint + swiftformat present.
+Platform capability (SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15): AVAILABLE.
+
+-------------------------------------------------------------------------------
+DELIVERABLE — apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.*
+-------------------------------------------------------------------------------
+Native SwiftUI parity of features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx.
+Files (10):
+  EnergyFlowAnimatedWidget.swift            — surface view (header + all states + compact/expanded)
+  EnergyFlowAnimatedWidget.Models.swift     — domain value types (state DTO, nodes, arrows, projection)
+  EnergyFlowAnimatedWidget.Builder.swift    — pure cached->projection adapter (unit-tested)
+  EnergyFlowAnimatedWidget.Model.swift      — P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n + formatters + a11y
+  EnergyFlowAnimatedWidget.Palette.swift    — arrow tints (cyan/emerald/amber) + neutral node chrome (tokens)
+  EnergyFlowAnimatedWidget.Diagram.swift    — SwiftUI flow diagram (Canvas arrows, marching dash, reduce-motion)
+  EnergyFlowAnimatedWidget.Compact.swift    — CompactView (size.cols < 2 fallback)
+  EnergyFlowAnimatedWidget.Previews.swift   — per-state previews (DEBUG)
+  EnergyFlowAnimatedWidget.strings          — P1/S10 i18n catalog contribution (table "EnergyFlowAnimatedWidget")
+  EnergyFlowAnimatedWidget.Tests.swift      — adapter + model + registry + formatting + a11y tests
+
+Registry parity: id="energy-flow-animated", category="energy", default 2x4, min 2x4, max 3x40.
+Telemetry: view.opened surface slug "EnergyFlowAnimatedWidget" (P1/S11).
+Parity specifics reproduced from the web source:
+  - 3 nodes ALWAYS present (battery left, drive right, charger top).
+  - 3 arrows ALWAYS present (battery->drive cyan, drive->battery emerald, charger->battery amber).
+  - Drive deadband: isConsuming = power > 0.5; isRegen = power < -0.5.
+  - Drive label Drive/Regen/Idle; charger value rounded kW; battery percent.
+  - Distinct CompactView (big SoC% + per-flow rows + Idle fallback).
+  - States: loading / empty / error(retry) / stale / offline / content.
+  - i18n keys: widget.energyFlowAnimated.{title,idle,battery,drive,regen,charger,noData} + native chrome.
+
+-------------------------------------------------------------------------------
+SURFACE VERIFICATION (this prompt's allowed files)
+-------------------------------------------------------------------------------
+[1] swiftlint --strict (9 swift files)
+    Done linting! Found 0 violations, 0 serious in 9 files.
+    LINT_EXIT=0
+
+[2] swiftformat --lint (9 swift files)
+    0/9 files require formatting.
+    FORMAT_EXIT=0
+
+[3] check-placeholders.ps1 -Path .../EnergyFlowAnimatedWidget
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[4] Compilation + tests — standalone SwiftPM harness built from the EXACT surface
+    sources + the REAL design-token infra (apps/design/generated/apple/Tokens.swift,
+    Sources/DashboardWidgets/DashboardWidgetInfra.swift, Sources/Components/Feedback
+    TSSkeleton), Swift 6 language mode + -strict-concurrency=complete, macOS 15.
+    Result (swift test --build-system native):
+      Test Suite 'EnergyFlowAnimatedAccessibilityTests' passed — Executed 9 tests, 0 failures
+      Test Suite 'EnergyFlowAnimatedBuilderTests'       passed — Executed 12 tests, 0 failures
+      Test Suite 'EnergyFlowAnimatedModelTests'         passed — Executed 10 tests, 0 failures
+      Test Suite 'EnergyFlowAnimatedRegistryTests'      passed — Executed 2 tests, 0 failures
+      Test Suite 'All tests' PASSED — Executed 33 tests, with 0 failures (0 unexpected)
+    => Surface compiles cleanly against the real infra and ALL 33 unit tests pass
+       (adapter parity incl. deadband + always-3-nodes/arrows, model phase resolution,
+        telemetry view.opened, registry clamp, formatting, diagram + compact a11y).
+    STANDALONE_BUILD_TEST=PASS
+
+[5] Real-module sema (full TeslaSync app target, iOS Simulator): ZERO compiler errors
+    were attributable to any EnergyFlowAnimatedWidget.* file.
+    (grep "error:" over the build log | grep EnergyFlowAnimated => 0 matches.)
+
+-------------------------------------------------------------------------------
+FULL-APP GATE (xcodebuild -scheme TeslaSync ... build test) — BLOCKED (pre-existing)
+-------------------------------------------------------------------------------
+The full app target does NOT compile at this consolidated HEAD due to MULTIPLE
+PRE-EXISTING breakages in SIBLING surfaces — all committed at HEAD, none introduced
+by this prompt (git status: 0 modified tracked files; only the 10 new
+EnergyFlowAnimatedWidget.* files are untracked), and all OUTSIDE this prompt's
+allowed-files scope (apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.*
++ this log). Per Honesty Covenant #2/#6 and the prompt "Out of Scope", sibling
+surfaces were NOT modified.
+
+Enumerated pre-existing blockers (sibling surfaces, each has its own prompt):
+  (a) Duplicate type declarations colliding in the single app module:
+        RecentDrivesModel / RecentDrivesUpdate / RecentDrivesLoadStatus / RecentDrivesConnection
+          declared in BOTH dashboard-widgets/RecentDrivesListWidget.Model.swift
+          AND feature-views/RecentDrivesSection.{Model,Seams,Adapter}.swift
+        StateTimelineModel / StateTimelineUpdate / StateTimelineLoadStatus / StateTimelineConnection
+          declared in BOTH dashboard-widgets/StateTimelineWidget.Model.swift
+          AND feature-views/StateTimeline.{Source,Adapter,Model}.swift
+        -> 54 "ambiguous for type lookup" errors.
+  (b) feature-views/.. shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141
+        error: escaping closure captures non-escaping parameter 'content'
+  (c) feature-views/AppearanceSettings.Controls.swift
+        swift-frontend IRGen crash (llvm report_at_maximum_capacity) while emitting
+        reabstraction thunk @$sSbScA_pSgIeAghyg_SbIeAghn_TR (a core, non-removable file).
+
+Additionally, this is a SHARED environment (3 users): a concurrent
+"xcodebuild -scheme TeslaSync ... build" from another slot was thrashing the host
+(load average > 50), so a full app build+test here is neither green nor responsible.
+
+Isolation proof: temporarily moving ONLY the colliding sibling families aside (with
+the surface untouched) advanced the compile past (a) to (b) to (c), confirming the
+blockers are external and that EnergyFlowAnimatedWidget.* itself compiles. The tree
+was then restored to pristine (verified: 0 modified tracked files).
+
+  IOS_BUILD_TEST=BLOCKED (pre-existing sibling compile failures + shared-host contention)
+  MAC_BUILD_TEST=BLOCKED (same)
+
+-------------------------------------------------------------------------------
+SUMMARY
+-------------------------------------------------------------------------------
+EnergyFlowAnimatedWidget surface: COMPLETE and VERIFIED in isolation
+  - swiftlint --strict ......... 0 violations  (EXIT 0)
+  - swiftformat --lint ......... 0 changes     (EXIT 0)
+  - check-placeholders ......... 0 placeholders (EXIT 0)
+  - standalone build + tests ... 33/33 pass against REAL infra (Swift 6 strict concurrency)
+  - real-module sema ........... 0 errors in EnergyFlowAnimatedWidget.*
+Full-app xcodebuild build test: BLOCKED by pre-existing, out-of-scope sibling
+breakages (a)(b)(c) + shared-host contention. No sibling files modified
+(Honesty Covenant #2/#6/#8 respected; no red reported as green).
+
+EXIT=1
+STATUS=BLOCKED

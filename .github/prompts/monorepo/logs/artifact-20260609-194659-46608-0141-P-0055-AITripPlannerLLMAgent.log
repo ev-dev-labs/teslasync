@@ -1,0 +1,128 @@
+=== P4 Shared surface 0055 AITripPlannerLLMAgent (Apple) ===
+Host: macOS (Darwin) · Xcode 26.5 (17F42) · Swift 6.3.2
+Toolchain present: xcodegen 2.45.4, swiftlint, swiftformat, gradle/JDK17 (Kotlin/Native 2.4.0)
+
+------------------------------------------------------------
+DELIVERABLE — apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.*
+------------------------------------------------------------
+  AITripPlannerLLMAgent.swift            (View: gated/loading/error/ready chrome)
+  AITripPlannerLLMAgent.Request.swift    (URL + body + canStart; pure Foundation)
+  AITripPlannerLLMAgent.Adapter.swift    (SSE parse, stream reducer, output/action/a11y derivations)
+  AITripPlannerLLMAgent.Model.swift      (P1/S8 source seam, P1/S10 strings, P1/S11 telemetry, @Observable model)
+  AITripPlannerLLMAgent.Projection.swift (pure input->view-state, localized)
+  AITripPlannerLLMAgent.Views.swift      (HelixBadge, Ask-Helix button, thinking indicator, output panel)
+  AITripPlannerLLMAgent.Chrome.swift     (freshness chip, refresh, connectivity banner, loading, gate-error)
+  AITripPlannerLLMAgent.Previews.swift   (10 #Preview states)
+  AITripPlannerLLMAgent.strings          (i18n catalog: parity + chrome keys)
+  AITripPlannerLLMAgent.Tests.swift      (projection/model/telemetry/freshness/a11y)
+  AITripPlannerLLMAgent.AdapterTests.swift (request/body/canStart, SSE, reducer, output/action)
+
+Parity with web/src/components/ai/AITripPlannerLLMAgent.tsx:
+  - withAiFeature('trip-planner-llm-agent') AI-off gate -> .gated phase renders EmptyView.
+  - useAiStream POST /ai/trips/plan/draft; body { vehicle_id=Number(vehicleId)||0,
+    origin/destination={lat,lng,name??''}|{0,0,''}, current_soc??80, charge_limit_soc??90,
+    min_arrival_soc??20, speed_factor??1.0 }; canStart = !!vehicleId && origin!=nil && destination!=nil.
+  - AIFeatureCard (title "Draft a plan with Helix", description, Ask-Helix button, "Helix" badge)
+    feeding AiOutputPanel. States reproduced: gated / loading / gate-error /
+    ready{empty, needs-inputs, thinking, prose, stream-error} + connectivity live/stale/offline
+    (header chip + banner + one-shot auto-refresh on the stale transition).
+  - Every string resolves through the P1/S10 facade (table "AITripPlannerLLMAgent"); no English
+    literals in Swift. VoiceOver labels on title/badge/button/output/refresh; Dynamic Type via tokens;
+    Reduce-Motion respected by the thinking dots / symbol pulse. view.opened (P1/S11) emitted once,
+    deferred past the gate (off-mode marker parity).
+
+============================================================
+GATE STEP RESULTS (real captured exits)
+============================================================
+[host-runnable gates — PASS]
+  swiftlint --strict            -> LINT_EXIT=0        (whole apps/apple tree, includes the 11 new files)
+  swiftformat --lint apps/apple -> FORMAT_EXIT=0      (0/3761 files require formatting)
+  check-placeholders.ps1        -> PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0; my files contain no
+                                                       TODO/FIXME/XXX/Placeholder/Lorem/"not implemented")
+  xcodegen generate             -> EXIT=0             (project regenerated; 66 refs to the new files)
+  KMP Shared.xcframework        -> BUILD SUCCESSFUL   (Gradle :core:assembleSharedXCFramework;
+                                                       ios-arm64 + ios-arm64-simulator + macos-arm64 staged)
+
+[xcodebuild gates — RED, for reasons OUTSIDE this surface + outside the allowed-files scope]
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+                                -> IOS_EXIT=65
+  xcodebuild -scheme TeslaSync-macOS build test
+                                -> MAC_EXIT=65
+
+============================================================
+EVIDENCE 1 — THE NEW SURFACE COMPILES CLEANLY (0 errors attributable to it)
+============================================================
+iOS clean build with the surface present:
+  - errors in AITripPlannerLLMAgent.* ............ 0
+  - errors in TripPlannerMap.* (collision I introduced, then fixed by renaming my type to
+    TripPlannerLLMAgentLocation) .................. 0
+  - swiftlint --strict over the 11 files ......... 0 violations
+  - swiftformat --lint over the 11 files ......... 0/10 require formatting
+
+============================================================
+EVIDENCE 2 — iOS RED IS PRE-EXISTING (duplicate public types in OTHER committed surfaces)
+============================================================
+The iOS app target compiles TeslaSync/{dashboard-widgets,feature-views,shared-surfaces} into ONE
+module. Two earlier-committed surface PAIRS each declare the SAME public type names, so the module has
+ambiguous-type errors regardless of this surface:
+
+  RecentDrives*  : RecentDrivesSection.*  (feature-views)     vs RecentDrivesListWidget.*  (dashboard-widgets)
+  StateTimeline* : StateTimeline.*        (feature-views)     vs StateTimelineWidget.*     (dashboard-widgets)
+
+Representative compiler errors (none in AITripPlannerLLMAgent.*):
+  RecentDrivesListWidget.Previews.swift:14:76: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+  RecentDrivesSection.Seams.swift:99:17:       error: 'RecentDrivesLoadStatus' is ambiguous for type lookup in this context
+  StateTimeline.Previews.swift:41:49:          error: 'StateTimelineUpdate' is ambiguous for type lookup in this context
+
+Git provenance (both halves of the collision are pre-existing commits, not this task):
+  afff462c1 feat(apps/apple/feature-views): add RecentDrivesSection surface (P4)
+  87b91a4d1 feat(apps/apple/dashboard-widgets): add RecentDrivesListWidget surface (P4)
+
+BASELINE PROOF — built with the 11 AITripPlannerLLMAgent.* files MOVED OUT of the tree:
+  xcodebuild ... build  -> BASELINE_EXIT=65
+  failing files (identical set, my surface absent):
+    RecentDrivesListWidget.Model.swift   RecentDrivesListWidget.Previews.swift  RecentDrivesListWidget.swift
+    RecentDrivesSection.Previews.swift   RecentDrivesSection.Seams.swift
+    StateTimeline.Previews.swift         StateTimeline.Source.swift
+    StateTimelineWidget.Model.swift      StateTimelineWidget.Previews.swift     StateTimelineWidget.swift
+  => The iOS build is red with OR without this surface; the cause is pre-existing duplicate-type
+     collisions in sibling surfaces. Those files are OUT OF SCOPE (prompt Allowed files =
+     apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.*, the log file; Out of Scope =
+     "Other surfaces"). Fixing them here would violate the allowed-files contract + covenant #9.
+
+============================================================
+EVIDENCE 3 — macOS RED IS A RUNNER CODE-SIGNING CAPABILITY LIMIT
+============================================================
+The macOS build fails at the signing/build-description phase (before source compilation), because the
+macOS app + widget extension carry entitlements that require a real Apple development certificate, which
+this runner does not have (project DEVELOPMENT_TEAM is empty; ad-hoc signing cannot satisfy the
+entitlements):
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+         Enable development signing in the Signing & Capabilities editor. (target 'TeslaSync-macOS')
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  ** TEST FAILED **
+This is a platform/runner capability limitation (no provisioning/cert), consistent with
+apps/macos-pending-verifications.md (Kotlin/Native + Xcode signing verifications deferred to the
+macos-latest CI matrix, ADR-012). It is not caused by this surface and is not fixable from the
+allowed files (Resources/*.entitlements + project.yml are out of scope).
+
+============================================================
+CONCLUSION
+============================================================
+The AITripPlannerLLMAgent Apple surface is COMPLETE and CORRECT:
+  - production-polished, full parity with the web source (all states, data, i18n, a11y, telemetry);
+  - compiles cleanly (0 errors attributable to it) once its own TripPlannerLocation collision was
+    renamed to the surface-specific TripPlannerLLMAgentLocation;
+  - passes every host-runnable gate: swiftlint --strict, swiftformat --lint, check-placeholders,
+    xcodegen generate, and the KMP Shared.xcframework pre-build.
+
+The two xcodebuild build+test gates remain RED for causes proven to be OUTSIDE this surface and OUTSIDE
+the allowed-files scope:
+  - iOS  : pre-existing duplicate public types in RecentDrives*/StateTimeline* sibling surfaces
+           (baseline build without this surface fails identically).
+  - macOS: runner lacks an Apple development signing certificate for the entitlement-bearing targets.
+Per the Honesty Covenant (#1 no red-as-green, #2 no scope narrowing, #8 no commit on red) these are
+reported truthfully rather than worked around by editing out-of-scope files.
+
+EXIT=65
+STATUS=BLOCKED

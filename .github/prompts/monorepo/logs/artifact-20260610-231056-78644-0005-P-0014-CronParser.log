@@ -1,0 +1,121 @@
+=== P4 Feature view 0014 CronParser (Apple) ===
+Artifact:   apps/apple/TeslaSync/feature-views/CronParser.{swift,Model,Adapter,Views,Previews,Tests}.swift + CronParser.strings
+Web source: web/src/features/admin/components/devtools/tools/CronParser.tsx
+Date:       2026-06-10 (runner: Darwin / Apple Silicon)
+Honesty:    This log reports the REAL command results. The build/test steps are RED.
+            The redness is EXTERNAL and PRE-EXISTING (see "BUILD GATE" below); it is
+            NOT a CronParser defect and NOT a platform-capability gap. The artifact
+            itself is complete and independently verified (see "ARTIFACT VERIFICATION").
+
+──────────────────────────────────────────────────────────────────────────────
+CAPABILITY (prompt's BLOCKED trigger is platform-capability; capability IS present)
+──────────────────────────────────────────────────────────────────────────────
+xcodebuild -version      -> Xcode 26.5 (17F42)
+swift --version          -> Apple Swift 6.3.2
+swiftlint version        -> 0.63.3
+swiftformat --version    -> 0.61.1
+xcrun simctl (iOS)       -> iPhone 16 simulator present (iOS 26.5 runtime)
+SwiftUI / Swift Charts / MapKit -> available (this surface uses SwiftUI only; web source has no chart/map)
+KMP Shared.xcframework   -> built + staged OK (gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL)
+xcodegen generate        -> OK (TeslaSync.xcodeproj regenerated; 42 CronParser refs across app + test targets)
+=> Capability is NOT the blocker.
+
+──────────────────────────────────────────────────────────────────────────────
+BUILD GATE (RED — pre-existing, external, outside this artifact's allowed files)
+──────────────────────────────────────────────────────────────────────────────
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=65
+  total compile errors                 : 216
+  errors attributable to CronParser.*  : 0
+  ALL 216 errors are duplicate-type collisions between two PREDECESSOR surfaces that
+  the shared TeslaSync module compiles together (dashboard-widgets + feature-views):
+     RecentDrivesListWidget.* (dashboard-widget)  vs  RecentDrivesSection.* (feature-view)
+     StateTimelineWidget.*     (dashboard-widget)  vs  StateTimeline.*       (feature-view)
+  Representative errors:
+     'RecentDrivesModel' is ambiguous for type lookup in this context
+     'RecentDrivesLoadStatus' / 'RecentDrivesConnection' / 'RecentDrivesUpdate' ambiguous
+     'StateTimelineModel' / 'StateTimelineLoadStatus' / 'StateTimelineConnection' / 'StateTimelineUpdate' ambiguous
+  Provenance: pre-existing on this branch. e.g. feature-views/RecentDrivesSection.Model.swift
+     was committed at afff462c1 "feat(apps/apple/feature-views): add RecentDrivesSection surface (P4)"
+     — a predecessor artifact, present at HEAD before this work (working tree was clean at start).
+  Allowed files for THIS artifact are CronParser.* only, so resolving these sibling-surface
+  collisions is out of scope here (and risks conflicts with the slots that own those surfaces).
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=65
+  Fails BEFORE Swift compilation on a code-signing/entitlements environment gap:
+     "TeslaSync-macOS has entitlements that require signing with a development certificate."
+  The runner has DEVELOPMENT_TEAM="" (no provisioning). Environmental, not a CronParser defect.
+  Re-running the macOS compile with CODE_SIGNING_ALLOWED=NO reproduces the SAME pre-existing
+  RecentDrives*/StateTimeline* collisions and 0 CronParser errors (shared source group, ADR-002).
+
+──────────────────────────────────────────────────────────────────────────────
+LINT / FORMAT / PLACEHOLDER GATE (GREEN)
+──────────────────────────────────────────────────────────────────────────────
+$ swiftlint --strict            (whole tree)   LINT_EXIT=0        (CronParser findings: 0)
+$ swiftformat --lint apps/apple (whole tree)   FORMAT_EXIT=0      (0/4062 require formatting; CronParser issues: 0)
+$ check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/CronParser
+                                               PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+  Meaningful re-scan of the six CronParser .swift files (copied to a temp dir):
+                                               PLACEHOLDER_COUNT=0  (no TODO/FIXME/stub/placeholder/Lorem)
+
+──────────────────────────────────────────────────────────────────────────────
+ARTIFACT VERIFICATION (CronParser proven correct in isolation, both targets)
+──────────────────────────────────────────────────────────────────────────────
+1. Pure adapter logic — REAL CronParser.Adapter.swift compiled with a driver and EXECUTED:
+   swiftc -O CronParser.Adapter.swift main.swift && ./run  ->  ALL CHECKS PASSED (41/41)
+   Covers web parity: expr.trim().split(/\s+/) tokenizer; JS parseInt/Number coercion;
+   describeCron phrasing across every branch incl. the parseInt("1-5")==1 weekday quirk and
+   padStart; matchField (*, */step, list, range, exact, degenerate); getNextCronRuns minute-walk
+   with second-truncation, */15, top-of-hour, daily midnight, weekday-0==Sunday, Feb-30 give-up;
+   projector complete/empty; presets; surface slug; accessibility summary.
+2. Type-check (Swift 6 strict), iOS simulator target arm64-apple-ios18.0-simulator:
+   CronParser.Adapter + CronParser.Model            -> CLEAN
+   full view closure (Tokens, TSMaterial, Typography, Buttons, Badges, Cards + my 4 files)
+                                                     -> only ONE diagnostic, on the defaulted
+   View initializer (#ActorIsolatedCall). This is a raw-swiftc artifact: SwiftUI's @MainActor
+   `View` isolation inference is not applied by a bare `swiftc -typecheck` file list. The
+   committed, gate-passing sibling ColorConverter uses the IDENTICAL pattern and emits the
+   IDENTICAL diagnostic under the same invocation, and 0 CronParser errors appeared in the real
+   whole-module xcodebuild compile above -> the real Xcode build accepts this pattern.
+3. Type-check, macOS target arm64-apple-macos15.0:
+   CronParser.Adapter + CronParser.Model            -> CLEAN
+   full view closure (artifact excluded)            -> CLEAN
+
+──────────────────────────────────────────────────────────────────────────────
+ARTIFACT COMPLETENESS (parity with the web source — no stubs, all states)
+──────────────────────────────────────────────────────────────────────────────
+- Data: pure local transform; web's only hook is useTranslation (no API). Bound via P1/S8
+  state holder CronParserModel; no direct HTTP in the view.
+- States rendered (the web source is synchronous with no query, so it has no loading/error/
+  stale/offline branch): empty (≠5 fields -> guidance hint), content (=5 fields -> description
+  + next-runs), and the no-upcoming-runs empty state (valid-but-unsatisfiable schedule ->
+  friendly empty state instead of a vanished section). Never a blank box.
+- i18n (P1/S10): every chrome string via the CronParser.strings facade — Cron Parser,
+  Cron Parser Desc, Cron Expression, Description, Next Runs, Every Minute/Hour/Day/Week/Month
+  + native chrome (cron.emptyHint, cron.noUpcomingRuns). The describeCron output is literal
+  English produced by the algorithm in the web source (never routed through t()), so it travels
+  as data — the same parity decision the sibling ColorConverter makes for its rgb()/hsl() strings.
+- Accessibility: VoiceOver labels/values on the input, preset chips, run rows; combined summary;
+  decorative glyphs hidden; Dynamic Type via Font.TS tokens.
+- Tokens (P1/S9) + shared components (TSGlassPanel, TSButton, TSBadge). No raw Tailwind ported.
+- Telemetry (P1/S11): view.opened emitted once with surface slug "CronParser".
+- Tests: CronParser.Tests.swift — adapter parity + scheduler determinism + model phases/presets/
+  telemetry + accessibility summary (co-located; runs in the TeslaSync(/-macOS) XCTest targets
+  once the pre-existing sibling collisions are resolved).
+
+──────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+──────────────────────────────────────────────────────────────────────────────
+The CronParser artifact is COMPLETE and VERIFIED (lint/format/placeholder GREEN; adapter logic
+executed 41/41; iOS+macOS type-check clean modulo the SwiftUI-inference artifact shared with the
+committed ColorConverter; 0 CronParser errors in the real whole-module compile).
+The build/test gate cannot reach EXIT=0 in this environment because of TWO external, pre-existing
+factors outside this artifact's allowed files: (1) duplicate-type collisions among predecessor
+RecentDrives*/StateTimeline* surfaces, and (2) absent macOS development signing. Per Honesty
+Covenant rule 1 (no red-as-green) and rule 8 (no commit on red), this is reported as BLOCKED and
+the final git commit is withheld; the seven CronParser files remain staged in the working tree
+for integration once the external blockers are resolved.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,240 @@
+=== P4 Shared surface 0042 AIRAGHelp (Apple) ===
+date: 2026-06-10T14:29-07:00 (start) … 2026-06-10 (gate run)
+host: Darwin 25.5.0 arm64 (Atuls-Mac-Studio)
+repo: ev-dev-labs/teslasync   slot: 20260609-194659-46608/slot-128
+web source (spec): web/src/components/ai/AIRAGHelp.tsx
+native output: apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.*
+
+############################################################
+# CAPABILITY PROBE — Apple build/test toolchain
+# Prompt: 'requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+#  iPadOS 18 / macOS 15 HIG. If unavailable on the runner ->
+#  STATUS=BLOCKED with API evidence.'
+############################################################
+$ xcode-select -p
+/Applications/Xcode.app/Contents/Developer            <-- FULL XCODE (not CLT)
+$ xcodebuild -version
+Xcode 26.5  Build version 17F42                        <-- xcodebuild WORKS here
+$ swift --version
+Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+$ swiftlint version    -> 0.63.3
+$ swiftformat --version -> 0.61.1
+$ xcodegen --version   -> 2.45.4
+$ pwsh --version       -> PowerShell 7.6.2
+$ xcrun simctl list devices available | grep 'iPhone 16'
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted)   <-- simulator present
+SDKs: iPhoneSimulator26.5.sdk, MacOSX26.5.sdk
+SDK frameworks present: SwiftUI ✓  Charts ✓  MapKit ✓  Combine ✓
+
+CONCLUSION: the platform CAPABILITY required by the prompt IS fully present on
+this runner (full Xcode 26.5, iOS 18 simulator, macOS 15 SDK, SwiftUI/Charts/
+MapKit). This is NOT a capability-BLOCKED. The AIRAGHelp surface is implemented
+in full and compiles cleanly (see PER-SURFACE VERIFICATION). The full-target
+`xcodebuild build test` is nonetheless RED — but exclusively because of
+PRE-EXISTING, OUT-OF-SCOPE compile/sign breakage in sibling surfaces that are
+NOT in this prompt's allowed-files set (see ROOT CAUSE). Per the Honesty
+Covenant (#1 no red-as-green, #8 no commit on red) this is reported as
+STATUS=BLOCKED with evidence, NOT a green DONE.
+
+NOTE vs. predecessor log (artifact-…-0271-P-0042-AIRAGHelp.log): that run was
+BLOCKED because its runner had CommandLineTools only (no xcodebuild / no
+simulator). THIS runner has full Xcode, so xcodebuild executes — and is the
+FIRST time the whole Apple app target has actually been compiled. That compile
+surfaces latent cross-surface defects that every prior CLT-only run could never
+catch (each surface had only been `swiftc -typecheck`'d in isolation).
+
+############################################################
+# GATE STEPS (prompt's gate, executed verbatim on this runner)
+############################################################
+
+## [1/5] xcodebuild iOS Simulator (scheme TeslaSync) — build test
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=65          ** BUILD FAILED ** ** TEST FAILED **
+  total `error:` lines ................ 162
+  errors attributable to AIRAGHelp.* .. 0      <-- ZERO
+  ALL 162 errors are in 4 OUT-OF-SCOPE sibling surfaces (pre-existing
+  duplicate public type definitions colliding in the single TeslaSync module):
+    TeslaSync/feature-views/StateTimeline.*          ⟷ TeslaSync/dashboard-widgets/StateTimelineWidget.*
+    TeslaSync/feature-views/RecentDrivesSection.*    ⟷ TeslaSync/dashboard-widgets/RecentDrivesListWidget.* (+ RecentDrivesWidget.*)
+  representative error:
+    dashboard-widgets/RecentDrivesListWidget.Previews.swift:14: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+    feature-views/...:        error: 'StateTimelineConnection' is ambiguous for type lookup in this context
+    error: cannot infer contextual base in reference to member 'loading'/'loaded'/'failed'/'stale'/'offline'/'live'
+
+## [2/5] xcodebuild macOS (scheme TeslaSync-macOS) — build test
+$ xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=65          ** BUILD FAILED ** ** TEST FAILED **
+  total `error:` lines ................ 4
+  errors attributable to AIRAGHelp.* .. 0      <-- ZERO
+  The 4 errors are CODE-SIGNING / entitlements config (NOT compile, NOT mine):
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. …
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. …
+  Root cause: project.yml sets DEVELOPMENT_TEAM: "" and the macOS targets enable
+  ENABLE_HARDENED_RUNTIME + CODE_SIGN_ENTITLEMENTS; this runner has no dev signing
+  identity. This is an environment/predecessor signing-config blocker affecting
+  EVERY macOS build regardless of surface (and, once signing is resolved, the
+  macOS compile would hit the same StateTimeline/RecentDrives collisions as iOS).
+  Both are outside this prompt's allowed files.
+
+## [3/5] swiftlint --strict   (cd apps/apple; config 'included' covers shared-surfaces)
+LINT_EXIT=0
+    Done linting! Found 0 violations, 0 serious in 3473 files.
+    (all 10 AIRAGHelp.*.swift linted — 0 violations.)
+
+## [4/5] swiftformat --lint apps/apple   (whole tree)
+FORMAT_EXIT=0
+    0/3703 files require formatting, 2 files skipped.
+    (0 AIRAGHelp.* files flagged.)
+
+## [5/5] check-placeholders.ps1 (ADR-011 no-stubs gate)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AIRAGHelp
+PLACEHOLDER_EXIT=0
+    PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+  STRONGER per-file scan of every AIRAGHelp.*.swift (-Language swift):
+    10/10 files PLACEHOLDER_COUNT=0
+    AIRAGHelp.Views.swift -> PLACEHOLDER_ALLOWED=1 PLACEHOLDER_COUNT=0
+      (1 ALLOWED = the verbatim web i18n key "help.aiHelp.placeholder" from
+       AIRAGHelp.tsx, opted out with '// parity:allow …' — a key NAME, not a stub.
+       The case-insensitive 'Placeholder' pattern is a substring false-positive
+       shared by every sibling prompt-input surface, e.g. AILifetimeStatsQA.Views.swift
+       which itself reports COUNT=6 under a strict per-file scan; AIRAGHelp is the
+       stricter of the two — 0 unaccounted matches.)
+
+# EXIT=0 only when every step above is 0  ->  NOT met (IOS_EXIT=65, MAC_EXIT=65)
+
+############################################################
+# PER-SURFACE VERIFICATION (the AIRAGHelp surface itself — ALL GREEN)
+############################################################
+Because the gate's full-target build is dominated by out-of-scope pre-existing
+breakage, the AIRAGHelp surface is independently verified by every runnable
+substitute the prior (CLT-only) run used, now reproduced with FULL Xcode:
+
+A) swiftc -typecheck, production files + their real shared deps (tokens +
+   components), Swift 6, -strict-concurrency=complete:
+     iOS:   -sdk iPhoneSimulator26.5 -target arm64-apple-ios18.0-simulator   -> EXIT=0, 0 errors
+     macOS: -sdk MacOSX26.5          -target arm64-apple-macos15.0           -> EXIT=0, 0 errors
+B) Full-target xcodebuild compile (iOS AND macOS): 0 errors attributable to
+   AIRAGHelp.* in EITHER build (Swift type-checks every file in the module; had
+   any AIRAGHelp file a type error it would appear regardless of sibling errors).
+C) swiftlint --strict: 0 violations across the 10 AIRAGHelp files.
+D) swiftformat --lint: 0 AIRAGHelp files require formatting.
+E) check-placeholders: 0 unaccounted stubs (1 sanctioned parity:allow).
+
+############################################################
+# IMPLEMENTATION MANIFEST
+############################################################
+Files (mirrors the established prompt-input streaming-surface pattern —
+sibling AILifetimeStatsQA / AINLDriveSearch 11-file layout):
+  AIRAGHelp.swift               195   feature surface View (gate switch + ready card + freshness chip/banner)
+  AIRAGHelp.Model.swift         273   P1/S8 state-holder seam + @Observable model + P1/S11 telemetry + P1/S10 facade
+  AIRAGHelp.Adapter.swift        87   pure request projection (body {prompt}) + canAsk gate + surface identity
+  AIRAGHelp.Logic.swift         166   pure phase/connection/gate/hint enums + button/output logic + a11y summary
+  AIRAGHelp.Source.swift         84   in-memory source (previews + tests)
+  AIRAGHelp.Views.swift         219   header + Helix badge + prompt field (Textarea rows=3) + Ask Helix button
+  AIRAGHelp.Chrome.swift        193   AiOutputPanel (thinking/answer/error) + gate loading/error chrome
+  AIRAGHelp.Previews.swift      104   9 #Preview states (DEBUG)
+  AIRAGHelp.Tests.swift         184   adapter projection + logic + a11y + i18n facade unit tests
+  AIRAGHelp.ModelTests.swift    241   state-holder wiring tests (gate/telemetry/ask/delta/stale/offline)
+  ------------------------------------------------------------
+  swift total (excl. .strings):       1746 lines
+  AIRAGHelp.strings              46   P1/S10 catalog contribution (table "AIRAGHelp", 23 keys)
+
+Web parity (components/ai/AIRAGHelp.tsx -> native):
+  withAiFeature('rag-help') gate    -> RAGHelpGate(.loading/.on/.off); .off renders EmptyView (web null)
+  AIFeatureCard header+badge+desc   -> RAGHelpHeader + RAGHelpHelixBadge
+  <Textarea rows={3}> prompt        -> RAGHelpPromptField (TextEditor, minHeight 76, cap = backend maxPromptChars)
+  body = { prompt }  (NO vehicle)   -> RAGHelpRequest.project(rawPrompt:) — global help corpus, no vehicle_id
+  canStart = prompt.trim().len > 0  -> RAGHelpRequest.canAsk / RAGHelpLogic.canStart
+  useAiStream(url:/ai/help/query)   -> RAGHelpSource seam (P1/S8) + RAGHelpModel delta accumulation
+  onEvent = () => {}                -> model acts only on .delta (text accumulator); other frames carried, ignored
+  AiOutputPanel branches            -> RAGHelpOutputPanel (idle/thinking/answer/error)
+  AIThinkingIndicator               -> RAGHelpThinkingIndicator (skeleton + sparkles pulse, reduce-motion safe)
+  universal 'Ask Helix' CTA         -> RAGHelpActionButton (idle 'Ask Helix' / streaming 'Helix is thinking…')
+
+Backend contract mirrored (internal/api/airaghelp/handler.go):
+  POST /ai/help/query, body {prompt}; prompt TrimSpace'd; empty -> 400; > maxPromptChars(4096) -> 400.
+  Handler comment confirms: deliberately NO vehicle_id (help corpus is GLOBAL, no PII).
+  -> RAGHelpConstants.maxPromptChars = 4096; field truncates; isPromptValid guards both 400s.
+
+States rendered (no hidden surface):
+  gated(EmptyView) · gateLoading(skeleton) · ready/idle(empty hint, never blank) ·
+  streaming(thinking) · answer · stream-error(in output panel) · gate-error(QueryError+retry) ·
+  stale(chip + one-shot auto-refresh) · offline(chip + banner, Ask disabled)
+
+i18n (P1/S10, table 'AIRAGHelp' -> AIRAGHelp.strings): 23 keys, 0 English literals in Swift.
+  parity keys from source: help.aiHelp.{title,description,askButton,badge,placeholder}
+  shared Helix scaffold: helix.{askHelix,thinking,tooltip,ariaLabel,errorLabel}, ai.common.errorUnknown
+  native chrome: help.aiHelp.{inputLabel,emptyHint,answerReady,loadingA11y,errorTitle,retry,
+    live,stale,offline,staleBanner,offlineBanner,refresh}
+
+Telemetry: P1/S11 view.opened slug = 'AIRAGHelp' (emitted once on first start()).
+Accessibility: VoiceOver labels on badge/prompt/Ask/answer/error/chip/refresh; title isHeader;
+  Dynamic Type via Font.TS tokens; Reduce Motion honored (ragHelpSymbolPulse gates symbolEffect).
+Tests authored (run under the BLOCKED full-target gate; logic verified by isolated typecheck):
+  Tests: request projection (trim, cap, canAsk), logic (isBusy/canStart/buttonDisabled/output/
+    thinking/idle/emptyHint), a11y summary across phases, i18n facade.
+  ModelTests: telemetry-once, gate render axis, ask trims + clears + no-op guards (busy/empty/
+    offline), delta accumulation, non-delta ignored, snapshot keeps answer, stale auto-refresh-once,
+    offline disables, stream-error keeps card ready, cancel/refresh/stop wiring.
+
+############################################################
+# ROOT CAUSE of the RED gate (pre-existing, out-of-scope, NOT AIRAGHelp)
+############################################################
+Duplicate PUBLIC type definitions colliding in the single TeslaSync module
+(both feature-views and dashboard-widgets compile into the same target). All
+files below are tracked at HEAD (git ls-files) — created by other prompts, NOT
+by this one (my 11 AIRAGHelp.* files are the ONLY '??' untracked entries):
+  StateTimelineConnection : feature-views/StateTimeline.Adapter.swift:125  &  dashboard-widgets/StateTimelineWidget.Model.swift:52
+  StateTimelineModel      : feature-views/StateTimeline.Model.swift:64     &  dashboard-widgets/StateTimelineWidget.Model.swift:104
+  RecentDrivesConnection  : feature-views/RecentDrivesSection.Adapter.swift:49 & dashboard-widgets/RecentDrivesListWidget.Model.swift:54
+  RecentDrivesModel       : feature-views/RecentDrivesSection.Model.swift:23   & dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+  (… + StateTimeline*/RecentDrives* peers: LoadStatus, Update, Projection, Accessibility, Strings, Source, Telemetry)
+Plus, once those are set aside locally (PROOF run, reverted), two MORE pre-existing
+out-of-scope compile bugs surface in other shared surfaces:
+  shared-surfaces/AIAutoNameUnnamedLocations.swift:123      error: escaping closure captures non-escaping parameter 'content'
+  shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141  (same bug)
+  feature-views/RecentDrivesSection.Previews.swift:24       error: compiler unable to type-check this expression in reasonable time
+(AIRAGHelp's own glass() helper marks `content` @escaping, matching the working
+ AILifetimeStatsQA template, so it does NOT have the escaping-closure bug.)
+
+PROOF the gate would be GREEN for this surface but for the predecessor breakage:
+  Temporarily moving ONLY the colliding out-of-scope dashboard-widget files aside
+  (24 files; NOT committed; fully restored afterward — `git status` shows only the
+  11 AIRAGHelp.* untracked, nothing else changed) let the iOS target advance past
+  the collisions and compile the AIRAGHelp surface with 0 errors; the remaining
+  failures were the two unrelated escaping-closure surfaces above.
+
+Per allowed-files (`apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.*` + this log)
+and Covenant #6/#7 (no delegation / no predecessor bypass), these collisions are
+NOT fixed here — they belong to the owning surface prompts / P4 core. They are
+documented, not bypassed, not masked.
+
+############################################################
+# DETERMINATION
+############################################################
+Runnable per-surface gates on this runner (ALL GREEN for AIRAGHelp):
+  TYPECHECK_iOS_EXIT=0    swiftc -typecheck Swift6 strict-concurrency, iOS18 sim SDK: 0 errors
+  TYPECHECK_macOS_EXIT=0  swiftc -typecheck Swift6 strict-concurrency, macOS15 SDK:  0 errors
+  LINT_EXIT=0             swiftlint --strict: 0 violations / 3473 files
+  FORMAT_EXIT=0           swiftformat --lint apps/apple: 0/3703
+  PLACEHOLDER_EXIT=0      check-placeholders: 0 unaccounted (1 sanctioned parity:allow)
+  AIRAGHelp errors in full iOS + macOS builds: 0 / 0
+
+Blocked gates (pre-existing, out-of-scope, predecessor/environment — NOT AIRAGHelp):
+  IOS_EXIT=65   full build/test red: duplicate public types in StateTimeline*/RecentDrives*
+                sibling surfaces (+ 2 escaping-closure surfaces) — none in allowed files.
+  MAC_EXIT=65   full build/test red: macOS code-signing/entitlements (DEVELOPMENT_TEAM="")
+                on this runner — environment/predecessor config, not this surface.
+
+The AIRAGHelp shared surface is implemented IN FULL at parity with the web source
+(every state, hook binding via the P1/S8 seam, P1/S10 i18n with no English
+literals, P1/S11 view.opened telemetry, accessibility, and unit tests). It
+compiles cleanly on iOS 18 + macOS 15 (Swift 6, strict concurrency) and passes
+swiftlint --strict, swiftformat, and the placeholder gate. The ONLY un-passable
+gate steps are the full-target `xcodebuild build test`, blocked by PRE-EXISTING,
+OUT-OF-SCOPE breakage in other surfaces + macOS signing config — outside this
+prompt's allowed files. Per the Honesty Covenant this is STATUS=BLOCKED with
+evidence, NOT a red-as-green DONE.
+
+EXIT=1
+STATUS=BLOCKED

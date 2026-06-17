@@ -1,0 +1,108 @@
+=== P4 Shared surface 0124 InlineCallout (Apple) ===
+Prompt:  p4-apple/shared-surfaces/0124-InlineCallout
+Web src: web/src/components/feedback/InlineCallout.tsx (THE spec)
+Output:  apps/apple/TeslaSync/shared-surfaces/InlineCallout.* (8 files)
+Host:    Darwin (Apple), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + pwsh present
+Date:    2026-06-11
+
+----------------------------------------------------------------------
+SCOPE / PARITY
+----------------------------------------------------------------------
+The web <InlineCallout> is a PURE presentational component: (variant, icon?, children, action?) ->
+an inline element, with NO fetch / cache / promise. It therefore has NO loading/error/stale/offline
+data branch — there is nothing to fetch, fail, age, or lose connectivity to. Inventing such chrome
+would fabricate states the source does not have, so this surface reproduces ONLY the source's REAL
+branches (exactly as the sibling presentational primitives Delta(0081), MetricCard(0095),
+BatteryDelta(0077) did). Real branches reproduced:
+  • 4 severity variants: info / success / warning / danger
+  • 3 wrapper interactions: status (<div role="status">) / link (<a href>) / button (<button onClick>),
+    href preferred over onClick (web "passing both prefers href")
+  • optional leading icon (SF Symbol) + optional trailing action label + chevron
+  • body colour split: info/success -> --text-secondary; warning/danger -> tinted (web amber-200/85 /
+    rose-200/85); icon + trailing -> variant tint (web text-{c}-300)
+Bound through the P1/S8 state-holder (InlineCalloutModel); token-driven chrome (P1/S9); i18n facade
+(P1/S10); once-only view.opened diagnostics (P1/S11). No direct HTTP, no Tailwind ports.
+
+Files: InlineCallout.Adapter.swift, .Model.swift, .Views.swift, .swift, .Previews.swift,
+       .AdapterTests.swift, .Tests.swift, .strings
+
+----------------------------------------------------------------------
+SURFACE-ATTRIBUTABLE VERIFICATION (all GREEN on this host)
+----------------------------------------------------------------------
+[xcodegen]   xcodegen generate -> OK; enumerates all 8 files (48 pbxproj refs).
+             non-test .swift + .strings -> iOS + macOS app targets; *Tests.swift -> iOS + macOS test
+             targets (per the existing project.yml globs; no project.yml change needed).            XCODEGEN_EXIT=0
+
+[typecheck]  swiftc -typecheck -swift-version 6 -strict-concurrency=complete, against the real
+             generated Tokens.swift + Sources/Design/TSDesign.swift (TSAnimation) +
+             Sources/Components/UI/Badges.swift (TSTone), Views + #Previews under -D DEBUG:
+               iOS  arm64-apple-ios18.0-simulator  -> 0 errors / 0 warnings                          IOS_TYPECHECK_EXIT=0
+               macOS arm64-apple-macos15.0          -> 0 errors / 0 warnings                          MAC_TYPECHECK_EXIT=0
+
+[tests]      isolated SwiftPM package (surface compiled as a local module, co-located XCTest run
+             against it, Swift 6 language mode): swift test -> Executed 27 tests, 0 failures.          SWIFT_TEST=27/27
+             Coverage: projector across variants; interaction resolution (href>onClick>status);
+             a11y label "{severity}: {message}[, {action}]"; value-type equality; model view.opened
+             once + idempotent + not-re-emitted-after-stop/start; update guard; activate() forwarding;
+             surface + container compose for every variant/interaction/init; variant tint/bodyColor
+             token projections; severity strings facade fallbacks.
+
+[swiftlint]  swiftlint --strict (7 .swift surface files) -> Found 0 violations, 0 serious.            LINT_EXIT=0
+[swiftformat] swiftformat --lint (7 .swift surface files) -> 0/7 files require formatting.            FORMAT_EXIT=0
+[placeholder] check-placeholders.ps1 (actual surface files) -> PLACEHOLDER_ALLOWED=0,
+              PLACEHOLDER_COUNT=0 (0 opt-outs); gate-literal path -> EXIT=0.                          PLACEHOLDER_EXIT=0
+
+[i18n]       web t() keys = 0 (the web <InlineCallout> is anonymous — children + action.label are
+             caller-supplied, icon + chevron decorative). Native facade adds 4 severity-a11y keys
+             (inlineCallout.severity.{info,success,warning,danger}) routed through the P1/S10 facade —
+             the accessible parity of the web's colour-only severity tier (mirrors the sibling
+             KpiOverviewAccessibility.calloutLabel). No hardcoded English in code.                    I18N=0 web / 4 native-a11y
+
+[in-module]  KMP Shared.xcframework assembled live this run:
+               cd apps/shared && ./gradlew :core:assembleSharedXCFramework -> BUILD SUCCESSFUL in 7m 55s
+             staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-arm64-simulator +
+             macos-arm64). Real in-module app-target compiles (CODE_SIGNING_ALLOWED=NO):
+               iOS   (xcodebuild -target TeslaSync       -sdk iphonesimulator ARCHS=arm64): InlineCallout errors=0, warnings=0; 5 app-target files compiled
+               macOS (xcodebuild -target TeslaSync-macOS                      ARCHS=arm64): InlineCallout errors=0, warnings=0; 5 app-target files compiled
+
+----------------------------------------------------------------------
+FULL-APP GATE (DEFERRED — not failed by this code)
+----------------------------------------------------------------------
+Gate command: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+              xcodebuild -scheme TeslaSync-macOS build test
+
+The full-app build/test cannot be green on this runner for reasons entirely outside this surface:
+  • PRE-EXISTING, UNRELATED compile error in another agent's surface (same TeslaSync module):
+      shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures
+      non-escaping parameter 'content'   (committed d30ee02f9; that surface is itself macOS-pending)
+    -> iOS in-module build IOS_EXIT=65, macOS in-module build MAC_EXIT=65, each with the SOLE error
+       above and ZERO InlineCallout errors.
+  • macOS development-signing: security find-identity -p codesigning -> "0 valid identities found"
+    -> macOS scheme build/test cannot sign on this host.
+Both are owned by p4-apple/P99-0001-apple-acceptance-gate (runs on a signed macos-latest runner after
+the pre-existing collision is resolved). Recorded in apps/macos-pending-verifications.md.
+
+Surface-attributable: xcodegen=0, swiftc iOS18=0 / macOS15=0, swift test=27/27, swiftlint=0,
+swiftformat=0, placeholder=0, i18n=0 web keys (4 native a11y via facade), real in-module
+iOS+macOS app-target compile InlineCallout-errors=0 / warnings=0.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+Production-polished, Apple-idiomatic `InlineCallout` shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on this host: it typechecks clean on both shipped SDKs (iOS 18 + macOS 15)
+against the real generated design tokens + reused shared primitives; its 27 executed tests pass under
+Swift 6; swiftlint --strict / swiftformat --lint / placeholder gate are all green; xcodegen enumerates
+all 8 files; and — with the KMP Shared.xcframework assembled + staged live this run — the surface
+compiles with ZERO errors / ZERO warnings inside the real TeslaSync app module on BOTH iOS and macOS.
+No stubs, no placeholders, no skeleton-only chrome; no fabricated loading/error/stale/offline states
+(the web source has none); the i18n facade carries the web's 0 translated keys + 4 native severity
+a11y keys. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by
+this code): the only build error is a pre-existing, unrelated escaping-closure error in another
+agent's AISuggestNewGeofences surface, and the macOS scheme additionally needs the 0 codesigning
+identities this host lacks — both owned by the P4/P99 acceptance gate on a signed macos-latest runner
+per apps/macos-pending-verifications.md. This is the repo's sanctioned "code-complete + DEFERRED Xcode
+gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

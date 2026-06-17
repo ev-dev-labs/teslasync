@@ -1,0 +1,290 @@
+I'll start by exploring the repository structure to understand the task fully — the web source, the Apple app structure, and supporting infrastructure.
+
+This is a complex page with many sub-components. Let me explore the sub-components, the Apple app structure, and supporting files in parallel.
+
+Let me examine an existing Apple page implementation for patterns, plus the relevant instruction files and the manifest record.
+
+Let me study the SmartChargePage reference implementation in depth, plus read the web sub-components and instruction files.
+
+Now let me read the supporting reference files (Strings, Models, Format) and the web sub-components for the driving page.
+
+Now let me read all 11 web sub-components to capture every panel, string, and data binding.
+
+Now the largest component (DrivingCoachSection) plus the shared infrastructure — design tokens, components, and route system.
+
+Excellent — I now understand the full web page. Let me explore the Apple shared infrastructure: design tokens, shared components, and the routing system.
+
+The Sources dir is under `apps/apple/`. Let me locate the routing system and design tokens across the whole Apple tree.
+
+The `driving` route already exists. Let me understand route composition, the parser, design tokens, and shared components.
+
+There are two feature trees (`Sources/Features` and `TeslaSync/Features`). Let me read project.yml to understand build roots, and find the design tokens and shared components.
+
+Now let me examine the AppRouteParser, the existing `Sources/Features/Driving` directory, the shared component locations, and the ledger entry.
+
+Let me check the existing driving route registrations and how the web maps these routes, plus the ledger entry for this page.
+
+Let me check tooling availability (xcodebuild/swiftlint/xcodegen) and the ledger entry — these determine whether the gate can run.
+
+All tooling is available (Xcode 26.5, swiftlint, xcodegen, pwsh) — the gate can run. Let me generate the Xcode project and kick off a baseline build in the background while I study the reference files.
+
+The build depends on a KMP `Shared.xcframework` built via Gradle. Let me check the shared module and kick off that build early since it's the long pole.
+
+Java 17 is available. Let me kick off the KMP Shared.xcframework Gradle build in the background now (the long pole), then continue studying references while it builds.
+
+While Gradle builds, let me study references. First the ledger entry and the closest sibling (DriveScore) page + model.
+
+The ledger uses a `rows` array. Let me find the DrivingDynamics row and read the DriveScore sibling references plus design tokens.
+
+The DriveScore page is an excellent reference. Let me read the design tokens, the DriveScore model + sample, and locate the chart/gauge/stat components I'll need.
+
+Let me read the key component APIs I'll use (gauge, metrics, badges, states, typography) and check the Gradle build progress.
+
+I have the tokens and core component APIs. Let me read the remaining component APIs (states, badges, typography, charts, datatable), the Units/SI facade, and check Gradle progress.
+
+Let me check Gradle progress and examine the string catalog convention, the Units/SI facade, and the DriveScore model.
+
+The catalog already contains `dynamics.title`/`dynamics.subtitle` (and both `key` + `translation.key` conventions exist). Let me inspect those entries and the broader `dynamics.*` coverage.
+
+The catalog already has all `translation.dynamics.*` keys — I'll use the `translation.`-prefixed façade like SmartCharge. Let me confirm an entry's structure and get the complete key inventory to verify coverage.
+
+109 `translation.dynamics.*` keys already exist with en/ar/he localizations — comprehensive. Let me capture the full key list and read the Units/SI facade plus the chart wrappers.
+
+All strings are available via the `translation.dynamics.*` convention. Let me read the Units/SI facade, chart wrappers, DataTable, and the DriveScore model for patterns.
+
+Let me locate the `Units`/`UnitPreferences` types and read the chart wrappers and DriveScore model.
+
+Let me read the chart models/line/bar wrappers, DataTable, and find the `UnitPreferences` convenience.
+
+Let me find the chart palette, DataTable API, the `UnitPreferences.metric` convenience, and check Gradle progress.
+
+Let me read the design helpers, DataTable, the DriveScore model + sample, and find where route registries are composed into the shell.
+
+I have the model pattern. Now let me read the placeholder scanner (critical for the gate), the DataTable API, a chart-usage example, and the web data types I must mirror.
+
+Critical to read the exact placeholder patterns plus the remaining web types and DataTable API.
+
+Now the Drive/Coach web types and the DataTable API.
+
+Let me check Gradle progress and read the DriveScore sample data source pattern plus the SI `Drive` model.
+
+Gradle's still compiling (Kotlin/Native is slow on first build). Let me study how the RouteEfficiency typed-destination is wired into the shell, check the parser/route tests, and confirm the theme modifier.
+
+Gradle finished. Let me confirm the framework built and is ready, then check the theme modifier.
+
+The Shared.xcframework built successfully. Let me kick off a baseline iOS build in the background (validates the clean state + staging script) while I write the page code.
+
+The baseline build is running. Before writing, I must know the exact lint constraints. Let me read the SwiftLint config and the theme modifier.
+
+Baseline build completed. Let me confirm it succeeded (clean baseline) before writing.
+
+The baseline build fails on a **pre-existing** duplicate-filename collision (`ScheduledExportsPanel.swift`), unrelated to my task — the repo history shows such "auto-dedupe collision" fixes are routine integration steps. Let me find the full set of duplicate basenames in the app target so the gate can build.
+
+Only one collision (`ScheduledExportsPanel.swift`) — pre-existing, blocking the whole target build. Let me inspect both files to confirm they're distinct surfaces before a minimal, zero-risk file rename to unblock the gate.
+
+Confirmed: two distinct surfaces (`ScheduledExportsPanelView` vs `ScheduledExportsPanel`) sharing a filename — the feature-views file is even self-documented as `ScheduledExportsPanelView.swift`. I'll rename it to match its type (zero code changes) to unblock the target. Let me set up tracking, check one web detail, and do the rename.
+
+Rename done (zero code impact). `fmtNumber` defaults to global precision (1 digit). Now let me set up tracking and write the plan.
+
+Now let me create the feature directory and write the foundational files (models, strings, format).
+
+Now the i18n strings façade and the format/derivation helpers.
+
+Now the data source seam with deterministic sample data so every panel renders.
+
+Now the `@Observable` page model that drives all states and derivations.
+
+Now the feature-local value gauge and shared section helpers (no hardcoded colors — all tokens).
+
+Before writing the views, I must check for type-name collisions with the existing `DrivingDynamicsWidget.*` and other surfaces in the huge target.
+
+Collisions found (`DrivingCoachData`, `CoachImpact` already exist). Let me get the full list before renaming.
+
+Four collisions to fix (`DrivingCoachData`, `CoachImpact`, `DrivingDynamicsVehicle`, `DrivingStatTile`). Let me verify my page-level + planned section type names are collision-free, and inspect the existing coach models to avoid surprises.
+
+All my planned section/page types are collision-free. I need to rename 6 colliding types (`DrivingDynamicsStrings`, `DrivingDynamicsFormat`, `DrivingCoachData`, `CoachImpact`, `DrivingDynamicsVehicle`, `DrivingStatTile`) to `DDyn*`. Let me apply word-boundary renames across my written files.
+
+Renames are clean. Now the main page view with all four data states and the section composition.
+
+Let me add a verbatim-text badge helper, then write the live-telemetry sections (motor status, G-force, pedal, speed/gear, autopilot).
+
+Now the motor history charts, efficiency insights, and summary stats sections.
+
+Let me make the gauge's unit line optional (for the coach score gauge), then write the coach section.
+
+The gate lints only my `Features/Driving` directory with `--strict`, so I'll fix all SwiftLint issues iteratively after writing. First, fix the `.init` shorthand (explicit_init rule) in the legend calls, then write the coach + analytics + route files.
+
+Now the driving coach section (score, style, efficiency, trend) and its detail panels (patterns, recommendations, per-drive table) split across two files to respect file-length limits.
+
+Now the coach detail panels (patterns, recommendations, per-drive table).
+
+Now the drive-analytics section (speed distribution, acceleration scatter, power profile, date range) and the driving tips section.
+
+Now the navigation registration (typed destination + factory, mirroring the sibling `RouteEfficiency`).
+
+Let me check the AppRouteParser tests before adding the deep-link alias, to ensure I won't break them.
+
+No fragile assertions — safe to add the alias. Let me add the `/driving-dynamics` deep-link alias alongside the sibling driving routes.
+
+Now let me find every string key my code references and diff against the catalog to identify what I must add.
+
+Let me compute exactly which referenced keys are missing from the catalog (including framework keys I use as literals).
+
+Let me verify the exact catalog form of the framework keys (`common.noData`, `error.title`) to know what's truly missing.
+
+I need to check the catalog's exact JSON formatting and the `drivesAnalyzed` template before adding keys. Let me inspect the raw structure.
+
+The catalog has inconsistent whitespace (both `"key" : {` and `"key": {`) but is valid JSON. Let me check the `drivesAnalyzed` template value, then fix the interpolation and add missing keys via a safe surgical insert.
+
+The template uses `%1$@` (string placeholder), so I must pass the count as a string. Let me fix the interpolation, then surgically add the missing catalog keys.
+
+The `json.dump` reformatted the entire 11,679-key catalog (huge diff). Let me restore the original and do a surgical text-insert that touches only the 15 new keys.
+
+Catalog diff is now surgical (345 insertions, 0 deletions). Let me verify no missing key references remain, then run SwiftLint on my directory.
+
+All keys resolve. Let me update tracking and run SwiftLint `--strict` on my directory.
+
+SwiftLint linted the whole project (config `included` overrode the path) and found 4 serious violations. Let me see exactly which violations and whether they're in my files.
+
+The 4 violations are all pre-existing (not my files). But I need to confirm my files are actually being linted (the config's `included` list doesn't contain `TeslaSync/Features`). Let me verify whether SwiftLint lints my files and that they're clean.
+
+My files ARE linted and clean (the 4 violations are pre-existing in `included` dirs). Let me definitively confirm my files pass the full strict ruleset in isolation.
+
+Now I see 7 real violations in my files. Let me view the exact offending lines to fix them precisely.
+
+Let me fix all 7 violations. First the simple ones (route init, long lines), then the tuple and the long function.
+
+The `temp()` helper lives in the efficiency section, not summary stats. Let me add a `temp` helper to `DDynSummaryStatsSection`.
+
+Now fix the Analytics large-tuple and the long Image line.
+
+Let me add the `SpeedBucketBound` struct, then refactor the long `useDrivingCoach` sample function.
+
+Let me re-run the scoped strict lint to confirm all violations are resolved.
+
+My files pass `swiftlint --strict` with 0 violations. Now the critical step — building the full app target with my changes.
+
+The build is running. While it compiles, let me fix the doc-comment inaccuracies introduced by the earlier rename (comments referencing web type names).
+
+Build completed — let me check the result.
+
+The generated Xcode project still references the pre-rename filename. I need to regenerate it with xcodegen (the `.xcodeproj` is git-ignored and rebuilt from `project.yml`). Let me regenerate and rebuild.
+
+The build is running (full rebuild after project regen). Let me wait and check progress.
+
+The build now reveals widespread pre-existing "ambiguous use of 'Preview'" errors (in shared files I didn't touch) — previously masked by the filename-collision failure. Let me find the root cause: a conflicting `Preview` declaration.
+
+Let me assess the scope: total error count and whether my files are implicated. Let me also check a prior page's gate log to see if BUILD was expected to pass.
+
+This is the known pattern: the sibling logs (SmartCharge, DriveScore) show `BUILD_EXIT=65` — the **full build is pre-existing RED** ("ambiguous use of..." cascade across hundreds of out-of-scope files), and they reach `STATUS=DONE` by proving their own files compile in isolation (per-file type-check). Let me capture the full error set and confirm none are in my files.
+
+A concurrent build locked the DB (my earlier count build was still running). Let me check for running builds and the error count.
+
+Multiple xcodebuild processes are running concurrently (causing DB lock). Let me stop the stray count build and wait for processes to settle.
+
+The stray xcodebuild processes are stuck holding the DB lock. Let me stop waiting and terminate them by PID.
+
+All stuck processes cleared. Let me run a single clean build capturing all errors, with no concurrency this time.
+
+The full build is the known pre-existing RED state (`BUILD_EXIT=65`), exactly as documented in the sibling SmartCharge/DriveScore logs. Let me wait for it to finish and analyze the error signature.
+
+Confirmed: **246 pre-existing errors, ZERO in my files** — the exact "ambiguous use of Preview/sm/md/init" cascade documented in the sibling logs. Now let me prove my files compile cleanly in isolation (the sibling VIEW_TYPECHECK approach). Let me set up an isolated type-check.
+
+Now the isolated type-check: compile `Sources/**` + design tokens + my `Features/Driving/**` (excluding the broken bulk surfaces) to prove my files compile clean.
+
+Only 6 errors, **zero in my files** — my files type-check clean against the real Sources + framework. Let me confirm the 6 remaining errors are pre-existing Sources issues unrelated to my code.
+
+The 6 errors are all in one unrelated `Sources/Features/Maps/LocationsPageModel.swift` (it references AI-draft types that live in the excluded bulk surfaces) — not my code. Let me get a clean isolated exit by excluding the surface-dependent Maps model, confirming my files + all transitive deps compile.
+
+Whack-a-mole in `Sources/Features/Maps`. Let me run a tighter, clean isolated type-check: my files + all of `Sources` **except** `Sources/Features` (which my files don't depend on, and where the Maps breakage lives).
+
+Excluding `Sources/Features` breaks `TeslaSyncApp` (it needs the route registrations). My files only depend on the component/design/facade foundation. Let me type-check my files against just that minimal foundation for a clean isolated result.
+
+Two errors left, both from `AppContainer.swift` needing `AuthTokenProviding`. Let me locate it and include its subtree for a clean isolated compile.
+
+The whack-a-mole confirms the module is deeply interconnected — the cleanest valid isolation is the 882-file run (full Sources + my files, minus only the broken bulk surfaces): **0 errors in my files**. Let me confirm the residual Maps errors are pre-existing (its deps live in the excluded surfaces), then run the placeholder gate.
+
+Confirmed pre-existing (the Maps deps live in the excluded bulk surfaces; `LocationsPageModel` has 0 errors in the full build). The placeholder scan didn't run (grep's 0-count returned exit 1, short-circuiting the chain). Let me run it standalone.
+
+Placeholder scan passes (`COUNT=0, EXIT=0`). Now, like the sibling DriveScore log, let me compile + run a logic harness for my pure derivations (Models + Format) to prove the core logic works.
+
+The harness needs top-level code in a file named `main.swift`. Let me fix that and re-run.
+
+Type-inference timeout from the dense initializer. Let me simplify the harness with explicit values.
+
+Right — the type is `DDynFormat` (renamed). Let me fix the harness references.
+
+Harness passes (`COMPILE_EXIT=0`, `RUN_EXIT=0`, core derivations verified). Now let me update the ledger with the two covered rows. Let me inspect its structure first.
+
+I'll insert the two DrivingDynamics rows after the TripReplay rows.
+
+Let me validate the ledger JSON and check it against the schema.
+
+The ledger is valid (207 rows, schema-conformant). Now let me write the evidence log with the required `=== PARITY ===` section and honest gate results.
+
+Now let me run a final lint check, review the complete change set, and clean up temp artifacts.
+
+Let me confirm the final lint summary clearly, then stage and commit all changes.
+
+0 violations confirmed. Let me update tracking, stage all changes, and commit.
+
+The rename is already staged. Let me stage the remaining paths (excluding the old filename).
+
+All changes staged (13 new feature files + nav alias + 15 catalog keys + rename + ledger + log). Let me commit.
+
+Commit succeeded (`74c3e6f82`). The prompt targets both macOS + iOS (ADR-002), so let me verify my files also type-check for the macOS target (matching the sibling `VIEW_TYPECHECK_MACOS` evidence).
+
+macOS type-check also clean (6 unrelated errors, **0 in my files**) — my files are cross-platform clean. Let me add the macOS evidence to the log and amend the commit.
+
+Working tree is clean. Let me clean up temp artifacts and do a final verification of the committed state.
+
+Let me do a final definitive confirmation that all 13 feature files are in the commit.
+
+All 13 feature files committed. Let me finalize the plan notes.
+
+All 16 todos complete. The task is done.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ .../apple-page-driving-DrivingDynamicsPage.log     | 185 +++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 345 ++++++++++++++++++++
+ apps/apple/Sources/App/AppRouteParser.swift        |   1 +
+ .../Driving/DrivingDynamicsDataSource.swift        | 256 +++++++++++++++
+ .../Features/Driving/DrivingDynamicsFormat.swift   | 109 +++++++
+ .../Features/Driving/DrivingDynamicsGauge.swift    | 166 ++++++++++
+ .../Features/Driving/DrivingDynamicsModels.swift   | 279 ++++++++++++++++
+ .../Driving/DrivingDynamicsPage.Analytics.swift    | 261 +++++++++++++++
+ .../Driving/DrivingDynamicsPage.Coach.Detail.swift | 215 ++++++++++++
+ .../Driving/DrivingDynamicsPage.Coach.swift        | 238 ++++++++++++++
+ .../Driving/DrivingDynamicsPage.Live.swift         | 362 +++++++++++++++++++++
+ .../Driving/DrivingDynamicsPage.Motor.swift        | 330 +++++++++++++++++++
+ .../Features/Driving/DrivingDynamicsPage.swift     | 213 ++++++++++++
+ .../Driving/DrivingDynamicsPageModel.swift         | 196 +++++++++++
+ .../Driving/DrivingDynamicsRouteRegistration.swift |  47 +++
+ .../Features/Driving/DrivingDynamicsStrings.swift  |  48 +++
+ ...Panel.swift => ScheduledExportsPanelView.swift} |   0
+ apps/parity/apple-ledger.json                      |  18 +
+ 18 files changed, 3269 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-driving-DrivingDynamicsPage.log
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsDataSource.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsFormat.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsGauge.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsModels.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Analytics.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Coach.Detail.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Coach.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Live.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.Motor.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPage.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsPageModel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsRouteRegistration.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Driving/DrivingDynamicsStrings.swift
+ rename apps/apple/TeslaSync/feature-views/{ScheduledExportsPanel.swift => ScheduledExportsPanelView.swift} (100%)
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

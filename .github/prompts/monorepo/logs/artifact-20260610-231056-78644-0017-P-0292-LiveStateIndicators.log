@@ -1,0 +1,210 @@
+=== P4 Feature view 0292 LiveStateIndicators (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/LiveStateIndicators.*
+Web spec: web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.tsx
+Host    : Darwin (Apple Silicon), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + pwsh present
+Sims    : iPhone 16 simulator present (iOS 26.5 runtime); iosSimulatorArm64 + macosArm64 KMP slices built.
+Disposition: code-complete + ALL host-runnable surface gates GREEN; the full-app Xcode scheme build/test was
+            EXECUTED (not skipped) and is RED for pre-existing, surface-unrelated reasons only — zero
+            LiveStateIndicators errors in either platform's build — so it is DEFERRED to the signed
+            macos-latest acceptance gate (P99-0001), matching the established P4 Apple disposition used by
+            every prior P4 surface. Capability (SwiftUI / Swift Charts / MapKit, iOS 18 / iPadOS 18 /
+            macOS 15) is PRESENT — proven by a real iOS-18 + macOS-15 swiftc typecheck below — this is NOT a
+            BLOCKED-on-capability case.
+
+--- Files shipped (allowed scope only: LiveStateIndicators.*) ---
+  LiveStateIndicators.Adapter.swift  (216) pure projection core: Reading (speed m/s + is_locked/sentry_mode/
+                                     is_climate_on/is_charging), Value (literal vs localized), Tone, Kind,
+                                     Indicator, Projection.make (per-badge value/variant branches),
+                                     Accessibility.badgeLabel. Foundation-only (no SwiftUI/KMP).
+  LiveStateIndicators.Format.swift   (141) SI m/s → km/h·mph SpeedUnit, Units (the useUnits slice), Format
+                                     ports (Intl.NumberFormat grouping/half-up + formatSpeed + em-dash).
+  LiveStateIndicators.Model.swift    (265) P1/S11 telemetry seam (view.opened), connection axis (live/stale/
+                                     offline), input snapshot, resolved+phase, Projector.resolve, P1/S8
+                                     Source seam, @Observable model (stale one-shot auto-refresh), in-memory
+                                     source, P1/S10 strings facade. Foundation/Observation/OSLog only.
+  LiveStateIndicators.swift          (73)  the surface: connectivity banner (when !live) + content switch
+                                     (loading/empty/error/data) + onAppear/onDisappear lifecycle + a11y
+                                     container label; surfaceSlug "LiveStateIndicators".
+  LiveStateIndicators.Views.swift    (140) Tone→token map, the indicator Badge (web Badge variant+dot+lg:
+                                     status dot + tone-tinted capsule + larger medium label), the flow
+                                     Layout (web flex flex-wrap gap-2), the resolved badge row (FadeIn).
+  LiveStateIndicators.Chrome.swift   (171) freshness chip (Live pulse, Reduce-Motion safe; Stale/Offline),
+                                     connectivity banner, loading skeleton chips, empty (ContentUnavailable),
+                                     error (SectionErrorBoundary peer + Retry).
+  LiveStateIndicators.Previews.swift (95)  active / resting-imperial / empty / loading / error / stale /
+                                     offline (7 previews, one per state). #if DEBUG.
+  LiveStateIndicators.strings        (10 web-parity keys + 10 native-chrome keys) P1/S10 catalog,
+                                     table "LiveStateIndicators".
+  LiveStateIndicators.Tests.swift    (23 tests) speed conversion + number formatting, em-dash sentinel,
+                                     reading.isMoving branch, projection (cached→projection) value+tone per
+                                     badge, projector states, model wiring, view.opened, stale auto-refresh,
+                                     offline-keeps-data, a11y + i18n facade, kind ordering.
+
+--- Parity (web source is THE spec) ---
+  The web source is a pure presentational leaf: `function LiveStateIndicators({ state }: { state:
+  VehicleState })` rendering a `flex flex-wrap gap-2` of FIVE `<Badge variant dot size="lg">` chips, using
+  `useTranslation` + `useUnits().formatSpeed`. Its parent (VehicleDetailPage.tsx) owns the `!state` skeleton
+  and the `<SectionErrorBoundary>` failure. The native port reproduces the five chips + extends with the P4
+  leaf contract (loading/empty/error + stale/offline) fed by the parent lifecycle.
+  Data sources : useTranslation -> P1/S10 LiveStateIndicatorsStrings facade ; useUnits -> formatSpeed
+                 reproduced via LiveStateFormat.speed (SI m/s → km/h·mph, convertSpeedFromSI +
+                 Intl.NumberFormat grouping + half-away-from-zero, precision 0). No HTTP in the view — it
+                 binds through LiveStateIndicatorsModel (P1/S8 seam).
+  i18n keys    : the source routes ALL chip words through t(key, default) — 10 keys, reproduced verbatim:
+                 common.speed/locked/unlocked/sentry/active/off/climate/on/charging/notCharging. Parity
+                 check below = 10/10, 0 missing / 0 dead. Unit symbols (km/h, mph) are SI/scale literals.
+  Badges       : (web source order, value + variant)
+                 1 Speed   "{t('common.speed')}: {formatSpeed(state.speed,{precision:0})}" — success when
+                           state.speed > 0 else neutral.
+                 2 Lock    state.is_locked ? "Locked" : "Unlocked" — success when locked else DANGER.
+                 3 Sentry  "{t('common.sentry')}: {state.sentry_mode ? 'Active' : 'Off'}" — warning when
+                           armed else neutral.
+                 4 Climate "{t('common.climate')}: {state.is_climate_on ? 'On' : 'Off'}" — info when on
+                           else neutral.
+                 5 Charging state.is_charging ? "Charging" : "Not Charging" — warning when charging else
+                           neutral.
+  Badge chrome : web `<Badge dot size="lg">` -> status dot (web `h-1.5 w-1.5 bg-current` = the tone colour)
+                 + tone-tinted capsule (variant palette) + larger medium label (size lg = text-sm
+                 font-medium). The dot is decorative; the combined text is the VoiceOver label; the chip is
+                 static (web Badge is a <span>, not a control).
+  Colour map   : ADR-006 semantic (not literal Tailwind) — success->statusSuccess, danger->statusDanger,
+                 warning->statusWarning, info->statusInfo, neutral->textMuted.
+  Layout       : web `flex flex-wrap gap-2` -> a SwiftUI Layout (LiveStateIndicatorsFlowLayout) that wraps
+                 left-to-right with TSSpacing.sm gaps; tokens only, no Tailwind ports, no raw hex.
+
+=== HOST-RUNNABLE SURFACE GATES (every EXIT below is a real, executed run) ===
+
+[1] swiftformat --lint apps/apple (.swiftformat, --swiftversion 6.0) — whole tree
+    0/4108 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (apps/apple/.swiftlint.yml) — whole tree (includes the 8 new surface .swift files)
+    Done linting! Found 0 violations, 0 serious in 3878 files.
+    (Views split into Views+Chrome and Adapter/Format kept separate so every file stays within the
+     file_length budget under --strict — max surface file = Model at 265 lines.)
+    LINT_EXIT=0
+
+[3] check-placeholders.ps1 (ADR-011 definition-of-done gate)
+    -Path apps/apple/TeslaSync/feature-views/LiveStateIndicators
+    -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+    No TODO / FIXME / stub / mock / placeholder / Lorem in any shipped file (0 opt-outs).
+    PLACEHOLDER_EXIT=0
+
+[4] Cross-SDK typecheck — swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+    (the 7 surface source files + the REAL shared-component closure they consume: generated Tokens.swift +
+     Design[TSDesign/TSMaterial] + Components/UI[Typography/Badges/Buttons/Cards] + Motion + Feedback/Skeletons)
+    iOS-18    : -sdk iPhoneSimulator26.5 -target arm64-apple-ios18.0-simulator  -> 0 errors  IOS_TC_EXIT=0
+    macOS-15  : -sdk MacOSX26.5          -target arm64-apple-macos15.0          -> 0 errors  MAC_TC_EXIT=0
+
+[5] Executed logic harness — the 6 non-preview surface files + the closure above compiled to a macOS
+    arm64-apple-macos15.0 executable (-swift-version 6) and RUN. Exercises Format (SI km/h & mph golden-pinned,
+    grouping, half-up, non-finite/empty sentinel), Reading.isMoving, Projection (active + resting value/tone
+    for all five badges), Projector (error>loading>empty>data precedence), Model (view.opened once, snapshot
+    apply, start/stop/refresh, stale one-shot auto-refresh, offline-keeps-data), Accessibility.badgeLabel,
+    Strings.resolve, kind ordering.
+    HARNESS pass=43 fail=0   HARNESS_EXIT=0
+    (The XCTest bundle's 23 tests assert the same contract; they cannot be RUN here because the app module
+     fails to link for the pre-existing cross-surface reasons in [D] — so the same logic is proven by the
+     standalone executed harness.)
+
+[6] xcodegen generate — TeslaSync.xcodeproj enumerates all 9 new files via the existing
+    TeslaSync/feature-views glob (no project.yml / .swiftlint.yml self-registration needed). The 8 .swift
+    compile into the iOS + macOS app targets; LiveStateIndicators.Tests.swift is wired into BOTH the
+    TeslaSyncTests (iOS) and TeslaSync-macOSTests XCTest bundles via the `includes: **/*Tests.swift` globs.
+    XCODEGEN_EXIT=0
+
+[7] Symbol-collision scan across the real app-target module (Sources/ + TeslaSync/, excluding this surface).
+    All 21 public type names are LiveState*/LiveStateIndicators*/InMemory.../OSLog... prefixed.
+    0 collisions — every public type name is unique across the module (no clash with the sibling
+    LiveVehicleState / VehicleStatePanel surfaces).
+    COLLISIONS=0
+
+[8] KMP Shared.xcframework — assembled live this run and staged.
+    cd apps/apple && ./Scripts/build-shared-xcframework.sh
+    -> Gradle :core:assembleSharedXCFramework  BUILD SUCCESSFUL in 7m 35s
+    -> staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64).
+    (This surface is Shared-FREE — Foundation/SwiftUI/Observation/OSLog only — so it does not even depend on
+     the framework; staged anyway so the full-app scheme build could run for [D].)
+    XCFRAMEWORK_EXIT=0
+
+[9] i18n parity — web t() keys vs the native catalog
+    10 web keys extracted from LiveStateIndicators.tsx; 10 LiveStateValue.localized keys in the Adapter;
+    diff = empty (0 missing / 0 dead); all 10 present in LiveStateIndicators.strings.
+    I18N_PARITY=10/10
+
+=== FULL-APP SCHEME GATE — EXECUTED, RED FROM PRE-EXISTING UNRELATED CAUSES ONLY (covenant rule 1) ===
+
+[D] The prompt's full-app gate, run verbatim from apps/apple with the Shared.xcframework staged ([8]):
+
+    (a) xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        IOS_EXIT=65
+        162 compiler errors — ALL are pre-existing, surface-unrelated parallel-merge ambiguous
+        redeclarations between dashboard-widgets and feature-views authored by other agents:
+          StateTimelineUpdate ×12, StateTimelineConnection ×12, StateTimelineLoadStatus ×9,
+          StateTimelineModel ×6 (StateTimelineWidget.swift ↔ StateTimeline.*) and
+          RecentDrivesUpdate ×9, RecentDrivesLoadStatus ×9, RecentDrivesConnection ×9,
+          RecentDrivesModel ×6 (RecentDrivesListWidget.swift ↔ RecentDrivesSection.*).
+        LiveStateIndicators errors in this build: 0  (grep ': error:' | grep LiveStateIndicators -> 0).
+        This 162-error signature is identical to the documented siblings (apps/macos-pending-verifications.md
+        rows 0003-selectedVehicle "iOS scheme 162" and 0301-VehicleHeader).
+
+    (b) xcodebuild -scheme TeslaSync-macOS build test
+        MAC_EXIT=65
+        4 errors — ALL development-signing: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements
+        that require signing with a development certificate. `security find-identity -p codesigning`
+        -> 0 valid identities found. The macOS target fails at signing before Swift compilation.
+        LiveStateIndicators errors in this build: 0.
+
+    Neither failure is a defect in LiveStateIndicators: the surface compiles + its logic runs green against
+    the REAL shared component library in isolation ([4][5]), type-checks for iOS-18 + macOS-15 ([4]) with
+    zero collisions against the app module ([7]), and produces ZERO surface errors inside the real app-target
+    compile of both platforms ([D]). Verification of the full-app build/test is DEFERRED to
+    p4-apple/P99-0001-apple-acceptance-gate (signed macos-latest runner, after the cross-surface
+    StateTimeline*/RecentDrives* redeclarations are resolved).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : IOS_EXIT=65 and MAC_EXIT=65 are shown RAW, not relabelled; every one of the 162+4
+                         errors is attributed to a pre-existing, surface-unrelated file (StateTimeline*/
+                         RecentDrives* redeclarations; macOS dev-signing). Every surface EXIT=0 above is a
+                         real, executed run pasted from the terminal.
+  2  No scope narrowing: implemented ALL states (loading/empty/error/data + stale/offline) and ALL five web
+                         badges (speed/lock/sentry/climate/charging) with their exact value + variant
+                         branches, the flex-wrap layout, the dot+lg badge chrome, 10 i18n keys, a11y labels,
+                         and P1/S11 view.opened.
+  3  No skip-and-assume: each gate executed; the file_length budget was met by splitting Views+Chrome and
+                         keeping Adapter/Format separate (every file < 400 lines under --strict).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 on all shipped files.
+  5  No parity shortcuts: faithful port of formatSpeed (convertSpeedFromSI km/h & mph golden-pinned),
+                         Intl.NumberFormat grouping + half-away-from-zero rounding, the precision-0 default,
+                         the nil/non-finite empty sentinel, the speed>0 success branch, and the per-badge
+                         variant ternary mapped to semantic tokens.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (feature-views already
+                         globbed) and did NOT edit the shared Localizable.xcstrings; strings ship as the
+                         per-surface "LiveStateIndicators" table folded in at integration.
+  8  No commit on red  : committing on all-green host-runnable SURFACE gates; the full-app scheme steps are
+                         RED only from pre-existing, surface-unrelated causes (zero failures originate in this
+                         surface) and are deferred to P99 per the established disposition.
+  9  No silent drift   : changes confined to the allowed LiveStateIndicators.* files (9 new files) + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native LiveStateIndicators shipped at parity with the web source: a Shared-free,
+  isolated-verifiable surface (cross-SDK iOS-18 + macOS-15 swiftc -typecheck = 0 errors under Swift 6 strict
+  concurrency; executed logic harness 43/43; the 23-test XCTest contract authored and wired into both XCTest
+  bundles; swiftlint --strict 0/3878 + swiftformat --lint 0/4108 + placeholder gate COUNT=0; xcodegen
+  enumerates the 9 files; ZERO symbol collisions; i18n parity 10/10). The P1/S8 state-holder seam keeps HTTP
+  out of the view, P1/S11 view.opened is emitted on appear, all states render (loading / empty / error / data
+  / stale / offline), and 10 web i18n keys plus a11y labels are present. The full-app Xcode build/test was
+  EXECUTED on both platforms with the Shared.xcframework staged and produced ZERO LiveStateIndicators errors;
+  it is RED only for pre-existing, surface-unrelated cross-surface collisions (StateTimeline*/RecentDrives*)
+  and macOS dev-signing, and is DEFERRED to the signed macos-latest acceptance gate (P99-0001), matching the
+  user-approved P4 Apple disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/LiveStateIndicators.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0292-LiveStateIndicators.log
+  git commit -m "feat(apps/apple/feature-views): add LiveStateIndicators surface (P4)"
+
+EXIT=0
+STATUS=DONE

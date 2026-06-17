@@ -1,0 +1,165 @@
+================================================================================
+p4-apple · P7 · page:charging/ChargingCurve — SwiftUI / HIG parity
+Log: .github/prompts/monorepo/logs/apple-page-charging-ChargingCurvePage.log
+Run: 2026-06-17  (Xcode 26.5 / Swift 6.3.2, swiftlint, xcodegen 2.45, pwsh, JDK/Gradle KMP)
+================================================================================
+
+HONESTY COVENANT (binding — acknowledged verbatim)
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+ARTIFACT
+  Parity unit : page:charging/ChargingCurve   (route /charging-curve, /charging/curves)
+  Web source  : web/src/features/charging/pages/ChargingCurvePage.tsx
+  Output      : apps/apple/TeslaSync/Features/Charging/ (10 .swift) + model tests
+  Required    : PARITY_REQUIRED=11 (2 panels · 3 states · 6 strings)
+
+--------------------------------------------------------------------------------
+DELIVERABLE (files created — all under the allowed Features/Charging/** path)
+--------------------------------------------------------------------------------
+  ChargingCurveModels.swift            value types + ChargingCurveMath (isDc, category,
+                                       durationMinutes, generateChargingCurve, avg) + ViewState + Range
+  ChargingCurveFormat.swift            fmtNumber/int/withUnit/currency/date/sessionLabel/socRange (SI→display)
+  ChargingCurveStrings.swift           CCText — every web i18n key behind the translation.* table
+  ChargingCurveDataSource.swift        KMP-core seam; hook-named useChargingSessionsPaginated
+  ChargingCurvePageModel.swift         @Observable model + all web useMemo derivations + lifecycle
+  ChargingCurvePageModel.Sample.swift  deterministic fixture (success) + Empty/Failing doubles
+  ChargingCurvePage.swift              View: header (VehicleSelect+RangePicker) + phase switch
+  ChargingCurvePage.Sections.swift     selector, summary grid, detail panel, GlassPanel1, GlassPanel2, skeleton
+  ChargingCurveCharts.swift            native Swift Charts: curve(area), comparison, charger-type, speed-trend,
+                                       time-to-charge cards + yearly trend  (never a WKWebView)
+  ChargingCurveRouteRegistration.swift registers .chargingCurve in AppRouteHostRegistry
+  Tests/Unit/Features/Charging/ChargingCurvePageModelTests.swift   23 tests (state/derivation/math/format/route)
+
+  Navigation registration (allowed "navigation registration"):
+    Sources/App/AppRoute.swift         + case chargingCurve (pathSegment charging-curve, group .vehicle,
+                                         icon chart.xyaxis.line) + exhaustive systemImage/group switch arms
+    Sources/App/AppRouteParser.swift   /charging/curves alias -> .chargingCurve
+    Sources/TeslaSyncApp.swift         + ChargingCurveRouteRegistration.registry(base: registry)
+  String catalog (allowed):
+    Localization/Localizable.xcstrings + translation.charging.curve.emptyHint, .selectSessionHint, route.chargingCurve
+                                         (the other 4 required keys + all section keys already present)
+
+================================================================================
+=== PARITY ===   PARITY_REQUIRED=11
+================================================================================
+[x] panel  — GlassPanel1                 ChargingCurveEmptyPanel  (ChargingCurvePage.Sections.swift:234)
+                                          web GlassPanel #1 (no-sessions empty branch): empty headline + hint
+[x] panel  — GlassPanel2                 ChargingCurveHintPanel   (ChargingCurvePage.Sections.swift:258)
+                                          web GlassPanel #2 (success, no session selected): selectSessionHint
+[x] state  — loading                     ChargingCurveViewState.loading (ChargingCurveModels.swift:175)
+                                          -> ChargingCurveSkeleton (.Sections.swift:276, redacted(.placeholder)),
+                                             ChargingCurvePage.swift:152 `case .loading`
+[x] state  — empty                       ChargingCurveViewState.empty (ChargingCurveModels.swift:176)
+                                          -> ChargingCurveEmptyPanel, ChargingCurvePage.swift:156-157 `case .empty`
+[x] state  — success                     ChargingCurveViewState.success (ChargingCurveModels.swift:178)
+                                          -> successView (ChargingCurvePage.swift:158,182)
+[x] string — charging.curve.title        CCText.title             (ChargingCurveStrings.swift:18)
+[x] string — charging.curve.subtitle     CCText.subtitle          (ChargingCurveStrings.swift:20)
+[x] string — charging.curve.empty        CCText.empty             (ChargingCurveStrings.swift:22)
+[x] string — charging.curve.emptyHint    CCText.emptyHint         (ChargingCurveStrings.swift:24)
+[x] string — charging.curve.selectSession      CCText.selectSession      (ChargingCurveStrings.swift:26)
+[x] string — charging.curve.selectSessionHint  CCText.selectSessionHint  (ChargingCurveStrings.swift:28)
+
+PARITY_COVERED=11
+PARITY_REQUIRED=11
+(All 11 bind through the @Observable ChargingCurvePageModel. Beyond the manifest minimum, the page
+ also reproduces every web region — session selector, summary stats grid, single-session power-vs-SOC
+ area chart + detail sidebar, session comparison overlay, charger-type bars, monthly speed trend and
+ the DC time-to-charge analysis — natively with Swift Charts (no scope narrowing). The two web AI
+ narrator panels are out of scope: they are their own already-ported parity units, not page panels.)
+
+================================================================================
+GATE
+================================================================================
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Charging -Language swift
+  PLACEHOLDER_ALLOWED=1   (one documented redaction marker on the loading skeleton)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ cd apps/apple; swiftlint --strict        (config .swiftlint.yml; included roots cover all sources)
+  ChargingCurve/** + AppRoute/AppRouteParser/TeslaSyncApp + tests: 0 violations.
+  Whole tree: 1 violation, in a PRE-EXISTING, out-of-scope, untouched file (full disclosure below):
+    Sources/Features/System/MyActivityPageModel.swift:217 trailing_whitespace  (present in HEAD)
+LINT_EXIT(this artifact)=0 ; LINT_EXIT(whole-tree)=1 (the single pre-existing MyActivityPageModel line)
+
+$ xcodegen generate
+  Created TeslaSync.xcodeproj (the new Charging sources + test are picked up by the app + test targets).
+
+$ Scripts/build-shared-xcframework.sh
+  Shared.xcframework (KMP core, ADR-004) assembled via Gradle and staged. BUILD SUCCESSFUL.
+
+$ xcodebuild -scheme TeslaSync-macOS -configuration Release -derivedDataPath .build-cc-rel \
+      CODE_SIGNING_ALLOWED=NO build           (Release ⇒ #if DEBUG previews excluded ⇒ avoids the SDK
+                                               #Preview ambiguity; whole-module ⇒ checks every file)
+  errors attributable to ChargingCurve/**: 0   (zero — my code compiles clean)
+  BUILD_EXIT=1  — BLOCKED by pre-existing committed sibling breakage (enumerated below), none in Charging.
+
+$ swift test   (standalone SPM package: the self-contained model layer — ChargingCurveModels/Format/
+               PageModel/DataSource/Sample, Foundation+Observation only — with the model-logic tests)
+  Executed 21 tests, with 0 failures.
+TEST(model-logic, standalone)=21/21 PASS
+  (The 2 route-metadata/registration tests additionally compiled clean in the WMO build above; they
+   require AppRoute so they run in the app test bundle, which is itself blocked by the sibling breakage.)
+
+--------------------------------------------------------------------------------
+PRE-EXISTING ENVIRONMENT BLOCKER (full disclosure — NOT this change; NOT red-as-green)
+--------------------------------------------------------------------------------
+This slot's committed base tree (HEAD) does NOT compile — independently of this change. The Powershare
+sibling (apple-page-charging-Powershare, 2026-06-14) built clean on the same Xcode 26.5; since then,
+parallel P4-apple sibling phases committed breakage into this slot's tree. The page:system/TeslaAccount
+sibling already recorded the same situation in apple-ledger.json (status=blocked, "Build blocked by
+pre-existing MyActivityPage.swift errors"). Verified pre-existing via `git`: every file below is in HEAD
+and UNMODIFIED by this change.
+
+  A. Duplicate top-level types (parallel page-port vs widget-port both define the same name in one module):
+       TirePressureUnit / TirePressureConvert / TirePressureStatus / TirePressureThresholds
+         Features/VehicleSystems/TirePressureModels.swift  ⨯  dashboard-widgets/TirePressure*Widget.*
+       (the widget TirePressureConvert uses `.fromSI`, the page one uses `.fromPascals` — incompatible,
+        so they cannot simply be merged; resolving them means editing the sibling widget feature.)
+  B. Access-control bugs in split sibling files (Swift 6.3):
+       Sources/Features/Admin/DBHealthPage.Panels.swift  — 'model' inaccessible (private)
+       Sources/Features/Admin/DBHealthPage.swift         — missing argument 'title'
+       Sources/Features/System/DiagnosticPage.Sections.swift — many 'inaccessible due to fileprivate'
+  C. Type errors in unrelated sibling code:
+       Sources/Features/Dashboard/Widgets/BatteryRadialGaugeModel.swift — String? vs Int64?
+       Sources/Features/System/NotFoundPage.swift — LocalizedStringKey vs String.LocalizationValue
+  D. Xcode-26.5 SDK regression: the `#Preview` macro is ambiguous between SwiftUI.Preview and
+       UIKit.Preview (iOS) / AppKit.Preview (macOS) in EVERY `#if DEBUG #Preview` block across the
+       codebase (hundreds of files). Release config excludes them; a Debug build/`xcodebuild test`
+       cannot compile the app host. (See apps/macos-pending-verifications.md.)
+
+NONE of A–D is in ChargingCurve. They are out of this artifact's allowed-files scope and span unrelated
+sibling features; resolving them would mean rewriting other agents' in-progress work. They are therefore
+NOT fixed here. To PROVE the ChargingCurve code itself is clean despite the broken tree, three file-local
+pre-existing collisions in the immediate compile path were resolved LOCALLY for the Release build above
+and then REVERTED (Powershare-style "isolate + disclose", no out-of-scope source committed):
+  StatusApiDocsPage.swift (a second non-private `enum TSSpacing`/`TSRadius` shadowing the design tokens
+  module-wide), TeslaAccountPageViews.swift (an `extension TSSpacing` re-adding `x2xl` already in the
+  regenerated tokens), and the duplicate filename ScheduledExportsPanel.swift (feature-views vs
+  Features/System). With those reverted, the committed tree matches HEAD + this artifact's allowed files.
+
+--------------------------------------------------------------------------------
+LEDGER
+--------------------------------------------------------------------------------
+apps/parity/apple-ledger.json: page:charging/ChargingCurve added for both targets
+  apple-macos  status=blocked coveredCount=11 requiredCount=11
+  apple-ios    status=blocked coveredCount=11 requiredCount=11
+  (status=blocked mirrors the page:system/TeslaAccount precedent: parity complete, build blocked by
+   pre-existing tree breakage. NOT marked done — that would be red-as-green.)
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+PARITY:      11/11 covered (panels 2, charts 0 per manifest [full charts reproduced natively], states 3, strings 6)
+LINT:        0 violations in this artifact; 1 pre-existing whole-tree violation disclosed (untouched file)
+PLACEHOLDER: 0 (ADR-011); 1 allowed (documented redaction marker)
+BUILD:       ChargingCurve compiles with 0 errors (macOS Release WMO); full app build BLOCKED by
+             pre-existing committed sibling breakage (A–D above), none in ChargingCurve
+TEST:        21/21 model-logic tests pass (standalone SPM verification of the self-contained model layer);
+             app test bundle blocked by the same pre-existing breakage
+DELIVERABLE: complete and independently verified to the maximum extent the broken base tree permits.
+
+EXIT=1
+STATUS=BLOCKED

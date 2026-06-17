@@ -1,0 +1,104 @@
+=== P4 Shared surface 0196 ActionItem (Apple) ===
+Artifact : components/status/ActionItem.tsx  →  apps/apple/TeslaSync/shared-surfaces/ActionItem.*
+Runner   : macOS 26.5.1 (arm64) · Xcode 26.5 (17F42) · Swift 6 · SwiftLint + SwiftFormat present
+Date     : 2026-06-12
+
+------------------------------------------------------------------------------------------
+PLATFORM CAPABILITY (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15)
+------------------------------------------------------------------------------------------
+xcodebuild            : Xcode 26.5 Build 17F42                                  [AVAILABLE]
+iOS Simulator         : iPhone 16 (booted), iOS 18+ SDK present                 [AVAILABLE]
+macOS target          : macOS 15 SDK present                                    [AVAILABLE]
+swiftlint / swiftformat: /opt/homebrew/bin present                              [AVAILABLE]
+KMP Shared.xcframework: built via gradlew :core:assembleSharedXCFramework        [BUILD SUCCESSFUL in 10m11s]
+                        staged → apps/apple/Frameworks/Shared.xcframework        [STAGED]
+=> Platform is fully capable. This is NOT a platform-capability block.
+
+------------------------------------------------------------------------------------------
+SURFACE-SCOPED VERIFICATION (ActionItem.* only — the allowed file set)
+------------------------------------------------------------------------------------------
+Files delivered (9):
+   ActionItem.swift            108  public View · phase switch · controlled convenience init
+   ActionItem.Adapter.swift    212  pure core: severity, CTA value + make(), value, a11y, Resolve
+   ActionItem.Model.swift      223  slug · telemetry seam · connection · input · projection · @Observable model · i18n facade
+   ActionItem.Seams.swift      190  source protocol + Static/InMemory · navigator (Closure/Recording) · URL opener (System/Recording)
+   ActionItem.Views.swift      183  ActionItemRow · ActionItemCTAButton · ActionItemFreshnessChip · severity→TSTone
+   ActionItem.States.swift     105  loading skeleton · empty · error (retry) leaf chrome
+   ActionItem.Previews.swift   139  9 #Preview states (info/warn/error · route/external/handler CTA · empty/loading/error/stale/offline)
+   ActionItem.strings           37  i18n catalog (severity words, CTA hints, leaf chrome, freshness)
+   ActionItem.Tests.swift      354  adapter + projection + model + a11y XCTest coverage
+   TOTAL                      1551  (web source = 94 lines; native expansion = mandated state-holder/seams/adapter/views/states/previews/tests)
+
+Parity mapping (web → native):
+   ActionSeverity info|warn|error  → ActionItemSeverity (+ rawSeverity init, SF Symbols info.circle/exclamationmark.triangle/exclamationmark.circle, TSTone info/warning/danger)
+   cta.to (Link)                   → ActionItemCTA.Kind.route(String)   → navigator.navigate(to:)
+   cta.to + external (a _blank)    → ActionItemCTA.Kind.external(URL)    → opener.open(url) (UIApplication/NSWorkspace)
+   cta.onClick (button)            → ActionItemCTA.Kind.action           → onActionTap()
+   ChevronRight                    → chevron.right (external → arrow.up.right, Apple-idiomatic)
+   title / description / label     → caller content (verbatim); only chrome+a11y strings localized (P1/S10)
+   States                          → loading / empty / error / data + stale / offline freshness chip (P4 leaf contract)
+   view.opened telemetry           → ActionItemSurface.slug = "ActionItem" (P1/S11)
+
+(A) swiftc -typecheck  ActionItem(non-test) + REAL Sources/Components + Sources/Design + generated Tokens.swift
+    iphonesimulator SDK · -target arm64-apple-ios18.0-simulator · -swift-version 6 · -strict-concurrency=complete
+    => 0 errors, 0 warnings in ActionItem files.                                 TYPECHECK_EXIT=0
+(B) swiftc -typecheck  ActionItem.Tests (XCTest shim, in-module) + REAL components
+    => 0 errors (all surface-symbol references valid; throwing-autoclosure asserts OK). TEST_LOGIC_EXIT=0
+(C) swiftlint --strict  (8 swift files)
+    => Found 0 violations, 0 serious in 8 files.                                 LINT_EXIT=0
+(D) swiftformat --lint  (8 swift files)
+    => 0/8 files require formatting.                                             FORMAT_EXIT=0
+(E) check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/ActionItem
+    => PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0                       PLACEHOLDER_EXIT=0
+
+=> The ActionItem surface is COMPLETE and GREEN on every surface-scoped gate, and compiles
+   cleanly against its REAL dependencies (design tokens + shared components) under Swift 6
+   strict concurrency. ActionItem has zero dependency on the KMP `Shared` module.
+
+------------------------------------------------------------------------------------------
+AGGREGATE GATE (xcodebuild build test — whole TeslaSync app target)
+------------------------------------------------------------------------------------------
+iOS  : xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build
+       ** BUILD FAILED **   (3 failures)
+       Sole compile error:
+         shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure
+           captures non-escaping parameter 'content'
+       ActionItem diagnostics in build: 0 (the whole-module compile aborts in the alphabetically
+       earlier "AI*" batch, before ActionItem is reached).
+       IOS_EXIT=65
+
+macOS: xcodebuild -scheme TeslaSync-macOS build test
+       ** BUILD FAILED **   (3 failures)
+       Sole compile error: identical — shared-surfaces/AISignalExplorerNlFilter.swift:142:22
+       ActionItem diagnostics in build: 0
+       MAC_EXIT=65
+
+ROOT CAUSE OF AGGREGATE RED (out of scope for this prompt):
+   The shared TeslaSync app module fails to compile because of a PRE-EXISTING defect in a
+   SIBLING surface, `AISignalExplorerNlFilter.swift` (a non-escaping `content` parameter is
+   captured by an escaping closure). That surface is owned by its own prompt and is explicitly
+   OUT OF SCOPE here:
+     - prompt "Out of Scope": "Other surfaces in the same feature (each has its own prompt)"
+     - prompt "Allowed files": apps/apple/TeslaSync/shared-surfaces/ActionItem.*, the log file
+   Editing AISignalExplorerNlFilter.* would violate the allowed-file set and the honesty covenant
+   (No scope narrowing / No predecessor bypass), so it was NOT modified. The error pre-exists in
+   HEAD and is not introduced by this surface.
+
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------------------
+VERDICT
+------------------------------------------------------------------------------------------
+The ActionItem surface itself satisfies every surface-scoped acceptance criterion and is
+verified GREEN (typecheck 0 / lint 0 / format 0 / placeholder 0 / test-logic 0, zero ActionItem
+diagnostics on both iOS and macOS). The aggregate `xcodebuild build test` cannot reach EXIT=0
+in this repository snapshot because an OUT-OF-SCOPE sibling surface
+(AISignalExplorerNlFilter.swift) does not compile, and that file is outside this prompt's
+allowed file set. Reporting honestly per the covenant (No red-as-green): the aggregate gate is
+RED, so EXIT is non-zero and STATUS is BLOCKED — blocked by a pre-existing, out-of-scope sibling
+defect, NOT by platform capability and NOT by the ActionItem surface.
+
+EXIT=65
+STATUS=BLOCKED

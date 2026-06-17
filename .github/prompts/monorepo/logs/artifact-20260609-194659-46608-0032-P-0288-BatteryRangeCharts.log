@@ -1,0 +1,105 @@
+=== P4 Feature view 0288 BatteryRangeCharts (Apple) ===
+
+Surface  : apps/apple/TeslaSync/feature-views/BatteryRangeCharts.*
+Web src   : web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx
+Toolchain : Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat, pwsh — all present.
+Capability: SwiftUI + Swift Charts available on the runner (this is NOT a capability block).
+
+------------------------------------------------------------------------------
+DELIVERABLE (9 files, each under the 400-line file_length budget)
+------------------------------------------------------------------------------
+  BatteryRangeCharts.swift               main composable surface (2-panel grid, FadeIn, phase switch)
+  BatteryRangeCharts.Adapter.swift       pure projection core (SI->display, bars, drive trend, phases)
+  BatteryRangeCharts.Accessibility.swift a11y summaries + date format (web formatDate) + surface slug
+  BatteryRangeCharts.Model.swift         P1/S8 state holder + P1/S11 telemetry + P1/S10 i18n facade
+  BatteryRangeCharts.Views.swift         panels, gauge row, stat cards, freshness chip/banner, states
+  BatteryRangeCharts.Charts.swift        Swift Charts: battery gauge + Current/Remaining BarChart
+  BatteryRangeCharts.TrendChart.swift    Swift Charts: distance/duration AreaChart + legend + tooltip
+  BatteryRangeCharts.Previews.swift      8 previews: content/imperial/no-drives/empty/loading/error/stale/offline
+  BatteryRangeCharts.Tests.swift         adapter + model + a11y XCTest suites (32 tests)
+  BatteryRangeCharts.strings             i18n catalog (all 9 web keys + envelope + axes + a11y)
+
+Parity reproduced from the web source: battery share bars (Current / 100-level Remaining),
+RadialGauge with the batteryColor ramp (>60 success / >25 warning / else danger tokens),
+range stat (convertDistanceFromSI; km=m/1000, mi=m/1609.344), recent-drive trend
+(formatDate x-labels, rounded distance, duration/60 minutes, .reverse()) with the
+"No drive data for chart" empty state. CHART_COLORS[0]/[1] -> Color.TS.chartCategorical[0]/[1]
+(#0072B2 / #E69F00). All states render (loading/empty/error/stale/offline/content).
+
+==============================================================================
+GATE STEPS
+==============================================================================
+
+### STEP 1/5: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=65   (** TEST FAILED **)
+  Root cause: PRE-EXISTING duplicate-symbol collision in committed code, NOT this surface.
+  78 compiler errors, ALL in 5 files of two OTHER surfaces:
+     feature-views/StateTimeline.{Adapter,Model,Source,Previews,...}.swift
+     dashboard-widgets/StateTimelineWidget.{Model,Previews,swift,...}.swift
+  Both independently declare PUBLIC StateTimelineModel / StateTimelineUpdate /
+  StateTimelineConnection / StateTimelineLoadStatus  ->  "ambiguous for type lookup".
+  `git ls-files` confirms all 5 colliding files are committed at HEAD (clean working tree);
+  the 9 BatteryRangeCharts files are the only untracked additions.
+  Errors attributable to BatteryRangeCharts.* : 0   (grep BatteryRangeCharts + error: => none)
+  These files are OUTSIDE this surface's allowed-files scope (BatteryRangeCharts.* only) and
+  belong to the StateTimeline / StateTimelineWidget surface owners; they cannot be fixed here.
+
+### STEP 2/5: xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=65   (build failed before compilation)
+  Root cause: ENVIRONMENTAL code-signing, NOT this surface.
+  4 errors, all: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that require
+  signing with a development certificate. project.yml sets DEVELOPMENT_TEAM="" and the macOS
+  targets use hardened-runtime entitlements; no signing identity is provisioned on this runner.
+  Errors attributable to BatteryRangeCharts.* : 0
+
+### STEP 3/5: swiftlint --strict   (surface, 9 files)
+LINT_EXIT=0     Done linting! Found 0 violations, 0 serious in 9 files.
+
+### STEP 4/5: swiftformat --lint   (surface, 9 files)
+FORMAT_EXIT=0   0/9 files require formatting.
+
+### STEP 5/5: check-placeholders.ps1   (surface, 9 files + .strings)
+PLACEHOLDER_COUNT=0   (no TODO/FIXME/stub/mock/placeholder/Lorem in shipped code)
+
+==============================================================================
+SURFACE-ISOLATED VERIFICATION
+(proves THIS surface is complete + correct, independent of the two
+ pre-existing/environmental blockers in Steps 1-2)
+==============================================================================
+
+A. swiftc -typecheck, Swift 6 strict concurrency, target arm64-apple-ios18.0-simulator
+   Inputs: the 8 non-test surface files + real Tokens.swift + Motion.swift (TSFadeIn) +
+           MeasurementSystem.swift + a signature-faithful TSSkeleton stand-in.
+   RESULT: SURFACE_TYPECHECK_EXIT=0   (surface incl. all 8 #Preview states compiles clean)
+
+B. swiftc -typecheck of BatteryRangeCharts.Tests.swift against the surface API
+   RESULT: TESTS_TYPECHECK_EXIT=0   (every test reference to the surface API resolves)
+
+C. Executed the 32-test suite via a standalone macOS runner with real assertions
+   RESULT: BM_TESTS_RUN=32  BM_FAILURES=0  (RUN_EXIT=0)
+   Suites: BatteryRangeBuilderTests (15) + BatteryRangeChartsModelTests (13)
+           + BatteryRangeAccessibilityTests (4).
+   The runner genuinely executes: it first caught a wrong EXPECTED constant in a test
+   (412000/1609.344 = 256.0049, not 256.0099); corrected, then all 32 passed.
+
+D. The full iOS app build (Step 1) compiled the TeslaSync module WITH this surface and
+   emitted ZERO BatteryRangeCharts errors; the only failures were the pre-existing
+   StateTimeline collision.
+
+==============================================================================
+ACCEPTANCE CRITERIA
+==============================================================================
+[x] Surface renders all web states (loading/empty/error/stale/offline/content) — 8 previews.
+[x] Hooks bind through the shared P1/S8 state-holder seam (BatteryRangeSource); no HTTP in view.
+[x] Every web i18n key present in the P1/S10 catalog (BatteryRangeCharts.strings).
+[x] Accessibility labels/values on gauge, bars, trend, chips, retry; combined VoiceOver summary.
+[x] Tests: adapter unit + model per-state + a11y label tests (32, all pass).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] EXIT=0 is BLOCKED by two factors outside this surface AND outside its allowed files:
+      (1) pre-existing committed StateTimeline/StateTimelineWidget duplicate-symbol collision
+          breaks the iOS app build (IOS_EXIT=65);
+      (2) absent macOS development-signing certificate breaks the macOS build (MAC_EXIT=65).
+    This surface is itself complete and verified green (A-D); it contributes ZERO errors.
+
+EXIT=65
+STATUS=BLOCKED

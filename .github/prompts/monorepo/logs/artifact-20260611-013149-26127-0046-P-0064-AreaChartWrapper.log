@@ -1,0 +1,119 @@
+=== P4 Shared surface 0064 AreaChartWrapper (Apple) ===
+Host: Darwin, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat (homebrew),
+      iPhone 16 simulator (iOS 26.5) booted, KMP Shared.xcframework built via Gradle.
+Scope (allowed files): apps/apple/TeslaSync/shared-surfaces/AreaChartWrapper.* + this log.
+
+--------------------------------------------------------------------------------
+DELIVERABLE — AreaChartWrapper surface (SwiftUI + Swift Charts parity of
+web/src/components/charts/AreaChartWrapper.tsx). 9 files, complete, no stubs:
+  AreaChartWrapper.swift            public View + 3 inits (model / presentational / LoadableState)
+  AreaChartWrapper.Source.swift     value types, value-format, hex palette, pure chart logic
+  AreaChartWrapper.Projection.swift LoadableState adapter + pure projection (loading/error/empty/chart + stale/offline)
+  AreaChartWrapper.Model.swift      Meta slug, P1/S11 telemetry seam + diagnostics, P1/S10 strings facade, @Observable model
+  AreaChartWrapper.Views.swift      Swift Charts multi-series area (gradient fill 0.3->0, .monotone, stroke 2,
+                                    dashed grid "3 3", x/y axes w/ formatters, drag tooltip) + loading/empty/error/freshness chrome
+  AreaChartWrapper.strings          per-surface i18n English fallbacks (chrome + a11y)
+  AreaChartWrapper.Previews.swift   every state: multi-series, single, empty, loading, error, stale, offline
+  AreaChartWrapper.Tests.swift      value-format, palette, logic, projection, a11y, i18n facade + shared test data
+  AreaChartWrapper.ModelTests.swift LoadableState adapter, view.opened-once diagnostics, model retry/update
+Parity notes: states (loading/empty/error/stale/offline) all render; hooks bind via the shared
+P1/S8 LoadableState state-holder (no HTTP in the view); every string via P1/S10 facade;
+per-series colour = verbatim web hex with brand-palette fallback (ChartLegend precedent);
+view.opened emitted once on appear (P1/S11); VoiceOver labels on chart + interactive chrome.
+
+================================================================================
+GATE STEP RESULTS
+================================================================================
+
+[1] swiftformat --lint  ........................................ FORMAT_EXIT=0
+    - Whole tree:  "0/4363 files require formatting, 2 files skipped."  (EXIT=0)
+    - Surface only: "0/8 files require formatting."                     (EXIT=0)
+
+[2] swiftlint --strict  ........................................ LINT_EXIT=0  (surface)
+    - Surface (8 files): "Done linting! Found 0 violations, 0 serious in 8 files."
+    - (Whole-tree swiftlint not isolated here; surface is clean — 0 violations.)
+
+[3] check-placeholders.ps1 (apps/apple/.../AreaChartWrapper) ... PLACEHOLDER_EXIT=0
+    - PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    - No TODO / stub / mock / placeholder / Lorem in shipped code.
+
+[4] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+    build test  ................................................ IOS_EXIT=65  (BLOCKED — see below)
+
+[5] xcodebuild -scheme TeslaSync-macOS build test  ............. MAC_EXIT=65  (BLOCKED — see below)
+
+================================================================================
+[4] iOS build test — BLOCKED (NOT attributable to AreaChartWrapper)
+================================================================================
+The AreaChartWrapper surface itself compiles cleanly: across every build attempt there were
+ZERO `error:` diagnostics in any AreaChartWrapper.* file; the surface compiled into the
+TeslaSync module (the build reached app link, codesign and product packaging), and the test
+bundle compiled the surface's tests (4553 TeslaSyncTests objects cached, incl.
+AreaChartWrapper.Tests/.ModelTests).
+
+The whole-app `build test` gate could not be driven green for two external reasons:
+
+A) PRE-EXISTING baseline compile errors in SIBLING surfaces/tests (parallel-merge baseline at
+   HEAD a7cd4f7fc), under Xcode 26.5 / Swift 6.3.2. These files are tracked at HEAD, are NOT
+   part of this prompt's allowed scope, and are each owned by their own surface prompt. The
+   TeslaSync app + the single TeslaSyncTests bundle compile every co-located file, so any one
+   defect blocks the whole build/test. Discovered (each fix revealed the next):
+     1. TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:140
+        "escaping closure captures non-escaping parameter 'content'" (glass(_:) -> TSGlassPanel)
+     2. TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:141            (same defect)
+     3. TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:122          (same defect)
+     4. TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24
+        "the compiler is unable to type-check this expression in reasonable time"
+     5. TeslaSync/shared-surfaces/ChartContainer.AdapterTests.swift:309
+        "cannot find type 'EmptyView' in scope" (missing import SwiftUI)
+     6. TeslaSync/dashboard-widgets/StateTimelineWidget.Tests.swift:182,280
+        "invalid redeclaration of 'SpyStateTimelineTelemetry'" + telemetry conformance mismatch
+   (Each was repaired LOCALLY only to verify the surface compiles end-to-end; all such
+    out-of-scope repairs were then REVERTED — the committed change set is AreaChartWrapper.*
+    only. The app target compiled clean once defects 1-4 were locally repaired.)
+
+B) RUNNER RESOURCE EXHAUSTION on this shared (non-dedicated) host. 1-min load average
+   oscillated 14 -> 149 throughout (sustained 40-60+) from many concurrent parallel-slot
+   builds. The large TeslaSync / TeslaSyncTests swift-frontend batches were repeatedly
+   OOM-killed (SwiftCompile "failed with a nonzero exit code" with ZERO `error:` output) and
+   the overall build was intermittently SIGTERM'd (exit 143, "** BUILD INTERRUPTED **"), with
+   one attempt running 13 min before being killed. Note: the project pre-build run-script
+   re-stages Shared.xcframework every build (rm -rf + cp), which invalidates the TeslaSync
+   module cache and forces a full whole-module re-emit on each attempt — the dominant memory
+   peak under load. Both A and B are environmental / baseline, not the surface.
+
+Representative timeline (build test attempts, immediate-retry, framework staging stabilised):
+   reached: EmitSwiftModule -> Ld (TeslaSyncWidgets/Activities) -> CodeSign / ProcessProductPackaging
+   -> TeslaSyncTests objects cached (4553) ; final test-bundle link + test RUN never completed
+   before an OOM/SIGTERM under load, and once defect #6 (a sibling test file) surfaced the
+   bundle stopped compiling. No AreaChartWrapper test ever reported a failure.
+
+================================================================================
+[5] macOS build test — BLOCKED (NOT attributable to AreaChartWrapper)
+================================================================================
+xcodebuild -scheme TeslaSync-macOS build  (Gradle "BUILD SUCCESSFUL", "Shared.xcframework staged"):
+   error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+          Enable development signing in the Signing & Capabilities editor.
+   error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+The macOS app/widget targets require a development code-signing identity that is not
+provisioned on this runner (fails before compilation). The macOS targets additionally compile
+the same shared source files as iOS, so baseline defects (A) apply equally.
+
+================================================================================
+SUMMARY
+================================================================================
+In-scope quality gates GREEN: FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_EXIT=0.
+AreaChartWrapper compiles clean (0 surface errors) into both the app module and the test bundle.
+Full simulator/macOS build+test is BLOCKED by external factors only:
+  - pre-existing sibling baseline compile errors (out-of-scope, owned by their own prompts), and
+  - shared-runner resource exhaustion (OOM/SIGTERM under load 14-149), and
+  - missing macOS development signing certificate.
+No red-as-green: the build+test gate is reported as BLOCKED, not passed.
+
+IOS_EXIT=65
+MAC_EXIT=65
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,90 @@
+=== P4 Dashboard widget 0026 ClimateControlPanelWidget (Apple) ===
+date: 2026-06-09T16:13:34Z
+host: Darwin 25.5.0 arm64
+
+## Toolchain
+Full Xcode located at /Applications/Xcode.app and activated per-process via DEVELOPER_DIR
+(the default xcode-select dir is CommandLineTools; no sudo, so DEVELOPER_DIR override is used).
+Xcode 26.5
+Build version 17F42
+iOS sim SDK: Simulator - iOS 26.5 -sdk iphonesimulator26.5
+swiftlint 0.63.3  |  swiftformat 0.61.1  |  xcodegen Version: 2.45.4
+
+================================================================
+## A. Canonical gate (whole-app xcodebuild build test) — verbatim
+----------------------------------------------------------------
+Shared.xcframework (KMP core) built from apps/shared and staged:
+Info.plist ios-arm64 ios-arm64-simulator macos-arm64
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  → TEST BUILD FAILED. Cause is OUTSIDE this surface's allowed scope: a PRE-EXISTING
+    duplicate 'public final class SafetyModel' declared in BOTH sibling files:
+      SafetyHistoryWidget.Model.swift:156:public final class SafetyModel {
+      SafetyFeaturesWidget.Model.swift:97:public final class SafetyModel {
+    (these Safety widget files are committed + untouched by this task; git confirms clean:)
+      git status --porcelain Safety*.swift -> []
+    The duplicate type makes the whole single-module app target ambiguous; my surface uses
+    uniquely-prefixed ClimatePanel*/ClimateControlPanelWidget symbols and is NOT implicated.
+IOS_EXIT=65   (pre-existing sibling defect, not this surface)
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+  → BUILD FAILED: "TeslaSync-macOS has entitlements that require signing with a development
+    certificate" — environment code-signing limitation (no dev cert; DEVELOPMENT_TEAM empty).
+MAC_EXIT=65   (environment signing, not this surface)
+
+================================================================
+## B. This surface verified GREEN in isolation (real Xcode 26.5 toolchain)
+----------------------------------------------------------------
+[B1] Type-check vs REAL iOS 26.5 Simulator SDK + macOS 26.5 SDK (Model+Adapter+View+Views)
+     IOS_SDK_TYPECHECK_EXIT=0   MACOS_SDK_TYPECHECK_EXIT=0   (run earlier this session)
+
+[B2] Real XCTest suite EXECUTED via SwiftPM (Swift 6 language mode = strict 'complete'
+     concurrency, matching the app's SWIFT_STRICT_CONCURRENCY=complete). The surface's
+     actual ClimateControlPanelWidget.Tests.swift compiled against the real Model/Adapter/
+     View/Views and ran on the host:
+	 Executed 34 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds
+Test Suite 'All tests' passed at 2026-06-09 09:13:35.719.
+	 Executed 34 tests, with 0 failures (0 unexpected) in 0.006 (0.009) seconds
+     SWIFT_TEST_EXIT=0
+     (NOTE: this strict-concurrency build caught a real Sendable defect in the static
+      seat-heater table that plain swiftc -typecheck missed; it was fixed — the table is
+      now all-String + a pure switch, implicitly Sendable. Re-verified: 34/34 pass.)
+
+[B3] swiftlint --strict (.swiftlint.yml), 6 shipped Swift files
+Done linting! Found 0 violations, 0 serious in 6 files.
+     LINT_EXIT=0
+
+[B4] swiftformat --lint (.swiftformat), 6 shipped Swift files
+0/6 files require formatting.
+     FORMAT_EXIT=0
+
+[B5] check-placeholders.ps1 (ADR-011) scoped to this surface
+PLACEHOLDER_COUNT=0
+EXIT=0
+     PLACEHOLDER_EXIT=0
+
+[B6] xcodegen generate — new files wired into TeslaSync(/-macOS) app + XCTest targets
+     build-file refs for ClimateControlPanelWidget: 42
+     XCODEGEN_EXIT=0
+
+================================================================
+## Result
+Surface IMPLEMENTATION: COMPLETE + independently verified GREEN — 7 files, full web parity
+  (HVAC on/off + kW, cabin/outside temps via SI→°C/°F at the render boundary, fan speed,
+  steering-wheel heat, ordered FL/FR/RL/RC/RR seat-heater chips, defrost + battery-heater
+  chips, compact single-temp tile), all 17 web i18n keys + native chrome, every state
+  (loading/empty/error+retry/stale/offline/content), P1/S8 source seam (no HTTP in view),
+  P1/S11 view.opened telemetry, P1/S9 tokens, P1/S10 i18n, VoiceOver + Dynamic Type.
+  Real-toolchain proof: iOS+macOS SDK type-check=0, swift test 34/34=0 (strict concurrency),
+  swiftlint --strict=0, swiftformat --lint=0, placeholder=0, xcodegen=0.
+
+Canonical WHOLE-APP xcodebuild gate: cannot reach green on this branch, for two reasons that
+are EXTERNAL to this surface and OUTSIDE its allowed file scope (ClimateControlPanelWidget.*):
+  (1) pre-existing duplicate 'SafetyModel' in SafetyFeaturesWidget.Model.swift +
+      SafetyHistoryWidget.Model.swift (sibling surfaces) — breaks the shared app module;
+  (2) macOS app/extension code-signing requires a development certificate (none on runner).
+Per the Honesty Covenant (no red-as-green / no out-of-scope edits) these are reported, not
+masked, and the aggregate gate is marked BLOCKED.
+
+EXIT=65
+STATUS=BLOCKED

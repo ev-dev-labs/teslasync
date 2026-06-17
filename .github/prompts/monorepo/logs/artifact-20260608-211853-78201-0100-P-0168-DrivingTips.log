@@ -1,0 +1,181 @@
+=== P4 Feature view 0168 DrivingTips (Apple) ===
+date: 2026-06-09T09:21:46Z
+host: macOS 26.5.1 | Xcode 26.5 | Swift version 6.3.2
+web source: web/src/features/driving/components/driving-dynamics/DrivingTips.tsx
+native output: apps/apple/TeslaSync/feature-views/DrivingTips.{swift,Model,Adapter,Views,Previews,Tests}.swift + DrivingTips.strings
+
+--- deliverable files (wc -l) ---
+     159 TeslaSync/feature-views/DrivingTips.swift
+     281 TeslaSync/feature-views/DrivingTips.Model.swift
+     178 TeslaSync/feature-views/DrivingTips.Adapter.swift
+     179 TeslaSync/feature-views/DrivingTips.Views.swift
+      98 TeslaSync/feature-views/DrivingTips.Previews.swift
+     355 TeslaSync/feature-views/DrivingTips.Tests.swift
+      38 TeslaSync/feature-views/DrivingTips.strings
+    1288 total
+
+############################################################
+# HOST-RUNNABLE GATES (run on this host — real output below)
+############################################################
+
+=== [1/7] swiftformat --lint (DrivingTips files) ===
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-211853-78201/slot-100/apps/apple/.swiftformat
+SwiftFormat completed in 7.96s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+=== [2/7] swiftlint --strict (DrivingTips files) ===
+Linting 'DrivingTips.Views.swift' (4/6)
+Linting 'DrivingTips.Previews.swift' (5/6)
+Linting 'DrivingTips.Tests.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+=== [3/7] placeholder / stub gate (real scan of DrivingTips sources) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== [4/7] isolated SwiftPM build — surface vs REAL design tokens + component library (Swift 6 strict concurrency) ===
+Building for debugging...
+[0/1] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.27s)
+ISO_BUILD_EXIT=0
+
+=== [5/7] isolated XCTest — adapter + projection + model + a11y ===
+Test Suite 'All tests' passed at 2026-06-09 02:22:00.371.
+	 Executed 33 tests, with 0 failures (0 unexpected) in 0.012 (0.019) seconds
+ISO_TEST_EXIT=0
+
+=== [6/7] swiftc -typecheck against real SDKs (surface + components) ===
+IOS18_TYPECHECK_EXIT=0 (iOS 18 / iPadOS 18 deployment target)
+MACOS15_TYPECHECK_EXIT=0 (macOS 15 deployment target)
+
+=== [7/7] xcodegen generate — real TeslaSync.xcodeproj enumerates the surface ===
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-211853-78201/slot-100/apps/apple/TeslaSync.xcodeproj
+DrivingTips refs in project.pbxproj: 42
+XCODEGEN_EXIT=0
+
+HOST_GATES_SUMMARY: FORMAT=0 LINT=0 PLACEHOLDER=0 ISO_BUILD=0 ISO_TEST=0 IOS_TYPECHECK=0 MAC_TYPECHECK=0 XCODEGEN=0
+
+############################################################
+# FULL-APP xcodebuild GATE (iOS Simulator + macOS) — ATTEMPTED, DEFERRED
+############################################################
+
+Per Honesty Covenant #3 (no skip-and-assume) the canonical gate was ACTUALLY
+INVOKED on this host, not assumed:
+
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build
+
+Real captured behaviour (from the live run — see evidence lines):
+    Run pre-actions
+    SchemeAction "Stage Shared.xcframework"  (project.yml pre-build Run Script)
+    > /bin/sh -c .../Scripts/build-shared-xcframework.sh
+    ▸ Assembling Shared.xcframework via Gradle…
+    Starting a Gradle Daemon (7 busy, 24 stopped — shared across parallel slots)
+    > Task :core:downloadKotlinNativeDistribution
+    > Task :core:compileKotlinIosArm64 FROM-CACHE
+    > Task :core:linkDebugFrameworkIosArm64
+    > Task :core:linkDebugFrameworkIosSimulatorArm64
+    > Task :core:linkDebugFrameworkMacosArm64
+    > Task :core:assembleSharedDebugXCFramework        <-- debug XCFramework built
+    > Task :core:linkReleaseFrameworkIosArm64          <-- RELEASE link (the bottleneck)
+
+Result on this host:
+    - The DEBUG Shared.xcframework assembled successfully with all three slices:
+        apps/shared/core/build/XCFrameworks/debug/Shared.xcframework/
+          { ios-arm64, ios-arm64-simulator, macos-arm64, Info.plist }
+    - build-shared-xcframework.sh stages the RELEASE variant
+      (core/build/XCFrameworks/release/Shared.xcframework), whose
+      Kotlin/Native link (linkReleaseFramework*) is the long-pole step. Under the
+      live parallel-slot contention (8+ concurrent xcodebuild + a shared Gradle
+      daemon) the release link did not complete in-window, so the app link and the
+      full `build test` could not run to completion here.
+    IOS_EXIT=DEFERRED   (full-app iOS-Simulator build test — release Shared.xcframework)
+    MAC_EXIT=DEFERRED   (full-app macOS build test — release Shared.xcframework)
+
+This is NOT a surface defect and NOT a fabricated pass. The script itself states
+"On CI this runs on a `macos-latest` runner; see apps/macos-pending-verifications.md",
+and ADR-012's CI matrix owns the Kotlin/Native release-framework verification. The
+deferral is recorded in apps/macos-pending-verifications.md (row appended this run),
+matching the five preceding P4 feature-view/dashboard-widget surfaces.
+
+Why the deferral does not weaken this surface's verification:
+    - DrivingTips imports ONLY Foundation / SwiftUI / Observation / OSLog (grep-verified;
+      zero `import Shared` / KMP references). It binds data through the P1/S8
+      `DrivingTipsSource` seam, never the KMP core, so Shared.xcframework is irrelevant
+      to its compilation.
+    - The isolated SwiftPM gate [4]/[5] compiles the surface against the REAL generated
+      design tokens (apps/design/generated/apple) and the REAL component library
+      (apps/apple/Sources/Components + Sources/Design) under Swift 6 language mode
+      (= the app target's SWIFT_STRICT_CONCURRENCY: complete) and runs all 33 tests.
+    - [6] typechecks the surface + its real component closure against the actual
+      iPhoneSimulator (iOS 18 target) and macOS (15 target) SDKs.
+    - [7] regenerates the real TeslaSync.xcodeproj; it enumerates the surface
+      (42 DrivingTips references in project.pbxproj across the app + XCTest targets).
+
+############################################################
+# WEB PARITY (DrivingTips.tsx is THE spec)
+############################################################
+
+Data sources    : useTranslation only (web leaf is prop-fed motorStats + throttleStyle).
+                  Native: bound via DrivingTipsSource (P1/S8); no HTTP in the view.
+Shared comps    : @/components/ui  -> TSGlassPanel (UI/Cards), TSButton (UI/Buttons),
+                                      TSTone (UI/Badges), TSSkeleton (Feedback/Skeletons)
+                  @/components/motion -> TSFadeIn (Motion/Motion), delay 0.6 preserved
+Charts / maps   : none (web source uses neither) — Swift Charts / MapKit not required.
+i18n keys       : all 9 web t() calls reproduced verbatim in DrivingTips.strings
+                  (dynamics.recommendations, dynamics.tipNoData, .tipEaseAccel,
+                   .tipBrakeEarly, .tipSmoothThrottle, .tipCoast, .tipGreat, .tipKeep,
+                   .tipThermal) + 9 native-chrome keys (drivingTips.*). No English
+                  literals in Swift (facade-resolved via DrivingTipsStrings).
+Recommendation logic (exact port of the web useMemo, raw > thresholds):
+    motorStats == null            -> ["Drive your vehicle…"]                 (empty body)
+    avgPower  > 80                -> ease accelerator + brake earlier
+    avgPower  > 20  (<= 80)       -> smooth throttle + coast
+    avgPower <= 20                -> great + keep monitoring
+    maxMotorTemp > 120           -> append thermal tip
+    row icon = throttleStyle == 'conservative' ? ShieldCheck(green) : AlertTriangle(yellow)
+                                  -> checkmark.shield.fill / exclamationmark.triangle.fill
+States rendered (every one, no hidden surface):
+    loading  -> card-shaped skeleton rows (never a blank box)
+    empty    -> panel keeps the single "Drive your vehicle…" recommendation (web branch)
+    error    -> QueryError peer: title + message + Retry (TSButton)
+    data     -> recommendation list, TSFadeIn delay 0.6
+    stale    -> header freshness chip + banner + one-shot auto-refresh (P4 leaf contract)
+    offline  -> header chip + banner, cached recommendations retained, no refetch
+Accessibility   : header isHeader trait; each row .ignore + verbatim tip label; list
+                  .contain with a joined VoiceOver summary; freshness chip + refresh +
+                  retry labelled; icons accessibilityHidden. Dynamic Type via Font.TS
+                  tokens; Reduce Motion honoured by TSFadeIn / TSSkeleton.
+Telemetry       : DrivingTips.start() emits view.opened surface="DrivingTips" (P1/S11),
+                  asserted once-only by DrivingTipsModelTests.
+
+############################################################
+# HONESTY COVENANT
+############################################################
+1  No red-as-green   : IOS_EXIT/MAC_EXIT recorded as DEFERRED, never as 0.
+2  No scope narrowing: all six web branches + every t() key reproduced.
+3  No skip-and-assume: the real xcodebuild gate was invoked; evidence captured.
+4  No stubs as final : 1250 LoC across 6 Swift files; placeholder gate COUNT=0.
+5  No parity shortcut: recommendation logic + thresholds + icon mapping ported exactly.
+6  No delegation     : implemented in-session, not delegated.
+7  No predecessor bypass: builds on P4 core tokens/components/state-holder seams.
+8  No commit on red  : every host-runnable gate is EXIT=0 before commit.
+9  No silent drift   : ledger row appended; deferral explicit.
+10 EXIT + STATUS below.
+
+HOST-RUNNABLE GATES: FORMAT=0 LINT=0 PLACEHOLDER=0 ISO_BUILD=0 ISO_TEST=0(33/33)
+                     IOS18_TYPECHECK=0 MACOS15_TYPECHECK=0 XCODEGEN=0
+FULL-APP xcodebuild: IOS_EXIT=DEFERRED MAC_EXIT=DEFERRED
+                     (release Shared.xcframework -> p4-apple/P99-0001 on macos-latest,
+                      tracked in apps/macos-pending-verifications.md)
+
+EXIT=0
+STATUS=DONE

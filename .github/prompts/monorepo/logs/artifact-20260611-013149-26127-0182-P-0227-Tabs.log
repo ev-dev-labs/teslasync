@@ -1,0 +1,159 @@
+=== P4 Shared surface 0227 Tabs (Apple) ===
+date: 2026-06-12T13:39:24Z
+host xcodebuild: Xcode 26.5 Build version 17F42 
+host swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+locked baseline (apps/apple/versions.lock.md): Xcode 26 / Swift 6.0.1
+destination sim:     iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+
+----------------------------------------------------------------
+STEP: iOS build+test
+CMD: xcodebuild -scheme TeslaSync -destination platform=iOS Simulator,name=iPhone 16 build test
+----------------------------------------------------------------
+[diagnostics — every 'error:' line, deduped]
+apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures non-escaping parameter 'content'
+apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures non-escaping parameter 'content'
+
+[failing-command summary tail]
+The following build commands failed:
+	SwiftCompile normal arm64 Compiling\ AIStateMachineDebuggerNarrator.Views.swift,\ AIStateMachineDebuggerNarrator.swift,\ AISuggestNewGeofences.Adapter.swift,\ AISuggestNewGeofences.Chrome.swift,\ AISuggestNewGeofences.Model.swift,\ AISuggestNewGeofences.Previews.swift,\ AISuggestNewGeofences.Views.swift,\ AISuggestNewGeofences.swift,\ AIThinkingIndicator.Adapter.swift,\ AIThinkingIndicator.Model.swift,\ AIThinkingIndicator.Previews.swift,\ AIThinkingIndicator.Projection.swift,\ AIThinkingIndicator.Views.swift,\ AIThinkingIndicator.swift,\ AITirePressureTrendReasoning.Adapter.swift,\ AITirePressureTrendReasoning.Chrome.swift,\ AITirePressureTrendReasoning.Model.swift,\ AITirePressureTrendReasoning.Previews.swift,\ AITirePressureTrendReasoning.Projection.swift,\ AITirePressureTrendReasoning.Views.swift,\ AITirePressureTrendReasoning.swift,\ AITripPostcardShareCardImageGeneration.Adapter.swift,\ AITripPostcardShareCardImageGeneration.Endpoint.swift,\ AITripPostcardShareCardImageGeneration.Model.swift,\ AITripPostcardShareCardImageGeneration.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIStateMachineDebuggerNarrator.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Chrome.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Projection.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Chrome.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Projection.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITirePressureTrendReasoning.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Endpoint.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AITripPostcardShareCardImageGeneration.Previews.swift (in target 'TeslaSync' from project 'TeslaSync')
+	SwiftCompile normal arm64 /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift (in target 'TeslaSync' from project 'TeslaSync')
+	Building project TeslaSync with scheme TeslaSync
+--
+** TEST FAILED **
+
+
+The following build commands failed:
+	SwiftCompile normal arm64 Compiling\ AIRouteEfficiencySuggestions.Projection.swift,\ AIRouteEfficiencySuggestions.Views.swift,\ AIRouteEfficiencySuggestions.swift,\ AISafetySettingExplainer.Adapter.swift,\ AISafetySettingExplainer.Chrome.swift,\ AISafetySettingExplainer.Model.swift,\ AISafetySettingExplainer.Previews.swift,\ AISafetySettingExplainer.Projection.swift,\ AISafetySettingExplainer.Views.swift,\ AISafetySettingExplainer.swift,\ AISettings.Adapter.swift,\ AISettings.Model.swift,\ AISettings.Previews.swift,\ AISettings.Projection.swift,\ AISettings.Views.swift,\ AISettings.swift,\ AISignalExplorerNlFilter.Adapter.swift,\ AISignalExplorerNlFilter.Chrome.swift,\ AISignalExplorerNlFilter.Logic.swift,\ AISignalExplorerNlFilter.Model.swift,\ AISignalExplorerNlFilter.Previews.swift,\ AISignalExplorerNlFilter.Source.swift,\ AISignalExplorerNlFilter.Views.swift,\ AISignalExplorerNlFilter.swift,\ AISmartChargeScheduleSuggestion.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIRouteEfficiencySuggestions.Projection.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIRouteEfficiencySuggestions.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AIRouteEfficiencySuggestions.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Chrome.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Projection.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISafetySettingExplainer.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/feature-views/AISettings.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/feature-views/AISettings.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/feature-views/AISettings.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/feature-views/AISettings.Projection.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/feature-views/AISettings.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/feature-views/AISettings.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.Chrome.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.Logic.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.Source.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.Adapter.swift (in target 'TeslaSync' from project 'TeslaSync')
+	SwiftCompile normal arm64 /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-182/apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift (in target 'TeslaSync' from project 'TeslaSync')
+	Testing project TeslaSync with scheme TeslaSync
+(full transcript: /tmp/gate-ios.log)
+IOS_EXIT=65
+----------------------------------------------------------------
+STEP: macOS build+test
+CMD: xcodebuild -scheme TeslaSync-macOS build test
+----------------------------------------------------------------
+[diagnostics — every 'error:' line, deduped]
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+
+[failing-command summary tail]
+
+The following build commands failed:
+	Building project TeslaSync with scheme TeslaSync-macOS
+(1 failure)
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+--
+** TEST FAILED **
+
+
+The following build commands failed:
+	Testing project TeslaSync with scheme TeslaSync-macOS
+(1 failure)
+(full transcript: /tmp/gate-mac.log)
+MAC_EXIT=65
+----------------------------------------------------------------
+STEP: swiftlint --strict
+Linting 'TeslaSyncWidgets/Widgets/SystemHealthWidget.swift' (4736/4736)
+Done linting! Found 0 violations, 0 serious in 4736 files.
+LINT_EXIT=0
+----------------------------------------------------------------
+STEP: swiftformat --lint apps/apple
+SwiftFormat completed in 11.2s.
+0/5034 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+----------------------------------------------------------------
+STEP: check-placeholders.ps1 (literal gate path)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================
+GATE STEP EXIT CODES
+  IOS_EXIT=65  MAC_EXIT=65  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+
+================================================================
+ROOT-CAUSE & SCOPE ANALYSIS (why IOS_EXIT/MAC_EXIT are non-zero)
+================================================================
+Allowed scope for this prompt: apps/apple/TeslaSync/shared-surfaces/Tabs.* + this log.
+The two failing xcodebuild steps fail for reasons that are PRE-EXISTING and/or
+ENVIRONMENTAL — entirely outside the Tabs.* scope and not introduced by this surface.
+
+(1) iOS build — pre-existing toolchain drift (Swift 6.3.2 runner vs locked 6.0.1).
+    This runner ships Apple Swift 6.3.2; apps/apple/versions.lock.md pins Swift 6.0.1.
+    Swift 6.3.x tightened escaping-closure inference for the idiom
+    "func ...(@ViewBuilder _ content: () -> some View) { Panel { content() } }",
+    now diagnosed as "escaping closure captures non-escaping parameter 'content'".
+    The full-scheme gate surfaces this in pre-existing sibling surfaces, e.g.:
+        AIAutoNameUnnamedLocations.swift:123   (seen with Tabs present)
+        AISignalExplorerNlFilter.swift:142     (also seen at baseline)
+        AISuggestNewGeofences.swift:129
+    Files using the exact failing 'func glass(@ViewBuilder' idiom: 16
+    Files using the broader vulnerable '@ViewBuilder _ content: () -> some View': 64
+    None of these are Tabs files; none may be edited under this prompt's scope.
+
+    BASELINE PROOF (Tabs files temporarily removed, project regenerated, then built):
+        xcodebuild -scheme TeslaSync ... build  ->  FAILS identically with
+        "AISignalExplorerNlFilter.swift:142: escaping closure captures non-escaping
+         parameter 'content'"  (transcript: /tmp/tabs-baseline.log)
+    => The iOS build is red WITHOUT this surface. Adding Tabs.* changes nothing about it;
+       grep of the gate iOS transcript shows ZERO 'error:' lines in any Tabs.* file.
+
+(2) macOS build — environmental code-signing (no development certificate on this runner).
+    Fails before the Swift compile phase with:
+        "TeslaSync-macOS has entitlements that require signing with a development
+         certificate. Enable development signing in the Signing & Capabilities editor."
+    This is an environment/provisioning limitation, not a code defect, and the signing
+    config lives outside the Tabs.* scope. (If signing were available the macOS compile
+    would still hit the same pre-existing escaping-closure errors as iOS.)
+
+================================================================
+TABS SURFACE — IN-SCOPE VERIFICATION (all green)
+================================================================
+Static gates (build-independent), run exactly as the gate specifies:
+    swiftlint --strict ............ 0 violations, 0 serious in 4736 files  (LINT_EXIT=0)
+    swiftformat --lint apps/apple . 0/5034 files require formatting        (FORMAT_EXIT=0)
+    check-placeholders.ps1 ........ PLACEHOLDER_COUNT=0                     (PLACEHOLDER_EXIT=0)
+        (literal gate path AND a meaningful per-file scan of the 7 Tabs *.swift both = 0)
+
+Compilation proof of THIS surface under the strict runner toolchain
+(swiftc -typecheck -swift-version 6 -D DEBUG, design tokens + Tabs non-test files):
+    iOS    (arm64-apple-ios18.0-simulator)  -> TYPECHECK_EXIT=0
+    macOS  (arm64-apple-macos15.0)          -> TYPECHECK_EXIT=0
+    => Every Tabs.* source compiles cleanly on both platforms; the surface depends only
+       on system frameworks + P1/S9 design tokens (zero references to TSGlassPanel or any
+       app-internal type that carries the pre-existing escaping-closure idiom).
+
+Deliverables (apps/apple/TeslaSync/shared-surfaces/Tabs.*):
+    Tabs.Adapter.swift     Foundation-only core: TabsSurface slug, TabItem, TabsInput,
+                           TabsIdentity (the useId peer: tablist id + tab/panel element ids),
+                           ResolvedTab, TabsProjection, TabsProjector (WAI-ARIA keyboard math).
+    Tabs.Model.swift       P1/S10 i18n facade, P1/S11 telemetry seam, @Observable TabsModel
+                           (selection + arrow/Home/End routing, roving focus, once-only view.opened).
+    Tabs.Views.swift       Tab button (accent underline), optional aria-label modifier, empty state.
+    Tabs.Surface.swift     Public SwiftUI API (parity of components/ui/Tabs.tsx); named *.Surface.swift
+                           to avoid a duplicate-filename collision with Sources/Components/UI/Tabs.swift,
+                           the same convention as ChartContainer.Surface / MapTileLayer.Surface.
+    Tabs.Previews.swift    DEBUG previews for every real branch (selection, disabled, wired panel,
+                           controlled, empty).
+    Tabs.strings           P1/S10 catalog (native empty-state key; web source is anonymous).
+    Tabs.AdapterTests.swift / Tabs.Tests.swift   adapter unit tests + model/view/strings tests
+                           (the per-state + a11y + identity-derivation coverage the acceptance asks for).
+    States reproduced from the web source: populated (selected/unselected/disabled per tab) + the
+    native friendly empty state. The web <Tabs> is a pure presentational primitive (only hook: useId;
+    no fetch) so it has no loading/error/stale/offline branch to mirror — inventing them would fabricate
+    states the source does not have (documented in Tabs.Adapter.swift, mirroring Accordion 0203 /
+    PillFilterBar 0156).
+
+================================================================
+DISPOSITION
+================================================================
+In-scope work is COMPLETE and fully green (lint + format + placeholder + iOS/macOS typecheck).
+The full-scheme xcodebuild gate cannot reach EXIT=0 on THIS runner because of pre-existing
+toolchain-drift compile errors (Swift 6.3.2 vs locked 6.0.1) in 16 sibling surfaces and an
+environmental macOS code-signing requirement — both outside the allowed Tabs.* scope and both
+present at baseline without this surface. Per Honesty Covenant rule 1 (no red-as-green) and rule 8
+(no commit on red), this is reported as BLOCKED rather than DONE, and no commit is made.
+
+EXIT=65
+STATUS=BLOCKED

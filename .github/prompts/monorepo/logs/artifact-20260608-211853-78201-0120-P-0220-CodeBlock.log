@@ -1,0 +1,157 @@
+=== P4 Feature view 0220 CodeBlock (Apple) ===
+Runner: macOS (Darwin), Xcode 26.5 (Build 17F42), Swift 6.3.2, swiftlint + swiftformat (Homebrew),
+        iOS 26.5 simulators present (incl. "iPhone 16"). Toolchain capability: AVAILABLE.
+Web source (spec): web/src/features/system/components/chatbot/CodeBlock.tsx
+Native output:     apps/apple/TeslaSync/feature-views/CodeBlock.{swift,Adapter,Model,Views,States,Previews,Tests}.swift + CodeBlock.strings
+Allowed files:     apps/apple/TeslaSync/feature-views/CodeBlock.* + this log
+
+############################################################
+# GATE STEPS (real commands, real exit codes — no value assumed)
+############################################################
+
+# Step 1 — xcodebuild iOS build test
+#   xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync \
+#     -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath build/DD build test
+#   ** BUILD FAILED **  ** TEST FAILED **
+IOS_EXIT=65
+#   Root cause: 160 "X is ambiguous for type lookup in this context" errors — PRE-EXISTING duplicate
+#   top-level type declarations across 8 dashboard-widget surfaces (NOT CodeBlock). Representative:
+#     'ChargeSessionDTO'       — ChargeStatusLiveWidget.Model.swift  AND ChargeSessionChartWidget.Models.swift
+#     'ChargeStatusProjection' — ChargeStatusLiveWidget.Adapter.swift AND ChargeStatusWidget.Adapter.swift
+#     'ChargeConnection'       — ChargeStatusLiveWidget.Model.swift  AND ChargeStatusWidget.Model.swift
+#     (+ ChargeStateDTO, ChargeUnitPrefs, ChargeDistanceUnit, ChargeLoadStatus, ChargeStatusUpdate,
+#        and DrivingCoach*, FleetStatsBar*, SafetyFeatures*, SafetyHistory* clusters)
+#   CodeBlock files in the error set: 0  (grep 'error:' build/ios-gate.log | grep -i CodeBlock => empty)
+
+# Step 2 — xcodebuild macOS build test
+#   xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -derivedDataPath build/DD-mac build test
+#   ** BUILD FAILED **  ** TEST FAILED **
+MAC_EXIT=65
+#   Root cause: RUNNER CAPABILITY — code signing. Verbatim:
+#     error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+#            Enable development signing in the Signing & Capabilities editor. (target 'TeslaSync-macOS')
+#     error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+#   Fails at the signing/entitlements check before compiling. CodeBlock files in the error set: 0.
+
+# Step 3 — swiftlint --strict   (gate runs whole project)
+#   swiftlint --strict
+LINT_EXIT=2
+#   Root cause: 1 PRE-EXISTING violation in a non-allowed file:
+#     LiveSignalSparklinesWidget.Builder.swift:158:9: error: Opening Brace Spacing Violation (opening_brace)
+#   CodeBlock violations: 0.
+#   Scoped to the allowed files, swiftlint --strict is GREEN:
+#     swiftlint lint --strict CodeBlock.{swift,Adapter,Model,Views,States,Previews,Tests}.swift
+#     => "Found 0 violations, 0 serious in 7 files."   LINT_EXIT_SCOPED=0
+
+# Step 4 — swiftformat --lint apps/apple   (gate runs whole tree)
+#   swiftformat --lint .
+FORMAT_EXIT=0
+#   "0/2420 files require formatting, 3 files skipped."  (CodeBlock.* included, all clean)
+
+# Step 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/CodeBlock
+PLACEHOLDER_EXIT=0
+#   PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+#   Also scanned each shipped file individually (LiteralPath resolves a prefix to "clean"): every
+#   CodeBlock.* file => PLACEHOLDER_COUNT=0 (incl. CodeBlock.strings). No TODO/FIXME/XXX/Coming soon/
+#   Placeholder/Lorem/"not implemented"/fatalError-unimpl in shipped code.
+
+############################################################
+# SUPPLEMENTARY HOST-RUNNABLE VERIFICATION (this runner HAS Xcode — stronger than typecheck-only)
+############################################################
+
+# S1 — Production sources type-check under the real Xcode toolchain, Swift 6, strict concurrency complete,
+#      DEBUG (so #Preview bodies are checked), against the REAL generated design tokens (Tokens.swift),
+#      iphonesimulator26.5 SDK, target arm64-apple-ios18.0-simulator.
+#   swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+#     CodeBlock.{swift,Adapter,Model,Views,States,Previews}.swift Tokens.swift
+TYPECHECK_PROD_EXIT=0
+
+# S2 — Test bodies (CodeBlock.Tests.swift) type-check against the REAL CodeBlock production API,
+#      compiled alongside the production sources with the real XCTest.framework (iPhoneSimulator
+#      platform), Swift 6, strict concurrency complete. (@testable import elided so the test compiles
+#      in-module with the sources.)
+TYPECHECK_TESTS_EXIT=0
+
+# S3 — Name-collision audit: NO CodeBlock* type (CodeBlock, CodeBlockModel, CodeBlockProjection,
+#      CodeBlockAdapter, CodeBlockInput, CodeBlockSurface, ...) is declared anywhere outside the
+#      8 shipped files. My surface introduces ZERO duplicate symbols. (git status: my only changes are
+#      the 8 untracked CodeBlock.* files; the failing dashboard-widget files are tracked + unmodified.)
+NAMECOLLISION_COUNT=0
+
+############################################################
+# GATE SUMMARY
+############################################################
+#   Step 1  iOS build test ............ IOS_EXIT=65   RED  — pre-existing duplicate symbols in non-allowed files
+#   Step 2  macOS build test .......... MAC_EXIT=65   RED  — runner code-signing capability (no dev certificate)
+#   Step 3  swiftlint --strict ........ LINT_EXIT=2   RED  — 1 pre-existing violation in a non-allowed file
+#           swiftlint --strict scoped . =0            PASS — CodeBlock.* : 0 violations / 7 files
+#   Step 4  swiftformat --lint ........ FORMAT_EXIT=0 PASS — 0/2420 files require formatting
+#   Step 5  check-placeholders ........ PLACEHOLDER_EXIT=0 PASS — PLACEHOLDER_COUNT=0
+#   S1      typecheck production ...... TYPECHECK_PROD_EXIT=0  PASS (Swift 6, strict concurrency, real tokens)
+#   S2      typecheck test bodies ..... TYPECHECK_TESTS_EXIT=0 PASS (real XCTest, matches production API)
+#   S3      name-collision audit ...... NAMECOLLISION_COUNT=0  PASS (zero symbols introduced by me)
+
+############################################################
+# WHY BLOCKED  (Honesty Covenant: 1 no-red-as-green, 8 no-commit-on-red, 9 no-silent-drift, 10 EXIT/STATUS)
+############################################################
+# The canonical whole-app gate cannot reach EXIT=0, for THREE reasons, ALL outside this surface's
+# allowed-files scope (apps/apple/TeslaSync/feature-views/CodeBlock.* + this log) — none introduced here:
+#
+#   (a) iOS RED  — PRE-EXISTING baseline breakage. The single Swift module `TeslaSync` does not compile
+#       because sibling dashboard-widget surfaces declare the SAME top-level type names twice
+#       (e.g. ChargeSessionDTO, ChargeStatusProjection, ChargeConnection, ... — 160 ambiguity errors
+#       across ChargeSessionChartWidget / ChargeStatusLiveWidget / ChargeStatusWidget / DrivingCoach* /
+#       FleetStatsBar* / SafetyFeatures* / SafetyHistory*). These files are committed + UNMODIFIED in this
+#       checkout (git status --porcelain dashboard-widgets => empty). Fixing them requires editing other
+#       surfaces' files, which this prompt forbids ("Out of Scope: Other surfaces in the same feature";
+#       "Allowed files: CodeBlock.*").
+#
+#   (b) macOS RED — RUNNER CAPABILITY (the prompt's Capability clause: "If unavailable on the runner ->
+#       STATUS=BLOCKED with API evidence"). The macOS app/widget targets carry entitlements that require a
+#       development signing certificate; this runner has none, so the build is rejected before compilation.
+#
+#   (c) project-wide swiftlint RED — 1 PRE-EXISTING opening-brace violation in
+#       LiveSignalSparklinesWidget.Builder.swift (a non-allowed file).
+#
+# NO xcodebuild / project-lint result is claimed green (Covenant rule 1). The CodeBlock surface itself is
+# INDEPENDENTLY GREEN on every gate that applies to an isolated surface: swiftlint --strict (scoped),
+# swiftformat --lint, check-placeholders, a real Swift-6 strict-concurrency Xcode-toolchain typecheck of
+# all production sources, AND a typecheck of the test bodies against the production API with real XCTest.
+# Precedent in this repo for the identical situation: sibling P-0221 MarkdownRenderer shipped with the
+# whole-app gate RED on "pre-existing baseline defects in non-allowed sibling files — DEFERRED, not
+# introduced here." The whole-app iOS/macOS build+test is therefore DEFERRED to a runner with a
+# green baseline (no duplicate symbols) + a development signing certificate.
+
+############################################################
+# DELIVERABLE — parity with web/src/features/system/components/chatbot/CodeBlock.tsx
+############################################################
+# Composition reproduced (native SwiftUI, Apple HIG; no ported Tailwind): a bordered rounded card
+#   (TSRadius.sm, Color.TS.surface + Color.TS.border) with a header (Color.TS.surfaceGlass) carrying the
+#   UPPERCASED monospaced language tag (Color.TS.textSecondary) and an icon-only copy button, over a
+#   horizontally-scrollable, text-selectable monospaced body (Color.TS.textPrimary). No syntax
+#   highlighting — web parity (keeps the chatbot bundle lean).
+# Data/semantics reproduced verbatim: languageLabel = `language?.trim() || 'text'`
+#   (CodeBlockAdapter.project + unit tests, incl. nil / whitespace-only -> "text"); copy payload = the RAW
+#   code text (web `<CopyButton text=…>`), routed through an injected pasteboard seam; body rendered
+#   verbatim (never inline-parsed / HTML-interpreted). Copy affordance mirrors the shared web CopyButton
+#   (iconOnly/ghost/sm): Copy -> Copied flip with a 2000 ms reset, VoiceOver announces the transition,
+#   honors Reduce Motion. Uses the web's own keys common.copyButton.copy / common.copyButton.copied.
+# States — every P4 leaf state renders (no hidden surfaces): loading (skeleton CARD silhouette, not a bare
+#   box), ready/data (the faithful card), empty (resolved-but-blank -> friendly state), error (web
+#   QueryError peer + retry), and the orthogonal stale / offline freshness banner + chip with a one-shot
+#   stale auto-refresh (live resets it; offline keeps the cached card, no refetch).
+# Architecture: binds through CodeBlockModel (P1/S8 state-holder seam); no networking in the view.
+#   Tokens via P1/S9 (Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion). Every string via the P1/S10
+#   facade (CodeBlockStrings, table "CodeBlock"); zero English literals in Swift (the only verbatim token
+#   is the code-fence label "text", a language identifier, not prose — matching the web literal).
+#   view.opened emitted once with surface slug "CodeBlock" via the P1/S11 telemetry seam.
+# Accessibility: VoiceOver labels on the card + copy/retry controls, per-phase spoken summary,
+#   Dynamic-Type-scaling body font, Reduce-Motion-respecting copy confirmation.
+# Tests (CodeBlock.Tests.swift): adapter projection (trim / "text" fallback / verbatim code / empty /
+#   line+char counts), per-phase model resolution (loading/ready/empty/error), view.opened-once, copy
+#   seam, retry, stale one-shot auto-refresh, offline-no-refetch, lifecycle restart, convenience init,
+#   per-phase a11y summaries, and the localization fallback. Previews exercise all 8 states.
+# No TODO / stub / mock / placeholder / Lorem in shipped code (Step 5 verified).
+
+EXIT=1
+STATUS=BLOCKED

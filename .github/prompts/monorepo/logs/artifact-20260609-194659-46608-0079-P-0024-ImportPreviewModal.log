@@ -1,0 +1,177 @@
+=== P4 Modal / dialog 0024 ImportPreviewModal (Apple) ===
+date: 2026-06-10T08:22Z
+host: macOS 26.5.1 (17F42) | Xcode 26.5 | Swift 6.3.2 | swiftlint 0.63.3 | swiftformat 0.61.1 | xcodegen 2.45.4 | pwsh 7.6.2
+web source: web/src/features/dashboard/components/ImportPreviewModal.tsx
+native output: apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.*
+
+Capability check (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG):
+  SwiftUI + iOS 18.0 sim SDK + macOS 15.0 SDK all present (Xcode 26.5). This surface uses NO charts
+  and NO maps (web "Charts/maps used: (none)"), so Swift Charts / MapKit are not on its path. NOT
+  blocked — the surface-scoped gates below run GREEN on this runner.
+
+Honesty note (Covenant rules 1/8/10): the full-app iOS/macOS `xcodebuild build test` from the prompt
+Gate is DEFERRED in this environment by surface-INDEPENDENT causes, exactly as every prior P4-apple
+modals-dialogs surface (see p4-apple-modals-dialogs-0018-EntryDrawer.log + macos-pending-verifications.md).
+They are NOT defects in this surface; captured live THIS run:
+  (1) the `modals-dialogs` tier is still not registered in apps/apple/project.yml (the four source
+      lists). `grep -c modals-dialogs apps/apple/project.yml = 0`. Registering the tier is a one-time
+      bootstrap owned by integration / the P4 acceptance gate, OUTSIDE this prompt's Allowed-files
+      (`ImportPreviewModal.*` + this log). So xcodebuild does not compile/test ImportPreviewModal:
+      `grep -c ImportPreviewModal <full xcodebuild log> = 0`.
+  (2) the KMP Shared.xcframework (ADR-004 app-target dependency) ships unstaged (Frameworks/ holds
+      only .gitkeep). Its Gradle/Kotlin-Native assemble is a scheme pre-action; on THIS runner it ran
+      and STAGED Frameworks/Shared.xcframework successfully ("✓ Shared.xcframework staged"), so the
+      long-pole is not the blocker here.
+  (3) with the framework staged, the full-app build red-stops (RC=65) on a PRE-EXISTING duplicate-type
+      collision between two already-committed surfaces — `RecentDrivesModel` / `RecentDrivesUpdate` /
+      `RecentDrivesLoadStatus` / `RecentDrivesConnection` are each declared TWICE
+      (TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift AND
+      TeslaSync/feature-views/RecentDrivesSection.{Adapter,Model,Seams}.swift) → "ambiguous for type
+      lookup". Those files are untouched by this prompt; ImportPreviewModal references zero
+      RecentDrives symbols (`grep -c "ImportPreview.*error:" = 0`). Fixing them is outside Allowed-files.
+This surface is verified GREEN here by the host-runnable, surface-scoped gates below.
+
+########## Surface files (non-blank LOC) ##########
+  ImportPreviewModal.swift                134  (modal card: header + screen switch + file intake)
+  ImportPreviewModal.Adapter.swift        348  (pure core: tabs, domain types, validateImportData port,
+                                                url-safe-base64 decoder + #import=/?import= extraction)
+  ImportPreviewModal.Projection.swift     207  (preview rows, count badges, mini-grid math, titles, a11y)
+  ImportPreviewModal.Catalog.swift        180  (widget registry seam + 118-id default: name + SF Symbol)
+  ImportPreviewModal.Seams.swift           58  (telemetry P1/S11, i18n P1/S10, confirm action onConfirm)
+  ImportPreviewModal.Model.swift          185  (@Observable state holder: tabs/inputs/commands/derived)
+  ImportPreviewModal.States.swift          72  (message banner + "Cannot preview this layout" empty)
+  ImportPreviewModal.Views.swift          239  (header, tab bar, file/paste/url input panels)
+  ImportPreviewModal.PreviewScreen.swift  135  (errors/warnings banners, summary, widget list, actions)
+  ImportPreviewModal.MiniGrid.swift       157  (mini-grid thumbnail + tile + widget-availability row)
+  ImportPreviewModal.Previews.swift       109  (7 #Preview states)
+  ImportPreviewModal.strings               54  (P1/S10 catalog, table "ImportPreviewModal")
+  ImportPreviewModal.ModelTests.swift     215  (17 state-holder tests)
+  ImportPreviewModal.Tests.swift          290  (22 adapter + projection + catalog + a11y tests)
+  total non-blank: 2383 ; 13 swift files + 1 .strings catalog
+
+Parity surface map (web -> native):
+  props open/onClose/onConfirm/initialJson -> ImportPreviewModal(model:onClose:) + ImportPreviewModalModel
+                                              (initialJSON auto-validate on start; onConfirm = seam)
+  useTranslation('dashboard')              -> ImportPreviewStrings (P1/S10, table "ImportPreviewModal")
+  Tabs file/paste/url                      -> ImportPreviewTab + ImportPreviewTabBar
+  validateImportData(raw)                  -> ImportPreviewValidator.validate (parse guards, required
+                                              fields, widget dedupe, registry availability split, layout
+                                              clamp {lg4/md3/sm2/xs1}, name slice 100, dashboard build)
+  fromUrlSafeBase64 + handleUrlImport      -> ImportPreviewURLDecoder (round-trip + #import=/?import=;
+                                              new URL()/atob throw arms -> .invalidURL; missing -> .noParam)
+  getWidgetDef(id)?.name/.icon             -> ImportPreviewWidgetCatalog seam (118-id default; nil on miss)
+  <MiniGridPreview dashboard>              -> ImportPreviewProjection.grid + ImportPreviewMiniGrid
+                                              (lg @ GRID_COLS.lg=4, maxY⇒safeMaxY guard, fractional tiles)
+  Badge {{count}} widgets / skipped        -> ImportPreviewProjection.badges + ImportPreviewBadgeRow
+  available/missing widget rows            -> ImportPreviewProjection.widgetRows + ImportPreviewWidgetRowView
+  AlertBanner danger/warning + EmptyState  -> ImportPreviewBanner + ImportPreviewEmptyState (no blank box)
+  FadeIn                                   -> TSFadeIn ; Modal/Button/Textarea/Input -> TS tokens + TSButton
+  onConfirm(dashboard) + handleClose        -> ImportPreviewConfirmAction seam + model.confirm()/reset()
+States rendered (the web source's ACTUAL branches; it performs NO async network fetch — its only data
+  dependency is useTranslation + synchronous local validation — so the generic remote loading / stale /
+  offline states do not exist in the source and are intentionally NOT fabricated):
+    input·file (drag-drop + browse), input·paste (editor + Validate), input·url (field + Load),
+    input·parseError (read / file-type / empty / no-param / invalid-url banners),
+    preview·valid (summary + mini-grid + count badges + widget-availability list + Import),
+    preview·withSkipped (warning banner + skipped badge + missing rows),
+    preview·invalid (validation errors banner + "Cannot preview this layout" empty state).
+Telemetry: view.opened emitted once with slug "ImportPreviewModal" (P1/S11) — covered by test.
+Accessibility: .isModal dialog label (title-aware), header close label, .isSelected active tab,
+  per-row VoiceOver ("<name>, available" / "<name>, Not available"), labelled file/paste/url controls,
+  Dynamic-Type token fonts, Reduce-Motion-aware dropzone highlight + TSFadeIn.
+
+########## [1/8] swiftformat --lint (surface) ##########
+$ swiftformat --lint <13 ImportPreviewModal swift files>  (config apps/apple/.swiftformat)
+SwiftFormat completed. 0/13 files require formatting.
+FORMAT_EXIT=0
+
+########## [2/8] swiftlint --strict (surface) ##########
+$ swiftlint lint --strict --no-cache --config apps/apple/.swiftlint.yml <13 ImportPreviewModal swift files>
+Done linting! Found 0 violations, 0 serious in 13 files.
+  (the repo .swiftlint.yml `included:` does not yet name modals-dialogs — same tier-bootstrap gap as
+   Honesty note (1) — so the strict run is invoked with the files scoped in explicitly. Single-letter
+   RGLLayout fields i/w/h were spelled out identifier/widthUnits/heightUnits for the identifier_name
+   budget; every type body < 250 and every file < 400 lines.)
+LINT_EXIT=0
+
+########## [3/8] swiftc -typecheck — iOS 18 simulator SDK (Swift 6) ##########
+$ xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+    -sdk iPhoneSimulator26.5.sdk -swift-version 6 -D DEBUG \
+    <Shared-free closure: ../design/generated/apple/Tokens.swift + Sources/Components/** +
+     Sources/Design/** (minus Components/DataDisplay/UnitFormatters.swift, the only SharedFacade-coupled
+     component) + ImportPreviewModal.{swift,Adapter,Projection,Catalog,Seams,Model,States,Views,
+     PreviewScreen,MiniGrid,Previews}>
+  (ImportPreviewModal imports no `Shared` symbol — the KMP framework is not on the view typecheck path.)
+IOS_TYPECHECK_EXIT=0 (0 errors)
+
+########## [4/8] swiftc -typecheck — macOS 15 SDK (Swift 6) ##########
+$ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -sdk MacOSX26.5.sdk \
+    -swift-version 6 -D DEBUG <same closure>
+MAC_TYPECHECK_EXIT=0 (0 errors)
+
+########## [5/8] isolated SwiftPM build + test (Swift 6 mode, macOS 15) ##########
+Throwaway package (module named TeslaSync so the deliverable test files' `@testable import TeslaSync`
+compiles UNCHANGED): library = ImportPreviewModal non-test files + the Shared-free Components/Design/
+Tokens closure; test target = ImportPreviewModal.ModelTests + ImportPreviewModal.Tests verbatim.
+$ swift build   -> Build complete! (11.73s)
+$ swift test
+  ImportPreviewModalModelTests   — 17 tests (view.opened once+idempotent; initial file input; tab
+                                   switch; validatePasted valid -> preview+dashboard+canConfirm+badges+
+                                   rows+grid; empty -> emptyInput; incompatible -> empty preview;
+                                   importFileText; reportFileReadError; reportInvalidDropType;
+                                   loadFromURL valid/no-param/invalid; back; confirm applies+resets;
+                                   confirm-without-dashboard no-op; reset; initialJSON auto-validate)
+  ImportPreviewModalAdapterTests — 22 tests (tab keys; validator invalid-json/non-object/required-fields/
+                                   valid/unknown-warns/no-compatible/clamp/stray-item-drop/dedupe/
+                                   name-slice; url decoder round-trip/hash/query/no-param/invalid/bad-b64;
+                                   projection title/badges/rows/grid/empty-grid; catalog coverage=118 +
+                                   hit/miss; a11y dialog/close/row labels)
+  Executed 39 tests, with 0 failures (0 unexpected).
+SWIFT_TEST_EXIT=0
+
+########## [6/8] placeholder / stub gate (ADR-011) ##########
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal
+PLACEHOLDER_ALLOWED=0   (no `// parity:allow` markers needed in ImportPreviewModal)
+PLACEHOLDER_COUNT=0     (no TODO/FIXME/Placeholder/Lorem/stub/not-implemented in ImportPreviewModal.*)
+PLACEHOLDER_EXIT=0
+
+########## [7/8] xcodegen generate — spec validity ##########
+$ xcodegen generate   -> Created apps/apple/TeslaSync.xcodeproj (then removed; it is .gitignored).
+The repo project.yml spec remains valid with the 14 new files on disk.
+XCODEGEN_EXIT=0
+
+########## [8/8] surface collision audit (introduces no symbol defined elsewhere) ##########
+$ grep -rnE "(struct|enum|class|protocol|actor)[[:space:]]+ImportPreview[A-Za-z]*" --include=*.swift . \
+    | grep -v "TeslaSync/modals-dialogs/ImportPreviewModal."
+  -> 0 external definitions. Every type is `ImportPreview*`-prefixed and unique to this surface
+     (deliberately specific — contrast the pre-existing generic `RecentDrives*` names that collide
+     between two surfaces in Honesty note (3)).
+COLLISION_EXIT=0
+
+########## Full-app xcodebuild build test — DEFERRED (macos-pending), evidence captured ##########
+iOS:   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+macOS: xcodebuild -scheme TeslaSync-macOS build test
+Captured this run (iOS scheme, `build`):
+  - scheme pre-action "Stage Shared.xcframework" -> Gradle :core:assembleSharedXCFramework ran and
+    STAGED Frameworks/Shared.xcframework successfully ("✓ Shared.xcframework staged").
+  - app compile then BUILD FAILED (RC=65) on PRE-EXISTING, surface-independent errors:
+      'RecentDrivesModel' / 'RecentDrivesUpdate' / 'RecentDrivesLoadStatus' / 'RecentDrivesConnection'
+      is ambiguous for type lookup (duplicate public type names across two committed surfaces).
+  - ImportPreviewModal is NOT in project.yml sources (Honesty note 1) -> not compiled/tested by
+    xcodebuild: `grep -c ImportPreviewModal <log> = 0`, `grep -c "ImportPreview.*error:" <log> = 0`.
+IOS_EXIT=deferred   # blocked by pre-existing RecentDrives* collision + unwired modals-dialogs tier
+MAC_EXIT=deferred   # same surface-independent causes
+
+########## Summary ##########
+Surface-acceptance gates (host-runnable, surface-scoped) — ALL GREEN:
+  FORMAT_EXIT=0  LINT_EXIT=0  IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  SWIFT_TEST_EXIT=0 (39/39)
+  PLACEHOLDER_EXIT=0  XCODEGEN_EXIT=0  COLLISION_EXIT=0
+Full-app xcodebuild (iOS+macOS): DEFERRED to the p4-apple acceptance gate on macos-latest —
+  pre-existing RecentDrives* collision + the modals-dialogs project.yml tier bootstrap, both
+  surface-independent and outside this prompt's Allowed-files.
+Working tree: only apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal.* added (14 files) + this log;
+  no shared file (project.yml, .swiftlint.yml, .swiftformat) modified.
+
+All surface-acceptance gates GREEN. Surface complete; full-app build deferred per protocol.
+EXIT=0
+STATUS=DONE

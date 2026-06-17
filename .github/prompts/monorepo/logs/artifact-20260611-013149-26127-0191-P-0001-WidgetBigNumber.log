@@ -1,0 +1,136 @@
+=== P4 Widget primitive 0001 WidgetBigNumber (Apple) ===
+Runner: Darwin (arm64), Xcode 26.5 (17F42), Swift 6.3.2, iPhone 16 simulator (iOS 26.5).
+Capability check: SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 toolchain ALL present
+(xcodebuild, swiftlint, swiftformat, xcrun simctl all available). The platform capability the
+prompt asks about is therefore AVAILABLE — this log is BLOCKED on a PRE-EXISTING, out-of-scope
+full-app build break + a runner code-signing gap, NOT on a missing capability. Evidence below.
+
+--------------------------------------------------------------------------------
+STEP 1 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+--------------------------------------------------------------------------------
+** BUILD FAILED **
+/…/apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures non-escaping parameter 'content'
+
+  → PRE-EXISTING baseline break, independent of this surface. Proven by building pristine HEAD
+    with this surface REMOVED and project.yml/.swiftlint.yml reverted: the identical error
+    reproduces (see "Baseline proof" below). The WidgetBigNumber surface contributes ZERO
+    compiler errors (`grep -c 'widget-primitives/WidgetBigNumber.*error:'` over the full build
+    log = 0).
+
+  → Root cause: `TSGlassPanel.init(@ViewBuilder content: @escaping () -> Content)` is @escaping,
+    but four AI* shared-surfaces declare `func glass(@ViewBuilder _ content: () -> some View)`
+    (non-escaping) and pass `content()` into the escaping panel closure. This is a partially-
+    completed baseline repair: 12 of the 16 sibling AI* files ALREADY carry the one-line
+    `@escaping` fix; only 4 stragglers remain (AIAutoNameUnnamedLocations, AISuggestNewGeofences,
+    AISignalExplorerNlFilter, AIGeofenceAwareAutomationSuggestions).
+
+  → After EXPERIMENTALLY applying that same one-line fix to the 4 stragglers, the build
+    progressed and then hit a second pre-existing break (RecentDrivesSection.Previews.swift:24 —
+    "the compiler is unable to type-check this expression in reasonable time" under Swift 6.3.2),
+    and after breaking up that DEBUG-preview expression, the build progressed further and the
+    swift-frontend CRASHED in IRGen on the ~4776-file module:
+
+      4.  While evaluating request IRGenRequest(IR Generation for file
+            ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+      5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+      8   swift-frontend  report_at_maximum_capacity(unsigned long) + 0
+      9   swift-frontend  llvm::SmallVectorBase<unsigned int>::grow_pod(...) + 384
+      10  swift-frontend  (anonymous namespace)::SyncCallEmission::setArgs(...) + 688
+      → error: compile command failed due to signal (LLVM SmallVector capacity overflow /
+        report_fatal_error) — a swift-frontend IRGen crash on a reabstraction thunk, on a shared,
+        non-sandboxed runner. Not fixable from within this surface's allowed files.
+
+  → Those experimental out-of-scope edits (4 AI* files + 1 preview file) were REVERTED to keep
+    this surface PR scoped to its allowed files. The committed tree therefore aborts at the first
+    pre-existing AI* error above.
+IOS_EXIT=65
+
+--------------------------------------------------------------------------------
+STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+--------------------------------------------------------------------------------
+** BUILD FAILED **
+TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS')
+TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. (in target 'TeslaSyncWidgets-macOS')
+  export SigningCert=        ← empty; no development certificate present on this runner.
+
+  → ENVIRONMENTAL: the macOS app target sets ENABLE_HARDENED_RUNTIME=YES + CODE_SIGN_ENTITLEMENTS
+    with DEVELOPMENT_TEAM="". Without a development signing identity on the runner, the macOS
+    target cannot link, independent of any source. Fails before compilation. Outside this
+    surface's scope.
+MAC_EXIT=65
+
+--------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict   (cd apps/apple; lints the full app incl. TeslaSync/widget-primitives)
+--------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 4776 files.
+LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple
+--------------------------------------------------------------------------------
+0/5074 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 5 — ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives/WidgetBigNumber
+--------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+  → genuinely scanned the surface directory (no TODO / FIXME / stub / mock / Placeholder / Lorem).
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+SUPPLEMENTARY — Standalone verification of THIS surface (Swift 6 strict concurrency)
+--------------------------------------------------------------------------------
+Because the full-app target cannot link on this runner (pre-existing AI* break + IRGen crash +
+macOS signing), the WidgetBigNumber surface was verified in isolation via a throwaway SwiftPM
+package (swift-tools 6.0, .macOS(.v15), .swiftLanguageMode(.v6) — matching the app's
+SWIFT_STRICT_CONCURRENCY=complete) containing the 7 surface sources + the real shared deps it
+uses (design Tokens, TSTone, TSButton, TSSkeleton) + the 2 co-located test files verbatim.
+
+  swift test →
+    Test Suite 'WidgetBigNumberBadgeToneTests'       passed   (3 tests)
+    Test Suite 'WidgetBigNumberFormatterTests'       passed   (5 tests)
+    Test Suite 'WidgetBigNumberAccessibilityTests'   passed   (3 tests)
+    Test Suite 'WidgetBigNumberContentTests'         passed   (2 tests)
+    Test Suite 'WidgetBigNumberProjectionTests'      passed   (6 tests)
+    Test Suite 'WidgetBigNumberModelTests'           passed   (6 tests)
+    Executed 25 tests, with 0 failures (0 unexpected)
+  STANDALONE_BUILD_TEST_EXIT=0
+
+  This proves: the entire surface (Adapter / Model / Seams / Views / States / surface / Previews)
+  compiles under Swift 6 strict concurrency, and the adapter (formatter, badge-tone map, a11y
+  summary), the projection (loading/value/empty/error branches), and the state-holder (view.opened
+  telemetry emission + stale one-shot auto-refresh) all pass. Acceptance criteria — every state,
+  hooks bound via the P1/S8 source seam (no HTTP in the view), i18n facade, a11y labels, adapter +
+  per-state + a11y tests, view.opened slug "WidgetBigNumber" — are all met by the surface itself.
+
+--------------------------------------------------------------------------------
+ANALYSIS
+--------------------------------------------------------------------------------
+• Surface scope: COMPLETE and VERIFIED (standalone build+test green, 25/25; lint 0; format 0;
+  placeholders 0; contributes 0 errors to the full-app build).
+• Full-app gate (STEP 1 + STEP 2): BLOCKED by conditions OUTSIDE this surface's allowed files:
+    (a) pre-existing iOS compile breakage in unrelated AI* shared-surfaces (4 stragglers of an
+        in-progress @escaping repair — 12/16 already fixed upstream),
+    (b) a swift-frontend IRGen crash (LLVM SmallVector capacity overflow) on the ~4776-file
+        module on a shared, non-sandboxed runner,
+    (c) macOS code-signing requiring a development certificate not present on the runner.
+• None of (a)/(b)/(c) is caused by, or fixable within, the WidgetBigNumber surface
+  (apps/apple/TeslaSync/widget-primitives/WidgetBigNumber.*). The capability the prompt gates on
+  (SwiftUI/Swift Charts/MapKit/iOS18/macOS15) is present; the blocker is a broken baseline +
+  runner signing gap. Per the Honesty Covenant (No red-as-green / No commit on red — the surface
+  itself is green; the redness is documented, pre-existing, and out-of-scope), this is reported
+  honestly rather than masked.
+
+--------------------------------------------------------------------------------
+Baseline proof (pristine HEAD, this surface removed, wiring reverted):
+  $ mv apps/apple/TeslaSync/widget-primitives /tmp/…  &&  git stash push project.yml .swiftlint.yml
+  $ xcodegen generate && xcodebuild -scheme TeslaSync -destination '…iPhone 16' build
+  ** BUILD FAILED **  AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures
+                      non-escaping parameter 'content'        ← identical error, no surface present.
+--------------------------------------------------------------------------------
+
+EXIT=1
+STATUS=BLOCKED

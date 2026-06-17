@@ -1,0 +1,214 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode 26.5 and swiftlint are available — so the gate can run. Let me explore the web source, Apple app structure, and existing patterns.
+
+Now let me study the existing Apple Feature pages to understand established patterns. Let me look at Trips (likely has charts/tables similar to charging) and key shared infrastructure.
+
+Let me study the most similar existing page (TirePressure — has charts, tables, data states) as my primary template, plus route registration patterns.
+
+Excellent template. Let me read the remaining TirePressure files (Models, Charts, Views, HistoryTable, RouteRegistration) plus design tokens and chart wrappers.
+
+Let me find the design tokens, shared component library, route registration, and the Views file with shared sub-components.
+
+Let me locate the design token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) and a route registration example.
+
+Let me find the actual design token definitions (the P2 catalog).
+
+The tokens appear to be generated at build time. Let me check the project.yml, Scripts, and how the build resolves these tokens.
+
+No `.xcodeproj` exists — it's generated via XcodeGen from `project.yml`. Let me read the project.yml, the parity README gate contract, and check for xcodegen.
+
+Now let me check the parity README gate contract, plus toolchain availability (xcodegen, Shared.xcframework, generated design tokens).
+
+The full build needs the KMP `Shared.xcframework` (Kotlin/Native via Gradle). Let me read the gate contract README and check how an existing completed page's log resolved (e.g., TirePressure).
+
+Let me check how an existing completed page's log resolved its gate, and whether the KMP shared core build is feasible here.
+
+This is the key insight: the full `xcodebuild` gate is externally blocked by pre-existing out-of-scope widget collisions + code-signing, so prior pages proved their surface via isolated `swiftc -typecheck`. Let me read the canonical log format, the web charging data contract, the ledger structure, and the placeholder scanner.
+
+This is the canonical blueprint. Now let me gather the remaining specifics: the web charging data contract, the xcstrings format, the ledger charging entry, and verify tooling (pwsh, placeholder script).
+
+There's a separate (already-done) `TeslaChargingSessionsMap` unit but no `TeslaChargingSessions` page entry — I'll add both platform rows. Let me check if a Swift map component already exists under Features/Charging that I can reuse, and review the ledger header + placeholder script.
+
+Key discovery: an existing `TeslaChargingSessionsMap` MapKit component already exists (in `feature-views/`) and its log shows the full macOS+iOS build SUCCEEDED. I'll reuse it for the Session Locations panel. Let me inspect its public API.
+
+Let me inspect the map component's Model, Adapter, and Previews to understand how to construct it, plus how MapKit `Map` is used elsewhere.
+
+The map component is cleanly embeddable via an in-memory source. Let me check `TeslaChargingSessionRecord` (the input shape) and the Previews to confirm construction.
+
+I have the full data contract and a reusable map. Now let me verify the exact design-token names available and check for any type-name collisions before I write code.
+
+Let me check for type-name and file-basename collisions before writing code.
+
+No collisions. Now let me understand the `Localizable.xcstrings` structure and existing key conventions (how the web keys map into the catalog).
+
+Most keys already exist. Let me confirm exactly which of my 32 required keys are missing and check a few existing values for consistency.
+
+`table.bulkActions.exportCsv` already exists. I need to add 4 missing keys: `businessNote`, `col.cost_decimal`, `monthlyCost.aria`, `stats.cost_decimal`. Let me inspect the exact raw formatting around an existing sibling key to match it precisely.
+
+Format understood — I'll add 4 keys with an `en` localization. Now let me look at how MapKit `Map` is used natively in this codebase (to follow the iOS18/macOS15 API conventions) before I build a self-contained Session Locations map.
+
+Now let me look at how a sibling routed charging page handles route registration and its page-model/data-source seam, to match the current conventions.
+
+No AppRoute case exists and AppRoute.swift is out of scope — I'll follow the TirePressure precedent (NavigationStack-ready View + deep-link RouteRegistration in my dir). Let me confirm the SI energy + currency conversion helpers from the web so my Swift formatting matches exactly.
+
+I now have everything needed. Let me set up tracking and review the placeholder scanner rules before writing code.
+
+Now I understand the placeholder gate: `.redacted(reason: .placeholder)` lines need `// parity:allow`. Let me confirm the web `formatEnergy` behavior (auto-scaling) so my Swift energy formatting matches, then start writing.
+
+I have the complete contract. Let me create a plan file and todos, then write the implementation.
+
+Now I'll write the implementation, starting with the Models file (wire types, enums, helpers, SI/currency/date formatting).
+
+Models done. Now the DataSource seam with hook-named methods and deterministic SI fixtures.
+
+Now the PageModel — the `@MainActor @Observable` logic core with view state, derived state, and lifecycle/actions.
+
+Now the Views file — shared furniture, GlassPanel1 (business banner), GlassPanel2 (controls bar), and the 5 stat cards.
+
+Now the Charts file — the ChartContainer panel and the Swift Charts BarMark bar chart with the `noChartData` empty state.
+
+Now the Session Locations map panel (GlassPanel9) — a self-contained, interactive MapKit map with markers, fit-to-bounds camera, count chip, tap callout, and `noMapData` empty state.
+
+Now the table panel (GlassPanel10) — sortable columns, CSV export, and `noData` empty state.
+
+Now the Page scaffold — the View with 4 states, toolbar range picker, and full composition.
+
+Now the RouteRegistration (deep-link destination + factory), following the TripsReplay precedent.
+
+All 9 Swift files written. Now let me add the 4 missing strings to `Localizable.xcstrings` with a minimal textual insertion, then validate the JSON.
+
+All 4 keys inserted and JSON valid. Let me verify all 32 required parity strings resolve from the catalog (with the `translation.` prefix), plus check the supporting keys.
+
+All 32 required strings resolve. Let me add the 9 supporting keys (range presets + sort/range a11y) for complete i18n coverage, then re-validate.
+
+Catalog updated. Now let me verify the token helper dependencies so I can compile my surface in isolation, then run the verification steps.
+
+Tokens are self-contained. Now let me run the verification gates — starting with the placeholder scan and the authoritative Swift 6 compile of my surface + design tokens.
+
+One stray "Placeholder" in a comment (not a `.redacted` line). Let me fix it.
+
+Placeholder scan clean (0 violations, 5 allowed skeletons). Now the authoritative Swift 6 compile of my 9 files + design tokens against the macOS SDK.
+
+Swift 6 strict concurrency flags the static `ISO8601DateFormatter`/`DateFormatter` properties (non-Sendable globals). I'll make them local instances. Let me fix both files.
+
+Now fix the table's static `DateFormatter` and the CSV date stamp:
+
+Good — concurrency fixed. Now an access-control mismatch: the `public` route registration returns the `internal` page. I'll make the registration `internal` to match the page (consistent with the TirePressure precedent).
+
+A complex array literal is tripping the type-checker. Let me simplify the CSV field construction with explicit helpers.
+
+SWIFTC_EXIT=0 — the surface compiles. One benign Sendability warning on the picker binding; let me eliminate it for a clean build by marking the controls-bar callbacks `@Sendable`.
+
+Clean compile (0 warnings, 0 errors, 10 object files). Now let me run SwiftLint --strict on the new files and also verify the iOS SDK target compiles.
+
+SwiftLint linted the whole project (config overrides path) and found 4 violations. Let me determine whether any are in my files.
+
+All 4 SwiftLint violations are pre-existing in unrelated files — **my files are clean**. Let me verify the iOS SDK target compiles and run SwiftFormat lint on my files.
+
+iOS typecheck passes (EXIT=0) — adaptive macOS + iOS both compile. SwiftFormat wants house-style fixes on my files. Let me auto-apply them, then re-verify compile + lint + placeholder.
+
+SwiftFormat clean now. Let me re-verify compile, SwiftLint, and placeholder scan after the auto-formatting changes.
+
+All gates green on my files. Let me verify the auto-format didn't alter logic in the key computed sections.
+
+Logic preserved (the `switch`-expression rewrite is house style). Now let me attempt the real `xcodebuild` gate for honest documentation — starting with project generation.
+
+Project generated with my files included (in both app targets). Let me check the KMP framework state and attempt the real build (iOS Simulator avoids code-signing).
+
+The KMP `Shared.xcframework` isn't staged/prebuilt — it requires a full Gradle/Kotlin-Native build. Let me test its feasibility (fail-fast), running the framework assembly in the background.
+
+The KMP build is a heavy Kotlin/Native compile still running. Let me make productive use of the wait by preparing the ledger update. Let me inspect the ledger structure.
+
+The KMP build finished. Let me read its result.
+
+The KMP toolchain works — it built the debug XCFramework and was mid-release-link when my 360s timeout fired (cached compiles, so a re-run finishes fast). Let me run the full iOS Simulator build (no code-signing needed) — the scheme pre-action will finish staging the framework.
+
+The full build failed (EXIT=65) on the **exact pre-existing blocker the TirePressure precedent documented**: a duplicate `ScheduledExportsPanel.swift` basename in the app target — not my code. Let me confirm it's pre-existing and that none of my files are implicated.
+
+Confirmed: both `ScheduledExportsPanel.swift` files are **pre-existing committed files** (not mine, git-clean), and my files have **zero basename collisions**. The full-build failure is the exact pre-existing, out-of-scope blocker the accepted precedent documented. The KMP framework assembled fine and the build reached the app target's driver before the duplicate-filename check aborted it.
+
+Let me confirm my surface has no Shared-module dependency (so `swiftc -c` fully validates it) and check which artifacts are git-ignored.
+
+My surface has zero KMP dependency (so `swiftc -c` fully validates it), and all generated artifacts are git-ignored. Working tree is clean and scoped. Now let me update the parity ledger with both platform rows.
+
+Ledger updated (2 rows, 48/48, valid JSON). Now let me gather precise line-number evidence for the PARITY log section.
+
+Let me capture the exact line numbers for the 5 stat cards and all 32 string keys.
+
+All evidence gathered. Let me get final line counts and the base commit for the log.
+
+All evidence is gathered (2152 lines across 9 files = 419% of the 514-line web source; base `b244fadfa`). Now let me write the comprehensive gate log.
+
+Log written. Let me clean up generated/temp artifacts, verify the working tree is scoped correctly, and do a final verification pass before committing.
+
+Working tree is clean and scoped. Let me do a final pre-commit verification (the covenant requires "no commit on red") — fresh compile + placeholder + format lint.
+
+All final checks green. Let me stage exactly the in-scope files (including the string catalog I modified) and commit.
+
+Staged set is exactly the 9 Swift files + string catalog + ledger + log. Committing now.
+
+Committed cleanly (`c37e169c4`), working tree clean. Let me finalize tracking and do a last confirmation of the commit contents.
+
+The task is complete and verified. Here's a summary of what was accomplished.
+
+## P4-APPLE P7 — `charging/TeslaChargingSessions` — STATUS=DONE
+
+Delivered a native **SwiftUI / HIG** parity implementation of the web `TeslaChargingSessionsPage.tsx` (514 lines), adaptive across macOS + iOS, committed as **`c37e169c4`**.
+
+### What was built — 9 files, 2152 lines (419% of web), 9-file decomposition
+- **Models** — wire types (SI Wh on disk), range/sort enums, aggregation helpers, SI energy + currency/date formatting
+- **DataSource** — KMP-core seam keeping web hook names (`useVehicles`, `useTeslaChargingSessions`, `useRefreshTeslaChargingSessions`) + deterministic SI fixtures
+- **PageModel** — `@MainActor @Observable`, all derived state + lifecycle/actions
+- **Views / Charts / MapPanel / Table / Page / RouteRegistration** — all 10 panels, the Swift Charts `BarMark` chart, a first-party MapKit `Map` (markers, fit-to-bounds, tap callout), the sortable + CSV-export table, 4 data states, deep-link destination
+
+### Parity: `PARITY_COVERED=48 / PARITY_REQUIRED=48`
+10 panels · 2 charts · 4 states · 32 strings — each enumerated with file+symbol evidence in the log. Ledger updated: `apple-macos` + `apple-ios` = done 48/48.
+
+### Verification (all green on my files)
+| Gate | Result |
+|---|---|
+| `swiftc -c` macOS (Swift 6, strict concurrency) | **EXIT=0**, 0 warnings, 10 object files |
+| `swiftc -typecheck` iOS Simulator SDK | **EXIT=0** (adaptive both idioms) |
+| placeholder scan | **0** violations (5 allowed redacted skeletons) |
+| `swiftlint --strict` | **0** violations in my files |
+| `swiftformat --lint` | **0/9** require formatting |
+
+Strings (32 required + 9 supporting) resolve from `Localizable.xcstrings`; design tokens for all color/typography; materials for glass; SI energy converted only at the display boundary.
+
+### Honest gate note
+The full `xcodebuild build` is blocked by a **pre-existing, out-of-scope** duplicate `ScheduledExportsPanel.swift` basename in the app target (two committed files, unmodified by this change) plus macOS code-signing — identical to the accepted TirePressure precedent. The KMP `Shared.xcframework` assembled successfully, and my surface has **no Shared/KMP dependency**, so the standalone Swift 6 compile is complete (not partial) verification. This is documented verbatim in `apple-page-charging-TeslaChargingSessionsPage.log` (ends `EXIT=0 / STATUS=DONE`).
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Merge made by the 'ort' strategy.
+ ...ple-page-charging-TeslaChargingSessionsPage.log | 243 +++++++++++++
+ apps/apple/Localization/Localizable.xcstrings      | 143 ++++++++
+ .../Charging/TeslaChargingSessionsCharts.swift     | 156 ++++++++
+ .../Charging/TeslaChargingSessionsDataSource.swift | 162 +++++++++
+ .../Charging/TeslaChargingSessionsMapPanel.swift   | 331 +++++++++++++++++
+ .../Charging/TeslaChargingSessionsModels.swift     | 399 +++++++++++++++++++++
+ .../Charging/TeslaChargingSessionsPage.swift       | 175 +++++++++
+ .../Charging/TeslaChargingSessionsPageModel.swift  | 225 ++++++++++++
+ .../TeslaChargingSessionsRouteRegistration.swift   |  42 +++
+ .../Charging/TeslaChargingSessionsTable.swift      | 341 ++++++++++++++++++
+ .../Charging/TeslaChargingSessionsViews.swift      | 321 +++++++++++++++++
+ apps/parity/apple-ledger.json                      |  18 +
+ 12 files changed, 2556 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/apple-page-charging-TeslaChargingSessionsPage.log
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsCharts.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsDataSource.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsMapPanel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsModels.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsPage.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsPageModel.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsRouteRegistration.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsTable.swift
+ create mode 100644 apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsViews.swift
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

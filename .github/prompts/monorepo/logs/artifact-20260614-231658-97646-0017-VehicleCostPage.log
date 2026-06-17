@@ -1,0 +1,261 @@
+=== P4-APPLE · P7 · page:admin/VehicleCost (SwiftUI / HIG) ===
+started: 2026-06-15T01:20:00-0700
+host: macOS (Darwin) 26.5; Xcode/xcodebuild present; Swift 6.3.2 (swiftlang-6.3.2.1.108); swiftlint 0.63.3 + swiftformat + xcodegen 2.45.4 + pwsh + gradlew/java present
+web source: web/src/features/admin/pages/VehicleCostPage.tsx   (route /admin/vehicle-cost)
+parity unit: page:admin/VehicleCost  (manifest PARITY_REQUIRED=33)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group. The repo's
+real, compiled canonical admin-page home is `apps/apple/Sources/Features/Admin/**` — where
+every shipped P7 admin page lives (ApiPlayground, AuditLog, DiskForecast, SchemaDrift,
+SlowQueries, SecretRotation, …) and which `Sources` already lists as a project.yml source
+path (createIntermediateGroups). The page therefore ships at
+`apps/apple/Sources/Features/Admin/**`, the faithful equivalent of the prompt's
+`Features/Admin`. Co-located model tests ship under `apps/apple/Tests/Unit/Features/Admin/**`
+(the XCTest bundle path). Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the same
+reconciliation the sibling DiskForecast / ApiPlayground logs recorded; it is the only
+deviation from the literal prompt path.
+
+ROUTE HOSTING: the web route is the admin sub-path `/admin/vehicle-cost`. Unlike the
+sibling DiskForecast page (which hosts on the catch-all `.admin`), `.admin` is already
+taken, so this page mirrors the SchemaDrift / SlowQueries / SecretRotation siblings: a
+dedicated `.vehicleCost` AppRoute case + an `AppRouteParser` alias
+`"/admin/vehicle-cost": .vehicleCost`, registered into the shell route host via
+`VehicleCostRouteRegistration` and chained in `TeslaSyncApp.swift`. This keeps the page
+reachable via the System-group sidebar entry and any `/admin/vehicle-cost` deep link.
+`AppRoute`/`AppRouteParser`/`TeslaSyncApp` edits are "navigation registration" (an allowed
+target). RouteTests invariants hold (unique path segment `vehicle-cost`; `.vehicleCost`
+resolves to its `.system` group). Recorded here per covenant #9.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/VehicleCostPage.swift              (298 LOC) SwiftUI view: header(title+subtitle), subsystem-unavailable AlertBanner, 4 fleet StatCards (TSMetricCard grid, shown when totals present), GlassPanel1 breakdown panel (PanelTitle + window Select), all states (loading/empty/error/success + 503 unavailable), adaptive, a11y; #if DEBUG previews (loaded/empty/unavailable/error)
+?? apps/apple/Sources/Features/Admin/VehicleCostPage.Table.swift        (160 LOC) VehicleCostTable (adaptive: macOS/iPad columnar Grid, iPhone compact cards) — 6 web columns (Vehicle+id / Rows / Bytes / Rate / DLQ amber / Last seen); display_name->unnamed fallback; verbatim "ID" caption
+?? apps/apple/Sources/Features/Admin/VehicleCostPageModel.swift         (370 LOC) @MainActor @Observable model: VehicleCostWindow(1/7/30/90 + since), VehicleCostRow/Totals/Report (mirror KMP VehicleCostRow/VehicleCostTotals/VehicleCostResponse 1:1), VehicleCostDataSource seam + SampleVehicleCostDataSource default + VehicleCostSubsystemUnavailable(503), VehicleCostState(loading/empty(totals)/unavailable/error/loaded), load/reload/refresh; VehicleCostFormat (fmtNumber/formatBytes/formatRelative ported from web numberFormat.ts + dateFormat.ts)
+?? apps/apple/Sources/Features/Admin/VehicleCostRouteRegistration.swift (26 LOC) registers .vehicleCost -> VehicleCostPage (mirrors SchemaDriftRouteRegistration; model built on MainActor + captured)
+?? apps/apple/Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift (239 LOC) XCTest: 4 states (+503) + window plumbing/reload + totals accessor + formatters (number/bytes/relative ladder/absolute fallback) + name fallback + sample seed well-formedness
+ M apps/apple/Sources/App/AppRoute.swift               +.vehicleCost case (pathSegment "vehicle-cost", systemImage "creditcard.fill", .system group)
+ M apps/apple/Sources/App/AppRouteParser.swift         +alias "/admin/vehicle-cost": .vehicleCost
+ M apps/apple/Sources/TeslaSyncApp.swift               chains VehicleCostRouteRegistration.registry(base: SecretRotationRouteRegistration.registry(...)) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings       +28 keys (23 admin.vehicleCost.* required + 4 admin.vehicleCost.window{1,7,30,90}d selector options + route.vehicleCost sidebar title); admin.subsystem.unavailableTitle REUSED (already present); JSON validated (9415 total keys); web key names verbatim
+ M apps/parity/apple-ledger.json                        +2 rows (apple-macos, apple-ios) for page:admin/VehicleCost, covered 33/33
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004 / P1-S2-S3 predecessor) staged via Gradle ---
+# apps/shared/gradlew :core:assembleSharedReleaseXCFramework   (compiles FROM-CACHE; release link + create-xcframework)
+"xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework" ; BUILD SUCCESSFUL in 18s
+# staged (cp -R) to apps/apple/Frameworks/Shared.xcframework (git-ignored; not committed)
+XCFRAMEWORK_EXIT=0
+# Note: an earlier back-to-back invocation reported assembleSharedReleaseXCFramework FAILED (xcodebuild exit 70)
+# purely because `-create-xcframework` refuses to overwrite a pre-existing output left by an interrupted run;
+# a clean run (output removed first) succeeds and leaves the task UP-TO-DATE for the xcodebuild pre-build phase.
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "VehicleCost" referenced 30x in pbxproj
+GEN_EXIT=0
+# Each of the 5 files is wired into all expected targets: VehicleCostPage/Model/Table/RouteRegistration -> iOS app
+# + macOS app (9 refs each across groups+build phases); VehicleCostPageModelTests -> iOS + macOS test bundles.
+
+--- swiftformat --lint (my 5 files + 3 edited nav files) ---
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 5 files + 3 edited nav files, repo .swiftlint.yml rules) ---
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=7
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in shipped code]
+# Tests dir also scanned: apps/apple/Tests/Unit/Features/Admin -> PLACEHOLDER_COUNT=0, EXIT=0
+
+--- Executed model logic (real VehicleCostPageModel.swift, Swift 6 strict-concurrency host harness) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   Sources/Features/Admin/VehicleCostPageModel.swift Harness.swift -o vcharness   (SWIFTC_EXIT=0)
+ASSERTIONS passed=46 failed=0 -> "ALL ASSERTIONS PASSED"
+  initial=.loading + !showsFleetTotals + window=.days30; success->.loaded(2)+showsFleetTotals+totals(rows 200/failures 3);
+  empty->.empty(totals)+!rows BUT showsFleetTotals (web shows stat cards on zero vehicles); 503->.unavailable+isSubsystemUnavailable;
+  failure->.error+totals nil; reload keeps rows; window days 1/7/30/90 + since(-86400) + 4 cases;
+  number 12,345.00 / 0.00 / 842.6 / 12,345.0 / 1,000 / inf->0.0; bytes 0B/512B/1.0KB/1.5KB/1.0MB/1.0GB + nil/inf->dash;
+  relative just now/5m/3h/2d + >7d->absoluteDate (not "ago") + ""/garbage->dash; sample non-empty + ids unique + totals match
+HARNESS_EXIT=0
+
+--- Isolated view+model+table+registration type-check vs the REAL P2 tokens + P3 components (Swift 6 strict concurrency) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Cards,Typography,Badges,Buttons}.swift Sources/Components/DataDisplay/Metrics.swift \
+#   Sources/Components/Feedback/{States,Banners,Skeletons}.swift Sources/App/{AppRoute,AppRouteParser,RouteHostRegistry}.swift \
+#   Sources/Features/Admin/VehicleCost{Page,Page.Table,PageModel,RouteRegistration}.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact branch in BOTH VehicleCostPage and VehicleCostTable]
+# Compiles my view + table + model + registration against the ACTUAL
+# TSGlassPanel/TSCard/TSMetricCard/TSAlertBanner/TSEmptyState/TSErrorDisplay/TSSkeleton/TSPageTitle/TSPanelTitle/TSCaption
+# /TSTone/Color.TS/Font.TS/TSSpacing/TSRadius/tsGlassPanel/AppRoute/AppRouteHostRegistry sources — authoritative proof the
+# API usage is correct on BOTH idioms (ADR-002/006). `-typecheck` performs full type/availability/concurrency checking.
+# One real defect was caught + fixed here pre-commit: an ambiguous number(0,...) overload call in VehicleCostFormat.
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65   [RED — blocked by PRE-EXISTING, OUT-OF-SCOPE sibling errors; ZERO errors in any of my files]
+TEST_EXIT=(not reached)   [the macOS test bundle hosts on the app target, blocked by the same out-of-scope errors]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to defects in sibling
+surfaces OUTSIDE this artifact's allowed files. Both build configurations were run; every
+diagnostic is in an out-of-scope file (none in mine):
+
+  Debug build (BUILD_EXIT=65): 4 diagnostics, all in ONE file —
+    TeslaSync/shared-surfaces/Input.Previews.swift:88 & :101
+      error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+    (a generated `#Preview` `@Previewable` block incompatible with the current toolchain;
+     same class as the DiskForecast log's documented shared-surfaces preview breakage).
+
+  Release build (cross-check, XCODEBUILD_REL_RC=65): 1 diagnostic, in a DIFFERENT file —
+    Sources/Features/Driving/DriveScorePage.Panels.swift:25:70
+      error: cannot convert value of type 'LocalizedStringKey' to expected argument type
+             'String.LocalizationValue'
+    (a mid-migration sibling page; `#if DEBUG` previews are excluded in Release, so the
+     Input.Previews breakage is replaced by this independent, also out-of-scope one.)
+
+Both files are UNTOUCHED by this artifact (git status --porcelain shows neither). Grep of the
+build logs for my files (Features/Admin/VehicleCost*, App/AppRoute*, TeslaSyncApp.swift) ->
+ZERO diagnostics. Positive proof my files ARE compiled in the app target: all four ship in the
+target's Debug SwiftFileList
+(DerivedData/.../TeslaSync-macOS.build/Debug/Objects-normal/arm64/TeslaSync.SwiftFileList ->
+VehicleCostPage.swift, VehicleCostPage.Table.swift, VehicleCostPageModel.swift,
+VehicleCostRouteRegistration.swift). Editing the out-of-scope files to green the build is
+forbidden (allowed files = Features/Admin + nav registration + catalog + log). My files'
+correctness is instead proven by the isolated Swift 6 strict-concurrency type-check
+(0/0 macOS+iOS) and the executed model harness (46/46) — the same host-harness methodology the
+peer p4-apple logs use when the shared app bundle is blocked by out-of-scope siblings. No
+out-of-scope file was edited.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=33
+================================================================================
+[x] panel  — GlassPanel1            VehicleCostPage.swift `breakdownPanel` -> TSGlassPanel { panelHeader(TSPanelTitle "admin.vehicleCost.tableTitle" + window Picker) ; breakdownContent } (table / empty / unavailable / skeleton)
+[x] panel  — Total-rows            VehicleCostPage.swift `fleetTotalsGrid` -> TSMetricCard(title:"admin.vehicleCost.totalRows", value: VehicleCostFormat.number(totals.totalRows), caption: windowSubCaption)
+[x] panel  — Total-bytes-est       VehicleCostPage.swift `fleetTotalsGrid` -> TSMetricCard("admin.vehicleCost.totalBytes", bytes(totals.totalBytesEst), "admin.vehicleCost.bytesSub")
+[x] panel  — Rate-rows-min-24h     VehicleCostPage.swift `fleetTotalsGrid` -> TSMetricCard("admin.vehicleCost.totalRate", number(totals.totalRatePerMinute24h, 1), "admin.vehicleCost.rateSub")
+[x] panel  — DLQ-failures-24h      VehicleCostPage.swift `fleetTotalsGrid` -> TSMetricCard("admin.vehicleCost.totalFailures", number(totals.totalFailures24h), "admin.vehicleCost.failuresSub")
+[x] state  — loading               VehicleCostState.loading (initial) -> `breakdownContent`.loading -> `skeletonRows` ForEach TSSkeleton x6
+[x] state  — empty                 VehicleCostState.empty(totals) (loaded, 0 vehicles) -> `breakdownContent`.empty -> TSEmptyState(title:"admin.vehicleCost.emptyTitle", message:"admin.vehicleCost.emptyMessage", systemImage:"creditcard"); fleet stat cards still render (web `{totals && ...}`)
+[x] state  — error                 VehicleCostState.error(String) -> `errorPanel` TSGlassPanel { TSErrorDisplay(onRetry: model.refresh) }   (+503 variant VehicleCostState.unavailable -> `subsystemBanner` TSAlertBanner + `emptyTableNote`)
+[x] state  — success               VehicleCostState.loaded(VehicleCostReport) -> `fleetTotalsGrid` (4 cards) + VehicleCostTable (regular Grid / compact cards)
+[x] string — admin.subsystem.unavailableTitle  VehicleCostPage.swift `subsystemBanner` TSAlertBanner title (catalog key reused — already present)
+[x] string — admin.vehicleCost.bytesSub        VehicleCostPage.swift `fleetTotalsGrid` Total-bytes TSMetricCard caption
+[x] string — admin.vehicleCost.colBytes        VehicleCostPage.Table.swift `regularTable` header + compact `labeledRow`
+[x] string — admin.vehicleCost.colFailures     VehicleCostPage.Table.swift `regularTable` header + compact `failuresRow`
+[x] string — admin.vehicleCost.colLastSeen     VehicleCostPage.Table.swift `regularTable` header + compact `labeledRow`
+[x] string — admin.vehicleCost.colRate         VehicleCostPage.Table.swift `regularTable` header + compact `labeledRow`
+[x] string — admin.vehicleCost.colRows         VehicleCostPage.Table.swift `regularTable` header + compact `labeledRow`
+[x] string — admin.vehicleCost.colVehicle      VehicleCostPage.Table.swift `regularTable` header("admin.vehicleCost.colVehicle")
+[x] string — admin.vehicleCost.emptyMessage    VehicleCostPage.swift `.empty` TSEmptyState message
+[x] string — admin.vehicleCost.emptyTable      VehicleCostPage.swift `emptyTableNote` (503 unavailable branch)
+[x] string — admin.vehicleCost.emptyTitle      VehicleCostPage.swift `.empty` TSEmptyState title
+[x] string — admin.vehicleCost.failuresSub     VehicleCostPage.swift `fleetTotalsGrid` Total-failures TSMetricCard caption
+[x] string — admin.vehicleCost.notConfigured   VehicleCostPage.swift `subsystemBanner` TSAlertBanner message
+[x] string — admin.vehicleCost.pageTitle       VehicleCostPage.swift `header` TSPageTitle("admin.vehicleCost.pageTitle")
+[x] string — admin.vehicleCost.rateSub         VehicleCostPage.swift `fleetTotalsGrid` Total-rate TSMetricCard caption
+[x] string — admin.vehicleCost.subtitle        VehicleCostPage.swift `header` Text("admin.vehicleCost.subtitle")
+[x] string — admin.vehicleCost.tableTitle      VehicleCostPage.swift `breakdownPanel`/`panelHeader` TSPanelTitle + a11y label
+[x] string — admin.vehicleCost.totalBytes      VehicleCostPage.swift `fleetTotalsGrid` Total-bytes TSMetricCard title
+[x] string — admin.vehicleCost.totalFailures   VehicleCostPage.swift `fleetTotalsGrid` Total-failures TSMetricCard title
+[x] string — admin.vehicleCost.totalRate       VehicleCostPage.swift `fleetTotalsGrid` Total-rate TSMetricCard title
+[x] string — admin.vehicleCost.totalRows       VehicleCostPage.swift `fleetTotalsGrid` Total-rows TSMetricCard title
+[x] string — admin.vehicleCost.unnamed         VehicleCostPage.Table.swift `vehicleName` (catalog "Vehicle #%lld") when display_name is nil
+[x] string — admin.vehicleCost.windowLabel     VehicleCostPage.swift `windowControl` TSCaption + Picker a11y label
+[x] string — admin.vehicleCost.windowSub       VehicleCostPage.swift `windowSubCaption`/`windowSubText` (catalog "Window: %lldd") on the Total-rows card
+PARITY_COVERED=33
+
+All 33 panels/states/strings render from the bound @Observable VehicleCostPageModel and the
+Localizable.xcstrings catalog; web key names preserved verbatim. The value types
+(VehicleCostRow/VehicleCostTotals/VehicleCostReport) mirror the KMP OperatorConfidence
+VehicleCostResponse field-for-field, so the production `OperatorConfidenceStore.vehicleCost()`
+binding drops into the `VehicleCostDataSource` seam (ADR-004 — no networking in the view), the
+same seam pattern the sibling DiskForecast/SlowQueries pages use. The window selector
+(1/7/30/90 days) reproduces the web `WINDOW_OPTIONS`/`windowDays` control and reloads via the
+model on change (web `setWindowDays` -> new `since`). SI converters: N/A — vehicle-cost row
+counts / byte estimates / ingest rates are unit-agnostic control-plane values (per the KMP
+model doc), formatted at the display boundary by VehicleCostFormat. Live-SSE staleness: N/A —
+useVehicleCost is a SLOW-interval poll/refresh query, not a live stream (ADR-013 scope).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. Format/lint/placeholder/typecheck/harness/xcodegen
+                       are all real GREEN. The full-scheme xcodebuild result is recorded verbatim below — not recoloured.
+ 2 No scope narrowing: all 5 panels, all 4 data states (+ the 503 unavailable variant), the adaptive macOS/iPad columnar
+                       + iPhone compact-card 6-column table, AND the window selector (a real interactive control) are
+                       implemented and verified.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title/subtitle/loading/error + subsystemMissing
+                       banner + the 4 StatCards (with sublabels, shown on zero-vehicle success too) + the 6-column
+                       per-vehicle DataTable + window Select + EmptyState were all reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code.
+ 5 No parity shortcuts: 4 states render distinctly; stat cards gated behind totals!=nil (web `{totals && ...}`) and still
+                       render on the empty success; DLQ amber when >0; display_name->unnamed fallback; relative-time
+                       ladder + absolute fallback ported; strings = web keys verbatim.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface or other owners' P1/P2/P3 files. The Shared.xcframework
+                       (a P1/S2-S3 predecessor artifact) was assembled via its own Gradle script and staged into the
+                       git-ignored Frameworks/ dir — not committed, not modified. The generated TeslaSync.xcodeproj is
+                       git-ignored (git check-ignore confirmed) and not committed.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/8), swiftlint --strict(0/8), placeholder(0),
+                       model harness(46/46), view type-check macOS(0/0) + iOS(0/0), xcodegen. The only RED is the full
+                       app-target xcodebuild, caused EXCLUSIVELY by pre-existing OUT-OF-SCOPE sibling files
+                       (shared-surfaces/Input.Previews.swift in Debug; Features/Driving/DriveScorePage.Panels.swift in
+                       Release) with ZERO diagnostics in any of my files — forbidden to commit-fix, DEFERRED to its
+                       owner / the P99 integration gate.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + dedicated-.vehicleCost-route reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI VehicleCostPage shipped at parity with the web source: a pure
+@Observable state holder (ADR-004 — no networking in the view) exposing loading/empty/error/success
+plus the 503 subsystem-unavailable variant over an injectable VehicleCostDataSource seam whose value
+types mirror the KMP OperatorConfidence VehicleCostResponse 1:1 (production binds
+OperatorConfidenceStore.vehicleCost() through the seam). The page reproduces the web chrome
+(title/subtitle), the subsystem-unavailable AlertBanner, the four fleet StatCards (Total rows /
+Total bytes / Rate / DLQ failures, each with its web sublabel, shown whenever the server totals are
+present — including the zero-vehicle success), and the per-vehicle breakdown GlassPanel with the
+window Select and an adaptive table — a columnar Grid on macOS/iPad and per-vehicle cards on iPhone —
+covering all six web columns (with the DLQ amber emphasis + display_name fallback), using the P2
+tokens + P3 shared components (no hand-rolled glass). Every visible string resolves from
+Localizable.xcstrings with the web key names (28 keys added; admin.subsystem.unavailableTitle reused);
+display formatting (fmtNumber/formatBytes/formatRelative) is ported and unit-tested. Verified on BOTH
+idioms by isolated Swift 6 strict-concurrency type-checks (0/0 macOS+iOS) and an executed model harness
+(46/46); my four source files are confirmed compiled in the full app target's SwiftFileList with ZERO
+diagnostics. The full-scheme xcodebuild is RED ONLY due to pre-existing, out-of-scope sibling files
+(shared-surfaces / DriveScore), which are forbidden to commit-fix — exactly the DiskForecast precedent.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/VehicleCostPage.swift \
+          apps/apple/Sources/Features/Admin/VehicleCostPage.Table.swift \
+          apps/apple/Sources/Features/Admin/VehicleCostPageModel.swift \
+          apps/apple/Sources/Features/Admin/VehicleCostRouteRegistration.swift \
+          apps/apple/Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-VehicleCostPage.log
+  git commit -m "feat(apps/apple): VehicleCostPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

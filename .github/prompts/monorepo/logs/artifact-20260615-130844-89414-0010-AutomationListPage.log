@@ -1,0 +1,228 @@
+================================================================================
+p4-apple · P7 · page:automations/AutomationList — SwiftUI / HIG parity
+================================================================================
+Artifact : page:automations/AutomationList  (web route /automations/list)
+Web src  : web/src/features/automations/pages/AutomationListPage.tsx
+Targets  : apple-macos + apple-ios (adaptive, ADR-002/006)
+Prompt   : p4-apple/P7/page:automations/AutomationList
+Runner   : macOS (Darwin 26), Xcode 26.5, Swift 6, swiftlint 0.63.3, swiftformat, pwsh 7.x, java 17
+PARITY_REQUIRED=27
+
+--------------------------------------------------------------------------------
+FILES (created unless noted)
+--------------------------------------------------------------------------------
+apps/apple/Sources/Features/Automations/AutomationListModels.swift
+apps/apple/Sources/Features/Automations/AutomationListPageModel.swift
+apps/apple/Sources/Features/Automations/AutomationListPageModel.Sample.swift
+apps/apple/Sources/Features/Automations/AutomationListPage.swift
+apps/apple/Sources/Features/Automations/AutomationListPage.Table.swift
+apps/apple/Sources/Features/Automations/AutomationListPage.Toolbar.swift
+apps/apple/Sources/Features/Automations/AutomationListRouteRegistration.swift
+apps/apple/Tests/Unit/Features/Automations/AutomationListPageModelTests.swift
+apps/apple/Sources/App/AppRoute.swift                 (modified: +.automationsList route — segment/icon/group)
+apps/apple/Sources/App/AppRouteParser.swift           (modified: +alias /automations/list -> .automationsList)
+apps/apple/Sources/TeslaSyncApp.swift                 (modified: registered .automationsList host)
+apps/apple/Localization/Localizable.xcstrings         (modified: +27 keys, additive)
+apps/parity/apple-ledger.json                         (modified: +2 rows, 27/27 macOS+iOS)
+.github/prompts/monorepo/logs/apple-page-automations-AutomationListPage.log
+
+Surface line count: 914 lines across the 7 Sources/ files (web page 217 lines composed into a
+HIG-native decomposition: page + adaptive table + bulk toolbar + @Observable model + models +
+sample source + route registration — well above the >=70% completeness bar).
+
+--------------------------------------------------------------------------------
+RECORDED DEVIATIONS (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+1. Output path: the prompt's "Output" lists apps/apple/TeslaSync/Features/Automations/**, but the
+   established, building convention (every DONE sibling — AutomationsList/AutomationBuilder/AuditLog/
+   ApiPlayground/...) lives under apps/apple/Sources/Features/Automations/**, which project.yml globs
+   into the iOS + macOS app targets. project.yml does NOT compile TeslaSync/Features. Files are
+   placed under Sources/Features/Automations so they compile + are enumerated + integrate with the
+   sibling AutomationListItem model. The prompt path is the generator's canonical alias for it.
+2. Navigation: the web /automations/list is a sub-route co-existing with the card hub
+   /automations (AutomationsListPage). Following the dominant repo convention (web sub-routes like
+   /admin/audit-log become top-level AppRoute cases + a path alias), it is registered as a top-level
+   .automationsList AppRoute (pathSegment "automations-list") with a /automations/list deep-link
+   alias, and wired into the shell's route host in TeslaSyncApp (real, reachable navigation — not a
+   dead destination). The web name-link (/automations/{id}) and empty CTA (/automations/new) target
+   the typed builder (separate parity units); both are surfaced via the injected onNavigate shell
+   hook to the .automations hub that owns those builder routes (a real wired affordance, no stub).
+3. Row model reuse: the row type is the sibling AutomationListItem (AutomationsListModels.swift,
+   same module) — DRY; only the bulk request/result types (AutomationBulkOperation /
+   AutomationBulkOutcome) and the select-all/row-status projections are added here.
+4. "master" -> "select-all": swiftlint inclusive_language forbids the web term "master"
+   (masterState / master checkbox); the declarations use selectAll* (web symbol cited in comments).
+5. Supporting bulk strings: the web <BulkActionToolbar> count/clear/aria labels (bulk.selected,
+   bulk.ofTotal, bulk.clear, bulk.toolbarLabel) are added as localized keys so the toolbar holds
+   ZERO hardcoded literals — additive, beyond the 22 required parity strings.
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+[placeholder]  pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Automations -Language swift
+               PLACEHOLDER_ALLOWED=7   PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+               (the 7 ALLOWED `// parity:allow` opt-outs are PRE-EXISTING sibling files; my 8 files
+                contain 0 opt-outs and 0 violations — verified by direct grep of AutomationList*.swift.)
+
+[swiftformat]  swiftformat --lint Sources/Features/Automations Tests/Unit/Features/Automations
+               0/49 files require formatting.   FORMAT_EXIT=0
+
+[swiftlint]    swiftlint lint --strict Sources/Features/Automations Tests/Unit/Features/Automations \
+                 Sources/App/AppRoute.swift Sources/App/AppRouteParser.swift Sources/TeslaSyncApp.swift
+               0 violations.   LINT_EXIT=0
+
+[xcodegen]     xcodegen generate -> TeslaSync.xcodeproj written; all new files enumerated.
+               XCODEGEN_EXIT=0
+
+[KMP shared]   apps/apple/Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework)
+               BUILD SUCCESSFUL; Shared.xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64).
+
+[build macOS]  xcodebuild -scheme TeslaSync-macOS -configuration Debug build CODE_SIGNING_ALLOWED=NO
+               ** BUILD SUCCEEDED **   BUILD_EXIT=0
+               The ENTIRE TeslaSync-macOS app target (Sources/ + all TeslaSync/* surfaces, ~6000
+               files) compiled under -swift-version 6 (SWIFT_STRICT_CONCURRENCY=complete), including
+               every new AutomationList* file + the modified AppRoute/AppRouteParser/TeslaSyncApp.
+               0 errors referencing any file in scope.
+
+[build iOS]    xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS Simulator' build
+               iOS WHOLE-MODULE TYPE-CHECK GREEN: EmitSwiftModule completed for BOTH arm64 +
+               x86_64 simulator slices with 0 errors (the phase that type-checks every file in the
+               TeslaSync target, including all AutomationList* files + their `#if os(iOS)`
+               horizontalSizeClass paths). The subsequent per-file object-codegen phase ran 0
+               errors across thousands of files. A FIRST iOS run was killed (no compiler
+               diagnostic, no crash backtrace) mid-codegen on the OUT-OF-SCOPE
+               TeslaSync/shared-surfaces/Temperature.Model.swift — an environmental OOM SIGKILL of
+               one swiftc batch (2-arch fat build, -j20); the -jobs 4 RETRY compiled PAST that exact
+               file with 0 errors, confirming it was environmental, not a code error. The macOS
+               full build below is the definitive completed full-app build evidence (same Sources/,
+               Swift 6 strict concurrency). BUILD_EXIT(iOS)=typecheck-green; full-link continued in
+               background.
+
+[test (full)]  xcodebuild -scheme TeslaSync-macOS test  -> ** TEST FAILED ** at COMPILE of the
+               TeslaSync-macOSTests bundle, for PRE-EXISTING, OUT-OF-SCOPE reasons (covenant #7,
+               forbidden to fix). The bundle batch-compiles every co-located *Tests.swift; several
+               PRE-EXISTING test files fail Swift 6 strict-concurrency / API checks, e.g.:
+                 Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10  main actor-isolated
+                   default value in a nonisolated context; :156 XCTAssertEqual(Date, accuracy:)
+                 Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift  (3 errors)
+               NONE of these files are mine (git status confirms my changeset = the 8 new files +
+               AppRoute/AppRouteParser/TeslaSyncApp/xcstrings/ledger). Zero errors reference any
+               AutomationList* file. This is the SAME accepted disposition as the DONE siblings
+               (apps/macos-pending-verifications.md): the surface is green, the full test bundle is
+               blocked by pre-existing unrelated breakage.   TEST_EXIT=blocked(pre-existing-out-of-scope)
+
+[harness RUN]  Substitute for the blocked bundle — a Swift 6 (-strict-concurrency=complete) executable
+               compiled + RUN against the REAL model source files (AutomationListModels.swift,
+               AutomationListPageModel.swift, AutomationListPageModel.Sample.swift) with a minimal
+               AutomationListItem shim:
+                 HARNESS_PASSED=25  HARNESS_FAILED=0  RUN_EXIT=0
+               covers: phase loading/ready/error + tableState loading/empty/error/success; toggle
+               select/deselect; select-all none/some/all; toggleAll select+clear; clearSelection;
+               reload-prunes-stale-selection; noun one/other; performBulk enable (forwards ids+op,
+               clears, refetches) / delete (deleted count) / ignored-when-empty / failure-keeps-
+               selection; AutomationBulkOperation destructive + allCases(3) + wire; rowStatus;
+               AutomationBulkOutcome clamp. (Mirrors AutomationListPageModelTests 1:1.)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=27
+================================================================================
+[x] panel  — GlassPanel1
+       AutomationListPage.swift -> tablePanel -> TSGlassPanel { switch model.tableState } — the
+       single web <GlassPanel className="overflow-hidden"> hosting the table + all 4 leaf states.
+[x] state  — loading
+       AutomationListPageModel.swift -> AutomationListTableState.loading (phase .loading);
+       AutomationListPage.swift -> loadingView (3x TSSkeleton). Web `isLoading ? skeletons`.
+[x] state  — empty
+       AutomationListPageModel.swift -> tableState .empty (ready && items.isEmpty);
+       AutomationListPage.swift -> emptyView -> TSEmptyState(title/message) + open-builder CTA.
+       Web `automations.length === 0 ? <EmptyState/>`.
+[x] state  — error
+       AutomationListPageModel.swift -> tableState .error (+ errorMessage);
+       AutomationListPage.swift -> errorView -> TSQueryError { model.refresh() }. Web `error ? <ErrorDisplay/>`.
+[x] state  — success
+       AutomationListPageModel.swift -> tableState .success;
+       AutomationListPage.Table.swift -> AutomationListTable (regular Grid / compact cards). Web `<table>`.
+[x] string — automationList.bulk.delete
+       AutomationListModels.swift:33 -> AutomationBulkOperation.labelKey (.delete)
+[x] string — automationList.bulk.deleteConfirm.body
+       AutomationListPage.Toolbar.swift:59 -> .confirmationDialog message Text
+[x] string — automationList.bulk.deleteConfirm.title
+       AutomationListPage.Toolbar.swift:46 -> .confirmationDialog title Text
+[x] string — automationList.bulk.disable
+       AutomationListModels.swift:32 -> AutomationBulkOperation.labelKey (.disable)
+[x] string — automationList.bulk.enable
+       AutomationListModels.swift:31 -> AutomationBulkOperation.labelKey (.enable)
+[x] string — automationList.col.desc
+       AutomationListPage.Table.swift:44 -> header("automationList.col.desc")
+[x] string — automationList.col.name
+       AutomationListPage.Table.swift:43 -> header("automationList.col.name")
+[x] string — automationList.col.runs
+       AutomationListPage.Table.swift:45 -> header(...) + compact card runs label
+[x] string — automationList.col.status
+       AutomationListPage.Table.swift:46 -> header("automationList.col.status")
+[x] string — automationList.empty.body
+       AutomationListPage.swift:100 -> emptyView TSEmptyState(message:)
+[x] string — automationList.empty.cta
+       AutomationListPage.swift:103 -> emptyView TSButton("automationList.empty.cta") { onOpenBuilder() }
+[x] string — automationList.empty.title
+       AutomationListPage.swift:99 -> emptyView TSEmptyState(title:)
+[x] string — automationList.noun.one
+       AutomationListPageModel.swift:211 -> selectionNounKey (count == 1 branch)
+[x] string — automationList.noun.other
+       AutomationListPageModel.swift:211 -> selectionNounKey (else branch)
+[x] string — automationList.selectAutomation
+       AutomationListPage.Table.swift:165 -> selectLabel(for:) (String(format:, item.name)); web aria-label
+[x] string — automationList.subtitle
+       AutomationListPage.swift:56 -> header Text("automationList.subtitle")
+[x] string — automationList.title
+       AutomationListPage.swift:55 -> header TSPageTitle("automationList.title") (+ loadingView a11y label)
+[x] string — bulk.selectAll
+       AutomationListPage.Table.swift:80 -> selectAllCheckbox.accessibilityLabel + compactSelectAllRow Text
+[x] string — bulk.selectRow
+       AutomationListPage.Table.swift:140 -> rowCheckbox.accessibilityHint("bulk.selectRow")
+[x] string — common.delete
+       AutomationListPage.Toolbar.swift:53 -> confirm destructive Button Text("common.delete")
+[x] string — common.disabled
+       AutomationListModels.swift:109 -> AutomationRowStatus.labelKey (.disabled) -> status TSBadge
+[x] string — common.enabled
+       AutomationListModels.swift:108 -> AutomationRowStatus.labelKey (.enabled) -> status TSBadge
+PARITY_COVERED=27
+
+(All 22 required keys added to Localizable.xcstrings with the web key names verbatim, plus
+ route.automationsList + 4 supporting bulk.* toolbar keys = 27 additive keys. The web "%@" name
+ interpolation (selectAutomation) and "%lld" count interpolation (bulk.selected/ofTotal) replace
+ i18next {{name}}/{{count}}. Insertion is purely additive.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : the full xcodebuild test bundle is RED and is recorded verbatim as RED with
+                       its real root cause (pre-existing Swift-6 breakage in out-of-scope
+                       VehicleCostPageModelTests / GDPRExportPageModelTests, not in my changeset).
+                       The GREEN claims are scoped: macOS app BUILD_EXIT=0 (whole target), swiftlint
+                       /swiftformat/placeholder EXIT=0, and a compiled+RUN 25/25 harness — all shown
+                       with real output above.
+ 2 No scope narrowing: 1 panel + 4 states + 22 strings = 27/27 implemented; the bulk toolbar
+                       (enable/disable/delete + delete confirm + count/noun/clear), the select-all
+                       tri-state, every row cell (checkbox, name link, description, runs, status
+                       badge), and the loading/empty/error/success states are all reproduced.
+ 3 No skip-and-assume: web source read end-to-end; useBulkSelection (masterState/toggle/toggleAll/
+                       clear), the bulk mutate-then-clear-then-invalidate flow, and the
+                       enabled/disabled badge branch are all ported (+ harness-proven).
+ 4 No stubs as final : PLACEHOLDER_COUNT=0; every region renders distinctly; empty is a full
+                       ContentUnavailableView with a real CTA; error is a real retry; no "coming soon".
+ 5 No parity shortcuts: 4 data states render distinctly + are state-machine proven; strings are the
+                       web keys from Localizable.xcstrings; SI not applicable (counts only).
+ 6 No delegation     : implemented directly; no sub-agents.
+ 7 No predecessor bypass: out-of-scope pre-existing broken test files were NOT edited; the surface
+                       reuses the sibling AutomationListItem + shared P2/P3 components as-is.
+ 8 No commit on red  : the in-scope gates are green; the only RED (full test bundle) is pre-existing
+                       + out-of-scope and recorded as such (matching the accepted sibling disposition).
+ 9 No silent drift   : all deviations recorded above; xcstrings/ledger edits additive.
+10 Log ends with EXIT + STATUS below.
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

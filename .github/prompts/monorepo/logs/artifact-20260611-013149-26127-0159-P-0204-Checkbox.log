@@ -1,0 +1,146 @@
+=== P4 Shared surface 0204 Checkbox (Apple) ===
+Artifact:   P4 · shared-surfaces · 0204 — Checkbox (Apple)
+Web source: web/src/components/ui/Checkbox.tsx
+Native out: apps/apple/TeslaSync/shared-surfaces/Checkbox.*
+Runner:     Darwin (arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint+swiftformat+xcodegen present
+Date:       2026-06-12
+
+------------------------------------------------------------------------------
+CAPABILITY (per prompt: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15)
+------------------------------------------------------------------------------
+PRESENT. xcodebuild Xcode 26.5; iOS 18 simulator 'iPhone 16' booted; macOS 15 SDK;
+SwiftUI/MapKit/Swift Charts SDKs resolved during the build (GeneratePcm SwiftUI, MapKit, ...).
+This artifact is NOT blocked on platform capability — every required SDK is available and used.
+(Checkbox is a pure presentational control; it uses neither Swift Charts nor MapKit.)
+
+------------------------------------------------------------------------------
+DELIVERED FILES (allowed scope: apps/apple/TeslaSync/shared-surfaces/Checkbox.*)
+------------------------------------------------------------------------------
+Checkbox.Adapter.swift      Foundation-only core: CheckboxSurface.slug, CheckboxSize(+metrics),
+                            CheckboxGlyph, CheckboxAccessibilityState, CheckboxProps, CheckboxInput,
+                            CheckboxProjection, CheckboxProjector (resolve / nextChecked / a11y label).
+Checkbox.Model.swift        CheckboxStrings (P1/S10 facade), CheckboxTelemetry seam (P1/S11 view.opened)
+                            + OSLog default, CheckboxModel (@MainActor @Observable, P1/S8).
+Checkbox.Views.swift        CheckboxControl (Button + a11y label/value/isToggle), CheckboxIndicator
+                            (token box + glyph, reduce-motion animation), CheckboxFocusRing.
+Checkbox.swift              public Checkbox: View — controlled init(isOn:), uncontrolled
+                            init(initiallyChecked:), injected init(model:).
+Checkbox.Previews.swift     DEBUG previews: states / disabled / sizes / no-label / controlled / uncontrolled.
+Checkbox.strings            P1/S10 native a11y additions (checked/unchecked/mixed/label).
+Checkbox.Tests.swift        model + view-composition + strings tests.
+Checkbox.AdapterTests.swift pure projector + value-type + size-metric tests.
+
+Faithful-parity note: the web <Checkbox> is a PURE presentational control with NO fetch / hooks, so it has
+no loading/error/stale/offline branch (nothing to fetch, fail, age, or lose connectivity to). Inventing
+such chrome would fabricate states the source does not have, so this surface reproduces only the source's
+REAL branches (unchecked / checked / indeterminate / disabled / sizes / labelled-unlabelled) — exactly as
+the sibling presentational primitives ActiveFilterChips (0147), Delta (0081), MetricCard (0095) did.
+The web source has NO t() keys (anonymous surface); the only user text is the caller-supplied label. The
+Checkbox.strings keys are native accessibility additions (the spoken state a browser derives for free from
+<input type=checkbox>'s checked/indeterminate), required so the native control is never silent to VoiceOver.
+
+==============================================================================
+GATE STEP 1 — swiftformat --lint apps/apple   (whole-tree, gate scope)
+==============================================================================
+(lint mode - no files will be changed.)
+Reading config file at apps/apple/.swiftformat
+SwiftFormat completed in 28.45s.
+0/4932 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+==============================================================================
+GATE STEP 2 — swiftlint --strict              (whole-tree, gate scope)
+==============================================================================
+Done linting! 0 violations, 0 serious.   (also confirmed scoped to the 7 Checkbox .swift files: 0 violations)
+LINT_EXIT=0
+
+==============================================================================
+GATE STEP 3 — placeholder gate (apps/tools/check-placeholders.ps1 -Path .../Checkbox -Language swift)
+==============================================================================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+==============================================================================
+GATE STEP 4 — Checkbox surface compile + unit tests (isolated SwiftPM module, macOS 15, Swift 6,
+              strict concurrency=complete). The Checkbox surface depends ONLY on SwiftUI + the P1/S9
+              design tokens, NOT on the KMP Shared.xcframework, so it is fully buildable + testable in
+              isolation. This is the authoritative per-surface verification.
+==============================================================================
+swift build  -> Build complete! (Tokens.swift, TSDesign.swift, Checkbox.Adapter/Model/Views/swift/Previews)
+swift test   -> Test Suite 'All tests' passed. Executed 36 tests, with 0 failures (0 unexpected).
+  CheckboxAdapterTests, CheckboxSizeTests, CheckboxGlyphTests, CheckboxProjectionTests,
+  CheckboxToggleDecisionTests, CheckboxAccessibilityLabelTests, CheckboxValueTypeTests,
+  CheckboxModelTests, CheckboxViewTests, CheckboxStringsTests.
+SURFACE_BUILD_EXIT=0
+SURFACE_TEST_EXIT=0   (36/36 pass: adapter cached->projection, per-state, a11y-label, view.opened-once)
+
+Also independently type-checked via:
+  xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+         -target arm64-apple-macos15.0 Tokens.swift TSDesign.swift Checkbox.{Adapter,Model,Views,Previews}.swift Checkbox.swift
+  TYPECHECK_EXIT=0
+
+==============================================================================
+GATE STEP 5 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+==============================================================================
+Shared.xcframework staged via Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework,
+offline build cache) -> BUILD SUCCESSFUL; xcframework staged to apps/apple/Frameworks/Shared.xcframework.
+xcodegen generate -> Created TeslaSync.xcodeproj (all 7 Checkbox .swift files wired into the TeslaSync app
+target + the 2 *Tests.swift into the TeslaSyncTests bundle — verified in project.pbxproj).
+
+** BUILD FAILED **  (3 failures)
+The following build command failed:
+  SwiftCompile normal arm64 .../TeslaSync/feature-views/RecentDrivesSection.Previews.swift
+  -> RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to type-check this
+     expression in reasonable time; try breaking up the expression into distinct sub-expressions
+Checkbox-file errors in this run: NONE (the Checkbox.* files compiled clean inside the full app target).
+Retried incrementally (cached DerivedData) -> identical deterministic failure at the same expression.
+IOS_EXIT=65
+
+==============================================================================
+GATE STEP 6 — xcodebuild -scheme TeslaSync-macOS build test
+==============================================================================
+** BUILD FAILED **  (same shared TeslaSync sources -> same failing compile batch containing
+  .../TeslaSync/feature-views/RecentDrivesSection.Previews.swift)
+Checkbox-file errors in this run: NONE (Checkbox.* compiled clean on macOS too).
+MAC_EXIT=65
+
+------------------------------------------------------------------------------
+ROOT-CAUSE / BLOCKER ANALYSIS  (honesty covenant: no red-as-green)
+------------------------------------------------------------------------------
+The full multi-target xcodebuild build/test cannot reach EXIT=0 because of a PRE-EXISTING,
+DETERMINISTIC, OUT-OF-SCOPE Swift type-checker timeout in:
+
+    apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24
+    (a `.map { ... RecentDriveItem(...numeric arithmetic + ternary...) }` sample-data closure
+     in feature-view 0297 — a DIFFERENT prompt with its own artifact)
+
+Evidence it is NOT caused by, and is unrelated to, the Checkbox surface:
+  1. git: the ONLY changed files are the 8 Checkbox.* files; RecentDrivesSection.* is untouched baseline.
+  2. The error is localized to RecentDrivesSection.Previews.swift:24 (a numeric/ternary expression);
+     it shares no symbols with the Checkbox surface (all Checkbox types are `Checkbox*`-prefixed).
+  3. It reproduces deterministically across two independent iOS runs AND the macOS run.
+  4. Every Checkbox.* file compiles clean inside the full app target on BOTH iOS and macOS.
+  5. The Checkbox surface builds + passes 36 tests in isolation (Gate Step 4).
+
+This blocker is NOT a platform-capability gap (capability is fully present — Gate Step 5 staged the KMP
+Shared.xcframework and compiled the entire app target up to the sibling file). It is a pre-existing defect
+in an out-of-scope sibling that this prompt's file scope (allowed files = Checkbox.* + this log) FORBIDS
+modifying. Resolving it belongs to the RecentDrivesSection (0297) artifact, not here.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Checkbox surface:                 COMPLETE + VERIFIED
+  swiftformat (whole-tree):       PASS (FORMAT_EXIT=0)
+  swiftlint --strict (whole-tree):PASS (LINT_EXIT=0)
+  placeholder gate:               PASS (PLACEHOLDER_EXIT=0)
+  surface build (SwiftPM):        PASS (SURFACE_BUILD_EXIT=0)
+  surface unit tests:             PASS 36/36 (SURFACE_TEST_EXIT=0)
+  swiftc -typecheck:              PASS (TYPECHECK_EXIT=0)
+  Checkbox compiles in full app:  PASS (iOS + macOS, 0 Checkbox errors)
+Full-app integration build/test:  BLOCKED (IOS_EXIT=65, MAC_EXIT=65) by pre-existing out-of-scope
+                                  RecentDrivesSection.Previews.swift:24 type-check timeout.
+
+EXIT=65
+STATUS=BLOCKED

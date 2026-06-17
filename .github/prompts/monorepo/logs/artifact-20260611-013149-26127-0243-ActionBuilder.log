@@ -1,0 +1,269 @@
+================================================================================
+P4 · apple · P7 · page:automations/ActionBuilder — SwiftUI / HIG (apple-macos + apple-ios)
+Run: 2026-06-12T17:05-0700   Host: Darwin arm64 (macOS 26.5.1)   Branch: auto/20260611-013149-26127/243
+Base: 69b75692ca32d4d91b1b6a87ed1ab16249f4a785
+Prompt: p4-apple/P7/page:automations/ActionBuilder
+Web source (spec): web/src/features/automations/pages/ActionBuilder.tsx  (web route: unrouted)
+Parity unit: page:automations/ActionBuilder  (panels=[GlassPanel1] · states=[error,success] · strings=27 · requiredCount=30)
+Native output: apps/apple/Sources/Features/Automations/ActionBuilder{Page,PageModel,Navigation}.swift
+               (hosts the committed feature-view builder apps/apple/TeslaSync/feature-views/ActionBuilder.*)
+Mode: code-complete + DEFERRED full-app Xcode build/test (macos-pending-verifications.md precedent,
+      ADR-012, Honesty rule 7). All host-runnable gates executed green on THIS runner.
+================================================================================
+
+=== PATH RECONCILIATION (no silent drift) ===
+  • The prompt's templated output path `apps/apple/TeslaSync/Features/Automations/ActionBuilder.swift`
+    does not exist in the repo and is not enumerated by project.yml. The REAL P7 page location —
+    proven by every "done" page in apps/parity/apple-ledger.json (admin/ApiPlayground,
+    analytics/FleetCompare, …) — is `apps/apple/Sources/Features/{Domain}/{Name}Page.swift`
+    + `{Name}PageModel.swift` + route registration, with co-located page tests under
+    `apps/apple/Tests/Unit/Features/{Domain}/`. This artifact follows that real convention.
+  • A complete SwiftUI parity of the web `ActionBuilder` COMPONENT already exists + is committed at
+    `apps/apple/TeslaSync/feature-views/ActionBuilder.*` (View + @Observable `ActionBuilderModel`
+    + Fields + Views + Catalog + Adapter + JSON + strings + Previews + Tests), shipped by
+    `p4-apple/feature-views/0080` (commit 87160b082). It already covers all 30 parity items.
+    The P7 page layer here REUSES it (no type duplication) and adds the page host + the navigation
+    registration + the platform-catalog strings the page program requires.
+  • web route = (unrouted): `ActionBuilder` is an embedded form component, not a sidebar
+    destination, so there is no `AppRoute` case for it. Per the prompt ("(if routed) map (unrouted)
+    to it as a deep link / NavigationDestination"), it is registered as a `NavigationDestination`
+    value (`ActionBuilderRoute` + `.actionBuilderNavigationDestination()`), not a top-level route.
+
+=== CAPABILITY PROBE (this runner) ===
+  swift toolchain ............ Apple Swift 6 (Xcode 26.5 / 17F42)                       OK
+  /Applications/Xcode.app .... Xcode 26.5 via DEVELOPER_DIR override                    OK
+  iPhoneSimulator SDK ........ iphonesimulator (arm64-apple-ios18.0-simulator)          OK
+  macOS SDK .................. macosx (arm64-apple-macos15.0)                           OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)         OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                              OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                   OK
+  xcodegen ................... project generates cleanly; new files registered          OK
+  Shared.xcframework ......... NOT staged (Frameworks/ holds only .gitkeep)            WARN
+  Sources/Features in project  REGISTERED (Sources path → app + macOS targets)          OK
+  Tests/Unit in project ...... REGISTERED (TeslaSyncTests + TeslaSync-macOSTests)        OK
+
+  Capability note: the parity unit lists no charts/maps and (per the manifest) "no API
+  data sources — renders from navigation values / local state". The core requirement is
+  SwiftUI, which is AVAILABLE and PROVEN below by real iOS-18 AND macOS-15 typechecks +
+  an executed XCTest suite. The capability-BLOCKED escape ("no Xcode runner") does NOT
+  apply. STATUS=DONE, not BLOCKED.
+
+=== ARTIFACT ===
+  NEW — P7 page layer (apps/apple/Sources/Features/Automations/):
+    ActionBuilderPageModel.swift   104  @Observable page state holder: ActionBuilderContext seam
+                                        (web `actions` + `channels` props / navigation values),
+                                        ActionBuilderPageState (loading/error/loaded), builds the
+                                        embedded ActionBuilderModel; load()/refresh(). No networking.
+    ActionBuilderPage.swift        180  Routed page View: native page chrome (title/subtitle) + the
+                                        three data states (loading skeleton / error+Retry / loaded =
+                                        the embedded `ActionBuilder` builder) + adaptive column width
+                                        (macOS/iPad cap, iPhone fill) + 4 #if DEBUG previews.
+    ActionBuilderNavigation.swift   23  ActionBuilderRoute (Hashable, Sendable) + the
+                                        `.actionBuilderNavigationDestination()` View modifier — the
+                                        unrouted-surface registration (push to present the builder).
+  NEW — page test (apps/apple/Tests/Unit/Features/Automations/):
+    ActionBuilderPageModelTests.swift 83  XCTest: load→loaded (default empty + seeded), load→error +
+                                        builder cleared, refresh recovers, builder mutations reflect
+                                        in page.actions (add + change-kind→default channel).
+  REUSED (committed, unchanged) — apps/apple/TeslaSync/feature-views/ActionBuilder.* (the builder:
+    View, @Observable ActionBuilderModel, ActionFields (4 kinds), JSON params engine, command catalog,
+    pure adapter, per-surface strings, previews, 26 tests).
+  STRINGS — apps/apple/Localization/Localizable.xcstrings: +33 keys (27 web parity keys verbatim +
+    6 native page-chrome keys: pageTitle, pageSubtitle, loading, errorTitle, errorMessage, a11ySurface).
+  Largest new .swift = 180 lines (swiftlint file_length<=400 honored). No new file imports the
+  Shared xcframework (the surface renders from local state; SwiftUI/Foundation/Observation only).
+
+=== PARITY ===
+  PARITY_REQUIRED=30. Each item below has binding evidence (file + symbol). The 27 web i18n keys are
+  ALL referenced in the reused builder source AND present in Localizable.xcstrings — verified
+  mechanically (referenced==27/27, catalogued==27/27, 0 missing).
+
+  PANELS (1):
+   [x] panel  GlassPanel1
+        → feature-views/ActionBuilder.swift `ActionBuilderRow.body … .tsGlassPanel()` (per-action
+          card) + `ActionBuilderEmptyState … .tsGlassPanel()`; surfaced by the page's success state
+          Sources/Features/Automations/ActionBuilderPage.swift `loadedState → ActionBuilder(model:)`.
+
+  STATES (2):
+   [x] state  error
+        → page Sources/Features/Automations/ActionBuilderPageModel.swift `ActionBuilderPageState.error`
+          rendered by ActionBuilderPage.swift `errorState(_:)` (TSErrorDisplay + Retry); PLUS the web
+          inline params error feature-views/ActionBuilder.Fields.swift `CommandActionFields.paramsError`
+          (commandParamsObjectError / invalidJson) — the source's only error surface.
+   [x] state  success
+        → page `ActionBuilderPageState.loaded` → ActionBuilderPage.swift `loadedState` rendering the
+          populated builder feature-views/ActionBuilder.swift `ActionBuilder.body ForEach(model.rows)`.
+
+  STRINGS (27) — key → reference symbol (feature-views/ActionBuilder.*) + Localizable.xcstrings entry:
+   [x] automations.builder.actionType .............. ActionBuilder.swift ActionBuilderRow type picker
+   [x] automations.builder.addAction ............... ActionBuilder.swift addButton
+   [x] automations.builder.channel ................. ActionBuilder.Views.swift ActionChannelPicker label
+   [x] automations.builder.command ................. ActionBuilder.Fields.swift CommandActionFields picker
+   [x] automations.builder.commandParams ........... ActionBuilder.Fields.swift CommandActionFields textarea
+   [x] automations.builder.commandParamsObjectError  ActionBuilder.Fields.swift handleParamsChange
+   [x] automations.builder.commandParamsPlaceholder  ActionBuilder.Fields.swift ActionBuilderPromptKeys.commandParams
+   [x] automations.builder.invalidJson ............. ActionBuilder.Fields.swift handleParamsChange (catch)
+   [x] automations.builder.moveDown ................ ActionBuilder.Views.swift ActionRowControls
+   [x] automations.builder.moveUp .................. ActionBuilder.Views.swift ActionRowControls
+   [x] automations.builder.noChannels .............. ActionBuilder.Views.swift ActionChannelPicker.emptyLabel
+   [x] automations.builder.notifyMessage ........... ActionBuilder.Fields.swift NotifyActionFields textarea
+   [x] automations.builder.notifyPlaceholder ....... ActionBuilder.Fields.swift ActionBuilderPromptKeys.notify
+   [x] automations.builder.removeAction ............ ActionBuilder.Views.swift ActionRowControls
+   [x] automations.builder.selectCommand ........... ActionBuilder.Adapter.swift commandOptions sentinel
+   [x] automations.builder.settingKey .............. ActionBuilder.Fields.swift SetSettingActionFields key
+   [x] automations.builder.settingKeyPlaceholder ... ActionBuilder.Fields.swift ActionBuilderPromptKeys.settingKey
+   [x] automations.builder.targetAutomationId ...... ActionBuilder.Fields.swift CallAutomationActionFields
+   [x] automations.builder.value ................... ActionBuilder.Fields.swift SetSettingActionFields valueField
+   [x] automations.builder.valueBoolean ............ ActionBuilder.Adapter.swift SettingValueKind.boolean.labelKey
+   [x] automations.builder.valueNumber ............. ActionBuilder.Adapter.swift SettingValueKind.number.labelKey
+   [x] automations.builder.valueNumberPlaceholder .. ActionBuilder.Fields.swift ActionBuilderPromptKeys.valueNumber
+   [x] automations.builder.valueText ............... ActionBuilder.Adapter.swift SettingValueKind.text.labelKey
+   [x] automations.builder.valueTextPlaceholder .... ActionBuilder.Fields.swift ActionBuilderPromptKeys.valueText
+   [x] automations.builder.valueType ............... ActionBuilder.Fields.swift SetSettingActionFields type picker
+   [x] common.false ................................ ActionBuilder.Fields.swift SetSettingActionFields boolOptions
+   [x] common.true ................................. ActionBuilder.Fields.swift SetSettingActionFields boolOptions
+
+  PARITY_COVERED=30   (panels 1/1 · states 2/2 · strings 27/27)   PARITY_COVERED==PARITY_REQUIRED ✓
+
+=== GATE — HOST-RUNNABLE STEPS (executed on THIS machine; real output) ===
+  [1] check-placeholders.ps1 (ADR-011 stub gate; swift) — Sources/Features/Automations:
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+  [2] swiftlint --strict (config apps/apple/.swiftlint.yml) — 0 violations attributable to
+        Sources/Features/Automations (one nesting violation found + fixed by hoisting the preview
+        providers; the only remaining tree violations are PRE-EXISTING in
+        widget-primitives/WidgetChartSummary.Tests.swift — not this surface):
+      LINT_EXIT=0                                                                   OK
+
+  [3] swiftformat --lint (config apps/apple/.swiftformat):
+        0/4 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+
+  [4] swiftc -typecheck — macOS 15 SDK (Swift 6, -strict-concurrency=complete, -D DEBUG),
+        REAL closure = generated Tokens.swift + Design (TSDesign/TSMaterial) + the UI/Feedback
+        components the views use (Buttons/Cards/Typography/Badges/States/Skeletons/Banners) +
+        the committed builder (8 files incl. Previews) + the 3 new page files:
+          xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+            -target arm64-apple-macos15.0 -D DEBUG <21 files>
+        MAC_TYPECHECK_EXIT=0                                                        OK
+
+  [5] swiftc -typecheck — iOS 18 SIMULATOR SDK (same closure + flags,
+        -target arm64-apple-ios18.0-simulator):
+        IOS_TYPECHECK_EXIT=0                                                        OK
+
+  [6] swift test — the page-model + builder XCTest suites EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (module renamed TeslaSync so `@testable import TeslaSync`
+        resolves; real ActionBuilderPageModel + builder Adapter/Catalog/JSON/Model + the 3 test
+        files), Swift 6 language mode / -strict-concurrency=complete:
+          Test Suite 'ActionBuilderPageModelTests'      passed —  5 tests, 0 failures
+          Test Suite 'ActionBuilderAdapterTests'        passed —  8 tests, 0 failures
+          Test Suite 'ActionBuilderModelTests'          passed —  7 tests, 0 failures
+          Test Suite 'ActionJSONTests'                  passed —  8 tests, 0 failures
+          Test Suite 'ActionCatalogTests'               passed —  2 tests, 0 failures
+          Test Suite 'ActionBuilderAccessibilityTests'  passed —  1 test,  0 failures
+          Executed 31 tests, with 0 failures (0 unexpected) in 0.010 seconds
+        SWIFT_TEST_EXIT=0                                                           OK
+        Covers (new page model): default-empty load → loaded; seeded actions/channels +
+        defaultChannelID; load failure → error + builder cleared; refresh recovers after error
+        (load count 2); builder add + change-kind→default-channel reflected in page.actions.
+
+  [7] xcodegen generate — the new files are enumerated into the generated project:
+        XCODEGEN_EXIT=0
+        ActionBuilderPage.swift / ActionBuilderPageModel.swift / ActionBuilderNavigation.swift
+          → 6 pbxproj refs each (iOS + macOS app targets).
+        ActionBuilderPageModelTests.swift → 6 refs (TeslaSyncTests + TeslaSync-macOSTests bundles).
+
+=== GATE — FULL-APP XCODE BUILD/TEST (DEFERRED to the signed macos-latest runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on THIS host; the scheme pre-action that stages the KMP
+    framework via Gradle is skipped by building the -target, exposing the single hard blocker):
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync       -sdk iphonesimulator build
+         CODE_SIGNING_ALLOWED=NO`
+            error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+            ** BUILD FAILED **                          -> IOS_TARGET_EXIT=65
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO`
+            (same missing XCFramework)                  -> MAC_TARGET_EXIT=65
+      - grep of both builds for errors mentioning ActionBuilder/Automations: NONE
+        (zero errors attributable to this surface — the only error is the missing xcframework).
+    Why DEFERRED (environment/infra, NOT a defect in this surface — identical disposition to the
+    feature-views predecessors recorded in apps/macos-pending-verifications.md, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app/macOS targets link the KMP core; staging it needs a
+          Kotlin/Native Gradle build (apps/shared :core:assembleSharedXCFramework), the documented
+          long-pole (GRADLE_EXIT=124 / BUILD INTERRUPTED on prior runs). Deferred to
+          p5-hardening/H8-0001 → p4-apple/P99-0001 on a macos-latest runner.
+      (b) macOS app/widget signing requires a development certificate on a signed runner (ADR-012);
+          independent of this surface.
+    The SAME 31 tests are PROVEN GREEN by the executed SwiftPM harness (step [6]); the page + builder
+    typecheck against BOTH the iOS-18 and macOS-15 SDKs (steps [4]/[5]). No green result is claimed
+    for the full-app build; its real exit-65 cause is shown.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (GlassPanel1) + every anonymous region reproduced (the builder's
+      four per-kind field groups + empty state) — via the reused, committed builder hosted by the page.
+  [x] All 30 parity items render from the bound @Observable state holder (ActionBuilderPageModel →
+      ActionBuilderModel). PARITY_COVERED==30.
+  [x] Data states for the source: loading (skeleton) / error (TSErrorDisplay + Retry — the manifest
+      `error`) / loaded (the populated builder — the manifest `success`); the builder's own empty
+      state renders when there are no actions, so no region is ever blank.
+  [x] All visible strings from Localizable.xcstrings; zero hardcoded literals; web key names matched
+      verbatim (27/27 referenced + catalogued, verified mechanically).
+  [x] Dark mode + Dynamic Type + accessibility + SI units honored; SwiftUI-native (materials, menus,
+      native pickers/fields) — no web cloning. (Surface carries no unit values; SI converters N/A.)
+  [x] build + lint + test + placeholder gates green on this runner; full-app xcodebuild DEFERRED with
+      captured exit-65 evidence.
+  [x] EXIT=0 / STATUS=DONE; apple-ledger rows for page:automations/ActionBuilder (apple-macos +
+      apple-ios) set status=done, coveredCount=requiredCount=30.
+
+=== HONESTY COVENANT ===
+   1 No red-as-green ...... host gates are genuinely green (raw exits pasted); the full-app xcodebuild
+                           is shown DEFERRED with its real exit-65 + missing-xcframework cause.
+   2 No scope narrowing ... full P7 page (host + model + navigation + tests) + all 30 parity items +
+                           catalog strings; reuses (does not stub) the committed builder.
+   3 No skip-and-assume ... web source + manifest read end-to-end; every panel/state/string mapped to
+                           a real symbol; every gate executed on THIS runner.
+   4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+   5 No parity shortcuts .. GlassPanel1 + error/success + all 27 keys mapped to builder symbols and
+                           Localizable.xcstrings entries (mechanically verified 27/27).
+   6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+   7 No predecessor bypass  same code-complete + DEFERRED-full-app disposition as the feature-views
+                           rows in apps/macos-pending-verifications.md.
+   8 No commit on red ..... the committed artifact is GREEN on every runnable gate (dual-SDK typecheck,
+                           31/31 SwiftPM tests, swiftlint --strict, swiftformat --lint, placeholder,
+                           xcodegen); the only non-green step is the environment-blocked
+                           Shared.xcframework build, DEFERRED with evidence.
+   9 No silent drift ...... changes confined to Sources/Features/Automations/* (3) + the page test +
+                           Localizable.xcstrings + the parity ledger + this log; PATH RECONCILIATION
+                           documents the Sources/Features vs templated-path mapping. project.yml
+                           already enumerates Sources + Tests/Unit (no edit); the .xcodeproj is
+                           git-ignored.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+=== DISPOSITION ===
+  P7 page page:automations/ActionBuilder is delivered Apple-idiomatically at full web parity: a routed
+  ActionBuilderPage (native chrome + loading/error/success states, adaptive macOS+iOS) hosting the
+  committed feature-view builder (every web branch: 4 action kinds, JSON params editor, add/remove/
+  reorder), registered as a NavigationDestination for the unrouted surface, with all 27 web i18n keys
+  in Localizable.xcstrings. It typechecks on BOTH the iOS-18 and macOS-15 SDKs under Swift 6
+  strict-concurrency=complete against the REAL tokens + components, and its page-model + builder XCTest
+  suites EXECUTE 31/31 green via SwiftPM — with swiftlint --strict / swiftformat --lint / placeholder
+  all clean and xcodegen enumerating every file. The full-app iOS-Simulator + macOS xcodebuild build/
+  test is DEFERRED (not failed by this code): blocked by the unstaged KMP Shared.xcframework
+  (Kotlin/Native Gradle long-pole) + macOS development-signing, per apps/macos-pending-verifications.md.
+
+IOS_BUILD_TEST=DEFERRED   (target build evidence: EXIT=65, missing Shared.xcframework)
+MAC_BUILD_TEST=DEFERRED   (target build evidence: EXIT=65, missing Shared.xcframework)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+PARITY_REQUIRED=30
+PARITY_COVERED=30
+EXIT=0
+STATUS=DONE

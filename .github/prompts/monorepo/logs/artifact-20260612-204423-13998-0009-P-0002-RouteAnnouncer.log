@@ -1,0 +1,130 @@
+=== P4 Shared surface 0002 RouteAnnouncer (Apple) ===
+Date: 2026-06-12
+Host: Darwin, Xcode 26.5 (17F42), Swift 6.3.2, SwiftLint 0.63.3, SwiftFormat 0.61.1, XcodeGen 2.45.4
+Repo HEAD: 264c54328  Branch: auto/20260612-204423-13998/9
+Surface: components/a11y/RouteAnnouncer.tsx  →  apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.*
+
+------------------------------------------------------------------------------
+DELIVERABLE — COMPLETE
+------------------------------------------------------------------------------
+Native-Apple-idiomatic parity of the web RouteAnnouncer (the SPA route-change
+screen-reader announcer). Shipped 10 files, following the established
+AnnouncerRegion (0001) shared-surface pattern verbatim:
+
+  RouteAnnouncer.swift            main SwiftUI surface (header + state switch + freshness chip)
+  RouteAnnouncer.Adapter.swift    pure core: Meta, RouteChange, padding port, effect rule, a11y builders
+  RouteAnnouncer.Model.swift      P1/S8 state-holder, P1/S11 telemetry seam, presenter seam, projection, P1/S10 i18n facade
+  RouteAnnouncer.Seams.swift      RouteTitleObserver (useLocation port), source protocol, live + in-memory sources, AX presenter
+  RouteAnnouncer.States.swift     loading / empty / error chrome
+  RouteAnnouncer.Views.swift      live-region card, history row/section, data body, freshness chip
+  RouteAnnouncer.Previews.swift   per-state DEBUG previews (data/empty/loading/error/stale/offline)
+  RouteAnnouncer.strings          P1/S10 i18n catalog contribution (no English literals in Swift)
+  RouteAnnouncer.Tests.swift      adapter + projection + a11y unit tests (24 cases)
+  RouteAnnouncer.ModelTests.swift state-holder + voicing + observer + live-source tests (22 cases)
+
+States rendered (no hidden surface): loading, empty, error, data, stale, offline.
+Data binding via shared P1/S8 state-holder (RouteTitleObserver, the useLocation
+parity); no direct HTTP in the view. The web source deliberately does NOT route
+through useAnnouncer() (see its header) — the native surface honours that
+separation and binds the route observer, not the shared announcer. Real VoiceOver
+voicing via AccessibilityNotification.Announcement at polite priority. Telemetry
+view.opened emitted with slug "RouteAnnouncer".
+
+------------------------------------------------------------------------------
+GATE RESULTS (exact gate commands)
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65   (BLOCKED — pre-existing compiler crash, see ENVIRONMENT BLOCKERS #1)
+
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65   (BLOCKED — missing dev signing certificate, see ENVIRONMENT BLOCKERS #2)
+
+swiftlint --strict
+  LINT_EXIT=2   (3 violations, all in PRE-EXISTING out-of-scope file
+                 TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift — vars 'a'/'b'/'c';
+                 0 violations in any RouteAnnouncer file)
+
+swiftformat --lint apps/apple
+  FORMAT_EXIT=1 (1 violation, in PRE-EXISTING out-of-scope file
+                 TeslaSync/feature-views/RecentDrivesSection.Previews.swift — redundantType;
+                 0 violations in any RouteAnnouncer file)
+
+check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer
+  PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+EVIDENCE — RouteAnnouncer surface is correct (every check scoped to my files)
+------------------------------------------------------------------------------
+[PASS] Whole-module type-check: Xcode "EmitSwiftModule normal arm64 (in target
+       'TeslaSync')" succeeded 8× across build attempts. This type-checks EVERY
+       file in the TeslaSync module, including all RouteAnnouncer.* sources.
+[PASS] Zero compile errors mention any RouteAnnouncer file in ANY of the 4 build
+       logs (ios_buildtest, ios_clean, ios_final, mac_buildtest).
+[PASS] swiftlint --strict on the 9 RouteAnnouncer Swift files: 0 violations.
+[PASS] swiftformat --lint on the 9 RouteAnnouncer Swift files: 0/9 require formatting.
+[PASS] No placeholder/stub patterns (TODO/FIXME/Placeholder/Lorem/fatalError-unimpl
+       etc.) in any of the 10 files — verified by grep + the gate script.
+[PASS] Core adapter logic verified at RUNTIME standalone (Foundation-only compile +
+       execute): 15/15 checks — zero-width dedupe padding (counter % 4 rotation),
+       the three web effect branches (skip-first-render / empty-title-clear /
+       announce-title incl. whitespace guard), the VoiceOver label builders, and
+       the surface metadata (slug + 100 ms default delay). Output:
+         ALL_CORE_LOGIC_CHECKS_PASSED
+
+The XCTest suites (RouteAnnouncer.Tests.swift + RouteAnnouncer.ModelTests.swift,
+46 cases total: adapter unit tests, per-state projection/snapshot tests, a11y
+label tests, model + voicing + observer + live-source tests) are written and
+type-check into the test target, but CANNOT EXECUTE because the test host (the
+TeslaSync app target) does not link — it is blocked by the pre-existing compiler
+crash below, which has nothing to do with this surface.
+
+------------------------------------------------------------------------------
+ENVIRONMENT BLOCKERS (pre-existing, out-of-scope, NOT caused by this surface)
+------------------------------------------------------------------------------
+#1  iOS build — deterministic Swift 6.3.2 IRGen compiler CRASH in a pre-existing,
+    out-of-scope file (not in this prompt's allowed file set):
+
+      While evaluating request IRGenRequest(IR Generation for file
+        ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+      While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+        (reabstraction thunk for a `(isolated (any Actor)?) -> Bool` closure)
+      llvm::report_fatal_error(...) -> report_at_maximum_capacity(unsigned long)
+
+    PROVEN PRE-EXISTING & INDEPENDENT OF THIS SURFACE:
+      • git diff HEAD shows this surface ADDS only 10 RouteAnnouncer files and
+        MODIFIES zero existing files (AppearanceSettings.Controls.swift untouched).
+      • A clean build (fresh DerivedData, single slot, 64 GB RAM @ 72% free)
+        crashed identically on this file.
+      • A build with ALL RouteAnnouncer files REMOVED from the tree (pristine HEAD,
+        regenerated project, 0 RouteAnnouncer refs in pbxproj) crashed with the
+        BYTE-IDENTICAL signature (same file, same SIL function
+        @$sSbScA_pSgIeAghyg_SbIeAghn_TR, same report_at_maximum_capacity).
+      • The crashing compilation batch (A-prefixed files) contains NONE of this
+        surface's files; reabstraction-thunk IRGen is per-file.
+    Cannot be fixed from this prompt's allowed file set (RouteAnnouncer.* + log).
+
+#2  macOS build — code-signing: "TeslaSync-macOS has entitlements that require
+    signing with a development certificate. Enable development signing." The macOS
+    target fails at the entitlements/signing stage (before compiling sources). No
+    development signing identity is available on this runner. Pre-existing project
+    configuration (Resources/TeslaSync-macOS.entitlements + ENABLE_HARDENED_RUNTIME),
+    out of scope for this surface.
+
+#3/#4  swiftlint / swiftformat full-scope failures are entirely in pre-existing
+    out-of-scope files (WidgetChartSummary.Tests.swift, RecentDrivesSection.Previews.swift),
+    untouched by this surface (git diff HEAD empty for both).
+
+------------------------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------------------------
+The RouteAnnouncer surface is COMPLETE and CORRECT: it type-checks into the real
+Xcode module build, passes swiftlint --strict and swiftformat --lint with zero
+violations on its own files, contains no stubs/placeholders, and its core logic is
+verified at runtime. Per the Honesty Covenant (rule 1: no red-as-green), the
+acceptance gate is reported RED/BLOCKED because the shared `xcodebuild build test`
+gate is blocked by a PRE-EXISTING, deterministic Swift-toolchain IRGen crash in an
+unrelated out-of-scope file (proven identical at pristine HEAD) and by a missing
+macOS dev-signing certificate — neither of which this surface can or should fix.
+
+EXIT=65
+STATUS=BLOCKED

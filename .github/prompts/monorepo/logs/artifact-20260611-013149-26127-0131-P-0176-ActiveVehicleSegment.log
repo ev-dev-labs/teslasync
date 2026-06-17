@@ -1,0 +1,158 @@
+=== P4 Shared surface 0176 ActiveVehicleSegment (Apple) ===
+Web source (THE spec): web/src/components/layout/status-bar/ActiveVehicleSegment.tsx
+Native output:         apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.*
+Run host:              Darwin (arm64), $(date) 2026-06-11 PDT
+
+--- Capability probe (per prompt: "If unavailable on the runner -> STATUS=BLOCKED with API evidence") ---
+xcodebuild : Xcode 26.5 (Build 17F42)                                  [AVAILABLE]
+swift      : Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)          [AVAILABLE]
+swiftlint  : /opt/homebrew/bin/swiftlint                               [AVAILABLE]
+swiftformat: /opt/homebrew/bin/swiftformat                             [AVAILABLE]
+pwsh       : /opt/homebrew/bin/pwsh                                    [AVAILABLE]
+java       : openjdk 17.0.19 (for the KMP Shared.xcframework)          [AVAILABLE]
+iOS sim    : iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) [AVAILABLE]
+SwiftUI + Swift Charts + MapKit (iOS 18 / macOS 15 SDKs)               [AVAILABLE]
+=> Apple toolchain IS available. (This surface uses no chart/map; data sources only.)
+
+--- Dependency: KMP Shared.xcframework (scheme pre-action build-shared-xcframework.sh) ---
+$ apps/shared/gradlew -p apps/shared --console=plain :core:assembleSharedXCFramework
+> Task :core:assembleSharedReleaseXCFramework
+xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+BUILD SUCCESSFUL in 8m  (15 actionable tasks: 11 executed, 4 from cache)
+Staged -> apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)  [OK]
+
+==========================================================================================
+GATE STEPS (commands exactly as specified in the prompt gate)
+==========================================================================================
+
+--- STEP 1: iOS build + test -------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+start: Thu Jun 11 21:15:36 PDT 2026
+end:   Thu Jun 11 21:22:12 PDT 2026
+... (full transcript captured; the build halts at the FIRST Swift semantic error) ...
+…/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures non-escaping parameter 'content'
+Command SwiftCompile failed with a nonzero exit code
+Testing cancelled because the build failed.
+** TEST FAILED **
+IOS_EXIT=65
+   >> The ONLY compile error is in a PRE-EXISTING SIBLING surface (AISuggestNewGeofences.swift),
+      committed at d30ee02f9 "feat(apps/apple/shared-surfaces): add AISuggestNewGeofences surface (P4)"
+      on 2026-06-11 07:23 — ~13h before this session, and is git-unmodified by me.
+   >> ZERO errors originate in ActiveVehicleSegment.* (grep proof below). The whole app target is a
+      single Swift module, so one sibling's semantic error fails the shared `build test` for every
+      surface. Fixing AISuggestNewGeofences is OUT OF the allowed-files scope for this prompt
+      ("Allowed files: apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.*, the log file") and
+      it is another prompt's deliverable, so it must not be touched (Covenant rule 6/7; ADR scope).
+
+   $ grep -E "ActiveVehicleSegment[^ ]*\.swift:[0-9]+:[0-9]+: error:" /tmp/avs-ios.log
+   (no matches) -> NONE in my files
+
+--- STEP 2: macOS build + test -----------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build test
+start: Thu Jun 11 21:25:32 PDT 2026
+end:   Thu Jun 11 21:25:41 PDT 2026
+…/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS')
+…/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS')
+** TEST FAILED **
+MAC_EXIT=65
+   >> PLATFORM-CAPABILITY block: the macOS app + widget targets carry entitlements
+      (Resources/TeslaSync-macOS.entitlements, ENABLE_HARDENED_RUNTIME=YES) and project.yml ships
+      DEVELOPMENT_TEAM="" with CODE_SIGN_STYLE=Automatic. This runner has no development signing
+      certificate / provisioning, so the macOS build cannot be signed and fails before/independent of
+      any surface code. Signing config lives in project.yml + Resources/*.entitlements — OUT OF the
+      allowed-files scope, and the missing certificate is an environment capability, not a code defect.
+   >> ZERO errors originate in ActiveVehicleSegment.* (grep proof: no matches in /tmp/avs-mac.log).
+
+--- STEP 3: swiftlint --strict (whole tree, 4505 files) ----------------------------------
+$ swiftlint --strict
+Done linting! Found 0 violations, 0 serious in 4505 files.
+LINT_EXIT=0
+
+--- STEP 4: swiftformat --lint apps/apple (whole tree, 4803 files) ------------------------
+$ swiftformat --lint .
+0/4803 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--- STEP 5: placeholder / stub gate ------------------------------------------------------
+(5a) Prompt's literal command:
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment
+PLACEHOLDER_EXIT=0
+   NOTE: shared-surfaces store each surface as flat sibling files (ActiveVehicleSegment.*), not a
+   per-surface subdirectory, so the literal -Path resolves to a non-existent directory and the
+   scanner returns a (vacuous) clean result. To make this MEANINGFUL (Covenant rule 1: no red-as-green)
+   the scan was ALSO run over a temp copy of all 9 shipped files:
+(5b) Meaningful scan of the 9 shipped surface files:
+$ ./apps/tools/check-placeholders.ps1 -Path <tmp with ActiveVehicleSegment.*> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+(5c) Scanner self-test (proves the scanner actually detects stubs):
+$ ./apps/tools/check-placeholders.ps1 -SelfTest
+[PASS] dirty tree -> PLACEHOLDER_COUNT=4 (non-zero) ; [PASS] NotImplementedException ; [PASS] Kotlin TODO(
+[PASS] clean tree -> 0 ; [PASS] opt-out with reason ALLOWED ; [PASS] opt-out without reason flagged
+SELFTEST_EXIT=0
+
+==========================================================================================
+SURFACE-SCOPE VERIFICATION (supplementary positive evidence for ActiveVehicleSegment.*)
+Because the shared app target cannot link on this runner (sibling compile error on iOS; missing
+signing certificate on macOS) — both OUTSIDE this prompt's allowed-files scope — the surface was
+compiled in isolation against the REAL generated design tokens (apps/design/generated/apple/Tokens.swift)
+under the project's concurrency settings (Swift 6, -strict-concurrency=complete). Only the single
+shared component this surface consumes (TSSkeleton) is signature-shimmed; everything else is real.
+==========================================================================================
+$ swiftc -typecheck  ActiveVehicleSegment.Adapter.swift               (host; Foundation-only core)
+ADAPTER_TYPECHECK_EXIT=0
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <iphonesimulator> \
+        -target arm64-apple-ios18.0-simulator  <7 source files + Tokens.swift + TSSkeleton shim>
+IOS_SDK_ISOLATED_TYPECHECK_EXIT=0
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <macosx> \
+        -target arm64-apple-macos15.0  <7 source files + Tokens.swift + TSSkeleton shim>
+MACOS_SDK_ISOLATED_TYPECHECK_EXIT=0
+$ swiftc -typecheck ... ActiveVehicleSegment.Tests.swift (+ Adapter/Model/Seams + XCTest)
+TESTFILE_TYPECHECK_EXIT=0
+   => Surface (Adapter/Seams/Model/States/Views/swift/Previews) and its tests are type-correct for
+      BOTH iOS 18 and macOS 15 SDKs under complete strict concurrency. swiftlint --strict and
+      swiftformat --lint pass on every shipped file; no placeholders/stubs.
+
+--- Shipped files (apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.*) ----------
+ActiveVehicleSegment.Adapter.swift   pure Foundation core (value types, SI distance convert + JS Math.round,
+                                     label/option/metric/tooltip + accessibility builders, resolver, slug)
+ActiveVehicleSegment.Seams.swift     P1/S8 source protocol + Update snapshot + in-memory source;
+                                     P1/S11 telemetry; P1/S10 strings facade
+ActiveVehicleSegment.Model.swift     @MainActor @Observable state holder (projection + copy, lifecycle
+                                     view.opened, select=setVehicleId, one-shot stale auto-refresh)
+ActiveVehicleSegment.States.swift    compact loading / empty / error / freshness chrome (every state renders)
+ActiveVehicleSegment.Views.swift     shared chip content, static single chip, Menu switcher (web listbox peer)
+ActiveVehicleSegment.swift           public surface; phase switch + freshness composition; onAppear start
+ActiveVehicleSegment.Previews.swift  single / multi / multi-iconOnly / empty / loading / error / stale / offline
+ActiveVehicleSegment.Tests.swift     adapter + projection + model unit tests (distance/round/labels/metric/
+                                     tooltip/a11y, every projection branch, telemetry/select/stale)
+ActiveVehicleSegment.strings         P1/S10 keys: statusBar.vehicle.{fallback,none,tooltip,aria,switch} + chrome
+
+--- Parity checklist vs web source -------------------------------------------------------
+[x] Data sources bound via P1/S8 seam (no HTTP in view): useVehicles(fleet) + useSelectedVehicle
+    (selectedId + select) + useVehicleState(live battery%/rated_range) + useUnits(distance label).
+[x] vehicles==0 -> web returns null; native renders a friendly empty chip (P4: never a blank box).
+[x] vehicles==1 -> static, non-interactive chip (Car + label + "· battery% · range unit").
+[x] vehicles>1  -> switcher; selecting routes via select(id) (web setVehicleId); checkmark on active.
+[x] label = display_name || vin || ("Vehicle {id}" | "No vehicle"); subLabel = model.
+[x] metric = round(convertDistanceFromSI(rated_range, unit)) with km/mi/ft factors + JS Math.round.
+[x] tooltip = "Active vehicle · label[ · sub][ · metric]" via .help(); iconOnly hides text.
+[x] every i18n key resolves through P1/S10 facade; no English literal in Swift code.
+[x] VoiceOver labels on chip / switcher / each row; Dynamic Type via Font.TS; tokens P1/S9 only.
+[x] states loading / empty / error / stale / offline all render; stale -> one-shot auto-refresh.
+[x] telemetry: view.opened emitted once with slug "ActiveVehicleSegment" (P1/S11).
+
+==========================================================================================
+VERDICT
+Surface ActiveVehicleSegment.* is COMPLETE and verified within the allowed-files scope:
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_COUNT=0  ADAPTER/iOS-SDK/macOS-SDK/TESTFILE typecheck = 0.
+The prompt gate's two app-target steps are RED for reasons OUTSIDE this surface and OUTSIDE the
+allowed-files scope, and cannot be remediated without editing files this prompt forbids:
+  IOS_EXIT=65  <- pre-existing sibling compile error AISuggestNewGeofences.swift:129 (commit d30ee02f9).
+  MAC_EXIT=65  <- macOS targets require a development signing certificate absent on this runner.
+Per the prompt: capability/predecessor blocks => STATUS=BLOCKED with evidence (above).
+Per Covenant rule 8 ("No commit on red") the surface was NOT committed while the gate is red.
+
+EXIT=65
+STATUS=BLOCKED

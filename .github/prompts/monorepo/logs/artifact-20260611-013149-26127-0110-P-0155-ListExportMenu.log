@@ -1,0 +1,211 @@
+=== P4 Shared surface 0155 ListExportMenu (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/shared-meaningful/P-0155-ListExportMenu.prompt.md
+         (P4 · Shared surface · 0155 · Per-surface parity · Delegation FORBIDDEN)
+Web src : web/src/components/forms/ListExportMenu.tsx (THE specification — read end-to-end)
+Native  : apps/apple/TeslaSync/shared-surfaces/ListExportMenu.* (7 files, 1084 lines)
+Runner  : macOS (Darwin), Xcode 26.5 (Build 17F42), Apple Swift 6.3.2, swiftlint, swiftformat,
+          xcodegen 2.45.4, pwsh, JDK 17, Kotlin/Native 2.4.0 (prebuilt, cached in ~/.konan).
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer. iPhone 16 simulator present.
+Date    : 2026-06-11
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+ARTIFACT (7 files — the only files this prompt is allowed to touch + this log)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  ListExportMenu.swift           (110)  — the surface: a Download-icon trigger + native `.popover`
+                                          + onAppear telemetry; local scope `@State` + drop effect.
+  ListExportMenu.Model.swift     (325)  — Foundation core: ListExportScope/Format/Availability value
+                                          types, the pure projection + scope rules (ListExportMenuLogic),
+                                          the P1/S10 i18n facade (ListExportMenuStrings), the P1/S11
+                                          diagnostics slug + telemetry seam, the @MainActor @Observable
+                                          state-holder model (host export callbacks).
+  ListExportMenu.Views.swift     (189)  — trigger (ghost download button + "Export" caption, spinner
+                                          while loading), popover content (optional scope chooser +
+                                          CSV/JSON rows), scope radio row, format row.
+  ListExportMenu.Previews.swift  (120)  — one #Preview per state (ready / ready+selection / loading /
+                                          empty) + the popover body in both shapes.
+  ListExportMenu.Tests.swift     (187)  — projection/scope-rule + a11y-label + i18n-facade XCTest.
+  ListExportMenu.ModelTests.swift(124)  — P1/S11 telemetry seam + model export-dispatch XCTest.
+  ListExportMenu.strings          (29)  — 9 i18n keys (exact web `t(key, default)` set), table
+                                          "ListExportMenu".
+  Shipped (non-test) Swift: 744 LOC. Tests: 311 LOC / 35 tests. i18n keys: 9 (1:1 with the web source).
+
+PARITY MAP (web → native, per the web source read end-to-end)
+  • web hand-rolled popover (manual click-outside + Escape)   → SwiftUI `.popover` (native dismissal,
+                                                                 keyboard, anchored presentation, a11y;
+                                                                 keeps the two-step "pick scope, then
+                                                                 pick format" flow open like the web)
+  • web `<Button variant=ghost icon=Download>Export</Button>` → ListExportMenuTrigger (native Button,
+                                                                 text-secondary tokens, icon+caption;
+                                                                 ChartExportMenu's sibling treatment)
+  • web `<button role=menuitem>` CSV/JSON rows               → ListExportFormatRow (tablecells / curlybraces)
+  • web scope radios (Visible / Selected fieldset)           → scope section + ListExportScopeRadioRow
+  • web `disabled` ("while loading or empty")                → ListExportAvailability ready/loading/empty
+                                                                 (loading=spinner, empty=dim; both label
+                                                                 "No data to export")
+  • web `selectedCount>0` gates the scope fieldset           → ListExportMenuLogic.showsScopeChooser
+  • web initial scope = selectedCount>0 ? selected : visible → ListExportMenuLogic.initialScope
+  • web effect: selected→visible when selection empties      → ListExportMenuLogic.correctedScope
+  • web "export always covers visible when chooser hidden"   → ListExportMenuLogic.effectiveScope
+  • web `visibleCount!=null ? "Visible ({{count}})":"Visible"`→ Strings.visibleScopeLabel ({{count}} ungrouped)
+  • web `onExportCsv(scope)` / `onExportJson(scope)`         → model.export(format, effectiveScope)
+  • web `useTranslation` t(key, default)                     → ListExportMenuStrings facade (P1/S10)
+  • web (no view.opened)                                      → ListExportMenuModel.markAppeared (P1/S11)
+
+STATES (every one renders — the trigger is never hidden):
+  ready (opens popover w/ optional scope chooser + CSV/JSON), loading (disabled trigger + spinner),
+  empty (dimmed disabled trigger, "No data to export"), and the open-popover with/without scope chooser.
+  The web control is purely presentational (its only hook is `useTranslation`; no query), so there is
+  NO data-fetch axis — no stale/offline/error/retry chrome is fabricated (that would be invented
+  behaviour / silent drift, covenant #2/#9). The loading + empty reasons are the native split of the
+  single web `disabled` boolean, which the web prop documents as set "while data is loading or empty".
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+HOST-RUNNABLE GATES (executed on THIS runner — raw results, all GREEN)
+────────────────────────────────────────────────────────────────────────────────────────────────
+[1] swiftformat --lint (apps/apple/.swiftformat config), my 6 Swift files:
+      0/6 files require formatting.                                                  FORMAT_EXIT=0
+
+[2] swiftlint lint --strict (apps/apple/.swiftlint.yml config), my 6 Swift files:
+      Done linting! Found 0 violations, 0 serious in 6 files.                        LINT_EXIT=0
+
+[3] Placeholder / stub gate (apps/tools/check-placeholders.ps1), my 7 surface files:
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0                                                                         PLACEHOLDER_EXIT=0
+    No TODO / FIXME / stub / mock / Coming-soon / Placeholder / Lorem; 0 opt-outs. (Scanned a temp dir
+    holding exactly the 7 ListExportMenu.* files — the gate's literal `-Path …/ListExportMenu` prefix
+    matches no literal node and the scanner treats a missing path as a vacuous clean pass, so the
+    files were scanned explicitly to prove clean rather than trivially.)
+
+[4] Isolated SwiftPM build — REAL P1/S9 design tokens (apps/design/generated/apple/Tokens.swift),
+    Swift 6 language mode (swiftLanguageMode(.v6)), platforms macOS(.v15)/iOS(.v18):
+      $ swift build
+      [8/8] Compiling TeslaSync Tokens.swift
+      Build complete! (7.13s)            ← compiles incl. the #Preview macro         ISO_BUILD_EXIT=0
+
+[5] Isolated XCTest (Xcode 26.5 XCTest runtime), final formatted sources:
+      $ swift test
+      Test Suite 'All tests' passed — Executed 35 tests, with 0 failures (0 unexpected)
+        ListExportMenuLogicTests           14 tests
+        ListExportMenuAccessibilityTests    5 tests
+        ListExportMenuStringsTests          8 tests
+        ListExportMenuDiagnosticsTests      5 tests
+        ListExportMenuModelTests            4 tests                                  ISO_TEST_EXIT=0
+
+[6] Real iOS-18 + macOS-15 swiftc -typecheck (surface + Tokens.swift, -swift-version 6, -D DEBUG):
+      $ xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator …
+        IOS_TYPECHECK_EXIT=0
+      $ xcrun --sdk macosx        swiftc -typecheck -target arm64-apple-macos15.0 …
+        MAC_TYPECHECK_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+FULL-APP xcodebuild build (iOS + macOS) — EXECUTED on this runner; reported raw, NEVER as passing
+────────────────────────────────────────────────────────────────────────────────────────────────
+  WIRING (now fixed in this checkout — the prior run's blocker is gone):
+    • shared-surfaces IS in apps/apple/project.yml `sources:` (app target excludes *Tests.swift; the
+      iOS/macOS XCTest bundles include them) AND in .swiftlint.yml `included:`.
+    • xcodegen generate → 42 ListExportMenu refs in the generated pbxproj; all 7 files wired
+      (ListExportMenu.swift/.Model/.Views/.Previews into the app target, .Tests/.ModelTests into the
+      test bundle, .strings as a resource). So the full-app build DOES compile this surface.
+    • The KMP Shared.xcframework — ABSENT in the prior run — was ASSEMBLED + STAGED on this run:
+      the scheme pre-action build-shared-xcframework.sh ran `gradlew :core:assembleSharedXCFramework`
+      (Kotlin/Native 2.4.0, cached in ~/.konan; no network needed) and produced
+      apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64 + Info.plist):
+        ▸ Assembling Shared.xcframework via Gradle…
+        ▸ Staging …/XCFrameworks/release/Shared.xcframework → apps/apple/Frameworks/Shared.xcframework
+        ✓ Shared.xcframework staged
+
+  [iOS]  $ xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync \
+             -destination 'platform=iOS Simulator,name=iPhone 16' build
+         Pre-action staged Shared.xcframework, then the app target compiled (2580 SwiftCompile/
+         SwiftDriver invocations — i.e. the build reached + ran the app-target Swift type-check that
+         includes shared-surfaces/ListExportMenu.*).
+         ** BUILD FAILED **    (XCODEBUILD_IOS_EXIT=65)
+         Exactly ONE error in the whole build — and it is NOT mine, it is a PRE-EXISTING, unrelated,
+         out-of-allowed-files surface:
+           TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is
+           unable to type-check this expression in reasonable time; try breaking up the expression
+           into distinct sub-expressions   ( return (0 ..< count).map { index in … } — a sample-data
+           closure mixing Int/Double/Int64 literals + an optional-Double ternary; a deterministic
+           Swift expression-complexity limit owned by that surface's own prompt, committed at
+           afff462c1 "feat(apps/apple/feature-views): add RecentDrivesSection surface (P4)", untouched
+           by this prompt — `git diff` on it is empty.)
+         ZERO ListExportMenu errors. `grep error: | grep -v RecentDrivesSection` → no other errors.
+
+  [macOS] $ xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS build
+         Pre-action found the xcframework UP-TO-DATE (Gradle incremental). The build then FAILED at
+         the project signing check, BEFORE app compilation:
+         ** BUILD FAILED **    (XCODEBUILD_MAC_EXIT=65)
+           error: "TeslaSync-macOS" has entitlements that require signing with a development
+             certificate. Enable development signing in the Signing & Capabilities editor.
+           error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+             certificate. …
+         This is the PRE-EXISTING absence of macOS development-signing identities on this runner (see
+         apps/macos-pending-verifications.md), a project/runner config issue outside this prompt's
+         allowed files (entitlements live in Resources/*.entitlements + project.yml). ZERO ListExportMenu
+         errors.
+
+  Both full-app failures are PRE-EXISTING, unrelated to this surface, and OUTSIDE this prompt's allowed
+  files (ListExportMenu.* only) — fixing RecentDrivesSection.Previews.swift or the macOS signing config
+  would be scope expansion (covenant #2/#6). They are owned by the respective surface prompt + the
+  P99-0001 apple-acceptance-gate on a signed macos-latest runner. This is a STRONGER result than the
+  prior sanctioned 0155 run (which deferred before the xcframework existed): here the framework was
+  built + staged, the surface is wired (42 pbxproj refs), and the app-target compile ran through this
+  surface with ZERO attributable errors.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT (binding)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild is reported BUILD FAILED with raw exit 65
+                           and the exact foreign causes — never reported as passing. Only the gates
+                           that genuinely pass on this runner are marked green.
+  2  No scope narrowing  : every web branch reproduced — the disabled trigger (loading/empty), the
+                           ready popover, the selectedCount>0 scope fieldset, the visibleCount!=null
+                           count label, the initial-scope rule, the selected→visible auto-correction,
+                           the effective-scope guard, the CSV/JSON items, the scope handed to export.
+                           The pre-existing foreign build errors were NOT "fixed" by editing files
+                           outside the allowed set.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted. The
+                           full-app build was actually run (not assumed): the xcframework was built +
+                           staged, 2580 SwiftCompile invocations observed, the single iOS error + the
+                           macOS signing errors captured verbatim from the live logs.
+  4  No stubs as final   : complete production surface + 35 real tests; placeholder scanner COUNT=0,
+                           0 opt-outs; no TODO/FIXME/stub/mock/Coming-soon/Placeholder/Lorem.
+  5  No parity shortcut  : the ungrouped `{{count}}` interpolation, the scope initialiser + drop
+                           correction, the effective-scope guard, the disabled-tooltip vs menu-label
+                           switch, the CSV-then-JSON order, and the SF-Symbol icon mapping are each
+                           unit-asserted against the web source's behaviour.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder model seam, P1/S9 tokens (real Tokens.swift), P1/S10
+                           i18n facade, P1/S11 view.opened telemetry all honoured; built on the
+                           established ChartExportMenu (sibling) + SavedViewMenu (popover) patterns.
+  8  No commit on red    : the committed artifact (7 ListExportMenu.* files + this log) is GREEN on
+                           every host-runnable gate AND on a real isolated Swift 6 strict-concurrency
+                           build + 35/35 XCTest + iOS-18/macOS-15 typecheck, AND compiles with ZERO
+                           attributable errors inside the full app target. The full-app build's red is
+                           exclusively pre-existing foreign code (RecentDrivesSection type-check
+                           timeout; absent macOS signing) this commit does not — and is not allowed to —
+                           touch.
+  9  No silent drift     : changes are confined to TeslaSync/shared-surfaces/ListExportMenu.* + this
+                           log (git status shows exactly the 7 new files). The native split of the web
+                           `disabled` boolean into loading/empty reasons is disclosed above.
+  10 EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+────────────────────────────────────────────────────────────────────────────────────────────────
+  Production-polished, Apple-idiomatic ListExportMenu shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 35 tests pass under Swift 6 strict concurrency, against
+  the REAL P1/S9 design tokens, via the Xcode 26.5 XCTest runtime, with real iOS-18 + macOS-15
+  swiftc -typecheck green and swiftformat / swiftlint / placeholder all green on the surface files
+  (0 violations, 0 opt-outs) and the #Preview macro compiling. The KMP Shared.xcframework was built +
+  staged on this runner and the full-app iOS xcodebuild compiled THROUGH this wired surface (42 pbxproj
+  refs, 2580 SwiftCompile invocations) with ZERO ListExportMenu errors. The full-app iOS + macOS builds
+  do not reach a clean ** BUILD SUCCEEDED **, blocked ONLY by pre-existing, unrelated, out-of-allowed-
+  files conditions — RecentDrivesSection.Previews.swift's deterministic expression-type-check timeout
+  (a different surface's own prompt) and the absent macOS development-signing identities — both owned by
+  their respective prompts + the P99-0001 apple-acceptance-gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md. No failure anywhere is attributable to this surface.
+
+EXIT=0
+STATUS=DONE

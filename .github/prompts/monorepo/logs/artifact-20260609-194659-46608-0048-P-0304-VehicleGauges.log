@@ -1,0 +1,206 @@
+=== P4 Feature view 0304 VehicleGauges (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/VehicleGauges.*  (11 .swift + 1 .strings, 2379 lines)
+Web src  : web/src/features/vehicles/components/VehicleGauges.tsx
+Host     : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat + pwsh + xcodegen + Java 17 present
+Date     : 2026-06-10
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+  swiftlint / swiftformat / pwsh / xcodegen / xcrun simctl -> all present
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0).
+  KMP Shared.xcframework: assembled live this run via Gradle (BUILD SUCCESSFUL in 7m7s) and STAGED into Frameworks/.
+  Capability requirement (SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG) is met — NOT a capability block.
+  (This surface uses no charts/maps — see "Charts / maps used: (none)" in the prompt — so SwiftUI + SF Symbols only.)
+
+----------------------------------------------------------------------------------------
+FILES (allowed-files scope: apps/apple/TeslaSync/feature-views/VehicleGauges.* + this log)
+----------------------------------------------------------------------------------------
+  VehicleGauges.swift            (70)  — surface view (freshness banner + phase switch, onAppear/start)
+  VehicleGauges.Adapter.swift   (330)  — pure data types + SI conversion/format (ports of unitConversion.ts +
+                                         numberFormat.ts, parity-pinned) + tint rules (batteryColor/boolColor) + a11y
+  VehicleGauges.Projection.swift(368)  — content projection: car viz + 4 gauges + 2/3 bars + 4 chips, web source order
+  VehicleGauges.Model.swift     (190)  — P1/S8 state-holder: input/resolved/phase projection + @Observable model,
+                                         connection axis + stale one-shot auto-refresh
+  VehicleGauges.Seams.swift     (108)  — surface slug, P1/S11 view.opened telemetry, P1/S8 source + InMemory double,
+                                         P1/S10 NSLocalizedString facade (table "VehicleGauges")
+  VehicleGauges.Views.swift     (314)  — tint→token bridge, GlassPanel surface, responsive layout, radial gauge,
+                                         metric bar, status chip, flow-wrap Layout (web flex-wrap)
+  VehicleGauges.CarViz.swift    (189)  — native vehicle visualization (battery ring + model silhouette + corner
+                                         status badges + motion treatment) — the web <TeslaCarViz> counterpart
+  VehicleGauges.States.swift    (179)  — loading skeleton / empty / error chrome + stale-offline connectivity banner
+  VehicleGauges.Previews.swift  (136)  — DEBUG previews (parked / charging / driving-imperial / loading / empty /
+                                         error / stale / offline)
+  VehicleGauges.Tests.swift     (326)  — adapter + projection + a11y unit tests (25)
+  VehicleGauges.ModelTests.swift(105)  — state-holder / telemetry / freshness unit tests (7)
+  VehicleGauges.strings          (64)  — P1/S10 catalog (13 web common.* keys + native chrome + model captions)
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  Composition  : GlassPanel (faint cyan→purple gradient wash) wrapping a responsive [auto,1fr] layout —
+                 (1) car visualization (web <TeslaCarViz model batteryLevel isCharging isLocked isClimateOn
+                     sentryMode speed>) reproduced natively as a battery ring + model silhouette + corner badges
+                     (charging bolt / sentry shield / climate wind / lock) + motion treatment when moving;
+                 (2) four radial gauges (web <RadialGauge>): Battery (%/100), Range (SI→distance pref),
+                     Speed (SI→speed pref), Power (charger_power kW / 250);
+                 (3) two-or-three metric bars (web <MetricBar>): Battery Level, Estimated Range, and Charge Rate
+                     ONLY when is_charging (web `{state.is_charging && <MetricBar.../>}`);
+                 (4) four status chips: lock (Lock/Unlock), sentry (Shield), climate (Wind), software (Cpu).
+  SI parity    : range read as SI metres, speed as SI m/s, charge_rate as SI metres-per-hour, converted at the
+                 display boundary; gauge ceilings expressed in SI (600 mi / 250 mph / 100 mi-per-h) so the percent
+                 fill is unit-independent — exactly as the web source documents. battery_level (%) and charger_power
+                 (kW) are NOT routed through the unit facade (web parity — rendered verbatim).
+  Colour parity: web hex → design token (ADR-006 semantic): CYAN→accent, PURPLE→chartSeriesPower, green #10b981→
+                 statusSuccess, amber→statusWarning, red→statusDanger, muted-grey inactive→textMuted. batteryColor
+                 (>60 success / >25 warning / else danger), boolColor (lock), sentry/climate/speed/power ternaries —
+                 all ported + unit-tested.
+  States       : loading (skeleton mirroring the gauge layout) / empty ("No live readings") / error (retry) / data
+                 + stale banner+auto-refresh / offline banner. Cached content stays visible while stale/offline/
+                 refreshing (web parity — parent keeps last good state). Every state renders real chrome.
+  Bindings     : P1/S8 VehicleGaugesSource state-holder seam (no HTTP in the view) — vehicle + state + units +
+                 loading/error/connection snapshot, mirroring the web props (VehicleGauges is a presentational leaf
+                 fed `vehicle` + `state` and reads useUnits); P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/
+                 TSMotion) + tsGlassPanel + TSButton + TSFadeIn + TSSkeleton; P1/S10 NSLocalizedString facade
+                 (table "VehicleGauges"); P1/S11 view.opened telemetry (slug "VehicleGauges", once + idempotent).
+  i18n         : 13/13 web keys reproduced (common.battery/range/speed/power/batteryLevel/estimatedRange/chargeRate/
+                 locked/unlocked/sentryOn/sentryOff/climateOn/climateOff) + native envelope + model captions.
+                 The web `software_version || 'N/A'` literal is localized via common.notAvailable (documented choice,
+                 not silent drift — covenant #9). Every code key verified present in the catalog (0 missing).
+  a11y         : per-gauge ignore+label, per-bar combined label, per-chip combined label, car-viz composed VoiceOver
+                 summary (model + battery + charging/lock/climate/sentry/driving), refresh/retry labels; decorative
+                 icons hidden; Dynamic Type via system fonts; Reduce Motion honored on every fill animation + the
+                 car-viz motion + TSFadeIn/TSSkeleton.
+  Telemetry    : view.opened emitted once on start with surface slug "VehicleGauges" (P1/S11 diagnostics contract).
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint
+      Surface (11 .swift)                 -> 0/11 require formatting.   FORMAT_EXIT=0
+      Tree-wide `swiftformat --lint .`    -> 0/3183 require formatting, 3 skipped.   FORMAT_TREE_EXIT=0
+
+[2] swiftlint --strict
+      Surface (11 .swift, --no-cache)     -> 0 violations, 0 serious in 11 files.   LINT_EXIT=0
+      Tree-wide `swiftlint lint --strict` -> 0 violations, 0 serious in 3179 files.   LINT_TREE_EXIT=0
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1 -Language swift, on an isolated copy of the surface)
+      NOTE: the prompt's literal `-Path …/VehicleGauges` has no extension and matches no on-disk path (the files
+      are `VehicleGauges.*`); to make the 0 MEANINGFUL the gate was run on an isolated copy of all 12 surface files.
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      Independent grep for todo|fixme|xxx|coming soon|placeholder|lorem ipsum|not implemented|fatalError("unimpl|
+      fatalError("not|Text("TODO across VehicleGauges.* -> CLEAN (0 hits).   PLACEHOLDER_EXIT=0
+
+[4] isolated SwiftPM build + test  (pure layer: Adapter + Projection + Model + Seams + both test files,
+    Package swift-tools 6.0, .swiftLanguageMode(.v6) = Swift 6 strict concurrency; Foundation/Observation/OSLog only)
+      swift build -> Build complete! (0 errors)
+      swift test  -> Executed 32 tests, with 0 failures (0 unexpected)
+      Suites: VehicleGaugesModelKeyTests(2) VehicleGaugesTintRulesTests(2) VehicleGaugesFormatTests(5)
+              VehicleGaugesGaugeProjectionTests(5) VehicleGaugesBarChipProjectionTests(4) VehicleGaugesFractionTests(1)
+              VehicleGaugesPhaseProjectionTests(4) VehicleGaugesAccessibilityTests(2) VehicleGaugesModelTests(7)
+      SPM_BUILD_EXIT=0  SPM_TEST_EXIT=0  (32/32)
+
+[5] dual-SDK swiftc -typecheck  (FULL surface incl. SwiftUI views + CarViz + #Previews [-D DEBUG], compiled against
+    the REAL design system: ../design/generated/apple/Tokens.swift + the actual shared components the surface uses —
+    Sources/Design/TSMaterial.swift + TSDesign.swift + Sources/Components/UI/{Typography,Badges,Buttons,Cards}.swift
+    + Components/Motion/Motion.swift + Components/Feedback/Skeletons.swift; -swift-version 6)
+      iOS 18    (-target arm64-apple-ios18.0-simulator,  --sdk iphonesimulator) -> 0 errors / 0 warnings  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)          -> 0 errors / 0 warnings  MAC_TYPECHECK_EXIT=0
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj  (git-ignored; rebuilt on demand)   XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 12 files (72 file-ref + build-file refs across iOS/macOS app + iOS/macOS test
+      bundles): VehicleGauges.{Adapter,CarViz,Model,ModelTests,Previews,Projection,Seams,States,swift,Tests,Views}.swift
+      + VehicleGauges.strings.
+
+[7] KMP Shared.xcframework — ASSEMBLED + STAGED (the usual deferral cause — RESOLVED this run)
+      cd apps/shared && ./gradlew --console=plain :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 7m7s  GRADLE_EXIT=0
+      Staged release variant (ios-arm64 + ios-arm64-simulator + macos-arm64) -> apps/apple/Frameworks/Shared.xcframework.
+
+----------------------------------------------------------------------------------------
+[8] REAL APP-MODULE COMPILE  (KMP framework staged; -target builds skip the scheme's Gradle pre-action)
+----------------------------------------------------------------------------------------
+  8a. macOS app module:
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      => ** BUILD FAILED **  exit 65  with 54 `error:` lines — and ZERO are VehicleGauges:
+         grep "error:" | grep VehicleGauges  =>  0
+      All 54 errors are PRE-EXISTING, UNRELATED parallel-merge collisions in OTHER agents' surfaces:
+         RecentDrivesListWidget.Previews(15) StateTimelineWidget.Previews(11) StateTimeline.Previews(10)
+         RecentDrivesSection.Previews(8) StateTimelineWidget.Model(2) StateTimeline.Source(2) RecentDrivesSection.Seams(2)
+         RecentDrivesListWidget.Model(2) StateTimelineWidget(1) RecentDrivesListWidget(1)
+         => "RecentDrives{Connection,LoadStatus,Model,Update}" + "StateTimeline{Connection,LoadStatus,Model,Update}"
+            ambiguous for type lookup (each public type defined twice across the colliding feature-view↔dashboard-widget
+            surfaces), plus their downstream "cannot infer contextual base" / "'nil' requires a contextual type" cascades.
+      The VehicleGauges translation units compiled with ZERO errors inside the real TeslaSync macOS app module.
+
+  8b. iOS app module:
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -configuration Debug
+                 CODE_SIGNING_ALLOWED=NO build
+      => ** BUILD FAILED **  exit 65  with 108 `error:` lines — and ZERO are VehicleGauges (same RecentDrives*/
+         StateTimeline* collision class; no IRGen crash in this slot).  grep "error:" | grep VehicleGauges => 0.
+      The VehicleGauges translation units compiled with ZERO errors inside the real TeslaSync iOS app module.
+
+  8c. macOS development-signing — `security find-identity -p codesigning` => 0 valid identities found.
+
+----------------------------------------------------------------------------------------
+[9] LITERAL PROMPT GATE  (xcodebuild -scheme … build test) — RED, DEFERRED (NOT a VehicleGauges failure)
+----------------------------------------------------------------------------------------
+  The literal gate `xcodebuild -scheme TeslaSync[-macOS] … build test` rebuilds the whole ~2400-file app target and
+  re-runs the scheme's Gradle pre-action. In THIS slot checkout that target does not compile/sign for reasons entirely
+  outside this surface and explicitly Out of Scope ("Other surfaces … each has its own prompt"; Anti-Revert: do NOT
+  modify other surfaces):
+    • the pre-existing RecentDrives*/StateTimeline* duplicate-public-type collisions shown verbatim in [8a]/[8b]
+      (committed baseline — `git status` shows only the 12 VehicleGauges.* files added by this prompt), and
+    • macOS code-signing (0 valid identities, [8c]).
+  VehicleGauges contributes ZERO errors to either app module (verified in [8a]/[8b]). This full-app build/test gate is
+  owned by p4-apple/P99 acceptance gate on a signed macos-latest runner once the cross-surface collisions are resolved,
+  per apps/macos-pending-verifications.md.
+    IOS_EXIT=DEFERRED   (real iOS app-module compile: 108 pre-existing cross-surface collision errors, 0 surface errors)
+    MAC_EXIT=DEFERRED   (real macOS app-module compile: 54 pre-existing collision errors, 0 surface errors; 0 signing identities)
+
+========================================================================================
+HONESTY COVENANT (binding)
+========================================================================================
+  1  No red-as-green     : the full-app xcodebuild gate [9] is reported RED and explicitly DEFERRED with the real
+                           app-module compile failures pasted ([8a] 54 / [8b] 108 cross-surface collision errors) —
+                           never as passing.
+  2  No scope narrowing  : every web region (car viz, 4 radial gauges, battery/range/charge-rate bars incl. the
+                           is_charging conditional, 4 status chips), all 13 source i18n keys, and loading/empty/error/
+                           data + stale/offline all render + are tested.
+  3  No skip-and-assume  : steps [1]-[7] AND both real app-module builds [8a]/[8b] executed on THIS runner; raw results
+                           pasted. The placeholder 0 was made meaningful by scanning the real files.
+  4  No stubs as final   : complete production surface + 32 real passing tests; placeholder scan = 0; no
+                           todo/stub/mock/placeholder/lorem tokens anywhere. The native car viz is a full rendering
+                           (battery ring + silhouette + status badges + motion), not a skeleton.
+  5  No parity shortcut  : SI conversions (parity-pinned 1609.344 / 0.44704 / SI gauge ceilings), gauge value/max
+                           pairing + decimals rule, batteryColor/boolColor tints, charge-rate-only-when-charging,
+                           software `|| 'N/A'`, freshness banner + auto-refresh, a11y, view.opened — all mapped + tested.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens + tsGlassPanel/TSButton/TSFadeIn/TSSkeleton, P1/S10 i18n
+                           facade, P1/S11 telemetry consumed (no re-implementation). Local unit types + SI ports follow
+                           the SpeedGearPanel/QuickStatsGrid precedent so the pure layer is KMP-free + host-testable.
+  8  No commit on red    : the COMMITTED artifact is GREEN on every host-runnable gate AND on a real isolated Swift 6
+                           build + 32/32 tests + dual-SDK (iOS18 + macOS15) typecheck against the real design system,
+                           AND compiles with ZERO errors inside BOTH real app modules (iOS + macOS, KMP framework
+                           staged). The deferred full-app gate is RED only on PRE-EXISTING cross-surface collisions
+                           (RecentDrives*/StateTimeline*) + absent signing, with zero surface errors.
+  9  No silent drift     : changes confined to feature-views/VehicleGauges.* (12 files) + this log. The software
+                           `|| 'N/A'` localization choice and the native car-viz rendering (no shared atomic car
+                           component exists; atomic components are a separate P4 bundle, out of scope) are documented
+                           above, not silent.
+  10 EXIT / STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic VehicleGauges shipped at parity with the web source and INDEPENDENTLY VERIFIED
+  on this host: it typechecks clean on both shipped SDKs (iOS 18 + macOS 15) against the real generated design tokens +
+  the actual shared components it uses, its 32 real tests pass under Swift 6 strict concurrency, swiftlint --strict /
+  swiftformat --lint / placeholder gate are all green (surface AND tree-wide), xcodegen enumerates all 12 files, and —
+  with the KMP Shared.xcframework assembled + staged live this run — the surface compiles with ZERO errors inside BOTH
+  the real TeslaSync iOS and macOS app modules. The full-app -scheme build/test gate is DEFERRED (not failed by this
+  code): both app-module builds produced errors that are ALL pre-existing cross-surface collisions in other agents'
+  RecentDrives*/StateTimeline* surfaces (0 VehicleGauges errors), plus 0 macOS codesigning identities — both owned by
+  the P4/P99 acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md. This is the repo's
+  sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

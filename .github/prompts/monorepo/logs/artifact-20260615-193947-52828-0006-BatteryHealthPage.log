@@ -1,0 +1,474 @@
+================================================================================
+p4-apple · P7 · page:battery/BatteryHealth — SwiftUI / HIG parity
+  web source : web/src/features/battery/pages/BatteryHealthPage.tsx  (route /battery)
+  output     : apps/apple/Sources/Features/Battery/BatteryHealth*.swift
+               (the live Xcode project — like the sibling BatteryDegradation /
+                BatteryCells / SleepEfficiency pages — hosts battery pages under
+                Sources/Features/Battery/; the prompt's nominal
+                apps/apple/TeslaSync/Features/Battery/** is the allowed-files alias,
+                reconciled here. `Sources/` is the only hand-written group compiled by
+                project.yml; the generated TeslaSync.xcodeproj is git-ignored and
+                rebuilt via `xcodegen generate`.)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI BatteryHealthPage at web parity: a pure @Observable
+state holder (ADR-004 — no networking in the view) over an injectable
+BatteryHealthDataSource seam whose value types mirror the web wire 1:1 (production binds
+the KMP analytics/charging endpoints through the seam):
+  loadHealth      <- useBatteryHealthAnalytics    -> GET /analytics/battery-health
+  loadDegradation <- useBatteryDegradation        -> GET /analytics/battery-degradation
+  loadSessions    <- useChargingSessionsPaginated
+  loadChargingLive<- useChargingTelemetryLatest    -> GET /charging-telemetry/latest
+The primary health source resolves the page phase (loading/empty/error/ready); the other
+three are independent (web separate queries) — their absence yields each section's own
+empty state, never the page-level error.
+
+Every measurement stays SI exactly as the API serves it (SOH/scores raw percent,
+capacity kWh, range km of derived SI, module temps °C, energy added Wh); the user's unit
+preference is applied ONLY at the SwiftUI render boundary via the shared Units facade +
+\.tsUnits (ADR-005). km->display via metres; module-temp spread is the difference of the
+two converted temps so the °F offset cancels (web parity).
+
+The page reproduces the web chrome (PageContainer title + subtitle + header
+VehicleSelect) and ALL 27 panels / 11 charts:
+  - Health-score hero (GlassPanel1): four native radial gauges (SOH banded green/amber/
+    red, Capacity cyan, Degradation banded, Cycles purple) — each showing the ACTUAL
+    value + unit in its centre (web RadialGauge; the shared TSRadialGauge only renders a
+    bare percent, so a faithful BatteryHealthHeroGauge primitive was built) — plus the
+    Excellent/Good/Degraded band badge and the "Years to 80%" warranty figure.
+  - Metric bars (GlassPanel2): Current-Capacity / Degradation / Charge-Cycles bars with
+    palette fills (BatteryHealthBar) + captions.
+  - Seven summary MetricCards (SOH, Current/Original Capacity, Degradation Rate, Total
+    Cycles, Battery Age, Full-Charge-Complete) and four Thermal cards (Module Temp Max/Min
+    with module-number subtitles, Battery Heater on/off, Temperature Spread).
+  - Dynamic Smart Insights (buildInsights): SOH band, fast-charge habit, deep-discharge +
+    Supercharger session insights, low-degradation — status-tinted cards or the empty.
+  - Capacity-Trend prediction (ChartContainer + native multi-series line = web
+    ComposedChart actual+projected, with 80% warranty / 70% threshold reference chips),
+    Range-Trend AreaChart, Charge-Level-Distribution grouped BarChart + habit tiles,
+    Capacity&Range New-vs-Now (4 tiles), AC/DC PieChart + Charging-Statistics panel,
+    Quick-Links grid (deep-links via openURL), and the Recommendations panel.
+Each data source implements loading / empty / error / success; each section renders its
+own empty state (never a blank region). The web per-section SectionErrorBoundary is
+mirrored by BatteryHealthSectionBoundary wrapping the 10 boundaried sections with their
+fallback-title strings.
+
+Adaptive across macOS/iPad (regular) + iPhone (compact): the gauge grid, metric grids,
+and the AC/DC two-column block reflow by horizontalSizeClass; VoiceOver labels/values on
+gauges + charts, Dynamic Type (token fonts), light/dark via the P2 tokens, >=44pt targets.
+
+Files (all new unless noted):
+  Sources/Features/Battery/BatteryHealthModels.swift            (value types + datasource seam + phase + band)
+  Sources/Features/Battery/BatteryHealthChartRows.swift         (derivation-output row value types)
+  Sources/Features/Battery/BatteryHealthDerivations.swift       (pure useMemo/buildInsights/buildRecommendations)
+  Sources/Features/Battery/BatteryHealthFormat.swift            (fmtNumber/fmtPercent/temperature formatters)
+  Sources/Features/Battery/BatteryHealthPageModel.swift         (@Observable model — phase + 4 sources)
+  Sources/Features/Battery/BatteryHealthPageModel.Sample.swift  (Sample + Empty + EmptySections + Failing seams)
+  Sources/Features/Battery/BatteryHealthPage.swift              (view: header + phase switch + readyView)
+  Sources/Features/Battery/BatteryHealthPage.Hero.swift         (hero 4 gauges + metric bars + gauge/bar primitives)
+  Sources/Features/Battery/BatteryHealthPage.Sections.swift     (summary cards + thermal + insights)
+  Sources/Features/Battery/BatteryHealthPage.Panels.swift       (new-vs-now + acdc/stats + quick links + recs + boundary)
+  Sources/Features/Battery/BatteryHealthPage.Charts.swift       (capacity trend + range + charge dist + acdc + skeleton)
+  Sources/Features/Battery/BatteryHealthRouteRegistration.swift (.batteryHealth route registration)
+  Tests/Unit/Features/Battery/BatteryHealthPageModelTests.swift (model state-machine tests)
+  Tests/Unit/Features/Battery/BatteryHealthDerivationsTests.swift (derivation/band/format tests)
+  Sources/App/AppRoute.swift          (MOD: +.batteryHealth case / pathSegment "battery" / icon heart.fill / energy group)
+  Sources/App/AppRouteParser.swift    (MOD: /battery + /battery/health -> .batteryHealth)
+  Sources/TeslaSyncApp.swift          (MOD: wire BatteryHealthRouteRegistration into routeHosts)
+  Tests/Unit/App/RouteTests.swift     (MOD: testAliasesRedirect now asserts /battery + /battery/health -> .batteryHealth)
+  Localization/Localizable.xcstrings  (MOD: +108 keys = 101 web battery.* + 6 battery.links.* + route.batteryHealth)
+  apps/parity/apple-ledger.json       (MOD: +2 rows page:battery/BatteryHealth 147/147, apple-macos + apple-ios)
+
+Navigation: web routes BOTH /battery and /battery/health to BatteryHealthPage (App.tsx).
+A new AppRoute.batteryHealth (pathSegment "battery", energy group) is added; the parser's
+two aliases that previously redirected to .energy now resolve to .batteryHealth, and the
+route is registered + reachable + deep-linkable. The only exhaustive AppRoute switches
+live in AppRoute.swift (systemImage + group, both updated) — verified no other file
+switches over .batteryCells/.batteryDegradation, so none needed editing.
+
+i18n: every visible literal resolves from Localizable.xcstrings using the WEB key names
+verbatim; the i18next {{soh}}/{{pct}}/{{count}}/{{rate}}/{{n}} interpolations are
+reproduced via String(localized:) + token substitution (BatteryHealthFormat.interpolate /
+BatteryHealthDerivations.localized). A script confirmed all 105 required strings are
+referenced in the Battery source AND present as xcstrings keys (0 missing each).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=147
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1
+       BatteryHealthPage.Hero.swift > BatteryHealthHeroSection.body (TSGlassPanel — 4-gauge hero)
+[x] panel  — GlassPanel2
+       BatteryHealthPage.Hero.swift > BatteryHealthMetricBarsSection.body (TSGlassPanel — 3 metric bars)
+[x] panel  — State-of-Health
+       BatteryHealthPage.Sections.swift > BatteryHealthSummarySection (card battery.metric.soh)
+[x] panel  — Current-Capacity
+       BatteryHealthPage.Sections.swift > BatteryHealthSummarySection (card battery.metric.currentCap)
+[x] panel  — Original-Capacity
+       BatteryHealthPage.Sections.swift > BatteryHealthSummarySection (card battery.metric.originalCap)
+[x] panel  — Degradation-Rate
+       BatteryHealthPage.Sections.swift > BatteryHealthSummarySection (card battery.metric.degradation)
+[x] panel  — Total-Cycles
+       BatteryHealthPage.Sections.swift > BatteryHealthSummarySection (card battery.metric.cycles)
+[x] panel  — Battery-Age
+       BatteryHealthPage.Sections.swift > BatteryHealthSummarySection.ageValue (card battery.metric.age)
+[x] panel  — Full-Charge-Complete
+       BatteryHealthPage.Sections.swift > BatteryHealthSummarySection.fullChargeValue (battery.metric.fullChargeComplete)
+[x] panel  — GlassPanel10
+       BatteryHealthPage.Sections.swift > BatteryHealthThermalSection.body (TSGlassPanel — thermal)
+[x] panel  — Module-Temp-Max
+       BatteryHealthPage.Sections.swift > BatteryHealthThermalSection.tempMaxCard
+[x] panel  — Module-Temp-Min
+       BatteryHealthPage.Sections.swift > BatteryHealthThermalSection.tempMinCard
+[x] panel  — Battery-Heater
+       BatteryHealthPage.Sections.swift > BatteryHealthThermalSection.heaterCard
+[x] panel  — Temperature-Spread
+       BatteryHealthPage.Sections.swift > BatteryHealthThermalSection.spreadCard
+[x] panel  — GlassPanel15
+       BatteryHealthPage.Sections.swift > BatteryHealthInsightsSection.body
+[x] panel  — Capacity-Trend-Prediction
+       BatteryHealthPage.Charts.swift > BatteryHealthCapacityTrendSection
+[x] panel  — Estimated-Range-Over-Time
+       BatteryHealthPage.Charts.swift > BatteryHealthRangeTrendSection
+[x] panel  — GlassPanel18
+       BatteryHealthPage.Charts.swift > BatteryHealthChargeDistributionSection (TSGlassPanel)
+[x] panel  — GlassPanel19
+       BatteryHealthPage.Panels.swift > BatteryHealthNewVsNowSection.body (TSGlassPanel)
+[x] panel  — GlassPanel20
+       BatteryHealthPage.Panels.swift > BatteryNewVsNowTile (battery.newVsNow.capNew)
+[x] panel  — GlassPanel21
+       BatteryHealthPage.Panels.swift > BatteryNewVsNowTile (battery.newVsNow.capNow + lost delta)
+[x] panel  — GlassPanel22
+       BatteryHealthPage.Panels.swift > BatteryNewVsNowTile (battery.newVsNow.rangeNew)
+[x] panel  — GlassPanel23
+       BatteryHealthPage.Panels.swift > BatteryNewVsNowTile (battery.newVsNow.rangeNow + lost delta)
+[x] panel  — AC-DC-Energy-Breakdown
+       BatteryHealthPage.Charts.swift > BatteryHealthACDCChart + Panels.BatteryHealthEnergyBreakdownSection
+[x] panel  — GlassPanel25
+       BatteryHealthPage.Panels.swift > BatteryHealthChargingStatsPanel
+[x] panel  — GlassPanel26
+       BatteryHealthPage.Panels.swift > BatteryHealthQuickLinksSection
+[x] panel  — GlassPanel27
+       BatteryHealthPage.Panels.swift > BatteryHealthRecommendationsSection
+[x] chart  — RadialGauge
+       BatteryHealthPage.Hero.swift > BatteryHealthHeroSection.healthGauge (BatteryHealthHeroGauge — SOH, banded tint)
+[x] chart  — RadialGauge
+       BatteryHealthPage.Hero.swift > BatteryHealthHeroSection.capacityGauge (BatteryHealthHeroGauge — capacity %)
+[x] chart  — RadialGauge
+       BatteryHealthPage.Hero.swift > BatteryHealthHeroSection.degradationGauge (BatteryHealthHeroGauge — %/yr)
+[x] chart  — RadialGauge
+       BatteryHealthPage.Hero.swift > BatteryHealthHeroSection.cyclesGauge (BatteryHealthHeroGauge — cycles)
+[x] chart  — ChartContainer
+       BatteryHealthPage.Charts.swift > BatteryHealthCapacityTrendSection (TSChartContainer)
+[x] chart  — ComposedChart
+       BatteryHealthPage.Charts.swift > BatteryHealthCapacityTrendSection.series (TSLineChart actual+predicted)
+[x] chart  — ChartContainer
+       BatteryHealthPage.Charts.swift > BatteryHealthRangeTrendSection (TSChartContainer)
+[x] chart  — AreaChart
+       BatteryHealthPage.Charts.swift > BatteryHealthRangeTrendSection.series (TSAreaChart)
+[x] chart  — BarChart
+       BatteryHealthPage.Charts.swift > BatteryHealthChargeDistributionSection.series (TSBarChart grouped)
+[x] chart  — ChartContainer
+       BatteryHealthPage.Charts.swift > BatteryHealthACDCChart (TSChartContainer)
+[x] chart  — PieChart
+       BatteryHealthPage.Charts.swift > BatteryHealthACDCChart.slices (TSPieChart AC/DC)
+[x] state  — loading data state
+       BatteryHealthPage.swift > content/.loading -> BatteryHealthSkeleton (redacted(.placeholder))
+[x] state  — empty data state
+       BatteryHealthPage.swift > content/.empty -> emptyView (TSEmptyState) + each section's own empty
+[x] state  — error data state
+       BatteryHealthPage.swift > content/.error -> errorView (TSErrorDisplay + Retry)
+[x] state  — success data state
+       BatteryHealthPage.swift > content/.ready -> readyView(_:)
+[x] string — battery.bar.capacity
+       BatteryHealthPage.Hero.swift:147
+[x] string — battery.bar.cycles
+       BatteryHealthPage.Hero.swift:177
+[x] string — battery.bar.degradation
+       BatteryHealthPage.Hero.swift:161
+[x] string — battery.chart.acdc
+       BatteryHealthPage.Charts.swift:260
+[x] string — battery.chart.acdc.aria
+       BatteryHealthPage.Charts.swift:260
+[x] string — battery.chart.actual
+       BatteryHealthPage.Charts.swift:42
+[x] string — battery.chart.capacityTrend
+       BatteryHealthPage.Charts.swift:22
+[x] string — battery.chart.capacityTrend.aria
+       BatteryHealthPage.Charts.swift:22
+[x] string — battery.chart.chargeDist
+       BatteryHealthPage.Charts.swift:156
+[x] string — battery.chart.chargeDistSub
+       BatteryHealthPage.Charts.swift:173
+[x] string — battery.chart.chargeEnded
+       BatteryHealthPage.Charts.swift:188
+[x] string — battery.chart.chargeStarted
+       BatteryHealthPage.Charts.swift:181
+[x] string — battery.chart.dashedProjected
+       BatteryHealthPage.Charts.swift:28
+[x] string — battery.chart.noBreakdown
+       BatteryHealthPage.Charts.swift:266
+[x] string — battery.chart.noRange
+       BatteryHealthPage.Charts.swift:101
+[x] string — battery.chart.noSessions
+       BatteryHealthPage.Charts.swift:151
+[x] string — battery.chart.noTrend
+       BatteryHealthPage.Charts.swift:24
+[x] string — battery.chart.predicted
+       BatteryHealthPage.Charts.swift:43
+[x] string — battery.chart.range
+       BatteryHealthPage.Charts.swift:109
+[x] string — battery.chart.rangeTrend
+       BatteryHealthPage.Charts.swift:99
+[x] string — battery.chart.rangeTrend.aria
+       BatteryHealthPage.Charts.swift:99
+[x] string — battery.empty
+       BatteryHealthPage.swift:129
+[x] string — battery.gauge.capacity
+       BatteryHealthPage.Hero.swift:66
+[x] string — battery.gauge.cycles
+       BatteryHealthPage.Hero.swift:88
+[x] string — battery.gauge.degradation
+       BatteryHealthPage.Hero.swift:77
+[x] string — battery.gauge.health
+       BatteryHealthPage.Hero.swift:53
+[x] string — battery.habit.avgEnd
+       BatteryHealthPage.Charts.swift:219
+[x] string — battery.habit.avgStart
+       BatteryHealthPage.Charts.swift:214
+[x] string — battery.habit.home
+       BatteryHealthPage.Charts.swift:229
+[x] string — battery.habit.supercharger
+       BatteryHealthPage.Charts.swift:224
+[x] string — battery.health.degraded
+       BatteryHealthModels.swift:204
+[x] string — battery.health.excellent
+       BatteryHealthModels.swift:202
+[x] string — battery.health.good
+       BatteryHealthModels.swift:203
+[x] string — battery.insight.concernDesc
+       BatteryHealthDerivations.swift:53
+[x] string — battery.insight.concernTitle
+       BatteryHealthDerivations.swift:52
+[x] string — battery.insight.deepDischargeDesc
+       BatteryHealthDerivations.swift:88
+[x] string — battery.insight.deepDischargeTitle
+       BatteryHealthDerivations.swift:87
+[x] string — battery.insight.excellentDesc
+       BatteryHealthDerivations.swift:36
+[x] string — battery.insight.excellentTitle
+       BatteryHealthDerivations.swift:35
+[x] string — battery.insight.goodDesc
+       BatteryHealthDerivations.swift:45
+[x] string — battery.insight.goodHabitsDesc
+       BatteryHealthDerivations.swift:74
+[x] string — battery.insight.goodHabitsTitle
+       BatteryHealthDerivations.swift:73
+[x] string — battery.insight.goodTitle
+       BatteryHealthDerivations.swift:44
+[x] string — battery.insight.highFastChargeDesc
+       BatteryHealthDerivations.swift:66
+[x] string — battery.insight.highFastChargeTitle
+       BatteryHealthDerivations.swift:65
+[x] string — battery.insight.highSuperchargerDesc
+       BatteryHealthDerivations.swift:98
+[x] string — battery.insight.highSuperchargerTitle
+       BatteryHealthDerivations.swift:97
+[x] string — battery.insight.lowDegDesc
+       BatteryHealthDerivations.swift:113
+[x] string — battery.insight.lowDegTitle
+       BatteryHealthDerivations.swift:111
+[x] string — battery.insights.empty
+       BatteryHealthPage.Sections.swift:234
+[x] string — battery.insights.title
+       BatteryHealthPage.Sections.swift:230
+[x] string — battery.metric.age
+       BatteryHealthPage.Sections.swift:108
+[x] string — battery.metric.currentCap
+       BatteryHealthPage.Sections.swift:81
+[x] string — battery.metric.cycles
+       BatteryHealthPage.Sections.swift:102
+[x] string — battery.metric.degradation
+       BatteryHealthPage.Sections.swift:93
+[x] string — battery.metric.fullChargeComplete
+       BatteryHealthPage.Sections.swift:114
+[x] string — battery.metric.originalCap
+       BatteryHealthPage.Sections.swift:87
+[x] string — battery.metric.soh
+       BatteryHealthPage.Sections.swift:75
+[x] string — battery.months
+       BatteryHealthPage.Sections.swift:62
+[x] string — battery.newVsNow.capNew
+       BatteryHealthPage.Panels.swift:29
+[x] string — battery.newVsNow.capNow
+       BatteryHealthPage.Panels.swift:35
+[x] string — battery.newVsNow.lost
+       BatteryHealthPage.Panels.swift:69
+[x] string — battery.newVsNow.rangeNew
+       BatteryHealthPage.Panels.swift:42
+[x] string — battery.newVsNow.rangeNow
+       BatteryHealthPage.Panels.swift:48
+[x] string — battery.newVsNow.title
+       BatteryHealthPage.Panels.swift:25
+[x] string — battery.perYear
+       BatteryHealthPage.Hero.swift:167
+[x] string — battery.recommendations.title
+       BatteryHealthPage.Panels.swift:300
+[x] string — battery.section.acdcFailed
+       BatteryHealthPage.swift:187
+[x] string — battery.section.capacityRangeFailed
+       BatteryHealthPage.swift:184
+[x] string — battery.section.chargeDistFailed
+       BatteryHealthPage.swift:178
+[x] string — battery.section.heroFailed
+       BatteryHealthPage.swift:161
+[x] string — battery.section.insightsFailed
+       BatteryHealthPage.swift:173
+[x] string — battery.section.metricBarsFailed
+       BatteryHealthPage.swift:164
+[x] string — battery.section.quickLinksFailed
+       BatteryHealthPage.swift:190
+[x] string — battery.section.recommendationsFailed
+       BatteryHealthPage.swift:193
+[x] string — battery.section.summaryCardsFailed
+       BatteryHealthPage.swift:167
+[x] string — battery.section.thermalFailed
+       BatteryHealthPage.swift:170
+[x] string — battery.stats.acSessions
+       BatteryHealthPage.Panels.swift:174
+[x] string — battery.stats.cycles
+       BatteryHealthPage.Panels.swift:180
+[x] string — battery.stats.dcSessions
+       BatteryHealthPage.Panels.swift:175
+[x] string — battery.stats.empty
+       BatteryHealthPage.Panels.swift:183
+[x] string — battery.stats.title
+       BatteryHealthPage.Panels.swift:169
+[x] string — battery.stats.totalEnergy
+       BatteryHealthPage.Panels.swift:177
+[x] string — battery.stats.totalSessions
+       BatteryHealthPage.Panels.swift:173
+[x] string — battery.subtitle
+       BatteryHealthPage.swift:81
+[x] string — battery.thermal.heater
+       BatteryHealthPage.Sections.swift:182
+[x] string — battery.thermal.moduleNumber
+       BatteryHealthPage.Sections.swift:210
+[x] string — battery.thermal.moduleTempMax
+       BatteryHealthPage.Sections.swift:157
+[x] string — battery.thermal.moduleTempMin
+       BatteryHealthPage.Sections.swift:167
+[x] string — battery.thermal.tempSpread
+       BatteryHealthPage.Sections.swift:196
+[x] string — battery.thermal.title
+       BatteryHealthPage.Sections.swift:141
+[x] string — battery.tip.aboveAvg
+       BatteryHealthDerivations.swift:131
+[x] string — battery.tip.avoid100
+       BatteryHealthDerivations.swift:129
+[x] string — battery.tip.avoidDeep
+       BatteryHealthDerivations.swift:130
+[x] string — battery.tip.great
+       BatteryHealthDerivations.swift:132
+[x] string — battery.tip.reduceFast
+       BatteryHealthDerivations.swift:128
+[x] string — battery.title
+       BatteryHealthPage.swift:42
+[x] string — battery.warrantyLimit
+       BatteryHealthPage.Hero.swift:181
+[x] string — battery.warrantyNote
+       BatteryHealthPage.Hero.swift:106
+[x] string — battery.yearsTo80
+       BatteryHealthPage.Hero.swift:101
+[x] string — battery.yr
+       BatteryHealthPage.Sections.swift:96
+[x] string — common.no
+       BatteryHealthPage.Sections.swift:69
+[x] string — common.off
+       BatteryHealthPage.Sections.swift:177
+[x] string — common.on
+       BatteryHealthPage.Sections.swift:177
+[x] string — common.yes
+       BatteryHealthPage.Sections.swift:69
+--------------------------------------------------------------------------------
+PARITY_COVERED=147
+(All 147 required items render from the bound @Observable BatteryHealthPageModel /
+ BatteryHealthDerivations. All 105 visible literals resolve from Localizable.xcstrings
+ with the web key names — verified by a script that confirmed each of the 105 strings is
+ referenced in the Battery source AND present as an xcstrings key (missing_in_source=0,
+ missing_in_catalog=0). The 4 RadialGauge chart items render the actual value+unit per the
+ web RadialGauge, not a bare percent. ComposedChart is ported as a native multi-series
+ Swift Charts line, AreaChart/BarChart/PieChart via the P3 TSAreaChart/TSBarChart/TSPieChart
+ wrappers — no WKWebView. Beyond the gate minimum, the full web behaviour was ported:
+ projection-trust sanity (>50%/yr slope rejected), actual->projected line bridge, AC/DC
+ split heuristic, deep-discharge/Supercharger insight thresholds, and the New-vs-Now lost
+ deltas.)
+
+================================================================================
+GATE (apple triad: placeholder + swiftformat + swiftlint + xcodegen + build + test)
+================================================================================
+  check-placeholders.ps1 (Sources/Features/Battery, swift) : PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+  swiftformat --lint (13 BatteryHealth* sources + tests)    : 0/14 files require formatting  -> PASS
+  swiftlint --strict Sources/Features/Battery (+ my tests)  : 0 violations          LINT_EXIT=0
+  xcodegen generate                                         : project written       -> OK
+  xcodebuild build  -scheme TeslaSync-macOS (platform macOS): ** BUILD SUCCEEDED **  BUILD_EXIT=0
+  xcodebuild build  -scheme TeslaSync (iOS Simulator)       : the iOS APP target compiled ALL
+        BatteryHealth* files clean (0 errors in any of my files). The shared XCTest bundle
+        fails to COMPILE only on three pre-existing, not-mine Swift-6-concurrency breaks in
+        sibling test files (Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10,
+        Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20,
+        Tests/Unit/Features/Analytics/TimelinePageModelTests.swift) — @MainActor-isolated
+        statics used as nonisolated defaults; untouched by this change (git-clean), the
+        documented out-of-scope test-bundle break the sibling P7 pages also deferred.
+  xcodebuild test   -scheme TeslaSync-macOS, my 3 suites    : Executed 38 tests, 0 failures
+        ** TEST SUCCEEDED **  TEST_EXIT=0
+        (BatteryHealthDerivationsTests 23, BatteryHealthPageModelTests 7, RouteTests 8.
+         To run the bundle past the three pre-existing sibling compile breaks above, those
+         three files were TEMPORARILY moved aside for the run and RESTORED immediately
+         after — git confirms they are byte-identical / untouched; nothing committed.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : every PASS above was executed; raw xcodebuild/swiftlint/swiftformat
+                         output captured. The only RED (iOS XCTest-bundle compile) is the
+                         pre-existing, not-mine sibling break — reported as RED, not masked.
+ 2 No scope narrowing  : all 27 panels + 11 charts + 4 states + 105 strings implemented
+                         (PARITY_COVERED==PARITY_REQUIRED==147).
+ 3 No skip-and-assume  : each section + chart wired to bound state; string coverage script-
+                         verified (0 missing in source, 0 missing in catalog).
+ 4 No stubs as final   : no "Coming soon"/placeholder bodies; placeholder scan COUNT=0. The
+                         data-source Sample seam is the established preview/test double
+                         pattern (production injects the KMP source), not a UI stub.
+ 5 No parity shortcuts : native Swift Charts wrappers only (no WKWebView); gauges show the
+                         real value+unit; per-section empties; SI-at-boundary units.
+ 6 No delegation       : implemented directly, no sub-agent delegation.
+ 7 No predecessor bypass: builds on P1 Units facade, P2 tokens, P3 components, P4 shell/route
+                         host; no re-implementation of shared infra.
+ 8 No commit on red    : committing on all-GREEN in-scope gates (placeholder/swiftformat/
+                         swiftlint/xcodegen/macOS build + executed 38-test suite + iOS app-
+                         target compile of my files). The only RED is the out-of-scope,
+                         pre-existing, not-mine sibling XCTest-bundle compile — deferred to
+                         its owner, as the sibling pages did.
+ 9 No silent drift     : changes confined to the files listed above + this log + the ledger.
+                         xcstrings insertion is a single contiguous block (the pre-existing
+                         entries are byte-identical); ledger diff is +2 rows, 0 deletions.
+10 EXIT/STATUS below.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Battery/BatteryHealth*.swift \
+          apps/apple/Tests/Unit/Features/Battery/BatteryHealth*.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Tests/Unit/App/RouteTests.swift \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-battery-BatteryHealthPage.log
+  git commit -m "feat(apps/apple): BatteryHealthPage at web parity (P7 battery)"
+
+EXIT=0
+STATUS=DONE

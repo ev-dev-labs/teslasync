@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app architecture, and the parity infrastructure.
+
+The web page is a thin wrapper around `NotificationChannelsView`. Let me explore the Apple app structure, the wrapped view, and the parity infrastructure in parallel.
+
+Toolchain is available (xcodebuild, swiftlint, swift, pwsh). Let me explore the parity manifest, the Apple Features structure, and existing built pages to understand conventions.
+
+The manifest scopes this unit to just the `ChannelsPage.tsx` wrapper (2 strings, no data/panels/charts). The existing `AlertRulesPage` is the template to follow. Let me check whether `NotificationChannelsView` is a separate parity unit and read the AlertRules template files.
+
+There's no separate parity unit for `NotificationChannelsView` — the manifest scopes this page to just the wrapper (title + subtitle). Let me check whether an Apple `NotificationChannelsView` already exists, and review the AlertRules model/strings pattern plus how the web `NotificationChannelsView` looks.
+
+An Apple `NotificationChannelsView.swift` already exists in `feature-views/`. My `ChannelsPage` should wrap it, mirroring the web. Let me read the existing channels view, the AlertRules model, and find the shared page-scaffold + navigation wiring.
+
+The `ChannelsPage` should wrap the existing `NotificationChannelsView`, mirroring the web. Let me find the shared page scaffold component, how `NotificationChannelsModel` is constructed, and the navigation/route wiring.
+
+There's a shared Apple `PageContainer` (P3 parity of the web one). Let me read its API, how to construct `NotificationChannelsModel`, and how an existing routed page uses `PageContainer`.
+
+Let me read the `PageContainer` View entry point (Adapter/Seams) and locate the `NotificationChannelsModel` definition plus any sample factory for previews.
+
+Let me find the `PageContainer` View struct, how `NotificationChannelsModel` is constructed in previews, and any existing page that composes `PageContainer` with content.
+
+Let me read the `PageContainer` View struct (init signature) and the channels model/source definitions.
+
+I have the building blocks. Now let me check the strings facade pattern, the xcstrings catalog location, the existing AlertRules log format, and how AlertRules is mounted into navigation.
+
+There's a sibling `WebhooksPage` already built — likely the closest analog (a thin wrapper page). Let me examine it as the template, plus the AlertRules log format and the strings table name.
+
+Two locations exist (`TeslaSync/Features` and `Sources/Features`). My target is `TeslaSync/Features/Notifications/` (like AlertRules). Let me read the WebhooksPage analog, its web source, and verify the Xcode project setup.
+
+`WebhooksPage` is the exact analog (wrapper page → section). I'll mirror it. Let me read its model, the shared `CopyLinkButton`/`TSPageTitle`, its tests, navigation wiring, and check xcodegen.
+
+xcodegen is available. Let me check the `AppRoute` enum for a channels case, the `CopyLinkButton`/`TSPageTitle` signatures, how these pages are mounted into navigation, and the Webhooks test pattern.
+
+`AppRoute` has `notificationsWebhooks`/`notificationsAudit` but no `notificationsChannels`. Let me read the `AppRoute` enum, parser, and find where `WebhooksPage`/`notificationsWebhooks` is wired into the nav graph so I can mirror it for Channels.
+
+Now I understand the routing. The prompt's commit list excludes `Sources/App/`, signaling I should follow the **AlertRules self-contained pattern** (no `AppRoute` enum widening), keeping everything in `TeslaSync/Features/Notifications/`. Let me confirm the parser, catalog format, registry mechanism, and remaining component signatures.
+
+Let me check where the AlertRules destination is mounted, the xcstrings catalog format with the webhooks keys, and the `NotifChannelsInput` shape for the sample source.
+
+Let me view the catalog structure around the webhooks keys and confirm the channels page keys are absent, plus read the `NotifChannelsInput` shape.
+
+Confirmed: the two page keys are absent; I'll add them mirroring the webhooks entries. Let me read the exact `NotifChannelsInput`, `NotificationChannelData`, and `NotifChannelStats` initializers to build a sample source.
+
+I have all the building blocks. Let me read the AlertRules log format, the ledger entry for this unit, and the gate contract before writing code.
+
+Key insight from the AlertRules log: the full `xcodebuild` was RED (exit 65) from pre-existing out-of-scope breakage, but the unit's own files compiled clean — documented honestly, STATUS=DONE. Let me read the rest of that log (VERIFY/PARITY/EXIT sections) and the ledger row schema.
+
+Let me read the final section of the AlertRules log and the ledger row schema for page rows.
+
+The ledger rows use a different key than `unit`. Let me inspect the actual row schema.
+
+I now have the complete precedent (WebhooksPage is the exact template). My plan: ship to `TeslaSync/Features/Notifications/` (matches AlertRules sibling), use the self-contained NavigationDestination pattern (no `AppRoute`/`TeslaSyncApp` edits needed — `/notifications/channels` already resolves to `.notifications` via the parser fallback). Let me verify the Frameworks state, `CopyLinkButton` init, and lint configs before writing.
+
+`Shared.xcframework` is absent (Frameworks has only `.gitkeep`), confirming the full app build requires out-of-scope KMP staging — I'll use the isolated type-check + lint + placeholder methodology like both siblings. `CopyLinkButton(url:)` exists. Let me verify the formatter config and `teslaSyncTheme`, then write a plan and start building.
+
+Let me record a plan + todos, then verify the projection logic and tokens I'll use in previews before writing files.
+
+All confirmed. Let me set up the plan and todos, then write the files.
+
+Now let me create the four Swift files.
+
+Now the page View:
+
+Now the route registration:
+
+Now let me add the two string keys to the catalog, inserting before the webhooks entry (alphabetical, title-before-subtitle like the existing file):
+
+Let me validate the catalog JSON and confirm the keys, then update the todos.
+
+Catalog valid with both keys; webhooks entry preserved. Let me mark file todos done and update the ledger (matching its exact formatting).
+
+I'll insert the two Channels rows right after the Webhooks rows, matching the exact formatting:
+
+Ledger valid (2 new rows). Now let me run the gates — starting with swiftformat and swiftlint on my files.
+
+swiftformat flagged a redundant explicit `Sendable` on the non-public struct. Let me remove it (empty struct is implicitly Sendable) and re-lint.
+
+swiftformat clean (0/4). swiftlint linted the whole project (config `included:` overrides) — 4 violations found. Let me confirm none are in my files and identify the 4.
+
+All 4 violations are pre-existing/out-of-scope (the exact ones the AlertRules log documented); zero are in my files. The config's `included:` list doesn't contain `TeslaSync/Features`, so the default run skips my files. Let me lint my files explicitly to get a clean scoped result.
+
+swiftlint --strict on my 4 files: **0 violations, rc=0**. Now the placeholder gate:
+
+Placeholder gate clean (COUNT=0, EXIT=0; the 1 ALLOWED is the pre-existing AlertRules shimmer opt-out, not my files). Now let me set up an isolated type-check. First, let me check what the data-layer files import (to know if `Shared.xcframework` is in the closure).
+
+The data layer is Shared-free, but the SwiftUI view stack is deeply coupled. Let me map which files in the likely closure import `Shared` (the absent xcframework) so I can build a clean curated type-check set.
+
+None of the closure dirs import `Shared`. Let me confirm globally where `import Shared` lives and whether my closure is truly Shared-free.
+
+My closure is `Shared`-free (the 19 `import Shared` files are all in `SharedFacade`/`DashboardWidgets`/`Tests`, outside my set). Let me attempt a curated isolated type-check (macOS SDK, Swift 6) of my files against the real components, excluding test/preview/Shared-coupled files.
+
+Let me check `Theme.swift` (does `teslaSyncTheme` pull in the Shared-coupled `UnitPreferences`?) to decide whether I need a shim.
+
+`teslaSyncTheme` is Shared-free. Let me identify which `Sources/Components` files reference Shared-facade-only symbols (so I can exclude them), and check the modal file's imports, before assembling the type-check.
+
+Only `UnitFormatters.swift` is Shared-coupled (and I don't use `tsUnits`). Let me assemble the curated type-check set and run it (macOS SDK, Swift 6, `-DDEBUG` for previews).
+
+Only 2 errors, none in my files. Let me see what they are (likely missing symbols from the incomplete closure):
+
+That's a single missing type from a split file (`ModalSize`), not my code. Let me find its defining file, add it, and re-run for a fully clean result.
+
+`ModalSize` lives in `Modal.Adapter.swift`. Let me add the full Modal surface (minus tests/previews) and re-run for a clean result.
+
+Another split-file symbol (`tsGlassPanel` modifier) referenced by `Cards.swift`. Let me locate it:
+
+`tsGlassPanel` is in `Sources/Design/TSMaterial.swift`. Let me add the `Sources/Design` layer and re-run:
+
+CopyLinkButton has more split files defining its seam types. Let me include all non-test/preview CopyLinkButton files and re-run:
+
+There's no `CopyLinkButton.Adapter.swift` — the seam types are in `CopyLinkButton.Seams.swift`. Let me correct the set and re-run:
+
+**Type-check clean: 0 errors** across all 51 files (my 4 + the real design tokens, P3 component library, Modal + CopyLinkButton surfaces, and the full NotificationChannelsView stack) under Swift 6 strict concurrency with previews (`-DDEBUG`). Let me confirm the iOS target too (adaptive parity):
+
+Both macOS and iOS type-checks are clean (0 errors). Let me run `xcodegen generate` to confirm the project picks up my new files (the `.xcodeproj` is git-ignored), then verify they're referenced:
+
+xcodegen succeeded; all 4 files are referenced in the project (6 refs each — iOS + macOS apps + both test bundles). The `.xcodeproj` is git-ignored. Let me gather tool versions for the log header, then write the evidence log.
+
+All gates green. Now let me write the evidence log:
+
+Let me verify the per-file LOC numbers in the log are accurate, then update todos and commit.
+
+Let me correct the per-file LOC in the log to the exact counts (88/61/70/41):
+
+Let me mark remaining todos and review git status before committing exactly the allowed files.
+
+Clean status — exactly my intended changes (the `.xcodeproj` is correctly git-ignored). Let me stage the allowed files and commit:
+
+Commit succeeded (`1c990b92e`). Let me do a final verification and close out the todos.
+
+Working tree clean; commit `1c990b92e` (7 files, 573 insertions); all todos done. Task complete.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

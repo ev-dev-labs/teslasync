@@ -1,0 +1,175 @@
+=== P4 Feature view 0276 FleetSummary (Apple) ===
+
+Artifact : apps/apple/TeslaSync/feature-views/FleetSummary.{swift,Adapter,Projection,Model,Views,Previews,Tests}.swift + FleetSummary.strings
+Web src  : web/src/features/vehicles/components/FleetSummary.tsx  (namespace "vehicles" -> "fleet")
+Allowed  : apps/apple/TeslaSync/feature-views/FleetSummary.* + this log
+ADRs     : ADR-002 (one SwiftUI source group, iOS+macOS), ADR-004 (KMP Shared.xcframework), ADR-009
+
+----------------------------------------------------------------------------------------------------
+ENVIRONMENT (capability check — SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15)
+----------------------------------------------------------------------------------------------------
+  Xcode 26.5 (build 17F42); Swift 6.3.2
+  macOS SDK (typecheck) ...... arm64-apple-macos15.0; -swift-version 6 -strict-concurrency=complete   OK
+  iOS-sim SDK (typecheck) .... arm64-apple-ios18.0-simulator; -swift-version 6 -strict-concurrency=complete  OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint        OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat      OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen         OK
+  iPhone 16 simulator ........ booted                            OK
+  This surface uses NO charts and NO maps (web source has none), so Swift Charts / MapKit are
+  not required here; SwiftUI + Observation + OSLog only. Capability is PRESENT — this is not a
+  platform-capability gap.
+
+----------------------------------------------------------------------------------------------------
+SURFACE SUMMARY (parity with the web source)
+----------------------------------------------------------------------------------------------------
+  Four GlassPanel cards in a responsive grid (web `grid-cols-2 sm:grid-cols-4`):
+    1. Vehicles            — car.fill (cyan/accent)   value = vehicles.length
+    2. Avg Battery         — battery.100 (green)       value = round(mean battery)%   (empty-guard -> 0)
+    3. Total Range         — gauge needle (purple)     value = round(convertDistanceFromSI(Σ rated_range, unit)); unit appended to label
+    4. Charging / Online   — bolt.fill (amber)         value = chargingCount (green) + " / " + onlineCount (muted)
+  SI: Σ rated_range is meters (Phase-42); converted at the display boundary via the shared
+  FleetUnits.distanceFromSI (km /1000, mi /1609.344, ft /0.3048) — reused, not re-declared.
+  Data bound through FleetSummaryViewModel (P1/S8 state-holder seam); no HTTP in the view.
+  States rendered (prompt): loading (skeleton) · empty (ContentUnavailableView) · error (retry) ·
+  content · stale (banner + one guarded auto-refresh) · offline (cached cards + banner).
+  i18n: every label via the P1/S10 facade (table "FleetSummary"); 4 web keys carried verbatim
+  (fleet.vehicles/avgBattery/totalRange/chargingOnline) + native envelope/a11y keys.
+  Telemetry: emits `view.opened` surface="FleetSummary" once on first appear (P1/S11).
+  Accessibility: per-tile combined labels (with unit + "/ N" detail), container summary, Dynamic
+  Type (minimumScaleFactor), reduce-motion honored via the shared TS components.
+
+====================================================================================================
+A. PER-SURFACE / HOST GATES  (FleetSummary.* scope — all GREEN, real runs)
+====================================================================================================
+
+[1] swiftc -typecheck — the 6 non-test surface files + DEBUG previews, compiled against the REAL
+    generated design tokens (apps/design/generated/apple/Tokens.swift) + the REAL shared component
+    & design layer (Sources/Components + Sources/Design, 40 files) + the shared sibling
+    FleetStatsBar.Adapter.swift (DistanceUnitPref + FleetUnits). 48 files total, -swift-version 6
+    -strict-concurrency=complete -D DEBUG.
+      macOS  -target arm64-apple-macos15.0 .............. MACOS_TYPECHECK_EXIT=0
+      iOS18  -target arm64-apple-ios18.0-simulator ...... IOS_TYPECHECK_EXIT=0
+
+[2] Coexistence — the surface compiles in the SAME module as FleetStatsBar.Adapter.swift (the owner
+    of the shared DistanceUnitPref + FleetUnits) with 0 redeclarations (included in [1]); a module-
+    wide scan of Sources/ + TeslaSync/ + widgets/watch for every public type this surface declares
+    (FleetSummary*, FleetVehicleSummarySnapshot, OSLogFleetSummaryTelemetry, InMemoryFleetSummarySource)
+    found 0 collisions.
+      COEXIST_COLLISIONS=0
+
+[3] EXECUTED harness — FleetSummary.Adapter + .Projection + .Model (+ FleetStatsBar.Adapter for the
+    shared unit types) compiled to a native arm64 binary with a main asserting: fmtNumber grouping /
+    half-up / non-finite / percent; per-vehicle aggregation (mean battery + empty-guard, Σ SI range,
+    charging/online counts); responsive column math (2 < 640 <= 4); the four-card projection
+    (ids/values/accents/tones/secondary/unit-suffix) for km, mi and the empty input; isEmpty + phase
+    resolution; the VoiceOver per-tile + container summaries; AND the @MainActor @Observable view-model
+    lifecycle (start applies + telemetry-once, loading->content, resolved-empty->empty, stale auto-
+    refresh once + re-arm, offline cached-hold + no refetch, error + retry, stop re-arms start).
+      ADAPTER+MODEL HARNESS: 61/61 assertions passed; 0 failed   (RUN_EXIT=0)
+
+[4] swiftlint --strict (the 7 FleetSummary .swift files, repo .swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 7 files.   (LINT_EXIT=0)
+
+[5] swiftformat --lint (the 7 .swift files, repo .swiftformat):
+      0/7 files require formatting.   (FORMAT_EXIT=0)
+
+[6] check-placeholders.ps1 (ADR-011) over each FleetSummary .swift file:
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   (no TODO/FIXME/XXX/Placeholder/Lorem/not-implemented)
+
+[7] i18n parity — the 4 web keys resolve through the facade with the web English fallbacks; the
+    unit code (km/mi/ft) is locale-invariant data appended to the label (matching the web), not a
+    catalog entry. Native state-envelope + a11y keys added in FleetSummary.strings.
+      WEB_KEYS=4/4 present; DEAD_KEYS=0
+
+[8] xcodegen generate (existing project.yml globs; NO self-registration):
+      Created project at .../apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+      Enumerated: FleetSummary.swift, .Adapter, .Projection, .Model, .Views, .Previews (app targets)
+                  FleetSummary.Tests.swift (TeslaSyncTests + TeslaSync-macOSTests), FleetSummary.strings
+
+[9] REAL app-target compile (from the iOS xcodebuild below): FleetSummary.{Adapter,Model,Previews,
+    Projection,Views,swift} appear in the TeslaSync target's compiled file set; the target reached
+    `EmitSwiftModule normal arm64` (whole-module type-check + SIL succeeded) and FleetSummary.strings
+    was copied + validated (UTF-8) into the app bundle.
+      FleetSummary compiler errors/warnings = 0
+
+====================================================================================================
+B. LITERAL GATE  (full-app xcodebuild build test — RED, but ONLY from PRE-EXISTING, OUT-OF-SCOPE breakage)
+====================================================================================================
+The KMP Shared.xcframework was assembled live via Gradle/Kotlin-Native (DEBUG + RELEASE slices
+staged into Frameworks/), so the app targets linked a fresh framework. The build then failed for
+reasons that are NOT in any FleetSummary file and NOT editable within the 0276 allowed scope:
+
+  xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      IOS_EXIT=65
+      Root cause: a Swift compiler IRGen CRASH (swift-frontend report_fatal_error), NOT a source
+      error. The crash backtrace pins the file:
+        4. While evaluating request IRGenRequest(IR Generation for file
+           ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+        5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+           (a Bool/Actor/Optional reabstraction thunk — a known IRGen-thunk codegen crash class).
+      AppearanceSettings.Controls.swift is a different, pre-existing feature-view (unmodified;
+      `git status` shows it untouched). Zero FleetSummary files are implicated; FleetSummary itself
+      reached whole-module emit cleanly (A[9]).
+
+  xcodebuild -scheme TeslaSync-macOS                                     build test
+      MAC_EXIT=65
+      Root cause: macOS development code-signing — the target entitlements require a development
+      certificate and the host has none:
+        error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+        error: "TeslaSyncWidgets-macOS" ... require signing with a development certificate.
+        `security find-identity -p codesigning` -> "0 valid identities found".
+      This is a host/infra gap (fails before Swift compilation); unrelated to FleetSummary.
+
+  swiftlint --strict   (tree-wide, the gate scans the whole included tree)
+      LINT_EXIT=2
+      The single violation is PRE-EXISTING and out of scope:
+        dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: error: opening_brace
+      0 FleetSummary violations (A[4]).
+
+  swiftformat --lint apps/apple   (tree-wide)
+      0/2924 files require formatting.   FORMAT_EXIT=0
+
+  check-placeholders.ps1 -Path .../FleetSummary
+      PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+
+These three blockers (the AppearanceSettings.Controls IRGen crash, macOS dev-signing, and the
+LiveSignalSparklinesWidget opening_brace lint) are exactly the shared/pre-existing parallel-merge
+items tracked by apps/macos-pending-verifications.md for every peer surface (ToolCard, AlertMessage-
+Editor, FSMTimelineChart, ScheduledExportsPanel, SignalCatalogPanel, ...). They live outside the
+FleetSummary.* allow-list and cannot be fixed here without scope-narrowing / predecessor-bypass.
+
+----------------------------------------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------------------------------------
+  1  No red-as-green ...... the literal xcodebuild gate is RED (IOS_EXIT=65 / MAC_EXIT=65 /
+                           LINT_EXIT=2); reported as BLOCKED, not DONE.
+  2  No scope narrowing ... the surface implements ALL four cards + all six states + a11y + i18n +
+                           telemetry; nothing dropped.
+  3  No skip-and-assume ... every host gate was executed; both xcodebuild gates were run to a real
+                           nonzero exit (not assumed); the iOS crash file + macOS signing error +
+                           lint file were read from the logs verbatim.
+  4  No stubs as final .... no TODO/placeholder/stub; placeholder gate clean.
+  5  No parity shortcuts .. data/composition/states/i18n keys reproduce the web source.
+  6  No delegation ........ authored directly.
+  7  No predecessor bypass  did NOT edit project.yml / .swiftlint.yml / macos-pending md / the
+                           crashing or linting out-of-scope files; only FleetSummary.* + this log.
+  8  No commit on red ..... the committed FleetSummary.* code is GREEN on every per-surface gate and
+                           in the real app-target compile; the RED is pre-existing, out-of-scope.
+  9  No silent drift ...... reused the shared DistanceUnitPref + FleetUnits (no duplicate SI logic).
+ 10  Log ends with EXIT + STATUS below.
+
+The FleetSummary surface is delivered complete and independently verified (iOS-18 + macOS-15
+typecheck = 0, executed harness 61/61, swiftlint/swiftformat/placeholder = 0, xcodegen enumerated,
+clean in the real iOS app-target compile). The full-app `xcodebuild build test` cannot reach EXIT=0
+on this host because of three PRE-EXISTING, OUT-OF-SCOPE blockers (an AppearanceSettings.Controls.swift
+IRGen compiler crash, macOS development-signing, and a LiveSignalSparklinesWidget lint error). Those
+belong to the P4 acceptance gate / macos-pending CI matrix, not to FleetSummary.* — so per the
+covenant (no red-as-green, no predecessor bypass) this is reported BLOCKED with the evidence above.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

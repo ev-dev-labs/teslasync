@@ -1,0 +1,139 @@
+=== P4 Widget primitive 0003 WidgetComparisonCard (Apple) ===
+Artifact : apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.*  (7 .swift + 1 .strings)
+Web src  : web/src/features/dashboard/widgets/shared/WidgetComparisonCard.tsx
+Host     : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat + pwsh + xcodegen present
+Date     : 2026-06-12
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint / swiftformat / pwsh / xcodegen -> all present
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0); iPhone 16 simulator (iOS 26.5) booted.
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  The web `WidgetComparisonCard` is a PURE presentational widget primitive (a shared widget building block):
+  it takes `metrics: ComparisonMetric[]` + optional `compact` and renders a hairline-separated column of
+  rows, each = a muted truncated label over a semibold formatted value (+ optional muted unit affix) on the
+  left and a direction-aware `<Delta>` (percent change vs the previous period) on the right. Its only own
+  branch is `visible.length === 0 -> <p>No comparison data</p>`; `compact` slices to the first two metrics.
+  There is NO fetch / React-Query / Promise in the source, so it has NO loading/error/stale/offline branch
+  (the host widget that owns the query renders those). Per the sibling presentational-primitive precedent
+  (Delta 0081, MetricCard 0095, Accordion 0203) this surface reproduces ONLY the source's REAL branches:
+    • populated column  (one row per visible metric, separators except the last; web border-b/last:border-b-0)
+    • compact slice     (first two metrics; web metrics.slice(0,2))
+    • empty leaf        (friendly "never a blank box" peer of web <p>No comparison data</p>)
+  The per-row change indicator REUSES the shared native Delta surface (0081) — the faithful peer of the web
+  `<Delta metric={{direction}} display="percent" size="sm" />` (direction = higherIsBetter ?? true).
+  Files: WidgetComparisonCard.Adapter/Model/.swift/Views/Previews/Tests/AdapterTests.swift + .strings.
+  Bindings : P1/S8 WidgetComparisonCardModel @Observable holder (props + projection; no HTTP in the view);
+             P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius) — no Tailwind ports, no raw hex;
+             P1/S10 NSLocalizedString facade (table "WidgetComparisonCard"); P1/S11 view.opened telemetry
+             (slug "WidgetComparisonCard", emitted once + idempotent across appear/disappear).
+  i18n     : web source has 0 t() keys (anonymous; its only literal "No comparison data" is reproduced via
+             widgetComparisonCard.empty). Native a11y/HIG additions: emptyHint, rowLabel, valueUnit. 0 dead.
+  a11y     : each row folds label+value into one VoiceOver element ("{label}, {value}{unit}"); Delta keeps
+             its own "{current} vs {previous}" reading; empty leaf is one combined element; Dynamic Type via
+             tokens; decorative icon/arrow hidden from VoiceOver.
+
+----------------------------------------------------------------------------------------
+BUILD WIRING (new tier directory — necessary, mirrors the 4 existing tiers)
+----------------------------------------------------------------------------------------
+  TeslaSync/widget-primitives did not previously exist, so it was wired exactly like the other tiers:
+    project.yml   -> added to TeslaSync (iOS app) + TeslaSync-macOS (app) sources (excludes *Tests.swift)
+                     and to TeslaSyncTests + TeslaSync-macOSTests bundles (includes *Tests.swift).
+    .swiftlint.yml -> added TeslaSync/widget-primitives to `included`.
+  Without this the new tier would not compile/lint into the targets (making the gate meaningless).
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint
+      surface (TeslaSync/widget-primitives, 7 .swift)  -> 0/7 files require formatting
+      tree-wide (apps/apple)                           -> 0/5080 files require formatting, 2 skipped
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict
+      surface + tree-wide                              -> Done linting! Found 0 violations, 0 serious in 4782 files.
+      LINT_EXIT=0
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1)
+      NOTE: the prompt's literal `-Path …/widget-primitives/WidgetComparisonCard` has no extension and matches
+      no on-disk path (files are WidgetComparisonCard.*); the script treats a non-existent path as a clean
+      no-op (EXIT=0). To make the 0 MEANINGFUL it was also run against the real directory:
+        -Path apps/apple/TeslaSync/widget-primitives -Language swift  -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+        -Path apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard (literal gate path) -> EXIT=0
+      PLACEHOLDER_EXIT=0
+
+[4] isolated SwiftPM build + test  (Foundation-pure layer: Adapter + Model + the Delta adapter that supplies
+    DeltaDirection; Package swift-tools 6.0, macOS v15, Swift 6 strict concurrency)
+      swift test -> Executed 28 tests, with 0 failures (0 unexpected) in 0.005s
+      Suites: WidgetComparisonCardAdapterTests, WidgetComparisonCardVisibleMetricsTests(4),
+              WidgetComparisonCardDirectionTests(3), WidgetComparisonCardRowsTests(5),
+              WidgetComparisonCardResolveTests(3), WidgetComparisonCardValueTypeTests(3),
+              WidgetComparisonCardModelTests(6), WidgetComparisonCardStringsTests(3)
+      SPM_TEST_EXIT=0  (28/28 — adapter cached->projection, model once-only view.opened, i18n/a11y facade)
+
+[5] dual-SDK swiftc -typecheck  (FULL surface incl. the SwiftUI views + previews, compiled against the REAL
+    design system — ../design/generated/apple/Tokens.swift + Sources/Components + Sources/Design (41 files) —
+    the REUSED Delta surface (Delta.swift/Adapter/Projection/Model/Views), Sources/SharedFacade/Units+Facade.swift,
+    and the staged Shared.xcframework; -swift-version 6 -D DEBUG)
+      iOS 18    (-target arm64-apple-ios18.0-simulator, --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)         -> 0 errors  MAC_TYPECHECK_EXIT=0
+      (test files Tests.swift + AdapterTests.swift also type-check against the real API.)
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 8 files (file-ref + build-files across iOS/macOS app + iOS/macOS test
+      bundles): WidgetComparisonCard.{Adapter,Model,swift,Views,Previews,Tests,AdapterTests}.swift +
+      WidgetComparisonCard.strings  (48 refs total).
+
+----------------------------------------------------------------------------------------
+FULL-APP xcodebuild build test  (the prompt gate) — RED, DEFERRED (NOT a WidgetComparisonCard failure)
+----------------------------------------------------------------------------------------
+  The KMP Shared.xcframework WAS staged for this run:
+    apps/shared/gradlew :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 8m 23s
+    staged -> apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64).
+
+  [iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         => ** BUILD FAILED **   IOS_EXIT=65
+         The scheme pre-action staged the framework (✓ Shared.xcframework staged) and the TeslaSync module
+         compiled to the type-check / module-emit phase. grep "error:" => exactly 2 errors, BOTH pre-existing
+         and unrelated to this surface (other agents' parallel-merged files):
+           1. TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+              error: escaping closure captures non-escaping parameter 'content'
+           2. TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20:
+              error: the compiler is unable to type-check this expression in reasonable time …
+         grep "error:" | grep WidgetComparisonCard => 0   (ZERO surface errors)
+
+  [macOS] xcodebuild -scheme TeslaSync-macOS build test
+         => ** BUILD FAILED **   MAC_EXIT=65
+         Fails at the SIGNING/entitlements phase BEFORE any Swift source compiles, with:
+           error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+           error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+         security find-identity -p codesigning => 0 valid identities found.
+         grep "error:" | grep WidgetComparisonCard => 0   (ZERO surface errors)
+
+  Concrete deferral causes on THIS host (pre-existing / environmental, unrelated to this surface):
+    • macOS development-signing — 0 valid codesigning identities (entitlements need a dev cert).
+    • 2 pre-existing compile errors in OTHER agents' parallel-merged surfaces (AIGeofenceAware… +
+      RecentDrivesSection.Previews) that fail the shared TeslaSync module emit. Fixing them is out of this
+      prompt's allowed-files scope (apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.*).
+  Per apps/macos-pending-verifications.md this full-app gate is owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner (with sibling surfaces green).
+
+----------------------------------------------------------------------------------------
+VERDICT
+----------------------------------------------------------------------------------------
+  Surface WidgetComparisonCard is COMPLETE and verified GREEN by every host-runnable + surface-scoped gate:
+    FORMAT_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  SPM_TEST_EXIT=0 (28/28)
+    IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+  The full-app xcodebuild build test is RED only for pre-existing, unrelated reasons (macOS dev-signing +
+  two other agents' pre-existing compile errors) — ZERO WidgetComparisonCard errors in either the iOS or
+  macOS app-target build — and is deferred to the P99 acceptance gate, recorded in
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

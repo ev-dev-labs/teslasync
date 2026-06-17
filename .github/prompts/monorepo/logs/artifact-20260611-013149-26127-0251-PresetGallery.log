@@ -1,0 +1,248 @@
+=== P4-APPLE · P7 · page:automations/PresetGallery (SwiftUI / HIG) ===
+started: 2026-06-12T18:18-0700
+host: macOS (Darwin); Xcode + swiftc (Swift 6.3.2, strict-concurrency=complete); swiftlint 0.61 + swiftformat 0.61.1 + xcodegen + pwsh 7 + JDK17 present
+web source: web/src/features/automations/pages/PresetGallery.tsx   (route: (unrouted))
+parity unit: page:automations/PresetGallery  (manifest requiredCount=9 = 2 panels + 3 states + 4 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Automations/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group. The repo's real,
+compiled canonical page home is `apps/apple/Sources/Features/<Domain>/` — proven by the DONE
+sibling P7 pages (AutomationActivityFeedPage under Sources/Features/Automations; StatisticsPage,
+FleetComparePage under Sources/Features/Analytics; ApiPlayground/DiskForecast under
+Sources/Features/Admin). `Sources` is a project.yml source path (createIntermediateGroups,
+excludes **/*Tests.swift), shared by the iOS + macOS app targets (ADR-002). The page therefore
+ships at `apps/apple/Sources/Features/Automations/**` — the faithful equivalent of the prompt's
+`Features/Automations`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This mapping is the only
+output-path deviation from the literal prompt and is recorded here per covenant #9.
+
+NAVIGATION (the unit is (unrouted)):
+The web `PresetGallery` is a SECTION the `/automations` page (`AutomationsListPage`, which owns the
+`.automations` AppRoute) renders inline inside its collapsible "Quick Start Templates" panel — NOT
+a standalone route. So this unit does NOT take a top-level `AppRoute` (that would hijack
+AutomationsList's route). Instead it ships a typed `NavigationDestination` seam —
+`PresetGalleryLink` + `View.presetGalleryDestination(...)` + `PresetGalleryRouteRegistration.make(...)`
+— that any `NavigationStack` (the future AutomationsList route / macOS detail column) adopts to
+deep-link the full-screen gallery. No edits to the P4 shell (AppShell/AppRoute/TeslaSyncApp) were
+made — correct for an unrouted unit and consistent with covenant #7 (no predecessor bypass).
+
+TYPE-NAME DECONFLICTION (no silent drift — covenant #9):
+Two PRE-EXISTING units already live in the same TeslaSync module and define colliding public type
+names: the earlier feature-views component `TeslaSync/feature-views/PresetGallery.*` (P-0085) defines
+`public struct AutomationPresetItem`, and `TeslaSync/feature-views/AlertMessageEditor.Models.swift`
+defines `public enum PresetGalleryPhase`. To avoid module-level ambiguity (and because both predecessor
+files are OUTSIDE this unit's allowed files, covenant #6/#7), this unit's two clashing types are
+page-scoped-renamed: `AutomationPresetItem → PresetGalleryItem` and `PresetGalleryPhase →
+PresetGalleryPagePhase`. A full scan of all 16 of this unit's declared type names against the whole
+apps/apple tree confirms ZERO remaining collisions.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Automations/PresetGalleryPage.swift              (152 LOC) SwiftUI View: adaptive card grid (1-up compact iPhone → multi-up iPad/macOS via GridItem(.adaptive)); phase switch loading(4×PresetCardSkeleton)/empty(TSEmptyState presets.empty)/error(TSQueryError + Retry)/success(TSFadeIn+TSStaggerItem grid of PresetCard); navigationTitle presets.title; .task load(); .refreshable; #if DEBUG previews (success/loading/empty/error)
+?? apps/apple/Sources/Features/Automations/PresetGalleryPage.Views.swift        (130 LOC) Presentational subviews: PresetCard (GlassPanel1 — TSIconBox glyph + name + first-trigger label / noTrigger + PresetActionCountBadge + 2-line description + full-width Install TSButton), PresetCardSkeleton (GlassPanel2 — TSGlassPanel of TSSkeletons), PresetActionCountBadge (neutral count pill); a11y labels/hints
+?? apps/apple/Sources/Features/Automations/PresetGalleryPageModel.swift         (230 LOC) @MainActor @Observable PresetGalleryPageModel: phase(loading/empty/error/success) + presets + isRefreshing + installedPresetID + category; load()/refresh()/install(); PresetGalleryPagePhase; PresetGalleryItem (render-ready, wire init() maps iconMap?? Shield + triggerLabels[kind] + actions.length); PresetIcon (8 web glyphs → SF Symbols, ?? Shield); AutomationPresetTriggerKind (4 web kinds → labelKeys); PresetGalleryDataSource seam (← useAutomationPresets)
+?? apps/apple/Sources/Features/Automations/PresetGalleryPageModel.Sample.swift  (118 LOC) SamplePresetGalleryDataSource (8 fixture templates spanning every trigger kind + glyph + a no-trigger card) + DEBUG Empty/Failing/Loading doubles
+?? apps/apple/Sources/Features/Automations/PresetGalleryRouteRegistration.swift (56 LOC) NavigationDestination seam for the unrouted unit (PresetGalleryLink{category} + View.presetGalleryDestination(dataSource:onInstall:) + make factory)
+?? apps/apple/Tests/Unit/Features/Automations/PresetGalleryPageModelTests.swift (164 LOC) XCTest: 4 states (loading/empty/error/success) + refresh + install records-id+invokes-handler + default sample + category narrows + icon parse/fallback/symbol + trigger parse/labelKey/nil + actionCount clamp + actionCountText + wire-init mapping
+ M apps/apple/Localization/Localizable.xcstrings   +9 PLAIN web keys (4 required parity + 4 trigger labels for full no-hardcoded-text parity + presets.title nav title); JSON validated (8337 total strings)
+ M apps/parity/apple-ledger.json                   +2 rows: page:automations/PresetGallery {apple-macos, apple-ios} status=done covered=9/9
+
+(git status --porcelain confirms ONLY the above + this log are changed; the untracked
+ apps/apple/TeslaSync.xcodeproj and apps/apple/Frameworks/Shared.xcframework are git-ignored build
+ artifacts; NO sibling source file was touched.)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (scheme pre-build script, run standalone) ---
+# bash apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 7m 26s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "PresetGallery" referenced 96x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 6 files) ---
+0/6 files require formatting.   (autoformatted once, then clean)
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 6 files) ---
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+# (intermediate run flagged function_body_length on the Sample source + nesting on the test error type;
+#  both fixed — fixture array hoisted to a static let, test error moved to file scope — then 0/6 clean.)
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Automations -Language swift ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [also scanned Tests/Unit/Features/Automations → COUNT=0; no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in shipped code. One intermediate hit on the word "placeholder" in a doc comment was reworded to "skeleton".]
+
+--- Executed model logic (real PresetGalleryPageModel.swift + .Sample.swift, Swift 6 strict-concurrency host harness) ---
+# swiftc -swift-version 6 -strict-concurrency=complete -sdk <macOS SDK> -target arm64-apple-macos15.0 \
+#   PresetGalleryPageModel.swift PresetGalleryPageModel.Sample.swift main.swift   (SWIFTC_EXIT=0)
+ASSERTIONS passed=21 failed=0 -> "ALL ASSERTIONS PASSED"
+  initial=.loading; success->presets(.success); empty->.empty; throwing->.error(clears presets);
+  refresh-> .success + isRefreshing=false; install-> installedPresetID + onInstall handler both fire;
+  default sample-> .success non-empty; category narrows; PresetIcon.parse(Moon/.moon, zzz/.shield),
+  symbol(person.fill.xmark); trigger parse(geofence, unknown->nil), labelKey(triggerSignal);
+  no-trigger->nil kind; actionCount clamp(-4->0); actionCountText("3 actions"/"0 actions");
+  wire-init maps icon(Lock)+kind(signal)+count(1)
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens (design/generated/apple/Tokens.swift) + Sources/Design + Sources/Theme.swift + the full P3 Sources/Components tree (Swift 6 strict concurrency) ---
+# swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/*.swift Sources/Theme.swift \
+#   $(find Sources/Components -name '*.swift' ! -name UnitFormatters.swift) Sources/Features/Automations/PresetGallery*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors   VIEW_TYPECHECK_IOS_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact-column branch]
+# Compiles my view + model + subviews + sample + registration against the ACTUAL TSGlassPanel / TSIconBox /
+# TSButton / TSEmptyState / TSQueryError / TSSkeleton / TSFadeIn / TSStaggerItem / Color.TS / Font.TS /
+# TSSpacing / TSRadius / teslaSyncTheme sources — authoritative proof the view's API usage is correct on
+# BOTH idioms (ADR-002/006). (UnitFormatters.swift excluded: depends on the SharedFacade UnitPreferences,
+# out of this unit's scope and unused — this page carries no SI measurements.)
+
+--- Full-scheme build (xcodebuild -scheme TeslaSync-macOS -destination platform=macOS,arch=arm64 build) ---
+# Shared.xcframework staged (above); xcodegen project regenerated; ONLY_ACTIVE_ARCH=YES, CODE_SIGNING_ALLOWED=NO.
+BUILD_EXIT=65   [RED — ZERO diagnostics in any of my files; see PRE-EXISTING breakage below]
+TEST_EXIT=(not reached)  [TeslaSyncTests bundle links the app target, blocked by the same out-of-scope errors]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not link at this HEAD due to PRE-EXISTING source errors in
+SIBLING surfaces OUTSIDE this artifact's allowed files. The blocking error (the same diagnostic class
+repeated across four files):
+
+  apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+  apps/apple/TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+  apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:
+  apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:
+    error: escaping closure captures non-escaping parameter 'content'
+
+Root cause (NOT mine): each of those four sibling files declares a local helper
+`private func glass(@ViewBuilder _ content: () -> some View)` whose `content` parameter is
+NON-escaping, then passes it into `TSGlassPanel { content() }` whose initializer takes an
+`@escaping () -> Content`. That is a genuine pre-existing compile error in those other parity units'
+files. `git status --porcelain` shows all four are tracked and UNMODIFIED by me. My PresetCard /
+PresetCardSkeleton use `TSGlassPanel` correctly (trailing-closure literals), so MY files do NOT
+exhibit the anti-pattern (`grep '() -> some View)' Sources/Features/Automations/PresetGallery*.swift`
+= none).
+
+This is the same DISPOSITION CLASS recorded for every other in-flight Apple parity unit in
+`apps/macos-pending-verifications.md` (e.g. ToolCard, AlertMessageEditor, FSMTimelineChart,
+EnergyChargingPanel, MediaNavigationPanel, PowertrainPanel, …): the surface is verified green in
+isolation, the full-app `xcodebuild build test` is blocked by pre-existing, unrelated parallel-merge
+breakage in OTHER agents' files, and is deferred to the `p4-apple/P99-0001-apple-acceptance-gate`. It
+is forbidden to commit-fix (covenant #6/#7) and is NOT in scope for this unit.
+
+PROOF MY FILES ARE CLEAN (the in-scope correctness gates that DO pass):
+  - swiftformat --lint (0/6), swiftlint --strict (0/6 violations), placeholder (COUNT=0, Sources+Tests).
+  - isolated Swift 6 strict-concurrency type-check of my view+model+subviews+sample+registration against
+    the REAL P2 tokens + P3 Sources/Components tree: macOS 0 errors AND iOS-simulator 0 errors.
+  - executed model harness: 21/21 assertions.
+  - full xcodebuild transcript: `grep -c 'Features/Automations/PresetGallery.*error:'` = 0 ;
+    the ONLY `error:` lines are the four AI* shared-surfaces files above. My files were emitted into
+    the TeslaSync module type-check with zero diagnostics before the unrelated sibling batch failed.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=9
+================================================================================
+[x] panel  — GlassPanel1
+        evidence: PresetGalleryPage.Views.swift → `PresetCard` (TSGlassPanel { headerRow; description; installButton })
+                  rendered by PresetGalleryPage.swift `successGrid` (web PresetCard, GlassPanel hover glow="cyan")
+[x] panel  — GlassPanel2
+        evidence: PresetGalleryPage.Views.swift → `PresetCardSkeleton` (TSGlassPanel { TSSkeleton blocks })
+                  rendered by PresetGalleryPage.swift `loadingGrid` (web PresetCardSkeleton)
+[x] state  — loading data state
+        evidence: PresetGalleryPage.swift → `content` `.loading` branch → `loadingGrid` (4 × PresetCardSkeleton);
+                  model PresetGalleryPagePhase.loading (PresetGalleryPageModel.load sets .loading before fetch)
+[x] state  — empty data state
+        evidence: PresetGalleryPage.swift → `content` `.empty` branch → `emptyView`
+                  (TSEmptyState title "automations.presets.empty", systemImage clock); model fetch: result.isEmpty -> .empty
+[x] state  — success data state
+        evidence: PresetGalleryPage.swift → `content` `.success` branch → `successGrid`
+                  (TSFadeIn + LazyVGrid + TSStaggerItem → PresetCard); model fetch: non-empty -> .success
+[x] string — automations.builder.noTrigger
+        evidence: PresetGalleryPage.Views.swift → PresetCard.triggerLabel else branch Text("automations.builder.noTrigger")
+[x] string — automations.presets.actionCount
+        evidence: PresetGalleryPageModel.swift → PresetGalleryItem.actionCountText
+                  String(localized: "automations.presets.actionCount", defaultValue: "\(actionCount) actions")
+                  rendered by PresetGalleryPage.Views.swift → PresetActionCountBadge
+[x] string — automations.presets.install
+        evidence: PresetGalleryPage.Views.swift → PresetCard.installButton Text("automations.presets.install") + .accessibilityLabel
+[x] string — automations.presets.empty
+        evidence: PresetGalleryPage.swift → emptyView TSEmptyState(title: "automations.presets.empty")
+PARITY_COVERED=9
+
+(All 9 web keys added as PLAIN keys to Localizable.xcstrings — verified present + used in Swift; web key
+ names preserved verbatim. Four additional trigger-label keys (automations.builder.triggerSchedule/
+ triggerEvent/triggerGeofence/triggerSignal, used by PresetCard.triggerLabel) and the nav-title key
+ automations.presets.title were added too so the surface has ZERO hardcoded strings. The pre-existing
+ `translation.automations.*` mirror keys are a separate web-mirror namespace and are left untouched.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit code above is the real tool output; BUILD_EXIT=65 is recorded
+                       verbatim with its root cause (four sibling-file pre-existing source errors), not
+                       hidden or relabeled. The GREEN claim is scoped to my files + the in-scope gates.
+ 2 No scope narrowing : 2 panels + 3 states (loading/empty/success) + 4 strings = 9/9 implemented; a 4th
+                        error+Retry state was ADDED (acceptance "loading/empty/error per source") so no
+                        region renders blank; 4 trigger labels + nav title also localized.
+ 3 No skip-and-assume : the web source was read end-to-end; iconMap ?? Shield, triggerLabels[kind] vs
+                        noTrigger, actions.length badge, the install navigate(preset.id), and the
+                        isLoading/empty/grid ladder all ported.
+ 4 No stubs as final  : no TODO/FIXME/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code,
+                        every state renders distinctly; EmptyState is a full ContentUnavailableView, not blank.
+ 5 No parity shortcuts: 4 states render distinctly; both GlassPanels reproduced; strings = web keys from
+                        Localizable.xcstrings; count badge is count-substituted via the named web key.
+ 6 No delegation      : implemented here; no sub-agents.
+ 7 No predecessor bypass: no edits to the P4 shell or any sibling surface/owner file (incl. the four buggy
+                        AI* siblings + the pre-existing feature-views PresetGallery/AlertMessageEditor units);
+                        the unrouted unit ships a NavigationDestination seam and page-scoped type names instead.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — swiftformat(0/6), swiftlint --strict(0/6),
+                        placeholder(0), model harness(21/21), view type-check macOS(0)+iOS(0). The only RED
+                        is the pre-existing out-of-scope sibling breakage, deferred to the P99 gate.
+ 9 No silent drift    : changes confined to the files listed above + this log + apps/parity/apple-ledger.json;
+                        output-path, unrouted-navigation, and type-rename deviations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI PresetGallery page shipped at parity with the web source: a pure
+@Observable state holder (ADR-004 — no networking in the view) exposing loading/empty/error/success
+over an injectable `PresetGalleryDataSource` seam (default = an API-shaped sample of eight Quick-Start
+templates; the production host binds the shared KMP `useAutomationPresets` use-case). Both web GlassPanels
+are reproduced — GlassPanel1 the preset card (TSIconBox glyph + name + first-trigger label / noTrigger +
+count badge + 2-line description + full-width Install button) and GlassPanel2 the loading skeleton card —
+on the P2 tokens + P3 shared components (TSGlassPanel/TSIconBox/TSButton/TSEmptyState/TSQueryError/
+TSSkeleton/TSFadeIn/TSStaggerItem), no hand-rolled glass; the grid is adaptive (1-up compact iPhone →
+multi-up iPad/macOS, ADR-002/006); every visible string resolves from Localizable.xcstrings with the web
+key names (zero hardcoded text); VoiceOver labels/hints on cards + the install action; install navigation
+surfaced as an injectable seam; exposed as a deep-linkable NavigationDestination for its (unrouted) parent
+route. The unit carries no SI measurements, so no unit conversion is needed. Verified on BOTH idioms by
+isolated Swift 6 strict-concurrency type-checks (0/0) against the real tokens/components and an executed
+model harness (21/21). The full xcodebuild scheme is RED (BUILD_EXIT=65) ONLY due to PRE-EXISTING,
+out-of-scope source errors in four sibling AI* shared-surfaces files (a non-escaping `glass()` helper
+passed to TSGlassPanel — forbidden to commit-fix), with ZERO diagnostics in any of my files — the
+identical disposition under which the sibling page p4-apple/P7/page:automations/AutomationActivityFeed was
+accepted DONE and which the macos-pending-verifications.md registry defers to the P99 acceptance gate.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Automations apps/apple/Tests/Unit/Features/Automations \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-automations-PresetGallery.log
+  git commit -m "feat(apps/apple): PresetGallery at web parity (P7 automations)"
+
+EXIT=0
+STATUS=DONE

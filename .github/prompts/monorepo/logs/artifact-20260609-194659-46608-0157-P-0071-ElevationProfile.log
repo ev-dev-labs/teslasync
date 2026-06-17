@@ -1,0 +1,176 @@
+=== P4 Shared surface 0071 ElevationProfile (Apple) ===
+Date: 2026-06-10
+Prompt: .github/prompts/monorepo/.../p4-apple-shared-surfaces-0071-ElevationProfile
+Allowed scope (this prompt): apps/apple/TeslaSync/shared-surfaces/ElevationProfile.* + this log
+Web source (spec): web/src/components/charts/ElevationProfile.tsx
+
+------------------------------------------------------------------------------
+PLATFORM CAPABILITY (required by prompt: SwiftUI + Swift Charts + iOS18/macOS15)
+------------------------------------------------------------------------------
+Xcode 26.5 (Build 17F42)
+Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+XcodeGen Version: 2.45.4
+SwiftLint 0.63.3
+SwiftFormat 0.61.1
+JDK: openjdk 17.0.19 (for KMP Shared.xcframework)
+Simulator: iPhone 16 (booted)
+=> Capability is PRESENT. The surface uses SwiftUI + Swift Charts (AreaMark/LineMark/RuleMark
+   + chartXSelection) and is proven to compile + test on this runner (see ISOLATED VERIFICATION).
+
+------------------------------------------------------------------------------
+SHIPPED FILES (10-file canonical shared-surface set, all under allowed scope)
+------------------------------------------------------------------------------
+ElevationProfile.swift              — surface entry (panel chrome + state switch + view.opened)
+ElevationProfile.Model.swift        — P1/S8 state holder, P1/S10 i18n facade, P1/S11 telemetry seam
+ElevationProfile.Projection.swift   — pure input->resolved (loading/error/empty/populated)
+ElevationProfile.Adapter.swift      — pure metrics/format/accessibility (gain-loss, cursor, fmt)
+ElevationProfile.Chrome.swift       — freshness chip / refresh / connectivity banner / loading / error
+ElevationProfile.Views.swift        — Swift Charts area+line+cursor chart, tooltip, populated/empty
+ElevationProfile.Previews.swift     — DEBUG previews (populated/cursor/loading/empty/error/stale/offline)
+ElevationProfile.strings            — P1/S10 catalog (replay.elevation.* parity + chrome keys)
+ElevationProfile.Tests.swift        — projection + model + a11y tests
+ElevationProfile.AdapterTests.swift — pure adapter unit tests
+
+------------------------------------------------------------------------------
+STEP 1 — xcodegen generate
+------------------------------------------------------------------------------
+Created project at apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------
+STEP 2 — Shared.xcframework (KMP, scheme pre-action)
+------------------------------------------------------------------------------
+BUILD SUCCESSFUL in 7m 13s
+Staged ios-arm64 + ios-arm64-simulator + macos-arm64 slices to apps/apple/Frameworks/Shared.xcframework
+SHARED_EXIT=0
+
+------------------------------------------------------------------------------
+STEP 3 — xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test
+------------------------------------------------------------------------------
+** BUILD FAILED **
+IOS_EXIT=65
+
+ElevationProfile.* compile errors: 0   <-- this surface contributes ZERO errors
+ElevationChart.*   compile errors: 0   <-- the only collisions THIS prompt introduced were renamed away
+Distinct files with errors: 10 — ALL pre-existing tracked sibling surfaces (NOT in allowed scope):
+   60  TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift
+   44  TeslaSync/dashboard-widgets/StateTimelineWidget.Previews.swift
+   40  TeslaSync/feature-views/StateTimeline.Previews.swift
+   32  TeslaSync/feature-views/RecentDrivesSection.Previews.swift
+    8  TeslaSync/feature-views/StateTimeline.Source.swift
+    8  TeslaSync/feature-views/RecentDrivesSection.Seams.swift
+    8  TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+    8  TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+    4  TeslaSync/dashboard-widgets/StateTimelineWidget.swift
+    4  TeslaSync/dashboard-widgets/RecentDrivesListWidget.swift
+
+ROOT CAUSE (pre-existing, out of scope): two pairs of sibling surfaces each declare the SAME
+public type names in the single TeslaSync module, so the types are ambiguous module-wide:
+   RecentDrivesModel / RecentDrivesConnection / RecentDrivesLoadStatus / RecentDrivesUpdate
+     declared in BOTH dashboard-widgets/RecentDrivesListWidget.Model.swift
+                  AND feature-views/RecentDrivesSection.{Model,Adapter}.swift
+   StateTimelineModel / StateTimelineConnection / StateTimelineLoadStatus / StateTimelineUpdate
+     declared in BOTH dashboard-widgets/StateTimelineWidget.Model.swift
+                  AND feature-views/StateTimeline.{Model,Adapter}.swift
+Representative errors:
+   RecentDrivesListWidget.Model.swift:147:21: error: 'RecentDrivesConnection' is ambiguous for type lookup
+   StateTimelineWidget.Model.swift:71:21:    error: 'StateTimelineConnection' is ambiguous for type lookup
+These files are TRACKED at HEAD (git ls-files confirms) and are the ONLY changes-free baseline; the
+working tree has 0 modified tracked files and only this surface's 10 untracked files. The committed
+baseline TeslaSync app target therefore does not compile independently of this surface, and the
+offending files are outside this prompt's allowed scope (ElevationProfile.* only).
+
+------------------------------------------------------------------------------
+STEP 4 — xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------------------
+** BUILD FAILED **
+MAC_EXIT=65
+ElevationProfile.* compile errors: 0
+Blocked at code-signing BEFORE compile:
+   error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+   error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+=> macOS is blocked by a runner signing-identity gap (no DEVELOPMENT_TEAM / dev certificate); the
+   same module would also hit the Step-3 sibling collisions. Both blockers are outside allowed scope.
+
+------------------------------------------------------------------------------
+STEP 5 — swiftlint --strict   (whole tree, gate scope)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 3616 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+STEP 6 — swiftformat --lint apps/apple   (whole tree, gate scope)
+------------------------------------------------------------------------------
+0/3846 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+STEP 7 — check-placeholders.ps1 -Path .../shared-surfaces/ElevationProfile
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+==============================================================================
+ISOLATED VERIFICATION — proof THIS surface compiles + all tests pass
+==============================================================================
+Because the full TeslaSync target is poisoned by the pre-existing sibling collisions above, the
+surface was also compiled + tested in isolation against the REAL shared component library
+(Sources/Components + Sources/Design + design tokens; module renamed to TeslaSync so the co-located
+*Tests `@testable import TeslaSync` resolve), under the same settings as the app target
+(SWIFT_VERSION 6.0, SWIFT_STRICT_CONCURRENCY=complete, iOS 18.0), on the iPhone 16 simulator.
+
+   ** BUILD SUCCEEDED **
+   ** TEST SUCCEEDED **
+   Executed 42 tests, with 0 failures (0 unexpected)
+     ElevationProfileGainLossTests            6
+     ElevationProfileCursorTests              4
+     ElevationProfileNearestIndexTests        3
+     ElevationProfileDownsampleTests          2
+     ElevationProfileFormatTests              7
+     ElevationProfileProjectionPhaseTests     4
+     ElevationProfileProjectionChartTests     5
+     ElevationProfileModelTests               9   (incl. P1/S11 view.opened-once, stale auto-refresh)
+     ElevationProfileAccessibilityComposeTests 2
+   ISO_EXIT=0
+=> The surface itself compiles clean and every adapter / projection / state-holder / accessibility
+   test passes. It contributes 0 errors to the full-app build (Steps 3 & 4).
+
+------------------------------------------------------------------------------
+COLLISIONS INTRODUCED BY THIS PROMPT — fixed within allowed scope
+------------------------------------------------------------------------------
+The feature-tier sibling feature-views/ElevationChart.* already owns the names `ElevationSample`
+and `ElevationProfileChart`. To avoid adding NEW module-wide ambiguity, this surface's types were
+renamed (within ElevationProfile.* only):
+   ElevationSample        -> ElevationProfileSample
+   ElevationProfileChart  -> ElevationProfileChartView
+After the rename the full build reports 0 ElevationChart.* and 0 ElevationProfile.* errors.
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Surface renders all web-source states + P4 leaf states (loading/empty/error/stale/offline/populated)
+[x] Hooks bind to the shared P1/S8 state-holder (ElevationProfileSource/Model); no HTTP in the view
+[x] Every i18n key from source present in P1/S10 catalog (ElevationProfile.strings)
+[x] Accessibility labels on interactive elements + chart summary/value + VoiceOver-friendly tooltip
+[x] Tests: adapter unit tests + per-state projection tests + model + a11y test (42 tests, all pass)
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders EXIT=0)
+[x] swiftlint --strict = 0, swiftformat --lint = 0
+[ ] Full-app xcodebuild build test EXIT=0 — BLOCKED by pre-existing out-of-scope sibling collisions
+    (iOS: RecentDrives*/StateTimeline* duplicate types) and macOS runner signing gap.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+The ElevationProfile shared surface is COMPLETE and INDEPENDENTLY VERIFIED (isolated build +
+42 passing tests; lint/format/placeholder all green; zero errors contributed to the full build).
+The full-app gate cannot reach EXIT=0 in this workspace for reasons entirely outside this surface
+and outside this prompt's allowed file scope:
+  • iOS: pre-existing duplicate-type collisions across tracked sibling surfaces
+         (RecentDrivesListWidget vs RecentDrivesSection; StateTimelineWidget vs StateTimeline).
+  • macOS: runner lacks a development signing certificate for the hardened-runtime entitlements.
+Per the Honesty Covenant (no red-as-green, no commit on red), the gate is reported BLOCKED and the
+feature commit is withheld; the verified surface + this log remain in the working tree for review.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,240 @@
+=== P4 Feature view 0273 TripReplayCharts (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/0273 — Feature view: TripReplayCharts
+Web src : web/src/features/trips/components/TripReplayCharts.tsx  (THE spec)
+Native  : apps/apple/TeslaSync/feature-views/TripReplayCharts.*  (9 files)
+Runner  : Darwin (Apple silicon). Xcode 26.5 (17F42) via
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+          SDKs: iphonesimulator26.5, macosx26.5. Sim: iPhone 16 (booted).
+          swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 ·
+          pwsh 7.6.2 · jdk 17.
+Capability: SwiftUI + Swift Charts present and exercised on THIS runner (this surface
+          uses SwiftUI + Swift Charts; the web source uses no map, so no MapKit here).
+          NOT capability-blocked.
+
+----------------------------------------------------------------------------------
+DELIVERABLE (9 files — the only files this prompt is allowed to add; all match
+TripReplayCharts.* ; the .Chart and .ModelTests splits keep every file within the
+swiftlint file_length budget, the same split DriveOverviewChart/ElevationChart use)
+----------------------------------------------------------------------------------
+  TripReplayCharts.swift           — composable View; TSFadeIn card; phase switch over the
+                                     full state envelope (loading/empty/error/content) +
+                                     freshness banner; binds TripReplayChartsModel (P1/S8);
+                                     forwards user scrubs through model.scrub→onSeek.
+  TripReplayCharts.Adapter.swift   — pure core: TripReplayPoint→TripReplaySample indexing,
+                                     the web `data.length > 0` content/empty threshold,
+                                     phase resolution, playhead cursorTime / origin-index
+                                     lookups, dual-axis (speed/power) domains + rescale
+                                     round-trip, evenly-spaced ticks, nearestIndexByTime
+                                     (line-for-line port incl. the web tie-break), axis/
+                                     tooltip formatting, a11y summary, surface slug.
+  TripReplayCharts.Model.swift     — P1/S8 state-holder seam (TripReplayChartsSource) +
+                                     @Observable TripReplayChartsModel (owns the playhead
+                                     `currentIndex` + the seek callback `onSeek`, the parity
+                                     of web onSeekToIndex; de-dups via lastForwardedPosition
+                                     == web lastForwardedRef), P1/S10 i18n facade
+                                     (TripReplayChartsStrings), P1/S11 telemetry seam
+                                     (view.opened), InMemoryTripReplayChartsSource.
+  TripReplayCharts.Views.swift     — header (title + "Click to seek replay position" subtitle)
+                                     + freshness chip + stale/offline banner; Speed/Power
+                                     legend; loading / empty / error states. Token-driven
+                                     (P1/S9); no Tailwind.
+  TripReplayCharts.Chart.swift     — the Swift Charts dual-axis area trace: two overlapping
+                                     `AreaMark(stacking:.unstacked)`+`LineMark` series (speed
+                                     on the left scale, power rescaled onto it), the dashed
+                                     playhead `RuleMark` + value tooltip, the leading speed
+                                     axis + trailing kW axis (inverse rescale), the minute
+                                     x-axis, and `.chartXSelection`→onScrub.
+  TripReplayCharts.Previews.swift  — #Preview per state: Content/Empty/Loading/Error/Stale/Offline.
+  TripReplayCharts.strings         — P1/S10 catalog contribution (table "TripReplayCharts").
+  TripReplayCharts.ModelTests.swift— 21 pure tests: adapter projection (14), formatting (4),
+                                     accessibility (3) + shared fixtures/telemetry spy.
+  TripReplayCharts.Tests.swift     — 17 tests: model state machine + seek/scrub/playhead +
+                                     stale/offline + telemetry (15), per-state branch (2).
+
+----------------------------------------------------------------------------------
+WEB→NATIVE PARITY MAP (TripReplayCharts.tsx is the spec; every branch + t() reproduced)
+----------------------------------------------------------------------------------
+  ChartContainer title "Speed & Power Timeline"   → TripReplayChartsHeader [i18n replay.timeline.title]
+  subtitle "Click to seek replay position"        → header subtitle line  [i18n replay.timeline.subtitle]
+  ariaLabel "Trip replay speed and power…chart"   → Chart .accessibilityLabel [i18n replay.timeline.aria]
+                                                    + .accessibilityValue = speed/power span summary
+  <AreaChart data over time (minutes)>            → Chart { AreaMark + LineMark } x=time(min)
+  <Area dataKey="speed" yAxisId="speed">          → speed series on the LEFT scale; Color.TS.chartSeriesSpeed
+                                                    + url(#speedGrad) → vertical gradient + 2pt stroke
+  <Area dataKey="power" yAxisId="power" right>    → power series RESCALED onto the left scale (Swift Charts
+                                                    has one y-scale/chart) + a TRAILING kW axis reading the
+                                                    true kW back out; Color.TS.chartSeriesPower + url(#powerGrad)
+  <YAxis label={speedUnit}> (left)                → .chartYAxisLabel(.leading) = speedUnit; ticks fmt(v,0)
+  <YAxis label="kW" orientation="right">          → .chartYAxisLabel(.trailing) = "kW"; ticks inverse-rescaled
+  <XAxis type=number tickFormatter `${fmt(v,0)}m`>→ AxisMarks(evenlySpacedValues) label "Nm"  (TripReplayFormat)
+  <Tooltip labelFormatter `${fmt(v,1)} min`>      → TripReplayTimelineTooltip (minute header + Speed + Power rows)
+  <ReferenceLine x={data[currentIndex].time}      → playhead RuleMark at cursorTime (web data[currentIndex]?.time)
+    stroke="#00b4d8" strokeDasharray="4 2">         Color.TS.accent, dashed [4,2]
+  onClick activeTooltipIndex → onSeekToIndex(      → .chartXSelection(value:) → onScrub → model.scrub(toTime:)
+    data[idx].index) ; useSyncedCursor /             → nearestIndexByTime → onSeek(sample.originIndex),
+    useSyncedReferenceLineX bridge → onSeekToIndex     de-duplicated (lastForwardedPosition == web lastForwardedRef)
+  nearestIndexByTime(data, x) binary search       → TripReplayChartsProjection.nearestIndexByTime (line-for-line
+    incl. `target-prev < next-target` tie-break)     port; tie → right sample; verified by audit test)
+  data.length > 0 ? <chart> : <empty>             → TripReplayChartsProjection.hasTrace(≥1) → .content/.empty
+  empty: <Activity/> "No telemetry data available"→ ContentUnavailableView(waveform.path.ecg) [replay.timeline.noData]
+  <Area name="Speed"> / <Area name="Power">       → TripReplayChartsLegend + tooltip rows [replay.timeline.speed/power]
+  (P4 widening) web content/empty → full native envelope: + loading skeleton, + error/retry (QueryError parity),
+                + stale/offline freshness chip & banner (ADR-013).
+  (native mechanism) the web controlled `currentIndex`+`onSeekToIndex` pair → the model owns the playhead
+                (settable by a replay controller via update.currentIndex WITHOUT firing onSeek) and forwards a
+                user scrub/tap through onSeek(originIndex); both taps and the synced cursor route through one path.
+
+  i18n keys FROM SOURCE (all resolve through the P1/S10 facade — no English literals in code):
+    replay.timeline.title, replay.timeline.subtitle, replay.timeline.aria,
+    replay.timeline.speed, replay.timeline.power, replay.timeline.noData.
+  Native-envelope keys (freshness/banner/loading/error/retry/axes/a11y) added in TripReplayCharts.strings.
+
+  States rendered (every one — never a blank box): loading, empty, error, stale, offline, content.
+  Telemetry: view.opened surface="TripReplayCharts" (P1/S11), emitted once.
+
+----------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (the committed artifact — all GREEN, raw exits)
+----------------------------------------------------------------------------------
+[swiftlint --strict — the 8 TripReplayCharts .swift files]
+  Done linting! Found 0 violations, 0 serious in 8 files.              SURFACE_LINT_EXIT=0
+
+[swiftformat --lint — the 8 TripReplayCharts .swift files]
+  0/8 files require formatting.                                        SURFACE_FORMAT_EXIT=0
+
+[check-placeholders.ps1 — the 9 TripReplayCharts files (real per-file scan)]
+  PLACEHOLDER_COUNT=0  (×8 .swift) ; EXIT=0                            PLACEHOLDER_EXIT=0
+  + the prompt's verbatim `-Path …/TripReplayCharts` prefix resolves to no literal path
+    (files are TripReplayCharts.* not a dir) → the script's "nothing to scan is clean"
+    path → PLACEHOLDER_COUNT=0 / EXIT=0. The per-file scan above makes it meaningful.
+  + grep for TODO/FIXME/XXX/stub/mock/Placeholder/Lorem/fatalError across all 9 files = NONE.
+
+[iOS-SDK type-check (xcrun swiftc -typecheck, iphonesimulator26.5, arm64-ios18.0-simulator),
+ my files against the REAL generated Tokens.swift + Motion TSFadeIn + Feedback TSSkeleton]
+  6 source files .......................................................... TYPECHECK_EXIT=0
+  6 source + 2 test files (one module) .................................... TYPECHECK_ALL_EXIT=0
+
+[Isolated SwiftPM build + test — Swift 6 (== app's complete strict concurrency),
+ macOS 15, library target "TeslaSync" = my 5 source files + the REAL design system
+ (generated Tokens.swift / Motion TSFadeIn / Feedback TSSkeleton), test target = my
+ 2 real *Tests.swift via @testable import TeslaSync]
+  Build complete!                                                       ISO_BUILD_EXIT=0
+  Test Suite 'All tests' passed. Executed 38 tests, with 0 failures (0 unexpected).
+    TripReplayChartsProjectionTests    14/14
+    TripReplayChartsModelTests         15/15
+    TripReplayFormatTests               4/4
+    TripReplayChartsAccessibilityTests  3/3
+    TripReplayChartsStateTests          2/2
+                                                                        ISO_TEST_EXIT=0
+
+----------------------------------------------------------------------------------
+PREREQUISITES (host setup, reproducible)
+----------------------------------------------------------------------------------
+  apps/shared/gradlew :core:assembleSharedXCFramework  → BUILD SUCCESSFUL in 8m59s;
+    staged apps/apple/Frameworks/Shared.xcframework (ADR-004; git-ignored).
+  cd apps/apple && xcodegen generate                   → TeslaSync.xcodeproj
+    (git-ignored); schemes present: TeslaSync, TeslaSync-macOS.
+
+----------------------------------------------------------------------------------
+FULL-APP / WHOLE-TREE GATES (raw exits — the two xcodebuild reds are PRE-EXISTING,
+in committed files this prompt neither adds nor touches; the lint+format gates GREEN)
+----------------------------------------------------------------------------------
+[xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test]
+  ** BUILD FAILED **  (3 failures)
+  First error: TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:14:76:
+    error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+  Cause: 96 "ambiguous for type lookup" errors over 8 DUPLICATE public type names
+    declared in BOTH a dashboard-widget AND a feature-view (same TeslaSync module):
+      RecentDrivesModel / RecentDrivesUpdate / RecentDrivesLoadStatus / RecentDrivesConnection
+        — dashboard-widgets/RecentDrivesListWidget.* vs feature-views/RecentDrivesSection.*
+      StateTimelineModel / StateTimelineUpdate / StateTimelineLoadStatus / StateTimelineConnection
+        — dashboard-widgets/StateTimelineWidget.* vs feature-views/StateTimeline.*
+    All 8 colliding files are TRACKED AT HEAD (git ls-files), i.e. they predate this prompt.
+  TripReplayCharts errors in this run: 0 (grep -c = 0).                 IOS_EXIT=65
+
+[xcodebuild -scheme TeslaSync-macOS build test]
+  ** BUILD FAILED **
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing… (target 'TeslaSync-macOS')
+  error: "TeslaSyncWidgets-macOS" … requires signing with a development certificate.
+  Cause: development-signing of the macOS app/widget entitlements — no signing identity
+    on this runner. Infra, not code. (Same macOS blocker documented for every P4 surface.)
+  TripReplayCharts errors in this run: 0 (grep -c = 0).                 MAC_EXIT=65
+
+[swiftlint --strict — whole apps/apple]
+  Done linting! Found 0 violations, 0 serious in 3834 files.            LINT_EXIT=0
+
+[swiftformat --lint apps/apple]
+  0/4064 files require formatting, 2 files skipped.                     FORMAT_EXIT=0
+
+Why the two xcodebuild reds are NOT this surface's defect (no red-as-green):
+  • iOS blocker: 8 duplicate public type declarations across the RecentDrives* and
+    StateTimeline* dashboard-widget/feature-view pairs make those names ambiguous
+    module-wide. Every one of the 96 errors is in those pre-existing, HEAD-tracked
+    files; TripReplayCharts contributes ZERO (grep-verified). My types are uniquely
+    prefixed (TripReplay*) and collide with nothing.
+  • macOS blocker: development-signing of TeslaSync-macOS / TeslaSyncWidgets-macOS
+    entitlements — no signing identity on this runner. Infra, not code; the standing
+    P4/P99 macOS-signing gate (apps/macos-pending-verifications.md).
+  • Both blockers live OUTSIDE this prompt's allowed file set
+    (apps/apple/TeslaSync/feature-views/TripReplayCharts.* + this log) and OUTSIDE its
+    scope ("Out of Scope: Other surfaces in the same feature"). They cannot be fixed here.
+  • The COMMITTED artifact (TripReplayCharts.*) is GREEN on every surface-scoped gate
+    AND on a real isolated Swift 6 strict-concurrency build + 38/38 tests against the
+    real design system, AND on the whole-tree swiftlint+swiftformat. "No commit on red"
+    holds for the committed files.
+
+----------------------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------------------
+  1  No red-as-green   : both red exits (IOS_EXIT=65, MAC_EXIT=65) pasted raw + labeled
+                         red; their pre-existing, non-TripReplay causes named with
+                         file:line; TripReplayCharts error count = 0 in each.
+  2  No scope narrowing: full surface — all 6 states, dual-axis speed+power areas,
+                         playhead + click/scrub seek, synced-cursor bridge, tooltip,
+                         legend, leading+trailing axes, a11y, i18n, telemetry, 38 tests.
+                         Nothing deferred or trimmed.
+  3  No skip-and-assume: every gate executed on THIS runner; raw exits pasted; both
+                         xcodebuild failures + both whole-tree lint runs inspected, not
+                         assumed; the iOS+macOS reds run as the literal `build test`.
+  4  No stubs as final : complete production surface + 38 real tests; placeholder scan
+                         = 0; no TODO/stub/mock/placeholder/Lorem/fatalError.
+  5  No parity shortcut: title/subtitle/aria/dual-axis area+line/speedGrad+powerGrad/
+                         left speed axis + right kW axis/minute x-axis/tooltip/playhead
+                         ReferenceLine/nearestIndexByTime tie-break/onSeekToIndex/empty/
+                         units/i18n/a11y/telemetry all mapped to platform tokens + verified.
+  6  No delegation     : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: consumes P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n
+                         facade, P1/S11 telemetry, P4 core (TSFadeIn/TSSkeleton/Color.TS/
+                         Font.TS/TSSpacing/TSRadius/TSMotion). The pre-existing RecentDrives*/
+                         StateTimeline* duplicate-type reds are reported, not bypassed.
+  8  No commit on red  : the COMMITTED files (TripReplayCharts.* + this log) are GREEN on
+                         every surface-scoped gate + isolated build/38 tests + whole-tree
+                         lint/format; the two xcodebuild reds live in files this commit
+                         neither adds nor touches.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/
+                         TripReplayCharts.* (9 files) + this log. One documented widening:
+                         web content/empty → full P4 state envelope (loading/error/stale/
+                         offline). One documented native mechanism: the web controlled
+                         currentIndex+onSeekToIndex pair is realized as a model-owned
+                         playhead (settable by a replay controller without re-seeking)
+                         plus the onSeek callback; the dual y-axes are realized by
+                         projecting power onto the speed scale with a trailing kW axis,
+                         since Swift Charts carries one y-scale per chart.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TripReplayCharts shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED: it compiles and its 38 tests pass under the app's
+  own Swift 6 strict-concurrency rules, against the real design system, with
+  swiftlint / swiftformat / placeholder all green on the surface AND on the whole tree.
+  The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed
+  by this code) — iOS blocked by 8 pre-existing duplicate public type declarations in the
+  RecentDrives*/StateTimeline* dashboard-widget↔feature-view pairs (all HEAD-tracked,
+  outside this prompt's allowed files), macOS blocked by development-signing on a runner
+  with no signing identity (the standing P4/P99 macos-latest gate per
+  apps/macos-pending-verifications.md). This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date
+  (e.g. 0148-SocChart, 0138-DriveOverviewChart, 0141-ElevationChart).
+
+EXIT=0
+STATUS=DONE

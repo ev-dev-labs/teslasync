@@ -1,0 +1,284 @@
+================================================================================
+P4 · Feature view · 0291 — ClimateSection (Apple)
+Run: 2026-06-10T01:0x-0700   Host: Darwin arm64   Branch: auto/20260609-194659-46608/35
+Base: e16bad255
+Prompt: P4/feature-views/0291 — Feature view: ClimateSection
+Web source (spec): web/src/features/vehicles/components/vehicle-detail/ClimateSection.tsx (104 lines)
+Mode: code-complete + host-green; full-app xcodebuild build/test RAN and captured,
+      DEFERRED to the signed macos-latest acceptance gate (ADR-012, P99-0001) on two
+      PRE-EXISTING, code-unrelated reasons — (a) a sibling-surface duplicate-declaration
+      collision (StateTimeline* ambiguous across StateTimeline.* + StateTimelineWidget.*)
+      PROVEN pre-existing by an isolation rebuild, and (b) macOS dev-signing (0 identities)
+      — identical disposition to LiveTelemetryPanels 0281 / FleetSummary 0276. Honesty
+      rule 7. Delegation: NONE (FORBIDDEN by this prompt; authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (Xcode toolchain) .... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  Xcode ...................... Xcode 26.5 (17F42)                                   OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-…-CBDDD3140989)           OK
+  SwiftUI .................... present in both SDKs (this surface's core dependency) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER —
+                               web "Charts/maps used: (none)")                       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4 — project generates cleanly; 42 ClimateSection
+                               pbxproj refs across app + test targets               OK
+  Shared.xcframework ......... BUILT + STAGED — gradle :core:assembleSharedXCFramework
+                               BUILD SUCCESSFUL (6m32s); ios-arm64 + ios-arm64-simulator
+                               + macos-arm64 staged to apps/apple/Frameworks/        OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared components
+  "@/components/ui", "@/components/data-display", "@/components/feedback". The core
+  requirement is SwiftUI, AVAILABLE and PROVEN by the real iOS-18-simulator AND macOS-15
+  SDK type-checks + the executed XCTest suite below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== WHAT WAS BUILT (parity with the web source, read end-to-end) ===
+  ClimateSection is the Climate section of the Vehicle Detail page: a GlassPanel with a
+  Wind-icon "Climate" header over either an eight-tile MetricCard grid (when a climate
+  snapshot is present) or an EmptyState ("No climate data available"). The native surface
+  reproduces its data, composition, every state, and i18n keys via shared P1/S8
+  state-holder seams (no view I/O):
+
+  Composition (web → native), all EIGHT MetricCards reproduced VERBATIM (not stubbed):
+   1. Inside Temp      — formatTemperature(inside_temp ?? inside_temp_c), thermometer glyph,
+                         green accent chip.
+   2. Outside Temp     — formatTemperature(outside_temp ?? outside_temp_c), thermometer,
+                         cyan accent chip.
+   3. Driver Setpoint  — formatTemperature(driver_temp_setting ?? driver_setpoint_c),
+                         thermometer, purple accent chip.
+   4. Fan Speed        — hvac_fan_status ?? fan_status (raw integer, web String(n)), else
+                         em-dash; wind glyph, cyan.
+   5. Seat Heater Left — "Level {seat_heater_left}" else em-dash; CircleDot glyph, green.
+   6. Seat Heater Right— "Level {seat_heater_right}" else em-dash; CircleDot, green.
+   7. Defrost          — raw defrost_mode verbatim when active (mode present and != "Off"),
+                         else localized "Off"; snowflake glyph, green when active else cyan.
+   8. Climate On       — (is_ac_on ?? is_climate_on) ? "On" : "Off"; flame glyph, green when
+                         on else cyan.
+
+  Temperature pipeline ported VERBATIM from lib/unitConversion.ts: formatTemperature →
+  convertTempFromSI (°C identity / °F = c*9/5+32) + formatNumber (grouped, locale-aware,
+  half-up; DEFAULT_PRECISION.temperature = 1; °unit appended with NO space; nullish /
+  non-finite → emptyDisplay "—"). SI °C is read directly from the seam; conversion happens
+  only at the render boundary (web useUnits), honouring the frontend SI cutover.
+
+  Note (legacy-alias fidelity): the web coalesces each pre-migration alias over its SI
+  canonical column (inside_temp ?? inside_temp_c, …, is_ac_on ?? is_climate_on). Modelled
+  as both fields on ClimateSectionReading with `resolved*` accessors reproducing `?? `
+  verbatim (the legacy alias is preferred when present), unit tested.
+
+  Accent fidelity (ADR-006 semantic, not literal): the web MetricCard `color` prop tints
+  ONLY the icon chip (bg/ring/glyph), not the value. green → statusSuccess, cyan →
+  statusInfo, purple → chartSeriesPower; the defrost / climate-on tiles flip green↔cyan by
+  state. The value reads textPrimary; the label reads textSecondary.
+
+  Seams (P1/S8): ClimateSectionSource (one coalesced snapshot: reading + useUnits prefs +
+    loading/error + connectivity) → ClimateSectionModel (@Observable). Previews/tests inject
+    InMemoryClimateSectionSource; the view performs no networking.
+    Telemetry (P1/S11): view.opened with surface slug "ClimateSection", emitted once.
+    i18n (P1/S10): every string via ClimateSectionStrings; 0 hardcoded English literals in
+    native code (the temperature unit symbols "°C"/"°F", the raw fan integer, and the raw
+    defrost mode are device/data literals carried in code, not translated strings).
+
+  Collision audit (rule 9): `ClimateProjection` is ALREADY declared by the sibling
+  LiveTelemetry.Models.swift surface, and `Climate*` is heavily used by sibling surfaces
+  (ClimatePanel* / ClimateStatus* dashboard widgets). To introduce ZERO new redeclarations,
+  ALL of this surface's public/internal type names use the `ClimateSection*` prefix (the
+  same convention as the ClimatePanel* / ClimateStatus* siblings) and are unique in the
+  TeslaSync module (verified: a tree-wide scan of all 40 declared types found 0 collisions
+  outside ClimateSection.*; the sole shared name `Phase` is a nested type
+  `ClimateSectionResolved.Phase`, matching the PowertrainResolved.Phase sibling pattern).
+
+  Files (7; allowed scope = apps/apple/TeslaSync/feature-views/ClimateSection.*):
+    ClimateSection.Adapter.swift   398  (reading + legacy-alias coalescing + SI temp format
+                                         + accent/kind/value + projection + a11y)
+    ClimateSection.Model.swift     246  (telemetry/i18n facade + connection + input/resolved
+                                         + projector + Source seam + @Observable model)
+    ClimateSection.Tests.swift     338  (format/units/coalescing/defrost + 8-card projection
+                                         + value-text + projector + model/telemetry + a11y +
+                                         per-state render)  [test target, not app target]
+    ClimateSection.Views.swift     218  (value-text resolver + grid + metric tile + icon
+                                         chip + loading/empty/error chrome)
+    ClimateSection.swift           152  (surface View shell + header + freshness chip/banner
+                                         + state switch)
+    ClimateSection.Previews.swift  105  (8 per-state #if DEBUG previews)
+    ClimateSection.strings          22  (i18n catalog; 13 source keys + 9 native-chrome keys)
+  All 6 .swift files ≤ 400 lines (swiftlint file_length); decomposed page + sub-components,
+  not a monolith.
+
+=== STATES (every state renders — no hidden surfaces) ===
+  loading ......... initial-fetch skeleton (8 tile-shaped skeletons in the data grid)
+  data ............ the eight-tile grid (web `climateData ? grid`); a present-but-all-nil
+                    snapshot still renders the grid with em-dashes (web parity, unit tested)
+  empty ........... no snapshot (web `!climateData`) → ContentUnavailableView, never blank
+  error ........... parent-query failure → retry affordance (web QueryError peer) →
+                    model.refresh()
+  stale ........... freshness window exceeded → amber freshness chip + banner + one guarded
+                    auto-refresh on the stale transition (web refetch self-refresh)
+  offline ......... no connectivity → cached values + offline chip + banner
+  Each has a #if DEBUG preview (8 previews incl. imperial + partial) and is exercised by the
+  per-state ImageRenderer render test (EXECUTED green).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 5 production + 1 test .swift compiled together with the REAL
+  apps/apple token + component closure (design/generated/apple/Tokens + Sources/Design +
+  Sources/Components, minus the KMP-Units-dependent UnitFormatters.swift); none of the
+  surface files import the Shared xcframework.
+
+  [1] Isolated SwiftPM build — module "TeslaSync", real tokens + component library, Swift 6
+        language mode, -strict-concurrency=complete:
+          swift build -> "Build complete!"
+        ISO_BUILD_EXIT=0                                                           OK
+  [2] swift test — the FULL XCTest suite EXECUTED on the macOS host (real Adapter / Model /
+        Views / Previews + real tokens):
+          Executed 33 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: formatTemperature °C identity / °F conversion / grouping / negative /
+        precision-override / nil+non-finite empty sentinel / custom emptyDisplay;
+        convertTempFromSI fromCelsius + symbol + init(symbol:); legacy-alias coalescing
+        (resolved* prefer the alias) + canonical fallback + climate-on default;
+        defrostIsActive; the eight-card projection (order, the three temp tiles + accents,
+        fan legacy-alias-or-dash, seat levels, defrost active mode vs Off, climate on/off +
+        accent flips); the value-text resolver (measurement / missing / seatLevel / onOff);
+        projector phase precedence (error > loading > empty > data + present-but-empty →
+        data + empty-error-string ≠ error); model start-applies-initial + view.opened-once +
+        slug + refresh-forwarding + push-updates + stale-auto-refresh-once; a11y tile
+        summary; per-state ImageRenderer render smoke (loading / data / empty / error /
+        stale / offline).
+  [3] swiftc -typecheck — iOS 18 SIMULATOR SDK (-D DEBUG; -swift-version 6
+        -strict-concurrency=complete; -target arm64-apple-ios18.0-simulator; 46 files =
+        surface + real token/component closure):
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [4] swiftc -typecheck — macOS 15 SDK (same files/flags; -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [5] swiftlint --strict (6 surface .swift files; explicit paths; config apps/apple/
+        .swiftlint.yml):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                                OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate) on a scan dir holding the
+        ClimateSection.* files (all 7, incl .strings):
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+        (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented/stub/mock in any
+         file; 0 opt-outs.)
+  [8] i18n key coverage (referenced == declared) + plutil:
+          referenced=22  declared=22  missing=0  orphan=0   plutil -lint: OK
+        I18N_EXIT=0                                                               OK
+
+=== GATE — FULL-APP XCODEBUILD (RAN on this host; real output; DEFERRED to signed runner) ===
+    Prereqs done: `xcodegen generate` -> GEN_EXIT=0 (42 ClimateSection pbxproj refs);
+    Shared.xcframework staged from the gradle release artifact (BUILD SUCCESSFUL 6m32s
+    above; ios-arm64 + ios-arm64-simulator + macos-arm64).
+
+    [A] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+          IOS_EXIT=65   (** BUILD FAILED **, before the test phase)
+          error: lines = 52 total; ClimateSection error: lines = 0 (verified:
+            grep 'error:' | grep -ci ClimateSection -> 0). ALL 52 errors are a PRE-EXISTING
+            DUPLICATE-DECLARATION collision in SIBLING surfaces — the StateTimeline state
+            types are declared TWICE across the merged tree:
+              'StateTimelineUpdate' / 'StateTimelineConnection' / 'StateTimelineLoadStatus' /
+              'StateTimelineModel' is ambiguous for type lookup
+            declared in BOTH TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift AND
+            TeslaSync/feature-views/StateTimeline.{Adapter,Model,Source}.swift (a
+            parallel-merge collision OUTSIDE this prompt's allowed files). 52/52 errors are
+            StateTimeline*; ZERO ClimateSection files appear in any error (52 StateTimeline,
+            0 non-StateTimeline, 0 ClimateSection).
+
+          PROOF the collision is PRE-EXISTING (not induced by this surface): with all 7
+          ClimateSection.* files MOVED OUT of the target and the project regenerated
+          (pbxproj ClimateSection refs = 0), `xcodebuild build test` STILL fails identically —
+              ISO_IOS_EXIT=65; 52 error: lines, ALL StateTimeline (52/52), 0 non-StateTimeline,
+              ZERO ClimateSection files present.
+          The collision reproduces WITHOUT this surface present → it is a pre-existing
+          sibling-surface duplicate declaration, unrelated to ClimateSection. (The
+          with-surface and without-surface runs show the IDENTICAL 52 StateTimeline errors
+          and the IDENTICAL ClimateSection error count, 0.) Files restored afterward (7
+          files; 42 pbxproj refs).
+
+    [B] xcodebuild -scheme TeslaSync-macOS build test
+          MAC_EXIT=65   (** BUILD FAILED **)
+          Real errors = development-signing entitlements, PRE-EXISTING / infra (4 errors):
+            "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require
+              signing with a development certificate. Enable development signing…
+          Fast-fails at code-signing before the app module compile (security find-identity
+          -p codesigning -> 0 valid identities on this runner; ADR-012 reserves signed builds
+          for the macos-latest acceptance gate). ZERO ClimateSection errors.
+
+    Disposition (two independent, code-unrelated reasons — neither a defect in this surface;
+    identical to the LiveTelemetryPanels 0281 / FleetSummary 0276 predecessors, rule 7):
+      (a) SIBLING DUPLICATE DECLARATION: the iOS whole-module app compile is aborted by a
+          pre-existing StateTimeline*/StateTimelineWidget* type redeclaration in two DIFFERENT
+          surfaces. PROVEN pre-existing by the isolation rebuild above. Fixing those files is
+          OUTSIDE this prompt's allowed files. ClimateSection compiles clean.
+      (b) DEV-SIGNING: macOS app/widget entitlements need a development certificate on a signed
+          runner (ADR-012). Independent of this UI surface.
+      Both are the downstream P99-0001 apple-acceptance-gate's responsibility (runs on
+      macos-latest with signing identities and the merged, de-collided tree).
+    The surface is PROVEN green where it can be: isolated SwiftPM build [1], 33/33 EXECUTED
+    tests [2], real iOS-18 AND macOS-15 SDK type-checks [3]/[4], swiftlint/swiftformat/
+    placeholder/i18n [5]/[6]/[7]/[8], and ZERO ClimateSection errors in the full-app iOS +
+    macOS xcodebuild.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (loading/data/empty/error/stale/offline) — each has a #if DEBUG preview and is
+      exercised by the per-state render test; EXECUTED green (33/33). All eight MetricCards
+      reproduced (not stubbed).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (ClimateSectionSource →
+      ClimateSectionModel); no direct HTTP from the view. useUnits → display-boundary
+      temperature conversion; useTranslation → P1/S10 facade.
+  [x] Every i18n key from source has a matching catalog key — referenced (22) == declared
+      (22), 0 missing, 0 orphan; plutil -lint OK. No English literals in native code.
+  [x] Accessibility labels on every interactive element (each tile is one VoiceOver element
+      with label + value; freshness chip + refresh button labelled; icons accessibilityHidden;
+      loading/empty/error labelled; header isHeader trait). Dynamic Type via Font.TS ramp;
+      Reduce Motion via TSFadeIn/TSSkeleton.
+  [x] Tests: adapter/format/convert + 8-card projection + per-state model + a11y label +
+      per-state render — 33 methods, EXECUTED 33/33, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0, 0 opt-outs.
+  [x] EXIT=0 / STATUS=DONE — every host-runnable + surface-scoped gate green; the full-app
+      xcodebuild RAN with its REAL exit 65 (iOS: PRE-EXISTING sibling StateTimeline collision,
+      PROVEN by isolation rebuild; macOS: dev-signing) + ZERO ClimateSection errors, DEFERRED
+      to the signed P99 acceptance gate.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host/surface gates are genuinely green; the full-app xcodebuild is
+                          shown with its REAL exit 65 + cause (sibling StateTimeline collision
+                          + dev-signing) + zero-ClimateSection-errors + isolation proof,
+                          DEFERRED, never reported as pass.
+  2 No scope narrowing ... full surface: all EIGHT MetricCards' data + composition + every
+                          state + freshness chrome + a11y + telemetry reproduced; not a
+                          header-only shell.
+  3 No skip-and-assume ... web ClimateSection.tsx read end-to-end; every t() + every value
+                          expression + the `?? ` legacy-alias coalescing + the defrost/climate
+                          accent flips + the formatTemperature pipeline reproduced.
+  4 No stubs as final .... complete implementation of all eight tiles + every state;
+                          placeholder gate COUNT=0, 0 opt-outs.
+  5 No parity shortcuts .. SI °C → unit conversion + formatNumber (grouped, half-up, °unit
+                          no-space, precision 1, "—" empty) identical to web; the legacy-alias
+                          preference reproduced VERBATIM rather than "modernised away".
+  6 No delegation ........ authored directly (delegation FORBIDDEN by this prompt; none).
+  7 No predecessor bypass  same disposition as LiveTelemetryPanels 0281 (host green + full-app
+                          build deferred to the signed runner); the sibling collision is PROVEN
+                          pre-existing by an isolation rebuild, matching the predecessor's
+                          standard.
+  8 No commit on red ..... committed work is green on every surface-scoped runnable gate; the
+                          only non-green steps are a PRE-EXISTING sibling-surface duplicate
+                          declaration + dev-signing, both out-of-scope / out-of-allowed-files,
+                          and the surface itself is 0-error in both full-app builds.
+  9 No silent drift ...... the ClimateSection* prefix decision (to avoid the pre-existing
+                          ClimateProjection/Climate* sibling names), the full-app deferral + its
+                          causes (with real exit codes, the colliding sibling files + ambiguous
+                          types, and the isolation-rebuild proof), and the legacy-alias
+                          coalescing fidelity are all recorded above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

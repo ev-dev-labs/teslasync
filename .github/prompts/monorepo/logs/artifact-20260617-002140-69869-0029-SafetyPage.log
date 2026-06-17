@@ -1,0 +1,255 @@
+================================================================================
+p4-apple · P7 · page:settings/Safety — SwiftUI / HIG
+Native SwiftUI parity of web SafetyPage (route /settings/safety),
+adaptive macOS + iOS (ADR-002/006). Generated prompt:
+.github/prompts/monorepo/p4-apple/pages/p4-apple-P7-page-settings-Safety.prompt.md
+================================================================================
+
+RUNNER
+  host            : macOS (Darwin, arm64)
+  Xcode           : 26.5 (17F42)  — Xcode runner AVAILABLE → gate is NOT BLOCKED
+  swift           : 6.3.2 (swiftlang-6.3.2.1.108)
+  swiftlint       : 0.63.3 (--strict)
+  swiftformat     : 0.61.1 (--lint)
+  xcodegen        : present (the .xcodeproj is git-ignored, regenerated)
+  pwsh            : present (placeholder gate)
+  KMP Shared.xcframework : assembled via Gradle (:core:assembleSharedXCFramework,
+                    BUILD SUCCESSFUL 7m29s) → apps/shared/core/build/XCFrameworks/release/.
+                    This page binds NO KMP type (it renders from local settings state,
+                    ADR-004), so the isolated type-check below needs only P2 tokens + P3
+                    components; the framework is exercised by the full app-target build.
+
+PATH RECONCILIATION (binding, honest)
+  Unlike the earlier sibling ActiveSessions (whose log noted the templated path did
+  not yet exist), `apps/apple/TeslaSync/Features/` is NOW a real, compiled source tree
+  (project.yml `path: TeslaSync/Features` for both TeslaSync iOS + TeslaSync-macOS;
+  it already hosts GuardMode / TirePressure / Maintenance / Geofences …). The page is
+  therefore implemented at the prompt's templated Output/Allowed path verbatim:
+  apps/apple/TeslaSync/Features/Settings/**. xcodegen picks up the new Settings/
+  subdir automatically (18 build-file refs across the two app targets — verified).
+
+SCOPE (honesty covenant: no scope-narrowing, no stubs as final, ADR-011)
+  Web SafetyPage.tsx hosts the deterministic, AI-OFF-safe explainer LISTING of every
+  safety-related TeslaSync setting from useSettings(). The thin page manifest record
+  lists only the 6 chrome strings + GlassPanel1 + the success state, but a header-only
+  screen would be a stub. The FULL deterministic surface is reproduced natively:
+    - page chrome (PageContainer title + subtitle),
+    - the single GlassPanel listing (GlassPanel1): header (title + subtitle),
+    - ALL SEVEN setting rows (title + current-value Badge + plain-English explanation
+      + per-row "Docs" link), reproducing every anonymous region of the web <ul>,
+    - the read-only change-hint footer.
+  The opt-in <AISafetySettingExplainer> panel is ABSENT from the web DOM in the default
+  ai_mode='off' state (the page's documented "ShowsStaticHelpOnly" invariant) and is a
+  separate, gated component parity unit — correctly OUT of this PAGE's scope (its
+  inclusion as a non-functional panel would itself be a stub). The deterministic listing
+  IS the page's default/safe surface, reproduced in full.
+
+DECISIONS
+  - Routing: web App.tsx routes /settings/safety as a standalone, deep-linkable route
+    OUTSIDE the sidebar nav config (it is reached from the in-page link / a direct URL).
+    Reproducing it as a sidebar item would be an ANTI-parity addition, so — per the
+    accepted TeslaSync/Features sibling precedent (Geofences / TirePressure / GuardMode)
+    — the page ships as a NavigationStack-ready View + a typed NavigationDestination
+    (SafetySettingsLink + .safetySettingsDestination()) + a SafetyRouteRegistration.make()
+    factory, rather than editing the shared AppRoute sidebar enum. No phantom sidebar entry.
+  - Strings: the catalog already carries the web i18n bundle under the i18next default
+    namespace prefix `translation.` — all 24 translation.safetySettings.* keys are present
+    with en values IDENTICAL to the web defaults verbatim (the 6 required chrome keys + the
+    14 row keys + 4 aiExplainer keys). The page binds these (suffix == web key name),
+    matching the dominant TeslaSync/Features convention (GuardMode, 172 call sites). Value
+    chips reuse translation.common.{on,off,active}; 4 NEW scoped value keys were added for
+    Suspended + digest Instant/Hourly/Daily. Zero hardcoded user-facing literals.
+  - States: loading (panel header + ProgressView) → success (listing). The deterministic
+    listing has no empty/error surface (web useSettings() always yields DEFAULT_SETTINGS),
+    so it never blanks; the model falls back to web defaults rather than showing an error.
+  - Value badge: a feature-local SafetyValueBadge mirrors TSBadge's .info visual via the
+    shared Color.TS.statusInfo token, because the value is dynamic (a localized token OR a
+    verbatim HH:MM/em-dash datum) while the shared TSBadge accepts only a static key
+    (and is out of this prompt's allowed-files scope to edit).
+
+FILES (in scope)
+  A apps/apple/TeslaSync/Features/Settings/SafetyPage.swift               (View + SafetyValueBadge + previews)
+  A apps/apple/TeslaSync/Features/Settings/SafetyPageModel.swift          (@Observable model, seam, kind enum, value)
+  A apps/apple/TeslaSync/Features/Settings/SafetyRouteRegistration.swift  (typed NavigationDestination + factory)
+  M apps/apple/Localization/Localizable.xcstrings                         (+4 value keys; the 6 PARITY keys pre-present)
+  M apps/parity/apple-ledger.json                                         (+ apple-macos & apple-ios rows, done 8/8)
+
+ADAPTIVE / HIG / a11y / units
+  - macOS/iPad (regular): each row lays its main block + "Docs" link side-by-side.
+    iPhone (compact, horizontalSizeClass): stacked (web sm:grid-cols-[1fr_auto]).
+    Reading column capped (web PageContainer max-width); driven by @Observable model
+    (ADR-004, no networking in the view).
+  - Materials via TSGlassPanel; tokens-only color/typography (P2) — TSPageTitle,
+    TSSectionTitle, Color.TS / Font.TS / TSSpacing; no hand-rolled glass.
+  - VoiceOver: combined row elements; each "Docs" link labelled "<setting> — Docs" via
+    Text concatenation. Dynamic Type (system fonts), light/dark + increased-contrast via
+    tokens, ≥44pt Link targets.
+  - Units: N/A for this page (no SI quantities; quiet-hours are HH:MM clock strings shown
+    verbatim exactly as the web stores them — formatted only at the display boundary).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=8
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1
+      binding : TeslaSync/Features/Settings/SafetyPage.swift
+                symbol SafetyPage.listingPanel(settings:) -> TSGlassPanel (L113-114)
+                { listingHeader + rowList(7 rows) + changeHint } — web GlassPanel listing
+[x] state  — success data state
+      binding : TeslaSync/Features/Settings/SafetyPage.swift  SafetyPage.content switch
+                `case let .success(settings): listingPanel(settings:)` (L88-90)
+                model : TeslaSync/Features/Settings/SafetyPageModel.swift
+                SafetyPageState.success (L75); SafetyPageModel.fetchAndApply -> .success (L116)
+[x] string — safetySettings.pageTitle
+      catalog : translation.safetySettings.pageTitle  (en="Safety settings")
+      binding : SafetyPage.swift  header -> TSPageTitle("translation.safetySettings.pageTitle") (L73)
+                + .navigationTitle (L51)
+[x] string — safetySettings.pageSubtitle
+      catalog : translation.safetySettings.pageSubtitle  (en="Notification quiet hours, …")
+      binding : SafetyPage.swift  header -> Text("translation.safetySettings.pageSubtitle") (L74)
+[x] string — safetySettings.listing.title
+      catalog : translation.safetySettings.listing.title  (en="Your safety-related settings")
+      binding : SafetyPage.swift  listingHeader -> TSSectionTitle("…listing.title") (L131)
+[x] string — safetySettings.listing.subtitle
+      catalog : translation.safetySettings.listing.subtitle  (en="Each row shows the current value …")
+      binding : SafetyPage.swift  listingHeader -> Text("…listing.subtitle") (L132)
+[x] string — safetySettings.listing.docsLink
+      catalog : translation.safetySettings.listing.docsLink  (en="Docs")
+      binding : SafetyPage.swift  docsLink(_:) -> Link { Text("…listing.docsLink") } (L192) + a11y (L199)
+[x] string — safetySettings.listing.changeHint
+      catalog : translation.safetySettings.listing.changeHint  (en="To change a value, open the main Settings page. …")
+      binding : SafetyPage.swift  listingPanel -> Text("…listing.changeHint") (L118)
+--------------------------------------------------------------------------------
+PARITY_COVERED=8
+(PARITY_COVERED == PARITY_REQUIRED)
+
+  Beyond the 8 required items the full web listing is reproduced (no scope-narrowing):
+  all 7 rows (SafetySettingKind: quietHoursEnabled / quietHoursStart / quietHoursEnd /
+  alertDigestMode / criticalFlashEnabled / tabBadgeEnabled / apiSuspended) render their
+  web title + description (translation.safetySettings.rows.<key>.{title,description},
+  pre-present, en==web verbatim) + the live value chip (On/Off/Active/Suspended/digest +
+  HH:MM/—, web renderValue) + the "Docs" link to the web docsAnchor — the set + order
+  mirror the web SAFETY_ROWS / projectSafetySettingsEnvelope projection.
+
+================================================================================
+GATE
+================================================================================
+# placeholder scan (ADR-011)
+  pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Settings -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+# swiftformat --lint (this unit's files; config apps/apple/.swiftformat, maxwidth 120)
+  swiftformat --lint apps/apple/TeslaSync/Features/Settings
+  → 0/3 files require formatting.
+  SWIFTFORMAT_LINT_EXIT=0
+
+# swiftlint --strict (explicit paths — config `included:` omits TeslaSync/Features, so the
+# three files are passed directly; warnings-as-errors under --strict)
+  swiftlint lint --strict  SafetyPage.swift SafetyPageModel.swift SafetyRouteRegistration.swift
+  → Found 0 violations, 0 serious in 3 files.
+  LINT_EXIT=0
+
+# xcodegen generate (regenerate the git-ignored project incl. the new Settings/ files)
+  → Created project at apps/apple/TeslaSync.xcodeproj   (18 build-file refs to the 3 files
+     across the TeslaSync iOS + TeslaSync-macOS targets)
+  XCODEGEN_EXIT=0
+
+# isolated Swift 6 type-check — the three new files compiled against the REAL P2 tokens +
+# P3 components (Tokens.swift, TSMaterial, Typography, Cards [+ Badges/Buttons/Theme for the
+# DEBUG previews]); -swift-version 6 -strict-concurrency=complete; both idioms.
+  macOS  (arm64-apple-macos15.0)        shipping=0/0   +previews(-DDEBUG)=0/0
+  iOS    (arm64-apple-ios18.0-simulator) shipping=0/0   +previews(-DDEBUG)=0/0
+  TYPECHECK_EXIT=0
+  (This caught + fixed one real defect during development: the model used the SwiftUI
+   type LocalizedStringKey without importing SwiftUI — now imported. Re-verified green.)
+
+# xcodebuild BUILD — macOS (TeslaSync-macOS, platform=macOS, CODE_SIGNING_ALLOWED=NO)
+  → ** BUILD FAILED **   EXIT=65.  539 SwiftCompile tasks ran (Shared.xcframework staged
+     via the Gradle pre-build phase; the app's Swift sources DID compile). 486 errors across
+     112 PRE-EXISTING, OUT-OF-SCOPE sibling files — 395 "ambiguous use of 'Preview(_:traits:body:)'"
+     plus the usual cascade ("cannot use explicit return in result builder", "cannot infer
+     contextual base", "failed to produce diagnostic") — every one in sibling *.Previews.swift
+     / dashboard-widgets (AccordionSection.Previews, WidgetGaugeHero.Previews, Tooltip.Previews,
+     …). ZERO errors reference any of my files (grep 'error:' | grep 'Settings/Safety' == ∅;
+     none of SafetyPage/SafetyPageModel/SafetyRouteRegistration appear in the 112-file error set).
+  BUILD_EXIT(macos)=65  [pre-existing, out-of-scope — see HONESTY #1/#8]
+
+# xcodebuild BUILD — iOS Simulator (TeslaSync, iPhone 16, iOS 26.5)
+  → ** BUILD FAILED **   EXIT=65.  543 SwiftCompile tasks ran. 227 errors, 190 of them the
+     same project-wide "ambiguous use of 'Preview'" in pre-existing sibling *.Previews.swift.
+     ZERO errors in my files.
+  BUILD_EXIT(ios)=65  [pre-existing, out-of-scope]
+
+# xcodebuild TEST
+  The test bundle links the SAME app target, so `xcodebuild test` is blocked by the identical
+  pre-existing ambiguous-Preview compile breakage (it cannot link a target that does not build).
+  Not commit-fixable from this prompt's allowed files; deferred to the integration gate. The
+  three new files own no test target file (Tests/** is outside this prompt's allowed-files scope).
+  TEST_EXIT=65  [pre-existing, out-of-scope — same root cause as BUILD]
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. Placeholder(0), swiftformat(0),
+                       swiftlint --strict(0), xcodegen(0), and the isolated Swift 6 type-check
+                       macOS(0/0)+iOS(0/0) are real GREEN. The full app-target xcodebuild EXIT=65
+                       (macOS + iOS) is recorded verbatim — NOT recoloured.
+ 2 No scope narrowing: implemented the page chrome, GlassPanel1 listing header, ALL 7 setting rows
+                       (title + value chip + description + Docs link), and the change-hint footer —
+                       every anonymous region of the web listing, not just the 8 manifest items.
+ 3 No skip-and-assume: web SafetyPage.tsx read end-to-end (228 lines) incl. SAFETY_ROWS, renderValue,
+                       docsAnchor mapping, and DEFAULT_SETTINGS (web/src/hooks/useSettings.ts) used to
+                       seed the snapshot. The off-mode "ShowsStaticHelpOnly" invariant is honoured.
+ 4 No stubs as final : no TODO/FIXME/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code,
+                       real @Observable model + injectable data-source seam, 2 working previews.
+ 5 No parity shortcuts: strings = web keys (translation. = i18next default ns; suffix == web key),
+                       en values verbatim; SwiftUI-native (TSGlassPanel material, no WKWebView/web clone);
+                       adaptive macOS+iOS; full a11y; deterministic listing identical to the web set+order.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface or P1/P2/P3 owner file. The Shared.xcframework
+                       (P1/S2-S3 predecessor) was assembled via its own Gradle script + staged into the
+                       git-ignored apps/apple/Frameworks/ by the project's pre-build phase. No revert of
+                       any refactoring; no old-path imports.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — placeholder(0), swiftformat(0),
+                       swiftlint --strict(0), xcodegen, isolated Swift 6 type-check macOS(0/0)+iOS(0/0)
+                       vs the real P2 tokens + P3 components. The ONLY RED is the full app-target
+                       xcodebuild/test (EXIT=65), caused EXCLUSIVELY by PRE-EXISTING, OUT-OF-SCOPE sibling
+                       breakage (project-wide 'ambiguous Preview' across 112 *.Previews.swift) with ZERO
+                       diagnostics in my files — forbidden to commit-fix, the documented
+                       ClimateControl / VehicleCost / DiskForecast precedent. A new isolated page +
+                       additive catalog/ledger entries cannot make 112 unrelated widget/component previews
+                       ambiguous; the breakage is independent of this change.
+ 9 No silent drift   : changes confined to the FILES listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path reconciliation + the no-sidebar routing decision recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI SafetyPage shipped at parity with the web source: a pure @Observable
+state holder (ADR-004 — no networking in the view) exposing loading → success over an injectable
+SafetySettingsDataSource seam whose SafetySettingsSnapshot mirrors the web useSettings() safety subset
+1:1 and seeds from the web DEFAULT_SETTINGS. The page reproduces the web chrome (title/subtitle), the
+single GlassPanel deterministic listing (header + all seven safety-setting rows, each with its current
+value chip, plain-English explanation, and "Docs" link, + the read-only change-hint footer), adaptive
+across macOS/iPad/iPhone on the P2 tokens + P3 shared components (TSGlassPanel material — no hand-rolled
+glass, no WKWebView). Every visible string resolves from Localizable.xcstrings with the web key names;
+the route is delivered as a typed NavigationDestination (web /settings/safety is not a sidebar item).
+Verified on BOTH idioms by an isolated Swift 6 strict-concurrency type-check (shipping 0/0 + previews 0/0,
+macOS + iOS) against the real tokens/components. The full-scheme xcodebuild + test are RED (EXIT=65) ONLY
+due to pre-existing, out-of-scope project-wide 'ambiguous Preview' breakage across 112 sibling
+*.Previews.swift files (zero diagnostics in my files) — forbidden to commit-fix, exactly the documented
+ClimateControl / VehicleCost / DiskForecast precedent.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/TeslaSync/Features/Settings \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-settings-SafetyPage.log
+  git commit -m "feat(apps/apple): SafetyPage at web parity (P7 settings)"
+
+EXIT=0
+STATUS=DONE

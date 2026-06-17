@@ -1,0 +1,126 @@
+=== P4 Feature view 0288 BatteryRangeCharts (Apple) ===
+Date: 2026-06-11
+Host: macOS (Darwin arm64, Apple Studio) — Xcode 26.5 (17F42), Apple Swift 6.3.2
+Surface: apps/apple/TeslaSync/feature-views/BatteryRangeCharts.*
+Web source of truth: web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx
+
+--------------------------------------------------------------------------------
+CAPABILITY (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/macOS15 HIG)
+--------------------------------------------------------------------------------
+  xcodebuild .............. Xcode 26.5 (Build 17F42)                    PRESENT
+  swift ................... Apple Swift version 6.3.2                   PRESENT
+  Swift Charts ............ system framework (import Charts compiles)   PRESENT
+  swiftlint / swiftformat . /opt/homebrew/bin                          PRESENT
+  iOS Simulator ........... "iPhone 16" (iOS 18) available             PRESENT
+  Shared.xcframework ...... built + staged via Scripts/build-shared-xcframework.sh
+                            (Gradle :core:assembleSharedXCFramework, BUILD SUCCESSFUL 7m19s)
+  MapKit .................. N/A for this surface — the web source uses NO Leaflet/map,
+                            so no MapKit is introduced (parity: charts only).
+  => Platform capability is fully present.
+
+--------------------------------------------------------------------------------
+SURFACE FILES (all within the allowed-files scope: BatteryRangeCharts.* + this log)
+--------------------------------------------------------------------------------
+  BatteryRangeCharts.swift            main view (phase switch + responsive 2-panel grid)
+  BatteryRangeCharts.Model.swift      P1/S8 state holder, P1/S11 telemetry, P1/S10 strings
+  BatteryRangeCharts.Adapter.swift    pure types + SI/number/date math (no SwiftUI)
+  BatteryRangeCharts.Projection.swift web render branches -> content model (pure)
+  BatteryRangeCharts.Views.swift      panels, section title, radial gauge, stat tiles
+  BatteryRangeCharts.Charts.swift     Swift Charts bar chart + area chart + tooltips + legend
+  BatteryRangeCharts.States.swift     loading / empty / error / freshness / banner / drive-empty
+  BatteryRangeCharts.Previews.swift   8 state previews (DEBUG)
+  BatteryRangeCharts.strings          P1/S10 catalog (9 web-parity keys + native chrome)
+  BatteryRangeCharts.Tests.swift      phase/model/telemetry/freshness/auto-refresh
+  BatteryRangeCharts.ProjectionTests.swift  math/projection/stats/bars/drive-trend/a11y
+
+  Web parity reproduced: Battery Overview panel (RadialGauge + Battery/Range AnimatedNumber
+  tiles + Current/Remaining BarChart) and Drive Distance Trend panel (distance+duration
+  AreaChart or per-panel EmptyState). web CHART_COLORS[0]/[1] -> Color.TS.chartCategorical[0]/[1]
+  (RGB identical, Okabe-Ito). All states rendered: loading/empty/error/stale/offline/content
+  + the per-panel "No drive data for chart" branch. All 9 source i18n keys resolve through the
+  P1/S10 facade; no English literals in code.
+
+--------------------------------------------------------------------------------
+GATE STEP 1 — xcodebuild iOS Simulator (scheme TeslaSync, iPhone 16) build
+--------------------------------------------------------------------------------
+  Result: ** BUILD FAILED **
+  IOS_EXIT=65
+  Sole compile error (committed, pre-existing, OUT OF SCOPE):
+    apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+      error: escaping closure captures non-escaping parameter 'content'
+    (committed by predecessor commit 441cd2538 "add AISignalExplorerNlFilter surface (P4)")
+  After that single predecessor error is worked around for verification, the build then hits a
+  separate predecessor Swift-compiler CRASH (Stack dump) in another out-of-scope batch
+  (AnnouncerRegion / AnomalyInlineRow / App* / AppearanceSettings).
+  Errors referencing BatteryRangeCharts.*: ZERO. The surface compiled clean; the failure is
+  entirely in committed predecessor surfaces outside the allowed-files scope.
+
+--------------------------------------------------------------------------------
+GATE STEP 2 — xcodebuild macOS (scheme TeslaSync-macOS) build
+--------------------------------------------------------------------------------
+  Result: ** BUILD FAILED **
+  MAC_EXIT=65
+  First compile error (committed, pre-existing, OUT OF SCOPE):
+    apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error:
+  Errors referencing BatteryRangeCharts.*: ZERO.
+
+  ROOT CAUSE (both platforms): the committed Apple baseline does not compile under this
+  runner's Xcode 26.5 / Swift 6.3 toolchain. Per apps/macos-pending-verifications.md the Apple
+  surfaces were authored/committed on non-macOS hosts with macOS artifact verification DEFERRED,
+  so several predecessor surfaces carry never-Mac-compiled Swift-6 errors. These files are OUTSIDE
+  this prompt's allowed-files scope (BatteryRangeCharts.* only) and were NOT modified for the
+  committed change set (any temporary patch used purely to verify this surface was reverted).
+
+--------------------------------------------------------------------------------
+SURFACE VERIFICATION — isolated SwiftPM harness (/tmp/brcverify, Swift 6 lang mode,
+  complete strict concurrency, real system Swift Charts, faithful design-system stubs)
+  Compiles ALL 8 surface source files + runs BOTH co-located test suites.
+--------------------------------------------------------------------------------
+  swift test:
+    Test Suite 'All tests' passed.
+    Executed 38 tests, with 0 failures (0 unexpected).
+  SWIFT_TEST_RC=0
+  => Every surface source file (incl. SwiftUI Views/Charts/States/Model) type-checks under the
+     same Swift-6 strict-concurrency mode the app target uses; the adapter/projection/math/a11y
+     unit tests AND the state-holder (phase/telemetry/freshness/stale-auto-refresh) tests pass.
+  NOTE: the harness caught + fixed a real bug in this surface's own test file
+        (XCTAssertEqual(optional, accuracy:) -> XCTUnwrap) before it passed — no red-as-green.
+
+--------------------------------------------------------------------------------
+GATE STEP 3 — swiftlint --strict (surface files)
+--------------------------------------------------------------------------------
+  LINT_EXIT=0   (0 violations across all 10 BatteryRangeCharts Swift files)
+
+--------------------------------------------------------------------------------
+GATE STEP 4 — swiftformat --lint (surface files)
+--------------------------------------------------------------------------------
+  FORMAT_EXIT=0   (0/10 files require formatting)
+
+--------------------------------------------------------------------------------
+GATE STEP 5 — check-placeholders.ps1 (surface files)
+--------------------------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  (no TODO/FIXME/stub/placeholder/Lorem/"not implemented" in shipped code)
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+  Surface BatteryRangeCharts: COMPLETE + VERIFIED.
+    - All web sections, states, charts, and i18n keys reproduced (no stubs / no skeleton-only).
+    - Compiles clean (Swift 6 strict concurrency) + 38 unit tests pass (isolated harness).
+    - swiftlint --strict / swiftformat --lint / check-placeholders: all 0.
+  Full xcodebuild build+test gate: BLOCKED — the committed Apple baseline does not compile on
+  this runner due to pre-existing, OUT-OF-SCOPE predecessor compile errors (e.g.
+  AISignalExplorerNlFilter.swift:142, RecentDrivesSection.Previews.swift:24, plus a predecessor
+  compiler crash). None implicate this surface; per the allowed-files scope they were not changed.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_ISOLATED_TESTS=38/38 PASS (SWIFT_TEST_RC=0)
+EXIT=65
+STATUS=BLOCKED

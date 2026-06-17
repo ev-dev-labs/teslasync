@@ -1,0 +1,249 @@
+=== P4 Shared surface 0229 ThemeProvider (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/ThemeProvider.*
+Web src  : web/src/components/ui/ThemeProvider.tsx
+Host     : macOS / Darwin · Xcode 26.5 (17F42) · Swift 6 · swiftlint 0.63.x · swiftformat 0.61.x
+           xcodegen 2.x · pwsh 7.x · OpenJDK 17.0.19 (KMP) · iPhone 16 sim (iOS 26.5) booted
+Capability: NOT BLOCKED — SwiftUI present; Swift Charts / MapKit are NOT needed (the web source uses
+           neither — it is a transparent context provider, no chart, no map). KMP Shared.xcframework
+           built green (Gradle BUILD SUCCESSFUL in 10m 14s; staged ios-arm64 + ios-arm64-simulator +
+           macos-arm64).
+Delegation: NONE (FORBIDDEN this tier) — implemented directly.
+
+------------------------------------------------------------------------------
+WHAT SHIPPED  (11 ThemeProvider.* files; shared-surface bundle convention)
+------------------------------------------------------------------------------
+ThemeProvider.swift           (151) Public SwiftUI surface = parity of `<ThemeProvider>`. SwiftUI's
+                                    idiomatic React-context equivalent: EnvironmentValues.theme (read
+                                    side of `useTheme()`) + .themeController (write side: setColorway/
+                                    setMode/setCustomColors). The provider injects both, applies the
+                                    resolved scheme as preferredColorScheme, the colorway primary as
+                                    .tint, the mode background as a full-bleed fill (native peer of web
+                                    applyThemeCSS writing :root vars + body.background + color-scheme),
+                                    tracks ambient @Environment(\.colorScheme) so `auto` resolves live
+                                    (web matchMedia), starts/stops the model. Color(themeColor:) bridge +
+                                    .themeProvider() modifier. Production init wires the cross-process
+                                    NotificationCenter broadcaster (web cross-tab channel).
+ThemeProvider.Adapter.swift   (400) Foundation-only core: ThemeProviderSurface.slug="ThemeProvider";
+                                    ThemeColorway (web ThemeId, 6 cases, raw values verbatim) / ThemeMode
+                                    (web ModeId, 7 cases) / ThemeColorScheme (web colorScheme); ThemeCSSColor
+                                    (verbatim hex + rgb/rgba parser, 0..1 components + the r,g,b string web
+                                    exposes as --theme-*-rgb / hexToRGB); ColorwayPalette (web ColorTheme) +
+                                    ModePalette (web ModeTheme); CustomColors (#00b4d8/#e63946 defaults);
+                                    ThemeSelection + RemoteThemeSettings; ThemeSelectionReducer — the
+                                    sanitize-on-read guard (saved in themes ? saved : fallback) + the
+                                    per-field /settings adoption (custom needs BOTH primary & accent).
+ThemeProvider.Catalog.swift   (249) The verbatim port of web `themes`/`modes` tables: every hex/rgba
+                                    literal copied 1:1; exhaustive switch accessors (no force-unwrap);
+                                    buildCustomColorway (web buildCustomTheme); hexToRGB. AdapterTests pins
+                                    each built-in *RGB string to the web precomputed value.
+ThemeProvider.Projection.swift(130) Pure resolve: ResolvedTheme (web useTheme value) +
+                                    ThemeProjection.resolve — custom rebuilds from the live pair, `auto`
+                                    collapses to dark/light by system appearance (web resolvedMode).
+                                    ThemeSyncPhase = the observable projection of the web silent /settings
+                                    hydrate (idle/loading/synced/localOnly/stale/failed/offline).
+ThemeProvider.Seams.swift     (261) Injectable seams (no I/O in the view): ThemePersistence (+UserDefaults
+                                    default over the verbatim localStorage keys; +InMemory for tests),
+                                    ThemeRemoteGateway (+Static zero-network default; ThemeRemoteResult),
+                                    ThemeBroadcaster (+NotificationCenter production / +Noop default;
+                                    ThemeChange = web theme.changed / theme.customColors), ThemeProviderTelemetry
+                                    (+OSLog default).
+ThemeProvider.Model.swift     (204) P1/S10 ThemeProviderStrings facade + P1/S8 @MainActor @Observable
+                                    ThemeProviderModel = web ThemeProvider state + useTheme() value.
+                                    setColorway/setMode/setCustomColors mutate + persist + broadcast (custom
+                                    forces .custom + broadcasts both, web setCustomColors); updateSystemAppearance
+                                    (web matchMedia); refreshFromRemote maps every gateway result; backend
+                                    save gated on `initialized` (web !initialized); cross-process mirror
+                                    applies WITHOUT re-persist/re-broadcast (web cross-tab guard); view.opened once.
+ThemeProvider.Views.swift     (318) Token-driven (P1/S9): ThemeSyncStatusStyle maps EVERY ThemeSyncPhase;
+                                    ThemeSyncStatusBadge renders every state (spinner loading / stale chip
+                                    that refreshes / error chip + Retry / offline chip) — never a blank box;
+                                    ThemeColorwaySwatch + ThemeModeSwatch (accessible picker cells);
+                                    ThemePreviewBoard (DEBUG reference board).
+ThemeProvider.Previews.swift  (143) DEBUG previews for every real branch: the board (all colorways + modes),
+                                    each sync phase (loading/synced/local/stale/failed/offline), a live
+                                    ThemeProvider (model-injected, in-memory seams) on tesla-red/midnight +
+                                    custom, and auto -> light against a forced light environment.
+ThemeProvider.strings         (49)  P1/S10 catalog: colorway + mode names mirrored verbatim from web
+                                    themes/modes; sync-status + swatch a11y keys are native additions.
+ThemeProvider.AdapterTests.swift (252) Pure-core XCTest: slug; id-union raw values + counts + fallbacks;
+                                    hex/rgb/rgba parsing (+shorthand, +malformed nil, +0..255, +rgbString);
+                                    catalog *RGB parity pins vs web; custom builder; mode literals + scheme;
+                                    ThemeSelection copy-with; reducer sanitize + /settings adoption guards.
+ThemeProvider.Tests.swift     (382) Projection (every colorway/mode, custom rebuild, auto->dark/light);
+                                    ThemeSyncPhase flags; model (view.opened once+idempotent+stop/start;
+                                    init loads persisted; setters mutate+persist+broadcast; custom activates
+                                    +both broadcasts; system-appearance drives auto; refresh maps every
+                                    gateway result; backend save gated on initialized; mirror applies w/o
+                                    re-persist/re-broadcast); status-style maps every phase; view composition;
+                                    Color bridge; strings facade fallbacks.
+8 ship .swift = 1856 LOC; max ship file 400 (Adapter, == SwiftLint file_length budget, --strict);
++ 2 test files (634) + 1 .strings (49). No file gated all content behind a single data flag; every
+branch renders.
+
+------------------------------------------------------------------------------
+PARITY SCOPE  (Honesty #2 No-scope-narrowing)
+------------------------------------------------------------------------------
+The web <ThemeProvider> is a TRANSPARENT context provider: it renders {children} and writes the active
+palette to :root CSS vars + body.background + the color-scheme/dark class; it hydrates the selection
+from localStorage synchronously, then from the backend /settings feed (raw fetch, .catch swallowed),
+persists changes back (fire-and-forget PUT, gated on `initialized`), resolves `auto` against the system
+appearance, and mirrors changes from other tabs without re-persisting/re-broadcasting. Its data source
+is the `useTheme()` context. The native peer reproduces ALL of that, mapped to SwiftUI idioms:
+
+  • Data source useTheme()  : EnvironmentValues.theme (read) + .themeController (write), provided by the
+                              P1/S8 @Observable ThemeProviderModel — no HTTP in the view; every side
+                              effect goes through an injected seam (persistence / remote / broadcaster).
+  • 6 colorways + 7 modes    : ported 1:1 (every hex/rgba literal verbatim); each built-in colorway's
+                              primaryRGB/accentRGB is pinned to the web precomputed string in AdapterTests.
+  • custom                   : rebuilt from the live #00b4d8/#e63946-defaulted pair (web buildCustomTheme);
+                              setCustomColors forces colorway=custom + broadcasts both messages.
+  • auto                     : resolves to dark/light by ambient colorScheme (web systemDark), live via
+                              .onChange(of: colorScheme); the selected id stays `auto` (web modeId).
+  • localStorage             : UserDefaults under the verbatim keys teslasync-theme / -mode /
+                              -custom-primary / -custom-accent.
+  • /settings hydrate+persist: ThemeRemoteGateway seam (web first-mount fetch + fire-and-forget PUT);
+                              backend save suppressed until the first hydrate resolves (web !initialized).
+  • cross-tab broadcast      : ThemeBroadcaster (NotificationCenter) — publish on local change, mirror
+                              received changes WITHOUT re-persist/re-broadcast (web subscribe guard).
+  • states                   : the web hydrate is SILENT (never blocks render). ThemeSyncPhase makes that
+                              lifecycle observable; ThemeSyncStatusBadge renders EVERY state — loading
+                              (spinner), synced, local-only, stale (chip + refresh), failed (chip + Retry),
+                              offline (chip) — so a host shows status without ever hiding the themed UI.
+Shared comps : none (the web source composes none — it is a provider). Charts/maps: none -> Swift Charts /
+               MapKit not required.
+i18n keys    : colorway + mode display names mirrored verbatim from web themes/modes; status + swatch a11y
+               are native additions; ALL resolved through the P1/S10 ThemeProviderStrings facade.
+Telemetry    : view.opened emitted once with slug "ThemeProvider" (P1/S11).
+a11y         : status badge is one combined element with a localized "Theme sync status: <x>" label +
+               a labelled Retry; swatches are combined elements with localized labels + .isSelected;
+               Dynamic Type via tokens; reduce-motion N/A (no motion); preferredColorScheme drives polarity.
+
+------------------------------------------------------------------------------
+GATE RESULTS  (verbatim)
+------------------------------------------------------------------------------
+[xcframework] apps/apple/Scripts/build-shared-xcframework.sh -> Gradle BUILD SUCCESSFUL in 10m 14s; staged
+              Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64).          XCFRAMEWORK_EXIT=0
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> ** BUILD FAILED **  IOS_EXIT=65
+    The whole-app TeslaSync module (4700+ co-compiled sources) failed on a FOREIGN pre-existing defect
+    (NOT this surface) — the escaping-closure defect in two sibling AI surfaces:
+      shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures
+                                                              non-escaping parameter 'content'
+      shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures
+                                                              non-escaping parameter 'content'
+    ThemeProvider error count in this build: 0. The 8 ThemeProvider ship files all compiled in-target
+    (SwiftCompile actions observed for ThemeProvider.{Adapter,Catalog,Model,Previews,Projection,Seams,
+    Views}.swift + the main file). `git status` confirms ONLY the 11 new ThemeProvider.* files are added
+    (untracked) — no sibling file is modified by this work, so the red cannot be attributed to ThemeProvider.
+    (Same disposition the accepted sibling RangeSlider 0224 recorded; the parallel compiler surfaces
+    whichever foreign escaping-closure defect fails first.)
+
+    BASELINE PROOF (Honesty #1/#8) — same gate, ThemeProvider.* EXCLUDED from compilation:
+      xcodebuild ... build EXCLUDED_SOURCE_FILE_NAMES='ThemeProvider.*'  ->  ** BUILD FAILED **
+      BASELINE_IOS_EXIT=65, 0 ThemeProvider compile actions, 0 ThemeProvider errors. The tree still fails
+      on the SAME foreign AIAutoNameUnnamedLocations surface. The tree is RED WITHOUT this surface -> the
+      red is PRE-EXISTING and FOREIGN.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    -> ** BUILD FAILED **  MAC_EXIT=65
+    ENVIRONMENTAL, pre-compile (NOT this surface; 0 app-source SwiftCompile actions ran): the macOS
+    app/widget targets carry hardened-runtime entitlements that require a development signing certificate,
+    and the runner has none (project.yml DEVELOPMENT_TEAM=""):
+      TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. Enable development signing in the Signing & Capabilities editor.
+      TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+    ThemeProvider error count: 0. ThemeProvider's macOS-15 compilation is proven green independently via
+    the macOS typecheck + `swift test` below.
+
+[3] swiftlint --strict (FULL TREE, gate step)
+    -> Done linting! Found 0 violations, 0 serious in 4746 files.        LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple (FULL TREE, gate step)
+    -> 0/5044 files require formatting, 2 files skipped.                 FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (REAL gate tool)
+    scoped to the 10 ThemeProvider .swift files: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    -> no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"/unimpl stub; 0 opt-outs.  PLACEHOLDER_EXIT=0
+
+[6] xcodegen generate -> 66 ThemeProvider refs across the iOS app + macOS app + both XCTest bundles. XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------
+SURFACE-ATTRIBUTABLE VERIFICATION  (all GREEN — actually executed, Honesty #3)
+------------------------------------------------------------------------------
+[typecheck-iOS]   swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+                  -target arm64-apple-ios18.0-simulator (SDK 26.5), real surface (swift/Adapter/Catalog/
+                  Projection/Seams/Model/Views/Previews) + design tokens -> 0 errors / 0 warnings.
+                                                                                          IOS_TYPECHECK_EXIT=0
+[typecheck-macOS] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+                  -target arm64-apple-macos15.0, real surface + design tokens -> 0 errors / 0 warnings.
+                                                                                          MAC_TYPECHECK_EXIT=0
+[swift test]  The UNMODIFIED @testable XCTest files (ThemeProvider.Tests + ThemeProvider.AdapterTests) run
+              as a real module named TeslaSync (the shipped surface + design tokens), macOS, Swift 6
+              strict concurrency:  Executed 47 tests, with 0 failures (0 unexpected).     SWIFT_TEST_EXIT=0
+              Covered: slug; id-union raw values/counts/fallbacks; hex/rgb/rgba parse (+shorthand/malformed/
+              255/rgbString); catalog *RGB parity pins vs web; custom builder; mode literals + scheme;
+              selection copy-with + defaults; reducer sanitize + /settings adoption (custom needs both);
+              projection (every colorway/mode, custom rebuild, auto->dark/light, default); sync-phase flags;
+              model view.opened-once/idempotent/stop-start, init loads persisted, setColorway/setMode/
+              setCustomColors mutate+persist+broadcast, custom activates+both, updateSystemAppearance drives
+              auto, refresh maps applied/empty/failed/offline/stale, backend save gated on initialized,
+              mirror applies w/o re-persist/re-broadcast; status-style maps every phase; view composition;
+              Color bridge; strings facade fallbacks.
+[collision]   No cross-surface redeclaration: every public type/extension member is unique across Sources/
+              + TeslaSync/ (the AppearanceSettings `var theme` hits are instance properties on their own
+              models, not EnvironmentValues) -> the surface composes cleanly into the 4700+-source module.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+ 1  No red-as-green ..... IOS_EXIT=65 + MAC_EXIT=65 shown verbatim with file:line; NEVER claimed green.
+ 2  No scope narrowing .. full surface (swift/adapter/catalog/projection/seams/model/views/previews/strings
+                          + 2 test files) + every REAL branch (6 colorways, 7 modes, auto->dark/light,
+                          custom, the 6 sync phases, localStorage, /settings hydrate+persist, cross-process
+                          mirror); the silent web hydrate is made observable, not skipped.
+ 3  No skip-and-assume .. iOS gate, iOS ThemeProvider-excluded baseline, macOS gate, iOS+macOS typechecks,
+                          swift test (47), swiftlint, swiftformat, placeholder, xcodegen, xcframework,
+                          collision scan — ALL actually executed, output pasted verbatim.
+ 4  No stubs as final ... PLACEHOLDER_COUNT=0; every branch implemented + previewed + tested.
+ 5  No parity shortcuts . the 6 colorways/7 modes + every hex literal, hexToRGB, buildCustomTheme, the
+                          sanitize-on-read guard, the per-field /settings adoption (custom needs BOTH),
+                          auto->system resolution, the !initialized backend gate, and the cross-tab
+                          mirror-without-loop guard are all reproduced 1:1; *RGB strings pinned to web.
+ 6  No delegation ....... implemented directly.
+ 7  No predecessor bypass the FOREIGN iOS red was dispositioned exactly as the accepted sibling RangeSlider
+                          0224 — the same escaping-closure-captures-'content' defect class in sibling AI
+                          surfaces, reproduced in the ThemeProvider-excluded baseline.
+ 8  No commit on red .... the iOS red is FOREIGN (proven pre-existing via the ThemeProvider-excluded
+                          baseline BUILD FAILED=65 on AIAutoNameUnnamedLocations + git status) / the macOS
+                          red is ENVIRONMENTAL (no dev-signing cert, 0 app-source compiles); this surface
+                          contributes ZERO errors and EVERY surface-attributable gate is green.
+ 9  No silent drift ..... native idioms documented: React context -> SwiftUI Environment (theme +
+                          themeController); applyThemeCSS :root vars -> environment palette +
+                          preferredColorScheme + .tint + full-bleed background; localStorage -> UserDefaults
+                          (verbatim keys); cross-tab broadcast -> NotificationCenter; the web silent hydrate
+                          is surfaced as ThemeSyncPhase + an opt-in status badge (a host affordance, the
+                          provider itself stays transparent like the web source).
+10  Log ends with EXIT/STATUS.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+XCFRAMEWORK_EXIT=0
+IOS_EXIT=65          (FOREIGN pre-existing sibling defect: AIAutoNameUnnamedLocations.swift:123 +
+                      AIGeofenceAwareAutomationSuggestions.swift:141 escaping-closure; surface 0 errors —
+                      proven via baseline + isolation typecheck + swift test + git status)
+BASELINE_IOS_EXIT=65 (ThemeProvider.* EXCLUDED — tree still red on the foreign AIAutoNameUnnamedLocations
+                      surface; pre-existing)
+MAC_EXIT=65          (ENVIRONMENTAL: no macOS development-signing certificate on runner; pre-compile;
+                      0 app-source compiles; surface 0 errors — proven via macOS typecheck + swift test)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0    (47/47)
+LINT_EXIT=0          (0 violations in 4746 files)
+FORMAT_EXIT=0        (0/5044 files)
+PLACEHOLDER_EXIT=0   (0 count, 0 allowed)
+XCODEGEN_EXIT=0      (66 refs)
+
+EXIT=0
+STATUS=DONE

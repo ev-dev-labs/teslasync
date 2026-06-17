@@ -1,0 +1,113 @@
+=== P4 Feature view 0247 IncidentsCard (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/IncidentsCard.*
+Web source (spec): web/src/features/system/components/status/IncidentsCard.tsx
+Runner: macOS (Darwin), Xcode 26.5 (17F42), swiftlint/swiftformat (Homebrew), xcodegen 2.x,
+        Java 17 + Gradle 8.14.5 (KMP Shared.xcframework), iPhone 16 simulator (booted).
+Capability (SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG): AVAILABLE — proven by the
+        successful isolated SwiftUI builds below and the Gradle Shared.xcframework assembly.
+
+------------------------------------------------------------------------------------------------
+DELIVERED FILES (allowed scope = IncidentsCard.* only)
+------------------------------------------------------------------------------------------------
+  IncidentsCard.Adapter.swift    — pure projection core: IncidentSeverity/IncidentStatus (web
+                                   SEVERITY_TONE / STATUS_BADGE), relativeFrom() port (age buckets
+                                   + wording), ISO Date.parse port, IncidentRecord -> IncidentRow
+                                   projection, VoiceOver summaries. Dependency-free.
+  IncidentsCard.Model.swift      — P1/S8 state holder: surface slug + P1/S11 view.opened telemetry,
+                                   Connection (live/stale/offline), load lifecycle, Update snapshot,
+                                   Source seam (start/stop/refresh/open(id)/logIncident), @Observable
+                                   model (phase + rows + count + one-shot stale auto-refresh),
+                                   in-memory source, P1/S10 strings facade.
+  IncidentsCard.Views.swift      — header (AlertTriangle + count badge + ghost "Log incident"),
+                                   freshness chip, connectivity banner, navigable incident row
+                                   (severity glyph/title/status badge/severity label/affects/
+                                   started+updates/chevron), loading/empty/error chrome.
+  IncidentsCard.swift            — main surface: TimelineView(60s) live relative time, amber-ringed
+                                   GlassPanel, phase switch, onAppear/onDisappear, a11y container.
+  IncidentsCard.Previews.swift   — #Preview for data / empty / loading / error / stale / offline.
+  IncidentsCard.strings          — P1/S10 catalog: web-extracted + native-chrome keys.
+  IncidentsCard.Tests.swift      — adapter + projection + model wiring/telemetry/auto-refresh/
+                                   open/logIncident + accessibility (32 tests).
+
+States reproduced (every one renders): loading, empty (web returns null -> P4 friendly empty),
+error (retry), loaded (navigable list), stale (chip + auto-refresh), offline (chip + cached).
+
+------------------------------------------------------------------------------------------------
+PER-SURFACE VERIFICATION (IncidentsCard.* — all GREEN)
+------------------------------------------------------------------------------------------------
+[1] swiftformat --lint  (6 IncidentsCard files)            -> 0/6 require formatting        PASS
+[2] swiftlint --strict  (6 IncidentsCard files)            -> 0 violations, 0 serious        PASS
+[3] check-placeholders.ps1 (real scan of IncidentsCard.*)  -> PLACEHOLDER_COUNT=0, EXIT=0     PASS
+[4] Adapter + Model compile + UNIT TESTS (isolated SwiftPM, REAL sources, Swift 6 strict
+    concurrency = same as the app target's SWIFT_STRICT_CONCURRENCY: complete):
+        swift test -> Executed 32 tests, with 0 failures (0 unexpected)                      PASS
+        (relativeFrom buckets/wording, ISO parse, severity/status maps, projection order +
+         affects join + updates>1, phase resolution + cached fallback, model start/refresh/
+         stop/open/logIncident delegation, view.opened-once telemetry, stale one-shot
+         auto-refresh, offline no-refresh, accessibility labels.)
+    NOTE: this step caught a real Swift-6 actor-isolation defect in the test file
+    (IncidentsCardPhaseTests calling @MainActor resolvePhase) which was fixed (added @MainActor,
+    @Sendable resolver) — it would otherwise have failed the app test target too.
+[5] VIEW LAYER compile (isolated SwiftPM, clean build) — IncidentsCard.swift + .Views.swift +
+    .Previews.swift + Adapter + Model against the REAL shared component library
+    (Sources/Components/UI + Feedback/Skeletons + Motion + Sources/Design + generated Tokens):
+        swift build (clean) -> Build complete! (13.54s)                                      PASS
+
+------------------------------------------------------------------------------------------------
+FULL-SCHEME GATE (mandated commands) — real exit codes
+------------------------------------------------------------------------------------------------
+swiftformat --lint apps/apple                                          ; FORMAT_EXIT=0   (GREEN)
+swiftlint --strict (whole tree)                                        ; LINT_EXIT=2     (RED*)
+    * 1 (one) violation, in a PRE-EXISTING sibling file, NOT IncidentsCard:
+      TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9 opening_brace
+      IncidentsCard violations in whole-tree run: 0
+check-placeholders.ps1 -Path .../IncidentsCard (literal gate path)     ; PLACEHOLDER_EXIT=0 (GREEN)
+xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test       ; IOS_EXIT=65     (RED*)
+xcodebuild -scheme TeslaSync-macOS build test                          ; MAC_EXIT=65     (RED*)
+
+------------------------------------------------------------------------------------------------
+ROOT CAUSE OF RED STEPS — PRE-EXISTING, OUTSIDE ALLOWED SCOPE (IncidentsCard.* only)
+------------------------------------------------------------------------------------------------
+git status --porcelain shows this prompt added ONLY IncidentsCard.* (7 files); no sibling file
+was modified.
+
+IOS_EXIT=65: the committed TeslaSync app target does not compile because multiple sibling
+parallel-generated surfaces declare the SAME public types at module scope ("ambiguous for type
+lookup"). Examples (each type defined in 2 files):
+   ChargeConnection / ChargeLoadStatus / ChargeStateDTO / ChargeUnitPrefs / ChargeDistanceUnit /
+   ChargeStatusUpdate   -> ChargeStatusLiveWidget.Model.swift  vs  ChargeStatusWidget.Model.swift
+   ChargeSessionDTO     -> ChargeStatusLiveWidget.Model.swift  vs  ChargeSessionChartWidget.Models.swift
+   DrivingCoachLoadStatus / DrivingCoachConnection -> DrivingCoachSection.Model.swift vs DrivingCoachWidget.Model.swift
+   FleetStatsBarModel   -> FleetStatsBarWidget.* (duplicate)
+   ... (further sibling collisions in dashboard-widgets / feature-views)
+   IncidentsCard files in the iOS error list: 0.
+   Proof of isolation: temporarily setting aside the self-contained ChargeStatusLiveWidget.* set
+   made every one of those types unique again (1 definition each); the IncidentsCard surface
+   never appears in any compiler diagnostic.
+
+MAC_EXIT=65: blocked first by code-signing — "TeslaSync-macOS / TeslaSyncWidgets-macOS has
+entitlements that require signing with a development certificate" (no dev certificate on this
+runner = a runner-capability limitation), and behind that the identical shared-source collisions.
+   IncidentsCard files in the macOS error list: 0.
+
+LINT_EXIT=2: a single pre-existing opening_brace violation in LiveSignalSparklinesWidget.Builder.swift
+(a sibling dashboard widget). Not editable under this prompt's allowed-files constraint.
+
+------------------------------------------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------------------------------------------
+The IncidentsCard surface is COMPLETE and parity-faithful to the web source, and passes every
+check that is attributable to it: format clean, lint clean, no placeholders/stubs, compiles
+against the real shared components on Apple, and all 32 of its unit tests pass under the app
+target's Swift-6 strict-concurrency settings.
+
+The mandated full-scheme `xcodebuild build test` gate cannot reach EXIT=0 because the committed
+TeslaSync Apple target is pre-broken by duplicate module-level type definitions in OTHER sibling
+surfaces (and macOS additionally needs a development signing certificate). Both blockers are
+outside this prompt's allowed files (IncidentsCard.* only) and cannot be fixed here without
+violating scope. Per Honesty Covenant rules 1 (no red-as-green) and 8 (no commit on red), the
+surface is NOT committed and the status is reported truthfully as BLOCKED. The files are left in
+place, ready to commit once the pre-existing sibling-surface collisions are resolved.
+
+EXIT=65
+STATUS=BLOCKED

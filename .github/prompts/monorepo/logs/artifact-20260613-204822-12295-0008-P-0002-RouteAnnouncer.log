@@ -1,0 +1,159 @@
+=== P4 Shared surface 0002 RouteAnnouncer (Apple) ===
+Artifact : .github/prompts/monorepo/p4-apple-shared-surfaces/0002-RouteAnnouncer.prompt.md
+Web src  : web/src/components/a11y/RouteAnnouncer.tsx  (THE specification)
+Native   : apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer.*
+Host     : Darwin (Apple Silicon), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint+swiftformat (brew),
+           pwsh 7, iPhone 16 simulator booted. Capability present.
+
+------------------------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------------------------
+The RouteAnnouncer surface was implemented to full parity with the web source and is independently
+verified GREEN by every check that is reproducible in this environment (swiftformat --lint,
+swiftlint --strict, an isolated Swift-6 strict-concurrency compile against the REAL design tokens +
+AppRoute, 42/42 unit tests, the placeholder gate, and xcodegen target wiring).
+
+The literal whole-app `xcodebuild ... build test` gate could NOT be driven to EXIT=0 in this
+environment for two platform/toolchain reasons, BOTH external to this surface:
+  (1) disk exhaustion — the shared volume hit 100% (285 MiB free); the Kotlin/Native
+      Shared.xcframework link + Xcode DerivedData writes failed with errno 28 (ENOSPC); and
+  (2) a swift-frontend Internal Compiler Error (ICE / crash, not a source error) while compiling a
+      PRE-EXISTING baseline batch of files (AnomalyInlineRow / ApiPlaygroundPage / AppCommands /
+      AppContainer / AppRoute / AppRouteParser / AppSettings* / AppShell / AppearanceSettings.*).
+      RouteAnnouncer is NOT in any crashed frontend command; the build emitted ZERO `error:` lines.
+
+Per the prompt's acceptance ("EXIT=0 / STATUS=DONE, or STATUS=BLOCKED with platform-capability
+evidence"), this run terminates STATUS=BLOCKED with the evidence below. The surface code itself is
+complete, parity-faithful, lint-clean, and green under an isolated compile + test.
+
+------------------------------------------------------------------------------------------------
+STEP 1 — swiftformat --lint (gate FORMAT step, scoped to the 10 surface Swift files)
+------------------------------------------------------------------------------------------------
+$ swiftformat --lint <RouteAnnouncer.*.swift RouteAnnouncer.swift>
+SwiftFormat completed. 0/10 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------------------------
+STEP 2 — swiftlint --strict (gate LINT step, scoped to the 10 surface Swift files)
+------------------------------------------------------------------------------------------------
+$ swiftlint lint --strict --no-cache <RouteAnnouncer.*.swift RouteAnnouncer.swift>
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------------------------
+STEP 3 — Isolated compile + unit tests (SwiftPM, Swift 6 strict concurrency)
+         Real apps/design/generated/apple/Tokens.swift + real Sources/App/AppRoute.swift +
+         signature-accurate stand-ins for the 5 shared components the surface consumes.
+------------------------------------------------------------------------------------------------
+$ swift build   # swiftLanguageMode(.v6), platforms macOS v15
+Build complete!
+HARNESS_BUILD_EXIT=0
+
+$ swift test
+Test Suite 'All tests' passed.
+   Executed 42 tests, with 0 failures (0 unexpected)
+Coverage:
+  - RouteAnnouncerDedupeTests          (ZWS rotation = web counter%4, incl. negative clamp)
+  - RouteAnnouncerEngineTests          (announce/advance, clear-on-empty w/o advancing, dup re-announce)
+  - RouteAnnouncerProjectionTests      (loading / empty / error / data / cleared-but-history)
+  - RouteAnnouncerAccessibilityTests   (region + history VoiceOver labels)
+  - RouteAnnouncerModelTests           (telemetry once, baseline skip-first, defer-until-flush,
+                                        cancel-pending -> only final destination, clear posts nothing,
+                                        stale one-shot auto-refresh + re-arm, offline keeps log,
+                                        manual refresh, stop/restart)
+  - RouteAnnouncerVoicingTests         (consecutive same-title both spoken w/ distinct padded text,
+                                        history most-recent-first)
+  - RouteAnnouncerSchedulerTests       (manual flush order + cancel, immediate sync, Task fire/cancel)
+  - LiveRouteAnnouncerSourceTests      (AppRoute -> path + localized page title, nil -> empty, refresh)
+  - InMemoryRouteAnnouncerSourceTests  (start emits initial, push delivers)
+HARNESS_TEST_EXIT=0
+
+------------------------------------------------------------------------------------------------
+STEP 4 — Placeholder / stub gate (apps/tools/check-placeholders.ps1)
+------------------------------------------------------------------------------------------------
+$ pwsh apps/tools/check-placeholders.ps1 -SelfTest
+  [PASS] dirty tree / NotImplementedException / Kotlin TODO( / clean tree / opt-out reason
+  SELFTEST_EXIT=0
+$ pwsh apps/tools/check-placeholders.ps1 -Path <RouteAnnouncer files> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(No TODO / FIXME / XXX / Coming soon / Placeholder / Lorem ipsum / "not implemented" in shipped code.)
+
+------------------------------------------------------------------------------------------------
+STEP 5 — xcodegen integration (project generation + target wiring)
+------------------------------------------------------------------------------------------------
+$ xcodegen generate
+Created project at apps/apple/TeslaSync.xcodeproj   (git-ignored)
+All 10 surface Swift files are wired:
+  - 7 non-test files -> app targets TeslaSync (iOS) + TeslaSync-macOS
+  - RouteAnnouncer.Tests.swift / .ModelTests.swift / .SeamsTests.swift -> the *Tests bundles
+RouteAnnouncer.strings present. `git status` shows ONLY the 11 new surface files (+ this log).
+XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------------------------
+STEP 6 — xcodebuild iOS (gate IOS step)  — BLOCKED (environment, not this surface)
+------------------------------------------------------------------------------------------------
+Attempt A (build test), while volume was at 100%:
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ... NSPOSIXErrorDomain Code=28 "No space left on device"
+  ... "You can't save ... because the volume 'Macintosh HD' is out of space."
+  ... Run custom shell script 'Stage Shared.xcframework' failed
+  ** TEST FAILED **   IOS_EXIT=65   (root cause: ENOSPC; df showed 285Mi free, 100% used)
+
+Direct Kotlin/Native probe (the Shared.xcframework the app target links):
+$ ./apps/shared/gradlew :core:assembleSharedXCFramework
+  > Task :core:linkDebugFrameworkIosArm64 FAILED
+  e: libtool: error writing file '.../Shared.framework/Shared'
+     write64() failed, returned -1 expected 92945720, errno=28   (ENOSPC)
+
+Attempt B (build), after the shared volume freed up (~63 GiB available):
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  ** BUILD FAILED **   IOS_EXIT=65
+  Diagnosis of /tmp/ra-build.log:
+    - ZERO `error:` lines in the entire build.
+    - One swift-frontend crash (Internal Compiler Error):
+        "Please submit a bug report (https://swift.org/contributing/#reporting-bugs) and include
+         the crash backtrace."  + Stack dump + swift-frontend performCompile/performFrontend/mainEntry
+    - The crashing SwiftCompile batch is the alphabetical "A" group of PRE-EXISTING baseline files:
+        AnomalyInlineRow.swift, ApiPlaygroundPage.swift, AppCommands.swift, AppContainer.swift,
+        AppRoute.swift, AppRouteParser.swift, AppSettings*.swift, AppShell.swift,
+        AppearanceSettings.*.swift
+    - Verification "RouteAnnouncer not in any crashed frontend command" -> the surface's files are
+      NOT implicated; they compile in normal batches without diagnostics, consistent with the green
+      isolated compile in STEP 3.
+  Conclusion: whole-module integration build is blocked by a toolchain ICE on baseline code +
+  prior disk exhaustion — both external to RouteAnnouncer.
+IOS_EXIT=65   (BLOCKED — swift-frontend ICE on non-surface baseline batch; no source errors)
+
+------------------------------------------------------------------------------------------------
+STEP 7 — xcodebuild macOS (gate MAC step)  — BLOCKED (same root cause, not separately executed)
+------------------------------------------------------------------------------------------------
+The macOS app target compiles the IDENTICAL shared source set with the same Xcode 26.5 toolchain,
+so it reaches the same swift-frontend ICE on the same baseline "A" batch. Not re-executed to avoid
+redundant multi-GB DerivedData churn on the shared 100%-pressured volume. Reported honestly as
+BLOCKED rather than claimed as a pass.
+MAC_EXIT=(blocked — same toolchain ICE on shared baseline source)
+
+------------------------------------------------------------------------------------------------
+RESULT
+------------------------------------------------------------------------------------------------
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+HARNESS_BUILD_EXIT=0
+HARNESS_TEST_EXIT=0   (42 passed / 0 failed)
+IOS_EXIT=65           (BLOCKED — disk ENOSPC, then swift-frontend ICE on PRE-EXISTING baseline files)
+MAC_EXIT=BLOCKED      (same toolchain ICE on the shared baseline source)
+
+The surface meets the acceptance criteria that are verifiable here: all states render (loading /
+empty / error / data / stale / offline), hooks bind through the shared state-holder layer (no direct
+HTTP in the view), every string resolves through the P1/S10 facade, accessibility labels exist on
+every interactive element, the adapter + per-state + voicing/a11y tests pass, and there is no
+TODO/stub/mock/placeholder/Lorem in shipped code. The only failing gate steps are the whole-app
+xcodebuild build/test, blocked by environment (disk) + a swift-frontend ICE on baseline code that
+does not include this surface.
+
+EXIT=1
+STATUS=BLOCKED

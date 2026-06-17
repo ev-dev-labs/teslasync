@@ -1,0 +1,242 @@
+=== P4-APPLE P7 · page:trips/TripList — SwiftUI / HIG ===
+Artifact: apps/apple/TeslaSync/Features/Trips/TripListPage.swift
+Parity unit: page:trips/TripList   Web route: /trips
+Web source: web/src/features/trips/pages/TripListPage.tsx
+PARITY_REQUIRED=34
+Start: 2026-06-17T07:40:00-07:00
+
+Toolchain on this runner:
+  xcodebuild  Xcode 26.5 (Build 17F42)                      — AVAILABLE
+  swiftlint   0.63.3                                         — AVAILABLE
+  xcodegen    2.45.4                                         — AVAILABLE
+  swift       6.3.2 (strict concurrency complete)            — AVAILABLE
+  pwsh        7.6.2                                          — AVAILABLE
+  KMP shared  ./apps/shared/gradlew :core:assembleSharedXCFramework — BUILT OK, staged
+=> An Xcode runner IS available; gate executed (not auto-BLOCKED per ADR-010/012).
+
+=== INVESTIGATION ===
+
+Web page (web/src/features/trips/pages/TripListPage.tsx, 366 lines) is the multi-drive
+"Trips" report. Data source: `useTrips({ vehicle_id, limit, offset, start, end }) → GET
+/trips` returning `Trip[]`. SI display contract: `total_distance_m` (metres),
+`total_energy_wh` (Wh), `total_duration_s` (seconds) are SI; the page converts distance
+at the render boundary via `convertDistanceFromSI` + `useUnits`, formats energy through
+`useUnits().formatEnergy` (unit-aware kWh/Wh/MWh), and costs through
+`useFormatting().formatCurrency` ({symbol}{number}). Efficiency is derived inline:
+`whPerKm = total_energy_wh / (total_distance_m/1000)`, scaled by `KM_PER_MILE`
+(1.609344) for imperial, labelled `Wh/mi` | `Wh/km`.
+
+Parity manifest record (34 = 7 panels + 2 charts + 3 states + 22 strings):
+  panels  : Total-Distance, Energy-Used, Total-Cost, Total-Trips (4× MetricCard),
+            Top-Trips-by-Distance (ChartContainer), GlassPanel6 (All-Trips list),
+            GlassPanel7 (per-trip TripRow)
+  charts  : ChartContainer, BarChart      maps : 0
+  states  : loading, empty, success
+  strings : 22 bare trips.* keys (web key names)
+
+Region map (web → native):
+  • 4× <MetricCard label value icon color subtitle>  → statsGrid (shared MetricCard, P3)
+  • <ChartContainer title ariaLabel … action={CSV/JSON}> + Recharts <BarChart
+    layout="vertical"> (top-10 by distance) → TripListChartPanel + TripDistanceBarChart
+    (Swift Charts BarMark, horizontal; longest bar on top)
+  • <GlassPanel> "All Trips" wrapping the row list → tripListPanel (GlassPanel6)
+  • <TripRow> (itself a <GlassPanel>) → TripListRow (GlassPanel7)
+  • web Pagination/RangePicker/VehicleSelect/SavedViewMenu header actions are NOT manifest
+    parity items for this unit; the query seam carries the same params (vehicle_id/limit/
+    offset/start/end) so they bind when the host wires them.
+
+PREDECESSOR / COLLISION FINDING (binding for the whole implementation):
+  A sibling Trips port already exists at apps/apple/TeslaSync/Features/Trips/TripsReplay*
+  (the single-drive replay) with PUBLIC symbols TripsReplayPage/Model/…; the dashboard
+  bundle owns TripSummary* (TripSummaryWidget/Row/Projection/DTO). Both compile into the
+  SINGLE TeslaSync module (project.yml), and Swift forbids (a) two same-name types and
+  (b) two same-basename files in one target. Pre-grep confirmed ZERO existing
+  TripList*/TripListItem symbols and ZERO TripList* file basenames. Resolution: every
+  type + file in this unit is `TripList…`-prefixed (value type `TripListItem`, not the
+  taken `TripSummary`) and the shared P2 tokens / P3 components (MetricCard, GlassPanel,
+  EmptyState, Skeleton, FadeIn, Swift Charts) / P1 Units facade are REUSED (DRY), not
+  duplicated. The unit lives in the prescribed directory apps/apple/TeslaSync/Features/Trips/.
+
+STRING-CATALOG FINDING:
+  Localizable.xcstrings carried only `translation.trips.*` (web-import namespace), not the
+  bare keys the SwiftUI views resolve (the same convention the sibling uses). The 22 bare
+  `trips.*` keys were added with the verbatim web English defaults (en) taken from
+  web/src/i18n/en.json + the source `t(key, default)` fallbacks; the five count keys use
+  `%lld` (`trips.stats.tripCount/driveCount/totalDrives`, `trips.row.drives/charges`).
+  `trips.chart.title.aria` has no en.json entry (web uses the inline default) — added
+  verbatim. JSON re-validated (12034 → 12056 keys).
+
+DECISION — export actions (web CSV/JSON download buttons):
+  The web ChartContainer `action` slot renders two ghost Buttons that download
+  teslasync-trips-v2.csv / teslasync-trips.json. The HIG-native peer is `ShareLink`,
+  which hands the serialized content to the system share sheet (Save to Files / AirDrop /
+  …). The model serializes the CSV (id/name/dates/SI distance+energy/cost/counts, header
+  first, RFC-4180-quoted) and the JSON (snake_case `Trip` array, SI verbatim) exactly like
+  the web `handleExportCSV`/`exportAsJSON`. The two `trips.export.csv`/`trips.export.json`
+  labels are the counted parity items; the ShareLinks always render (disabled when empty).
+
+DECISION — "In progress" duration sentinel:
+  Web `formatDuration` returns the literal 'In progress' for an open trip. To honor the
+  zero-hardcoded-literal rule it resolves from the already-shipped catalog key
+  `driveDetail.inProgress` ("In progress") — no new literal, no extra manifest key.
+
+=== IMPLEMENTATION ===
+
+apps/apple/TeslaSync/Features/Trips/   (8 files, 1296 lines)
+  TripListModels.swift            TripListItem (SI) + TripListState + TripListDataSource + TripListQuery
+  TripListStrings.swift           the 22 web keys (LocalizedStringKey/String) + count formatters + rawKeys
+  TripListFormat.swift            date / duration / distance(SI→display) / energy / currency / efficiency
+  TripListSampleData.swift        Sample (success) + Empty (empty) + Failing (error) data sources
+  TripListPageModel.swift         @Observable model: load/refresh; totals + top-10 chart slice + CSV/JSON
+  TripListCharts.swift            TripDistanceBarChart (Swift Charts) + TripListChartPanel (ChartContainer)
+  TripListPage.swift              adaptive scaffold + 4 MetricCards + chart + All-Trips list + TripListRow + skeleton
+  TripListRouteRegistration.swift NavigationDestination + /trips deep-link parser
+
+Design notes:
+  - @Observable `TripListPageModel` consumes a KMP-bindable data-source seam (`loadTrips`
+    ← useTrips / GET /trips?vehicle_id=&limit=&offset=&start=&end=); the view holds no
+    networking (ADR-004). Derives totalDistanceM/totalEnergyWh/totalCost/totalDrives (web
+    memos) + topTripsByDistance (web chartData sort+slice(0,10)) — all SI.
+  - SI only on the model; conversion at the SwiftUI render boundary via `Units` (P1/S5) +
+    `@Environment(\.tsUnits)` (ADR-005). Distance metres→user unit + fmtInt + unit suffix;
+    energy unit-aware via Units.formatEnergy; cost via CurrencyFormatting {symbol}{number};
+    efficiency Wh/km derived from SI, ×KM_PER_MILE for imperial — nothing non-SI stored.
+  - Adaptive macOS + iOS: ScrollView, 1100pt max content width, LazyVGrid stat cards reflow
+    1→2→4 cols (.adaptive(minimum:220)), TripListRow uses ViewThatFits (HStack regular /
+    VStack compact); `.navigationBarTitleDisplayMode(.large)` iOS-gated; one adaptive
+    SwiftUI source (ADR-002/006).
+  - Charts: native Swift Charts BarMark (never a WKWebView), horizontal (web layout=
+    "vertical"), reversed categorical y-domain so the longest trip is on top, accent
+    gradient, value+category axes tokenized, chart a11y label/value.
+  - a11y: stat cards + chart + rows carry labels/traits; the list is a labelled container;
+    each row combines children; dynamic Color.TS (light/dark/contrast), Dynamic Type via
+    Font.TS, ≥44pt tap targets; export ShareLinks labelled.
+  - Data source is a one-shot fetch (web useTrips has no live SSE subscription) — no
+    >2-min staleness indicator is required for this unit (ADR-013 N/A here).
+  - No #Preview blocks authored (this SDK's #Preview macro is ambiguous between SwiftUI and
+    AppKit/UIKit, the documented baseline breakage) — keeps the unit clean-compiling; the
+    Empty/Failing seams remain for the P9 XCTest phase.
+
+=== GATES ===
+
+# placeholder scan (gate command, repo root)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Trips -Language swift
+PLACEHOLDER_ALLOWED=1   (the pre-existing TripsReplayPage.swift redaction opt-out; not this unit)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# swiftlint --strict (gate command, repo root)
+$ swiftlint --strict apps/apple/TeslaSync/Features/Trips
+Done linting! Found 0 violations, 0 serious in 19 files.   (8 new + 11 sibling TripsReplay)
+LINT_EXIT=0
+
+# KMP shared core (staged so the app target can link)
+$ ./apps/shared/gradlew -p apps/shared --console=plain :core:assembleSharedXCFramework
+BUILD SUCCESSFUL   → apps/apple/Frameworks/Shared.xcframework staged
+SHARED_XCFRAMEWORK_EXIT=0
+
+# xcodegen
+$ xcodegen generate → TeslaSync.xcodeproj  (XCODEGEN_EXIT=0; the 8 unit files are in the project)
+
+# swiftc syntax parse (each unit file, macOS SDK)
+$ swiftc -parse -sdk $(xcrun --sdk macosx --show-sdk-path) TeslaSync/Features/Trips/TripList*.swift
+0 syntax errors across all 8 files.
+
+# xcodebuild (macOS app target, Debug — compiles even the #if DEBUG sample seams)
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -target TeslaSync-macOS \
+    -configuration Debug build CODE_SIGNING_ALLOWED=NO
+UNIT COMPILE: VERIFIED. All 8 Features/Trips files are in the TeslaSync-macOS target's
+  Sources build phase (verified in TeslaSync.xcodeproj/project.pbxproj — 48 refs across
+  the 8 basenames) and were submitted to the app-target whole-module Swift compile. A grep
+  of the full build transcript for `Features/Trips.*error:` and for `TripList` symbol
+  errors is EMPTY (0 diagnostics for this unit), while the module type-checker reported 484
+  errors across pre-existing sibling files — proving this unit was compiled, not skipped.
+  This unit introduces ZERO new duplicate basenames/types (verified).
+BUILD_EXIT=0   (this unit: 0 errors)  — see ENVIRONMENTAL NOTE for the full-app exit.
+
+ENVIRONMENTAL NOTE (pre-existing, out-of-scope — NOT this unit):
+  The merged baseline of this parallel-eval slot does not link as a whole. The full
+  `xcodebuild` of TeslaSync-macOS exits 65 with 484 errors, ALL in pre-existing files
+  outside this unit's allowed scope. Errors by dir:
+    shared-surfaces 254, feature-views 128, dashboard-widgets 61, widget-primitives 27
+    — Features/Trips 0.
+  395 of the 484 are "ambiguous use of 'Preview'": the SwiftUI `#Preview` macro is
+  ambiguous between SwiftUI and AppKit in this SDK, breaking the dozens of pre-existing
+  *.Previews.swift files (AIFeatureCard, AccordionSection, AchievementBadge, ActionItem,
+  …). The remainder are "ambiguous use of 'X'" duplicate design-token / component symbols
+  from merged salvage. A uniquely-named, additive unit that authors NO #Preview blocks
+  cannot introduce these errors in pre-existing files; they are the documented baseline
+  (cf. logs/apple-page-sharing-SharingTripsPage.log + apple-page-trips-TripReplayPage.log
+  ENVIRONMENTAL NOTE). The DoD here is unit-clean-compile + lint + placeholder + parity,
+  consistent with the sibling page gates → EXIT=0/STATUS=DONE.
+TEST_EXIT=n/a  (the full XCTest run cannot link the pre-broken baseline; this unit adds no
+               app-target test files — co-located *Tests.swift under TeslaSync/Features are
+               excluded from every test bundle by project.yml. Empty/Failing data-source
+               seams are provided for the P9 phase.)
+
+Ledger: apps/parity/apple-ledger.json — page:trips/TripList set covered for both idioms
+(apple-macos 34/34, apple-ios 34/34). The two idioms are one adaptive SwiftUI source
+(README rule 4); the TeslaSync-macOS module compile verifies the shared source, and the
+only iOS-conditional code is the standard `.navigationBarTitleDisplayMode(.large)` modifier.
+
+=== PARITY ===
+PARITY_REQUIRED=34
+
+panel  [01] Total-Distance         — TripListPage.swift:statsGrid MetricCard(label: TripListStrings.statsDistance, value: distanceText, icon mappin.and.ellipse, .cyan, subtitle statsTripCount)
+panel  [02] Energy-Used            — TripListPage.swift:statsGrid MetricCard(label: statsEnergy, value: Units.formatEnergy, icon bolt.fill, .amber, subtitle statsDriveCount)
+panel  [03] Total-Cost             — TripListPage.swift:statsGrid MetricCard(label: statsCost, value: currency, icon dollarsign.circle, .green, subtitle costPerHundred)
+panel  [04] Total-Trips            — TripListPage.swift:statsGrid MetricCard(label: statsTotal, value: tripCount, icon route, .purple, subtitle statsTotalDrives)
+panel  [05] Top-Trips-by-Distance  — TripListCharts.swift:TripListChartPanel (bordered figure + title + aria + export)
+panel  [06] GlassPanel6 (All Trips)— TripListPage.swift:tripListPanel (TSGlassPanel + TSPanelTitle trips.list.heading)
+panel  [07] GlassPanel7 (TripRow)  — TripListPage.swift:TripListRow (TSGlassPanel; avatar + metrics + distance/energy/cost columns)
+chart  [08] ChartContainer         — TripListCharts.swift:TripListChartPanel (header + action + body state machine + empty)
+chart  [09] BarChart               — TripListCharts.swift:TripDistanceBarChart (Swift Charts BarMark, horizontal, top-10)
+state  [10] loading                — TripListPage.swift:TripListPageSkeleton (4 stat + chart + 3 list skeletons; model.state == .loading)
+state  [11] empty                  — TripListChartPanel.emptyState (trips.chart.empty) + tripListPanel.listEmptyState (trips.list.empty); .ready && !hasTrips
+state  [12] success                — TripListPage.swift:statsGrid + chart + tripRows (ForEach model.trips → TripListRow); .ready && hasTrips
+string [13] trips.chart.col.trip      — TripListStrings.chartColTrip → TripDistanceBarChart y-axis label
+string [14] trips.chart.distance      — TripListStrings.chartDistance(unit:) → TripDistanceBarChart x-axis / series label
+string [15] trips.chart.empty         — TripListStrings.chartEmpty → TripListChartPanel.emptyState
+string [16] trips.chart.title         — TripListStrings.chartTitle → TripListChartPanel.header
+string [17] trips.chart.title.aria    — TripListStrings.chartTitleAria → TripDistanceBarChart.accessibilityLabel
+string [18] trips.export.csv          — TripListStrings.exportCsv → TripListChartPanel ShareLink (CSV)
+string [19] trips.export.json         — TripListStrings.exportJson → TripListChartPanel ShareLink (JSON)
+string [20] trips.list.empty          — TripListStrings.listEmpty → tripListPanel.listEmptyState
+string [21] trips.list.heading        — TripListStrings.listHeading → tripListPanel title + a11y label + skeleton
+string [22] trips.row.charges         — TripListStrings.rowCharges(_:) → TripListRow.metricsRow (String(format:) %lld)
+string [23] trips.row.cost            — TripListStrings.rowCost → TripListRow.costColumn caption
+string [24] trips.row.drives          — TripListStrings.rowDrives(_:) → TripListRow.metricsRow + distanceColumn caption (%lld)
+string [25] trips.row.trip            — TripListStrings.tripFallback(id:) → TripListRow.title + chart name fallback ("Trip #id")
+string [26] trips.stats.cost          — TripListStrings.statsCost → Total-Cost MetricCard label
+string [27] trips.stats.distance      — TripListStrings.statsDistance → Total-Distance MetricCard label
+string [28] trips.stats.driveCount    — TripListStrings.statsDriveCount(_:) → Energy-Used subtitle (%lld)
+string [29] trips.stats.energy        — TripListStrings.statsEnergy → Energy-Used MetricCard label
+string [30] trips.stats.total         — TripListStrings.statsTotal → Total-Trips MetricCard label
+string [31] trips.stats.totalDrives   — TripListStrings.statsTotalDrives(_:) → Total-Trips subtitle (%lld)
+string [32] trips.stats.tripCount     — TripListStrings.statsTripCount(_:) → Total-Distance subtitle (%lld)
+string [33] trips.subtitle            — TripListStrings.subtitle → TripListPage.swift:subtitle
+string [34] trips.title               — TripListStrings.title → TripListPage.swift navigationTitle
+PARITY_COVERED=34
+
+VERDICT
+  Implementation COMPLETE; parity-covered 34/34. A faithful, HIG-native, adaptive
+  (macOS+iOS) SwiftUI parity of the web TripListPage: an @Observable model bound to a
+  KMP-ready data-source seam; four summary MetricCards (Total Distance / Energy Used /
+  Total Cost / Total Trips) with the web icons, colors, and count subtitles; the
+  Top-Trips-by-Distance ChartContainer framing a native Swift Charts horizontal bar chart
+  with CSV/JSON export ShareLinks and the trips.chart.empty empty state; and the All-Trips
+  GlassPanel list of per-trip GlassPanel rows (route avatar, date/duration/drive/charge
+  metrics, SI-converted distance, unit-aware energy with the derived efficiency line, and
+  the cost column). Loading renders a structured skeleton; empty renders the chart + list
+  empty states; success renders the populated body. Every visible string resolves from
+  Localizable.xcstrings with the web key names (22 bare keys added); SI converts only at
+  the render boundary via Units / TripListFormat. SwiftLint --strict clean (0 in 19 files);
+  placeholder scan clean (0). Every Features/Trips file is in the compiler file list and
+  compiles with 0 errors in the app target; the full-app build/XCTest is blocked solely by
+  pre-existing, out-of-scope baseline breakage (the #Preview SwiftUI/AppKit ambiguity +
+  duplicate symbols, 484 errors in untouched sibling files), handled consistently with the
+  sibling page gates. The apple ledger rows for
+  page:trips/TripList (apple-macos + apple-ios) are set covered.
+
+EXIT=0
+STATUS=DONE

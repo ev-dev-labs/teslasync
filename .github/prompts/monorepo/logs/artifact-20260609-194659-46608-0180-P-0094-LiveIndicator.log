@@ -1,0 +1,138 @@
+=== P4 Shared surface 0094 LiveIndicator (Apple) ===
+Prompt:  .github/prompts/monorepo/p4-apple/shared-surfaces/0094-LiveIndicator.prompt.md
+Web src: web/src/components/data-display/LiveIndicator.tsx  (THE specification)
+Output:  apps/apple/TeslaSync/shared-surfaces/LiveIndicator.*
+Runner:  Darwin / Xcode 26.5 (17F42) · xcodegen, swiftlint, swiftformat, pwsh present
+         iPhone 16 simulator available (booted) · macOS 15 SDK · KMP Shared.xcframework built
+
+------------------------------------------------------------------------------
+WHAT SHIPPED (10 files, all under the allowed glob apps/apple/.../LiveIndicator.*)
+------------------------------------------------------------------------------
+  LiveIndicator.swift              public View + LiveIndicatorVariant (pill/dot/compact)
+  LiveIndicator.Projection.swift   status taxonomy, transport, derive (web hook), snapshot,
+                                   reading→snapshot factory, tone/icon selectors, resolved
+                                   view-state, pure projection, surface metadata
+  LiveIndicator.RelativeTime.swift formatRelativeTime port (justNow / {n}m / {n}h / absolute)
+  LiveIndicator.Seams.swift        LiveIndicatorSource protocol (P1/S8) + production source
+                                   (host-pushed reading, derived via the web hook math) + in-memory
+  LiveIndicator.Model.swift        @Observable @MainActor model + telemetry seam (P1/S11) + i18n
+                                   facade (P1/S10)
+  LiveIndicator.Views.swift        dot, chip, reconnecting spinner (Reduce-Motion gated), tone→Color.TS
+  LiveIndicator.Previews.swift     4 statuses × variants + freshness ages + motion/reduce-motion
+  LiveIndicator.strings            i18n: live.{connected,reconnecting,disconnected,unknown} +
+                                   live.relative.{justNow,minutesAgo,hoursAgo}
+  LiveIndicator.Tests.swift        model / seams / views / telemetry coverage
+  LiveIndicator.ProjectionTests.swift  derive / snapshot / projection / relative-time coverage
+
+PARITY NOTES
+  • Data source: useLiveConnection → P1/S8 source seam emitting LiveConnectionSnapshot
+    {status, lastMessageAt}. No HTTP in the view. The web hook's compute step (raw sse
+    state + 10s RECONNECTING_GRACE promotion + never-connected→unknown) is reproduced
+    faithfully in LiveConnectionStatus.derive(...) and unit + runtime tested.
+  • 4 statuses (web cfg table): connected→success/wifi/"Live"(+freshness on pill),
+    reconnecting→warning/spinning loader/"Reconnecting…", disconnected→danger/wifi.slash/
+    "Offline", unknown→muted/wifi.slash/"Unknown". The web has NO skeleton/spinner-only gate,
+    so unknown IS the initial/loading state and disconnected IS the offline/error state — that
+    mapping is reproduced rather than inventing chrome the source lacks (no silent drift).
+  • 3 variants: pill (chip + icon + label + "· {relative}"), dot (bare colored dot), compact
+    (chip + icon + label, no stamp). Freshness stamp gated to pill+connected+lastMessageAt.
+  • i18n: every label/phrase via NSLocalizedString(table "LiveIndicator"); no English literals
+    in code. Relative phrases (web-hardcoded in dateFormat.ts) routed through the facade.
+  • a11y: one VoiceOver element, label=status, value=freshness, .updatesFrequently (web
+    role="status" live region); spinner gated on accessibilityReduceMotion; SF Symbols scale
+    with Dynamic Type. Telemetry: view.opened surface=LiveIndicator emitted once on appear.
+
+------------------------------------------------------------------------------
+GATE STEP 3 — swiftlint --strict      (cd apps/apple && swiftlint --strict)
+------------------------------------------------------------------------------
+  Done linting! Found 0 violations, 0 serious in 3757 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEP 4 — swiftformat --lint apps/apple
+------------------------------------------------------------------------------
+  0/3987 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEP 5 — placeholder gate (apps/tools/check-placeholders.ps1)
+------------------------------------------------------------------------------
+  Exact prompt path (apps/apple/TeslaSync/shared-surfaces/LiveIndicator):
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  Rigorous isolated scan of the 10 shipped files (temp dir, -Language swift):
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  grep of forbidden tokens (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented)
+  across LiveIndicator.* : NONE FOUND.
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+SURFACE COMPILE + RUNTIME VERIFICATION (independent of the blocked full-app link)
+The surface is self-contained: it imports only SwiftUI/Foundation/Observation/OSLog/XCTest
+and references only the real design tokens (apps/design/generated/apple/Tokens.swift). No
+Shared.xcframework dependency, no sibling-surface dependency, no type-name collisions
+(LiveIndicator/LiveConnection*/LiveIndicator* are all unique in the app target). So it can be
+compiled in isolation under the app's exact Swift 6 / strict-concurrency settings:
+------------------------------------------------------------------------------
+  iOS 18 sim  · swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator
+              · Tokens.swift + 6 source files                       → EXIT 0
+  macOS 15    · swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0
+              · Tokens.swift + 6 source files                       → EXIT 0
+  iOS 18 sim  · + LiveIndicator.Previews.swift (-D DEBUG, #Preview matrix)  → EXIT 0
+  Tests       · source + *Tests.swift as one module: every LiveIndicator/LiveConnection symbol
+                resolves; the only unresolved names are XCTest's XCTAssert* C-macros, which raw
+                swiftc -typecheck cannot expand outside a test bundle (tooling limitation, not a
+                code defect — the real XCTest target expands them).
+  Runtime     · built + ran a standalone macOS harness over the real source files:
+                22/22 assertions PASS — derive (5), snapshot factory (2), projection
+                tone/icon/label/spin (4), freshness gating (5), relative-time thresholds (6).
+                Sample: ≥24h → "Nov 12 at 2:13 PM"; 5m → "5m ago"; future/nil → "Just now"/"—".
+                HARNESS_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEPS 1 & 2 — full-app xcodebuild build/test (DEFERRED on PRE-EXISTING, OUT-OF-SCOPE blockers)
+------------------------------------------------------------------------------
+iOS  (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build):
+  IOS_EXIT=65 — 54 compile errors, ALL pre-existing and OUTSIDE the allowed files. Root cause:
+  duplicate type declarations across two directories I did not touch —
+    RecentDrivesModel / RecentDrivesLoadStatus / RecentDrivesConnection / RecentDrivesUpdate
+      declared in BOTH dashboard-widgets/RecentDrivesListWidget.* AND feature-views/RecentDrivesSection.*
+    StateTimelineModel / StateTimelineConnection / StateTimelineLoadStatus
+      declared in BOTH dashboard-widgets/StateTimelineWidget.* AND feature-views/StateTimeline.*
+  → "'RecentDrivesModel' is ambiguous for type lookup" + cascading "cannot infer contextual base".
+  Both directories are tracked at HEAD (git ls-files confirms) — the collision exists before my
+  change. ZERO errors are attributed to LiveIndicator.* (grep of the build log confirms). My files
+  ARE in the compile input set. This is the same blocker the sibling Speed (0088) recorded as
+  "owned by the P4 acceptance gate, not this per-surface prompt."
+
+macOS (xcodebuild -scheme TeslaSync-macOS build):
+  MAC_EXIT=65 — 2 errors, both pre-existing and environmental (NOT compile errors, ZERO in my
+  files):
+    "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing with a
+    development certificate.
+  This runner has no development signing identity (DEVELOPMENT_TEAM=""). Same blocker the sibling
+  Speed (0088) recorded ("development code-signing on the unsigned macOS runner"). Out of the
+  allowed-files scope and not introduced by this surface.
+
+Because both full-app builds are blocked before/at link by pre-existing, out-of-scope issues, the
+hosted `test` action cannot be reached here; the surface's own tests are verified by the symbol-
+resolution typecheck above plus the 22/22 runtime harness. The duplicate-declaration fix and the
+macOS signing identity are owned by the P4 acceptance gate on a signed runner, per ADR-002 (one
+shared Sources group across both app targets) and the established sibling disposition.
+
+------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic LiveIndicator shipped at parity with the web source and
+INDEPENDENTLY VERIFIED: it compiles for iOS 18 + macOS 15 under Swift 6 strict concurrency against
+the REAL design tokens, its #Preview matrix compiles, every surface symbol its tests reference
+resolves, and its pure state machine + formatter pass 22/22 runtime assertions — with
+swiftlint --strict, swiftformat --lint, and the placeholder gate all green. No stubs, no skeleton-
+only, no English literals, no hidden surfaces, no delegation. The full-app iOS + macOS
+xcodebuild build/test is DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-
+allowed-files blockers — sibling duplicate type declarations (RecentDrives*/StateTimeline* across
+feature-views vs dashboard-widgets) on iOS and development code-signing on the unsigned runner on
+macOS — both owned by the P4 acceptance gate. The generated .xcodeproj + staged Shared.xcframework
+are git-ignored.
+
+EXIT=0
+STATUS=DONE

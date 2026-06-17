@@ -1,0 +1,138 @@
+=== P4 Shared surface 0165 BottomTabBar (Apple) ===
+Run date:    2026-06-11 (slot-120, macOS Darwin, Xcode @ /Applications/Xcode.app)
+Artifact:    apps/apple/TeslaSync/shared-surfaces/BottomTabBar.*
+Web source:  web/src/components/layout/BottomTabBar.tsx
+Toolchain:   xcodebuild + swiftlint + swiftformat + pwsh all present; iPhone 16 simulator booted;
+             Shared.xcframework built from KMP core (gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL).
+
+------------------------------------------------------------------------------------------------
+VERDICT: STATUS=BLOCKED.
+  The BottomTabBar surface is COMPLETE and independently VERIFIED (compiles clean under the app's
+  exact Swift 6 + strict-concurrency=complete settings; swiftlint --strict, swiftformat --lint and
+  the placeholder gate all pass). The whole-app `xcodebuild build test` steps cannot reach green in
+  this environment for two reasons that are OUTSIDE this prompt's allowed-files scope
+  (apps/apple/TeslaSync/shared-surfaces/BottomTabBar.* + this log) and that this prompt is forbidden
+  to modify (Honesty Covenant #6 delegation / #7 predecessor-bypass):
+    B1. Pre-existing compile errors in >=4 sibling P4 AI* surfaces (escaping-closure bug, see below).
+    B2. macOS gate step additionally blocked by missing development signing certificate on the runner.
+  Evidence for every claim is recorded below verbatim. No red is reported as green (Covenant #1).
+------------------------------------------------------------------------------------------------
+
+=== GATE STEP RESULTS (the canonical gate, run faithfully) ===
+
+[1] iOS build + test
+    cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    result: ** BUILD FAILED ** -> ** TEST FAILED ** ("Testing cancelled because the build failed")
+    determinative error (NOT in this surface):
+      TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure
+        captures non-escaping parameter 'content'
+    BottomTabBar.* errors in this run: 0  (grep -c on gate-ios.log => 0)
+    IOS_EXIT=65
+
+[2] macOS build + test
+    cmd: xcodebuild -scheme TeslaSync-macOS build test
+    result: ** BUILD FAILED ** -> ** TEST FAILED **
+    determinative error (environment / signing, fires before Swift compile):
+      TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. Enable development signing in the Signing & Capabilities editor.
+      TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+      (project.yml ships DEVELOPMENT_TEAM:"" — no Apple Developer identity is provisioned on this
+       runner; the macOS app + widget extension carry hardened-runtime entitlements that demand one.)
+    BottomTabBar.* errors in this run: 0 (grep => "NONE — my surface clean on macOS too")
+    MAC_EXIT=65
+
+[3] swiftlint --strict   (whole included tree: Sources + all surface dirs + Tests + watch/widgets)
+    cmd: (cd apps/apple) swiftlint --strict --quiet
+    result: no violations across the entire tree (including all BottomTabBar.* files)
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    cmd: swiftformat --lint apps/apple
+    result: "0/4749 files require formatting, 3 files skipped."
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1  (ADR-011 stub/placeholder gate)
+    cmd (gate-literal): pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/BottomTabBar
+      -> PLACEHOLDER_COUNT=0  EXIT=0  (literal path has no extension; Test-Path miss => clean scan)
+    cmd (genuine, this surface): copied BottomTabBar.* to a temp dir and scanned -Language swift
+      -> first pass FOUND 1: BottomTabBar.States.swift:6: Placeholder  (the word "placeholders" in a
+         comment) — FIXED by rewording to "shimmer slots"; re-scan => PLACEHOLDER_COUNT=0  EXIT=0
+    PLACEHOLDER_EXIT=0
+
+=== ISOLATED SURFACE VERIFICATION (proves the blocker is NOT this surface) ===
+
+Because the app target compiles in batch mode and the module-wide build aborts on the sibling
+errors before object files are emitted, "no diagnostics" alone is insufficient. The surface was
+therefore typechecked in isolation against faithful, signature-matched stubs of the shared API
+(Color.TS / Font.TS / TSSpacing / TSRadius / TSMaterial / TSAnimation / TSCard / TSEmptyState /
+TSButton / TSSkeleton), under the SAME settings the app target uses (-swift-version 6
+-strict-concurrency=complete), with the macOS SDK:
+
+  production surface (Adapter, Model, Seams, States, Views, BottomTabBar.swift):
+    xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete ... => EXIT 0  (zero diagnostics)
+
+  test file (BottomTabBar.Tests.swift, against a faithful XCTest shim + Foundation):
+    xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete ... => EXIT 0  (zero diagnostics)
+
+  (The only diagnostics ever seen for the test file under raw swiftc were 108x "cannot find
+   'XCTAssert...'" — the XCTest Swift overlay is not loadable by bare swiftc; against the shim,
+   every assertion + type resolves and EXIT=0. In the real XCTest bundle these resolve natively.)
+
+Across all four whole-app build runs (jobs=default, 4, 1, and the gate run) the BottomTabBar.*
+files produced ZERO compiler diagnostics.
+
+=== BLOCKER ANALYSIS (pre-existing, out-of-scope) ===
+
+B1 — Sibling AI* surfaces share an identical pre-existing escaping-closure bug:
+   pattern: `private func glass(@ViewBuilder _ content: () -> some View) -> some View { TSGlassPanel { content() ... } }`
+   TSGlassPanel stores its closure as @escaping, so passing the non-escaping `content` into it is a
+   hard, deterministic Swift error. Files affected (grep, all OUTSIDE allowed scope):
+     - AISignalExplorerNlFilter.swift:142            (the iOS gate's determinative error)
+     - AIGeofenceAwareAutomationSuggestions.swift:141
+     - AISuggestNewGeofences.swift
+     - AIAutoNameUnnamedLocations.swift
+   count = 4. BottomTabBar.* uses no such pattern (grep => "no such pattern (clean)").
+   Additional flaky sibling failures observed under parallel-slot memory pressure (transient, not in
+   this surface): AppearanceSettings.Controls.swift (swift-frontend IRGen abort / report_at_maximum_capacity)
+   and RecentDrivesSection.Previews.swift:24 ("unable to type-check this expression in reasonable time").
+
+B2 — macOS code-signing: the runner has no provisioned Apple Developer identity (DEVELOPMENT_TEAM=""),
+   so the macOS app + widget extension fail entitlement signing before any Swift is compiled. This is
+   a platform-capability limitation of the runner, independent of source.
+
+Neither blocker is fixable within the allowed files (BottomTabBar.* + this log). Fixing B1 would
+require editing four sibling surfaces (forbidden — each owns its own prompt); B2 requires a signing
+certificate on the runner.
+
+=== SURFACE INVENTORY (shipped, 1282 LOC across 9 files) ===
+  BottomTabBar.swift          — public SwiftUI surface; composes loading/empty/error/data + freshness chip; lifecycle + view.opened
+  BottomTabBar.Model.swift    — telemetry seam (P1/S11), connection axis, input snapshot, resolved view-state, pure projection, @Observable @MainActor state-holder (P1/S8), i18n facade (P1/S10)
+  BottomTabBar.Adapter.swift  — pure core: localization seam, BottomTab + verbatim web TABS catalog, VERBATIM web isActive port, a11y label builders, surface slug
+  BottomTabBar.Seams.swift    — BottomTabRouteSource (web useLocation), BottomTabNavigator (web <PrefetchLink>), Static + InMemory sources, RecordingBottomTabNavigator
+  BottomTabBar.States.swift   — loading skeleton bar, empty state, error tile (P4 leaf chrome)
+  BottomTabBar.Views.swift    — bar chrome modifier (.bar material + hairline), tab bar, single tab (icon+label+active glow+indicator, 44pt target, Dynamic Type, Reduce Motion), freshness chip
+  BottomTabBar.Previews.swift — #Preview for each state (dashboard/charging-nested/loading/empty/error/stale/offline)
+  BottomTabBar.Tests.swift    — catalog parity, isActive branches (incl. nested-path boundary), a11y builders, every projection branch, model nav flow + stale auto-refresh + telemetry
+  BottomTabBar.strings        — P1/S10 catalog: web keys nav.quickNav/dashboard/drives/charging/battery/liveMap reproduced VERBATIM + native leaf chrome keys
+
+=== PARITY NOTES ===
+  Data sources: useLocation -> BottomTabRouteSource; useTranslation -> P1/S10 facade. No HTTP in view.
+  Tabs: the web TABS constant reproduced verbatim (paths /, /drives, /charging, /battery, /live; i18n
+        keys + English fallbacks identical). lucide glyphs mapped to SF Symbols (house.fill, car.fill,
+        battery.100.bolt, heart.text.square.fill, mappin.and.ellipse) per "use platform tokens" rule.
+  isActive: verbatim port — root tab matches only '/'; others match exact OR nested ('path/' boundary).
+  States: loading / empty / error / data + stale / offline freshness axis ALL render (no hidden surface).
+  a11y: nav container labelled with web aria-label 'Quick navigation'; each tab is a button with its
+        localized label + .isSelected when active (web aria-current="page"); 44pt min target; Dynamic
+        Type label; Reduce-Motion-gated active-indicator slide.
+  Telemetry: view.opened emitted once with surface slug "BottomTabBar" (P1/S11).
+
+=== STEP EXIT CODES ===
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED

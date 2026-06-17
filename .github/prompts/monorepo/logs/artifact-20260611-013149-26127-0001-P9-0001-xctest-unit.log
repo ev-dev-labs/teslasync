@@ -1,0 +1,252 @@
+================================================================================
+P4 · P9 · 0001 — Apple XCTest unit coverage
+Run: 2026-06-11T02:41-0700   Host: Darwin arm64   Branch: auto/20260611-013149-26127/1
+Prompt: P4/P9/0001 — "XCTest unit tests" (this run)
+Log:    .github/prompts/monorepo/logs/p4-p9-0001-xctest-unit.log
+Honesty Covenant: 10 rules inlined in the prompt; enforced verbatim below.
+================================================================================
+
+=== PREFLIGHT (predecessor + capability + clean-tree) ===
+
+CAPABILITY PROBE (the prompt's "requires macOS + Xcode" gate):
+  xcode-select -p ........ /Applications/Xcode.app/Contents/Developer            OK
+  xcodebuild -version .... Xcode 26.5 (Build 17F42)                              OK
+  swift --version ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  swiftlint .............. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ............ /opt/homebrew/bin/swiftformat                         OK
+  pwsh / xcodegen ........ /opt/homebrew/bin/{pwsh,xcodegen}                     OK
+  java ................... OpenJDK 17.0.19 (Homebrew) — for KMP Shared core      OK
+  iPhone 16 simulator .... present + Booted; runtime iOS 26.5 (23F77)           OK
+  security find-identity -p codesigning -v .... "0 valid identities found"   << CAPABILITY GAP
+  => macOS + Xcode toolchain ARE present. The prompt's "no macOS/Xcode runner"
+     escape hatch does NOT apply. The gate is RUN FOR REAL below. A SEPARATE
+     capability gap (no code-signing identity) affects the macOS leg, and a
+     PREDECESSOR defect (a deterministic Swift 6.3.2 IRGen compiler crash in the
+     P7-generated surfaces) blocks the iOS+macOS BUILD before tests can run.
+
+  Shared.xcframework (KMP core, ADR-004) built fresh this run:
+    apps/shared/gradlew :core:assembleSharedXCFramework  => BUILD SUCCESSFUL in 6m33s
+    Staged to apps/apple/Frameworks/Shared.xcframework
+    slices = { ios-arm64, ios-arm64-simulator, macos-arm64 } + Info.plist
+    xcodegen generate => TeslaSync.xcodeproj (schemes: TeslaSync, TeslaSync-macOS,
+    TeslaSyncWatch).
+
+PREDECESSOR ("Depends on: P4/P1..P8 infrastructure and generated P7 pages"):
+  - Infrastructure (Sources/**) + the generated P7 surfaces (TeslaSync/feature-views,
+    dashboard-widgets, shared-surfaces, misc-surfaces, modals-dialogs) ARE present
+    on this branch (unlike the prior 98066 run, where pages were absent).
+  - NO predecessor STATUS=DONE log exists for THIS run series (26127). The logs/
+    directory contains only the prior 98066-run artifacts. done.txt is empty, and
+    the most recent commits describe a "jobs-8 partial run" + collision dedups.
+  - The build evidence below proves the P7 surface generation is a NON-DONE PARTIAL
+    RUN: it does not compile clean on Swift 6.3.2 (3x @escaping errors, 1x
+    type-checker timeout, and a deterministic IRGen COMPILER CRASH). Per Covenant
+    Rule 7 ("verify every Depends on prompt's log shows STATUS=DONE first") the
+    predecessor is NOT DONE.
+
+CLEAN TREE: at preflight `git status` was clean. Changes made during this run are
+  confined to apps/apple/** (the Allowed-Files scope) + this log. See CHANGES.
+
+=== SURVEY (what was inspected) ===
+
+EXISTING XCTest CODE (the P9-0001 deliverable — already extensive):
+  Test methods (unique `func test...`) ...... 10,990
+  XCTestCase classes ........................ 2,972
+  *Tests.swift files ........................ 769
+  Tests/Unit categories ..................... App, Auth, Charts, Components,
+    Dashboard, DashboardWidgets, DataDisplay, Design, Facade, FeatureViews, Forms,
+    Live, Maps, Notifications, Platform, Widgets (+ SharedCoreReachable, ExportStatusWidget)
+  Tests/Watch ............................... 8 files (WatchModel/Cache/DeepLink/Glance/
+    QuickAction/SyncPayload/SyncService + support)
+  Tests/UI .................................. 4 XCUITest files (OUT OF SCOPE here; P9-0002)
+  Co-located surface tests (TeslaSync/**) ... feature-views 396, dashboard-widgets 129,
+    shared-surfaces 133, misc-surfaces 6 test files.
+  => Every Spec category is covered by existing test code: facade/golden
+     (Tests/Unit/Facade: FacadeErrorMapping, LoadableState, UnitsGoldenVector),
+     design/components (Design/TSDesignTokens, Components, Charts, DataDisplay, Forms,
+     Maps), auth/live/push (Auth/PKCE,KeychainTokenStore,OIDC,TokenEndpoint;
+     Live/LiveDataStore,LiveStaleness; Notifications/PushPayloadParser,DeviceRegistrar,
+     LiveActivityController,QuietHours,PushCoordinator), widgets/intents/watch
+     (Widgets/*, Platform/Intent*,Spotlight,Menu,Handoff,VehicleCommand, Tests/Watch/*),
+     and per-page state (co-located *.Tests.swift / *.ModelTests.swift).
+
+PLACEHOLDER GATE (host gate, scanned all apps/apple swift): initial scan = 93
+  forbidden-pattern hits ("Placeholder" substring) with only 44 opt-outs =>
+  PLACEHOLDER_COUNT=93, EXIT=1 (RED). Audited all 93: EVERY hit is legitimate
+  non-stub code — em-dash null-value fallbacks (`static let placeholder = "—"`),
+  SwiftUI input-prompt text + i18n keys, `.redacted(reason: .placeholder)` loading
+  skeletons, and doc-comments/test-names describing those. NONE is a "Coming soon"
+  / TODO / unimplemented stub. (The checker is a blind case-insensitive substring
+  match; its designed opt-out is `// parity:allow <reason>`, already used on 56
+  lines elsewhere.)
+
+=== REASONING (approach + alternatives rejected) ===
+
+GOAL: bring Apple unit coverage to the ADR-010 bar AND run the exact 5-part gate
+green (iOS build+test, macOS build+test, swiftlint --strict, swiftformat --lint,
+check-placeholders). Coverage code already exists at scale, so the work reduced to
+(a) clearing the host gates honestly and (b) getting the build+test legs to run.
+
+PLACEHOLDER GATE FIX (host gate, in Allowed-Files):
+  - For the 85 short lines: appended `// parity:allow <reason>` (the gate's designed,
+    reason-required opt-out) with accurate per-category reasons (em-dash fallback /
+    web i18n key / input prompt / loading skeleton / ui copy / test name), each kept
+    <=120 chars so swiftlint line_length (warn 120, --strict) and swiftformat
+    wrapSingleLineComments (maxwidth 120) both still pass.
+  - For 6 long doc-comments where no marker could fit <=120: reworded "placeholder"
+    to the accurate term it denotes (template `tokens`, loading `skeletons`, input
+    `prompt`, `fallback`) — matching the codebase convention (LiveMotorStatus.Adapter
+    notes surfaces use `emDash`/`fallback` "never 'placeholder', so [they] carr[y] no
+    ADR-011 markers"). No marker needed; line shortens.
+  - For 2 long code lines (an i18n-key assertion + an em-dash ChargePlanBadge arg):
+    wrapped the call per swiftformat --wraparguments before-first style.
+  REJECTED: blanket renaming every `placeholder` identifier (broad cross-file blast
+  radius, compile risk) and blanket comment substitution (semantically lossy — the
+  word means 5 different things across the hits). The chosen mix is accurate + minimal.
+
+PREDECESSOR COMPILE FIXES (needed for the build leg to even start; in Allowed-Files):
+  - 3x "escaping closure captures non-escaping parameter 'content'" — added `@escaping`
+    to `glass(@ViewBuilder _ content:)` in AIAutoNameUnnamedLocations / AISignalExplorerNlFilter
+    / AIGeofenceAwareAutomationSuggestions, matching the 7 sibling surfaces that already
+    have it (TSGlassPanel.init takes `@escaping`).
+  - 1x "compiler unable to type-check this expression in reasonable time" —
+    RecentDrivesSection.Previews.swift:24: split a mixed Int/Double literal-inference
+    `.map { … }` into explicitly-typed locals.
+  These are correct, convention-aligned fixes. They are NOT a "fix" for the blocker
+  below — they merely let compilation PROCEED far enough to hit it.
+
+BLOCKER (intractable here): a deterministic Swift 6.3.2 IRGen COMPILER CRASH — see GATE.
+  Attempts to mitigate (all rejected/ineffective):
+  - Fresh isolated DerivedData (/tmp/dd-ios) to rule out corruption => crash recurs
+    (deterministic, not corruption).
+  - Demangled the crashing thunk to find a source trigger => it is COMPILER-SYNTHESIZED
+    (`@isolated(any) @Sendable (Bool) -> ()` reabstraction); there are 0 explicit
+    `@isolated(any)` usages and no greppable `@Sendable (Bool)->Void` declaration to
+    refactor. Lazy-definition emission is module-wide, so the trigger is not localizable
+    to the crashing batch.
+  - A build-setting dodge (batch-mode / explicit-modules / compilation-mode) would be
+    speculative 10–30 min builds and cannot change a TYPE-driven IRGen overflow; and
+    masking strict-concurrency or excluding sources would violate Rule 2/4/5.
+  Fixing an upstream compiler crash in PREDECESSOR P7 code is out of P9-0001 scope and
+  not tractable on the installed toolchain.
+
+=== CHANGES (files touched; in Allowed-Files apps/apple/**) ===
+NOTE: per Covenant Rule 8 (BLOCKED => commit ONLY the log, never code) these changes
+were VERIFIED locally (host gates green) but are NOT committed. They are recorded here
+so a follow-up run (after the predecessor compiler crash is resolved by P7) can re-apply.
+
+Placeholder-gate opt-outs / rewords / wraps (40 files): AnalyticsSummaryWidget.{Model,Tests},
+  BatteryHealthAnalyticsWidget.Views, ChargePlansWidget.Builder, ChargeStatusLiveWidget.Adapter,
+  ChargingSessionDetailWidget, DriveScoreGaugeWidget.Views, WatchSummaryWidget.{Adapter,Tests,Views},
+  YearReviewWidget.{Adapter,Model,Tests}, AchievementBadge.{States,swift}, ChargingSection.Chart,
+  CommandSearch.{Model,Models,Views,swift}, ConditionBuilder.{Fields,Model,Views},
+  DrivingCoachSection.{Adapter,Projection,Tests}, LiveMotorStatus.Adapter, PedalUsage.Tests,
+  SettingsExportImport.{Adapter,Seams}, SettingsSearch.Views, SignalCompareControls.{Controls,Localization},
+  TemperatureSection.Views, ImportPreviewModal.Views, WidgetCatalogueDialog.{Rows,Seams},
+  AILifetimeStatsQA.Views, AINLDriveSearch.{Tests,Views}.
+Predecessor compile fixes (4 files): AIAutoNameUnnamedLocations.swift,
+  AISignalExplorerNlFilter.swift, AIGeofenceAwareAutomationSuggestions.swift (+@escaping),
+  RecentDrivesSection.Previews.swift (type-check split).
+(Total 44 files; none are in the crashing batch — see GATE — confirming the crash is
+pre-existing predecessor code I did not touch.)
+
+=== COVERAGE / PARITY (Spec step 4 + ADR-010 target) ===
+PER-SPEC-CATEGORY test code presence: ALL present (see SURVEY) — facade+golden,
+  design/components, auth/live/push, widgets/intents/watch, and per-page co-located
+  state tests (*.Tests.swift / *.ModelTests.swift across 562 feature-view, 181
+  dashboard-widget, 139 shared-surface parity units).
+INSTRUMENTED LINE-% (xccov, target >=80% ADR-010): NOT OBTAINABLE — coverage requires
+  a successful `build test`, which is blocked by the IRGen crash. No number is invented
+  (Covenant Rule 1/3).
+PER-PARITY-UNIT STATE COVERAGE: cannot be MECHANICALLY VERIFIED via a green test run for
+  the same reason. The test SOURCES exist; their execution is gated by the predecessor
+  build crash.
+
+=== GATE (exact prompt commands; EXIT captured) ===
+
+[1] iOS — xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ----------------------------------------------------------------------
+    BUILD FAILED — DETERMINISTIC Swift 6.3.2 compiler CRASH during IR generation
+    (reproduced on fresh isolated DerivedData /tmp/dd-ios, after the @escaping +
+    type-check predecessor fixes let compilation proceed; ~1948 compile steps in).
+    Verbatim crash backtrace (apps/apple build, target 'TeslaSync'):
+      5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+      8   report_at_maximum_capacity(unsigned long) + 0
+      10  (anon)::SyncCallEmission::setArgs(Explosion&, bool, WitnessMetadata*) + 688
+      11  (anon)::IRGenSILFunction::visitFullApplySite(swift::FullApplySite) + 5196
+      15  swift::irgen::IRGenerator::emitLazyDefinitions() + 5520
+      "Command SwiftCompile failed with a nonzero exit code"
+    Demangled thunk: reabstraction thunk helper for
+      @escaping @isolated(any) @callee_guaranteed @Sendable (Bool, Actor?) -> ()
+      to @escaping @isolated(any) @callee_guaranteed @Sendable (Bool) -> ()
+      => an LLVM SmallVector<unsigned> overflow (report_at_maximum_capacity) while
+         lowering a COMPILER-SYNTHESIZED @isolated(any) isolation-erasure thunk
+         (SE-0431). Module-wide lazy definition; not source-localizable; no explicit
+         @isolated(any) in the tree. Tests NEVER execute (build precedes test).
+    IOS_EXIT=65
+
+[2] macOS — xcodebuild -scheme TeslaSync-macOS build test
+    ----------------------------------------------------------------------
+    BUILD FAILED — DETERMINISTIC code-signing validation failure (no override),
+    fails pre-compile. Verbatim:
+      error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. (target 'TeslaSync-macOS')
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+        development certificate. (target 'TeslaSyncWidgets-macOS')
+    Root cause: `security find-identity -p codesigning -v` => 0 valid identities; the
+    macOS app+widget carry entitlements (aps-environment, application-groups,
+    associated-domains) under ENABLE_HARDENED_RUNTIME=YES which REQUIRE a dev cert.
+    This is the ADR-012 capability gap (apps/macos-pending-verifications.md; also
+    blocked the prior 98066 run). NOT worked around in committed config.
+    A standard unsigned-test override `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+    CODE_SIGN_IDENTITY=-` was PROVEN this run to bypass signing validation (probe
+    reached Swift compilation: "note: Using codesigning identity override: -"), but the
+    macOS leg then hits the SAME IRGen crash as [1] (shared sources). Either way RED.
+    MAC_EXIT=65
+
+[3] swiftlint --strict            (cd apps/apple)
+    ----------------------------------------------------------------------
+    "Done linting! Found 0 violations, 0 serious in 3887 files."
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    ----------------------------------------------------------------------
+    "0/4117 files require formatting, 2 files skipped."
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path apps/apple -Language swift
+    ----------------------------------------------------------------------
+    PLACEHOLDER_ALLOWED=137  PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+Gate formula: EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER all 0.
+  IOS_EXIT=65  MAC_EXIT=65  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  => build/test legs RED  =>  gate EXIT is NON-ZERO.
+
+=== DISPOSITION ===
+STATUS=BLOCKED. Two independent, evidence-backed blockers:
+  A. PREDECESSOR NOT DONE (Covenant Rule 7) + GATE CANNOT RUN (Rule 3): the
+     P7-generated surfaces are a non-DONE partial run that does not compile on Swift
+     6.3.2. After fixing 3x @escaping + 1x type-check-timeout, the build hits a
+     deterministic IRGen COMPILER CRASH (report_at_maximum_capacity on a synthesized
+     @isolated(any) @Sendable (Bool)->() thunk). The XCTest unit suite (the deliverable)
+     therefore cannot be executed; no xccov/coverage can be honestly reported.
+  B. macOS code-signing capability gap (0 identities; entitlements need a dev cert) —
+     the documented ADR-012 gap. Bypassable for local unsigned test runs but still
+     subject to blocker A.
+
+The P9-0001 DELIVERABLE ITSELF (unit test code) is comprehensive (10,990 test methods /
+2,972 XCTestCase / 769 files across every Spec category) and the three HOST gates
+(swiftlint/swiftformat/check-placeholders) are GREEN after the placeholder remediation.
+Only the toolchain build+test legs are red — via a predecessor compiler crash outside
+P9-0001's scope. Per Rule 1 ("any EXIT != 0 => BLOCKED") this is BLOCKED, not DONE.
+
+=== COMMIT ===
+Per Rule 8 (BLOCKED => commit ONLY the log; never code): working-tree code changes in
+apps/apple/** are reverted; only this log is committed.
+  git add .github/prompts/monorepo/logs/p4-p9-0001-xctest-unit.log
+  git commit -m "chore(monorepo): BLOCKED P4/P9/0001 XCTest unit — predecessor Swift 6.3.2 IRGen crash + macOS dev-cert gap"
+
+EXIT=65
+STATUS=BLOCKED

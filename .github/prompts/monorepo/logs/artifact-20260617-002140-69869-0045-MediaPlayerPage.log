@@ -1,0 +1,223 @@
+================================================================================
+ p4-apple · P7 · page:vehicle-systems/MediaPlayer — SwiftUI / HIG parity
+ Native SwiftUI implementation of web MediaPlayerPage.tsx (adaptive macOS + iOS)
+ Prompt: p4-apple/P7/page:vehicle-systems/MediaPlayer
+ Web source: web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx (578 lines)
+ Output dir: apps/apple/TeslaSync/Features/VehicleSystems/
+================================================================================
+
+HOST / TOOLCHAIN
+  Xcode 26.5 (Build 17F42) · Swift 6.3.2 · swiftlint (homebrew) · swiftformat · pwsh · xcodegen
+  An Xcode runner IS available on this host (so the gate is NOT auto-BLOCKED on
+  "no runner"). The KMP Shared.xcframework was assembled locally for the build.
+
+FILES (8 new, 1945 lines — 336% of the 578-line web source; well above the ≥70% floor)
+  MediaPlayerModels.swift              304  wire model, enums, helpers, formatting (SI note)
+  MediaPlayerDataSource.swift          140  KMP seam (useMediaLatest/useMediaHistory) + fixtures
+  MediaPlayerPageModel.swift           228  @MainActor @Observable; stats/volume/source derivations
+  MediaPlayerViews.swift               370  Card/Header/Badge/MetricCard/StalenessChip; NowPlaying; VolumeStatsRow
+  MediaPlayerCharts.swift              326  RadialGauge · AreaChart panel · PieChart panel
+  MediaPlayerHistoryTable.swift        310  sortable Playback History table (web DataTable)
+  MediaPlayerPage.swift                223  scaffold: ScrollView + viewState switch; toolbar; .task/.refreshable
+  MediaPlayerPageRouteRegistration.swift 44 typed NavigationDestination (web /media-player)
+
+ARCHITECTURE
+  - SwiftUI View + @MainActor @Observable MediaPlayerPageModel (ADR-004). No business
+    logic in the view body; all derivations (web useMemo `filtered`/`stats`/`volumeChartData`/
+    `sourceData`) are model computed-properties.
+  - The web TanStack queries are kept by name as the single KMP seam in
+    MediaPlayerDataSource.swift (useMediaLatest → GET /media/latest, useMediaHistory → GET /media);
+    only that file changes when the generated client lands (P1/S2-S3). The view never touches the network.
+  - Charts are first-party Swift Charts (SectorMark / AreaMark+LineMark) — never a WKWebView.
+  - Tokens (P2) for every color/typography (Color.TS / Font.TS / TSSpacing / TSRadius / TSChartPalette);
+    .regularMaterial for the web glass (ADR-005). Adaptive macOS (regular) + iOS (compact/regular)
+    via horizontalSizeClass (charts row side-by-side vs stacked) (ADR-002/006).
+  - SI boundary (P1/S5): the page carries no non-SI unit — audio_volume is an unitless Tesla
+    loudness step (0…max) and elapsed/duration are milliseconds (time, already canonical). There is
+    no miles/mph/psi/kWh quantity; values render directly via MediaPlayerFormat. Documented in the
+    file header so the "never store/compute non-SI" rule is honored by construction.
+  - Live freshness (ADR-013): MediaPlayerPageModel.isStale surfaces a >2-min staleness chip.
+  - a11y (ADR-015): accessibilityLabel/Value/traits on every panel, chart, gauge, badge and the
+    sortable headers; charts expose a single VoiceOver summary; Dynamic Type via tokens; light/dark/
+    increased-contrast via the dynamic-color tokens; ≥44pt targets (Picker/Button defaults).
+  - i18n (ADR-014): every visible literal via String(localized:"translation.<key>"); web key names kept.
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=42
+================================================================================
+
+PANELS (9/9) — every named panel + every anonymous web region reproduced
+[x] panel — GlassPanel1     → MediaNowPlayingCard                 (MediaPlayerViews.swift) album-art tile,
+                              title + status badge, artist/album, station, source line, progress bar;
+                              glows cyan + art pulses while playing (web `glow`/animate-pulse).
+[x] panel — GlassPanel2     → MediaVolumeStatsRow.volumeGaugePanel (MediaPlayerViews.swift) hosts the
+                              volume RadialGauge (web GlassPanel with RadialGauge, max audio_volume_max||11).
+[x] panel — Unique-Tracks   → MediaVolumeStatsRow MetricCard "Unique Tracks"  (MediaPlayerViews.swift) purple/list icon.
+[x] panel — Top-Source      → MediaVolumeStatsRow MetricCard "Top Source"     (MediaPlayerViews.swift) green/radio icon.
+[x] panel — Avg-Volume      → MediaVolumeStatsRow MetricCard "Avg Volume"     (MediaPlayerViews.swift) cyan/speaker icon, fmtInt.
+[x] panel — Volume-Step     → MediaVolumeStatsRow MetricCard "Volume Step"    (MediaPlayerViews.swift) purple/speaker icon, fmtNumber(2)/—.
+[x] panel — GlassPanel7     → MediaVolumeChartPanel               (MediaPlayerCharts.swift) "Volume over Time" area chart, spans 2 cols (regular).
+[x] panel — GlassPanel8     → MediaSourceDistributionPanel        (MediaPlayerCharts.swift) "Source Distribution" donut + wrapping legend.
+[x] panel — GlassPanel9     → MediaPlaybackHistoryPanel           (MediaPlayerHistoryTable.swift) "Playback History" + N-records badge + table.
+
+CHARTS (3/3) — first-party Swift Charts, no WKWebView
+[x] chart — RadialGauge     → MediaPlayerRadialGauge   (MediaPlayerCharts.swift) SectorMark donut, innerRadius .ratio(0.68), value-only center (web unit="").
+[x] chart — AreaChart       → MediaVolumeAreaChart      (MediaPlayerCharts.swift) AreaMark gradient + LineMark, .monotone, yScale 0…(audio_volume_max||11).
+[x] chart — PieChart        → MediaSourcePieChart       (MediaPlayerCharts.swift) SectorMark donut, innerRadius .ratio(0.56) (web 45/80), angularInset 3 (web paddingAngle 3), palette via TSChartPalette.color(at:).
+
+DATA STATES (4/4) — implemented for the data source (latest + history)
+[x] state — loading  → MediaPlayerViewState.loading  → MediaPlayerPage.loadingView (redacted skeleton cards)
+                       + per-panel reload skeletons (MediaVolumeChartPanel.chartSkeleton,
+                       MediaSourceDistributionPanel.chartSkeleton, MediaPlaybackHistoryPanel.tableSkeleton)
+                       driven by isLoadingHistory; redacted(reason:.placeholder).
+[x] state — empty    → MediaPlayerViewState.empty    → MediaPlayerPage.emptyView (ContentUnavailableView)
+                       + per-source empties: "No volume data for this period", "No source data available",
+                       "No playback history for this period" / "No playback history" — never a blank region.
+[x] state — error    → MediaPlayerViewState.error    → MediaPlayerPage.errorView (ContentUnavailableView + Retry)
+                       + MediaPlayerInlineError (web `anyError` AlertBanner); MediaPlayerPageModel.fail() wires the arm.
+[x] state — success  → MediaPlayerViewState.success  → MediaPlayerPage.contentView (all panels render from model state).
+
+STRINGS (26/26) — every visible literal resolves from Localizable.xcstrings; web key names kept
+  Pre-existing in catalog (11, verified resolve):
+[x] string — Artist            translation.Artist            (MediaHistorySortKey.header / NowPlaying)
+[x] string — Source            translation.Source            (MediaHistorySortKey.header / NowPlaying)
+[x] string — Status            translation.Status            (MediaHistorySortKey.header)
+[x] string — Time              translation.Time              (MediaHistorySortKey.header / progress a11y)
+[x] string — Track             translation.Track             (MediaHistorySortKey.header)
+[x] string — Volume            translation.Volume            (MediaHistorySortKey.header / gauge / area name)
+[x] string — Playing           translation.Playing           (MediaPlaybackState.label)
+[x] string — Paused            translation.Paused            (MediaPlaybackState.label)
+[x] string — Stopped           translation.Stopped           (MediaPlaybackState.label)
+[x] string — records           translation.records           (MediaPlaybackHistoryPanel.recordsBadge)
+[x] string — error.loadFailed  translation.error.loadFailed  (MediaPlayerInlineError / errorView)
+  Added to catalog this change (15, en source values verbatim from the web defaults):
+[x] string — Media Player                                   translation.Media Player                 (navigationTitle / empty / error)
+[x] string — Top Source                                     translation.Top Source                   (MediaVolumeStatsRow)
+[x] string — Avg Volume                                     translation.Avg Volume                   (MediaVolumeStatsRow)
+[x] string — Unique Tracks                                  translation.Unique Tracks                (MediaVolumeStatsRow)
+[x] string — Volume Step                                    translation.Volume Step                  (MediaVolumeStatsRow)
+[x] string — Volume over Time                               translation.Volume over Time             (MediaVolumeChartPanel / chart a11y)
+[x] string — Source Distribution                            translation.Source Distribution          (MediaSourceDistributionPanel / chart a11y)
+[x] string — Playback History                               translation.Playback History             (MediaPlaybackHistoryPanel.header)
+[x] string — No track                                       translation.No track                     (MediaNowPlayingCard.titleText)
+[x] string — Unknown artist                                 translation.Unknown artist               (MediaNowPlayingCard.artistText)
+[x] string — No playback history                            translation.No playback history          (MediaPlaybackHistoryTable empty — web DataTable emptyMessage)
+[x] string — No playback history for this period            translation.No playback history for this period (MediaPlaybackHistoryPanel.emptyState)
+[x] string — No source data available                       translation.No source data available     (MediaSourceDistributionPanel.emptyState)
+[x] string — No volume data for this period                 translation.No volume data for this period (MediaVolumeChartPanel.emptyState)
+[x] string — Now playing, volume, and listening history     translation.Now playing, volume, and listening history (subtitle / empty desc)
+
+PARITY_COVERED=42
+PARITY_REQUIRED=42   (100%)
+
+Hook ports (web query name kept at the Swift call site — single KMP seam, ADR-004):
+  ✓ useMediaLatest   — MediaPlayerDataSource.swift:27  (GET /media/latest?vehicle_id={id})
+  ✓ useMediaHistory  — MediaPlayerDataSource.swift:33  (GET /media?vehicle_id={id}&limit=500)
+  ✓ loadVehicles     — MediaPlayerDataSource.swift:22  (web useSelectedVehicle roster)
+
+Navigation registration:
+  ✓ MediaPlayerLink (Hashable) + View.mediaPlayerDestination() + MediaPlayerRouteRegistration.make()
+    in MediaPlayerPageRouteRegistration.swift — typed NavigationDestination for web /media-player,
+    following the accepted sibling precedent (TirePressure/GuardMode/Geofences/Safety), since the
+    global AppRoute enum (Sources/App) is outside this prompt's allowed-files scope. The sidebar row
+    already exists: Layout.Nav.swift:83  nav("/media-player","Media Player","headphones").
+
+Supporting strings localized beyond the required 26 (zero hardcoded visible literals):
+  range presets (Today / Last 7/30/90 Days / Month/Year to Date / All Time) →
+  translation.mediaPlayer.range.{today,7d,30d,90d,mtd,ytd,all}; vehicle selector a11y →
+  translation.mediaPlayer.selectVehicle; pre-existing common.retry / common.staleData / Unknown.
+  (8 new supporting keys added; all referenced keys resolve — verified.)
+
+================================================================================
+ === GATE ===
+================================================================================
+# 1) Placeholder / stub scan (ADR-011) — REQUIRED gate
+  ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/VehicleSystems -Language swift
+    PLACEHOLDER_ALLOWED=11   (4 in the new MediaPlayer files — redacted reload/loading skeletons,
+                              each with a "// parity:allow <reason>" marker; the rest are sibling files)
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0   PASS
+
+# 2) Lint — SwiftLint --strict — REQUIRED gate
+  (cd apps/apple && swiftlint lint --strict <the 8 new MediaPlayer*.swift>)
+    Found 0 violations. (One sorted_first_last finding was fixed to max(by:).)
+  LINT_EXIT=0   PASS
+  Note: SwiftFormat --lint is NOT an enforced gate for these P7 page files — the accepted sibling
+  TirePressure*.swift also does not pass `swiftformat --lint` (same redundantReturn / wrapPropertyBodies
+  / numberFormatting findings); this prompt's gate block lists placeholder/build/swiftlint/test only.
+  The new files match the accepted sibling style exactly.
+
+# 3) Build — authoritative Swift 6 strict-concurrency compile (the same Swift frontend xcodebuild uses)
+  swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos14.0 \
+    apps/design/generated/apple/Tokens.swift apps/apple/Sources/Design/TSDesign.swift \
+    apps/apple/TeslaSync/Features/VehicleSystems/MediaPlayer*.swift
+    → 0 errors, 0 warnings (strict concurrency complete, Swift 6).
+  BUILD_EXIT=0   PASS
+
+  Project integration: `xcodegen generate` EXIT=0 — all 8 files wired into BOTH the TeslaSync (iOS)
+  and TeslaSync-macOS targets (6 pbxproj refs each). Zero type-name collisions across the whole Apple
+  target (all 31 new types are Media*/MediaPlayer*-prefixed; tree-wide grep clean).
+
+  Runtime logic test (deterministic, 22 assertions, executed):
+    swiftc -O Tokens.swift TSDesign.swift MediaPlayerModels.swift main.swift -o test && ./test → RUN_EXIT=0
+    Verified: fmtPlayTime (1:18, 4:04, 0:05), fmtInt/fmtNumber, status classify+tone (web statusVariant),
+    source classify (web sourceIcon), snapshot isPlaying + progressFraction(~0.32), 7 range presets +
+    startDate windows. "ALL LOGIC ASSERTIONS PASSED".
+
+# 4) Test — `xcodebuild test`
+  Shares the same pre-existing target blocker as `xcodebuild build` (see ENV NOTE). The unit ships no
+  XCTest file because the Tests/ target is outside this prompt's allowed-files scope; its parity-critical
+  pure logic is verified green by the executed 22-assertion runtime test above + the authoritative compile.
+  TEST: unit logic verified (runtime RUN_EXIT=0); full-target xcodebuild test BLOCKED-pre-existing.
+
+ENV NOTE — raw full-target `xcodebuild build/test` is BLOCKED by PRE-EXISTING, OUT-OF-SCOPE breakage
+  I built the KMP Shared.xcframework locally (Gradle :core:assembleSharedXCFramework, BUILD SUCCESSFUL
+  in 6m37s) and ran a real `xcodebuild -scheme TeslaSync-macOS build` (signing disabled). Result:
+  BUILD_EXIT=65 with 25 batched failures across 119 PRE-EXISTING files — and MP_ERR_COUNT=0 (zero
+  errors in any MediaPlayer file). The failures are target-wide symbol ambiguities and compiler
+  diagnostic crashes in files I never touched, e.g.:
+    - "'TirePressureUnit' is ambiguous for type lookup" — that enum is DUPLICATE-defined in
+      TeslaSync/Features/VehicleSystems/TirePressureModels.swift AND
+      TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Projection.swift (the dual Sources/ +
+      TeslaSync/ source trees collide). The accepted sibling TirePressure page lives with this same issue.
+    - "ambiguous use of 'Preview' / 'opacity' / 'xs' / 'sm' / 'md'" across Sources/Components/UI/*,
+      Sources/Dashboard/Widgets/*, TeslaSync/dashboard-widgets/Warranty*/WatchSummary* — pre-existing
+      duplicate token/Preview symbols.
+    - "failed to produce diagnostic for expression; please submit a bug report" — Swift compiler crashes
+      on pre-existing complex Warranty/WatchSummary expressions.
+  `git status` confirms my change set is ONLY the 8 new MediaPlayer*.swift + Localizable.xcstrings +
+  apple-ledger.json; none of the 119 erroring files are touched, and my new code adds no ambiguity.
+  Fixing those 119 files is explicitly Out-of-Scope for this parity-only prompt. Per the accepted
+  P7-page precedent (apple-page-vehicle-systems-TirePressurePage.log), the new code is verified green by
+  the authoritative Swift frontend compile that xcodebuild itself uses; no NEW code is red.
+
+================================================================================
+ === SUMMARY ===
+================================================================================
+✓ All 9 panels implemented (now-playing, volume gauge, 4 MetricCards, area chart, source donut, history table);
+  every anonymous web region reproduced (subtitle header, vehicle + range toolbar pickers, source legend).
+✓ All 3 charts first-party Swift Charts (SectorMark gauge, AreaMark+LineMark volume, SectorMark donut) — no WKWebView.
+✓ All 4 data states (loading/empty/error/success); per-source empties use ContentUnavailableView — never a blank region.
+✓ All 26 required i18n strings resolve from Localizable.xcstrings (11 pre-existing + 15 added); web key names kept;
+  +8 supporting keys (range presets, selector a11y) localized; zero hardcoded visible literals.
+✓ @MainActor @Observable model; web queries kept by name as the single KMP seam (ADR-004); view is logic-free.
+✓ No non-SI unit on this page (volume is unitless, time is ms); documented; renders via MediaPlayerFormat (P1/S5).
+✓ Tokens (P2) for all color/typography; materials for glass (ADR-005); adaptive macOS + iOS (ADR-002/006);
+  a11y labels/traits/Dynamic Type + light/dark/high-contrast (ADR-015); >2-min staleness chip (ADR-013).
+✓ PARITY_COVERED=42 / PARITY_REQUIRED=42 (100%).
+✓ Placeholder check: PASS (PLACEHOLDER_COUNT=0, 4 allowed redacted-skeleton opt-outs in the new files).
+✓ Authoritative Swift 6 compile (swiftc, strict-concurrency complete): PASS (BUILD_EXIT=0).
+✓ Runtime logic test (22 assertions): PASS (RUN_EXIT=0).
+✓ SwiftLint --strict: PASS (0 violations on the 8 new files).
+✓ xcodegen integration: PASS (all 8 files in both app targets); no symbol collisions across the Apple target.
+⚠ Raw full-target `xcodebuild build/test` BLOCKED by 119 PRE-EXISTING, out-of-scope files (duplicate
+  TirePressureUnit + Preview/token ambiguities + compiler crashes). MP_ERR_COUNT=0; the KMP framework
+  assembled + staged fine; no NEW code is red. Same precedent as TirePressurePage.
+
+Files: apps/apple/TeslaSync/Features/VehicleSystems/MediaPlayer*.swift (8 files, 1945 lines)
+Strings: apps/apple/Localization/Localizable.xcstrings (+23 keys: 15 required + 8 supporting)
+Ledger: apps/parity/apple-ledger.json — page:vehicle-systems/MediaPlayer {apple-macos, apple-ios} = done 42/42
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,194 @@
+==============================================================================
+=== P4 Feature view 0210 QuietHoursPanel (Apple) ===
+==============================================================================
+Surface  : apps/apple/TeslaSync/feature-views/QuietHoursPanel.*
+Web spec : web/src/features/settings/components/QuietHoursPanel.tsx (583 lines)
+Runner   : Darwin (arm64), Xcode 26.5 (Build 17F42), Swift 6.3.2,
+           swiftlint 0.x, swiftformat 0.x, pwsh 7.x, iPhone 16 simulator (booted)
+Allowed  : apps/apple/TeslaSync/feature-views/QuietHoursPanel.* + this log
+ADRs     : ADR-002 (shared SwiftUI source), ADR-004 (Shared.xcframework), ADR-009
+
+Honesty covenant honored: every figure below is the real, pasted result of an
+actually-executed command. No red is reported as green (rule 1). The whole-app
+`xcodebuild ... test` RUN is reported BLOCKED, NOT fabricated as 0 (rule 8/10),
+because the shared XCTest bundle fails to COMPILE on PRE-EXISTING, NON-OWNED
+base test files (enumerated in section 4). This surface contributes ZERO errors.
+
+------------------------------------------------------------------------------
+1. FILES SHIPPED (14 Swift + 1 .strings; each <= 400 lines per swiftlint)
+------------------------------------------------------------------------------
+QuietHoursPanel.swift             97   surface (FadeIn>GlassPanel>header/banner/
+                                       feedback/phase-body/editor; onAppear telemetry)
+QuietHoursPanel.Models.swift     291   severity+weekday catalogs, config, draft,
+                                       validation, phase/status/connection, outcomes
+QuietHoursPanel.Projection.swift 159   window value type, projected row, surface slug,
+                                       a11y summaries
+QuietHoursPanel.Adapter.swift    232   pure projector: validate (verbatim), parseHHMM,
+                                       summarize, nextChangeLabel, project, resolvePhase,
+                                       makeDraft, timezoneOptions
+QuietHoursPanel.Facade.swift     122   telemetry seam, i18n facade, validation-copy,
+                                       update snapshot, store seam (P1/S8)
+QuietHoursPanel.Model.swift      330   @Observable state holder (CRUD + freshness)
+QuietHoursPanel.Store.swift      115   InMemoryQuietHoursStore (previews/tests double)
+QuietHoursPanel.States.swift     122   loading skeleton / empty / error+retry chrome
+QuietHoursPanel.Views.swift      331   flow layout, chips, icon box, time bridge,
+                                       header, freshness chip, banner, feedback callout
+QuietHoursPanel.Row.swift        147   window row (<li>) + list (<ul>)
+QuietHoursPanel.Editor.swift     195   editor form (toggle/time/tz/weekday/severity/save)
+QuietHoursPanel.Previews.swift   111   #if DEBUG previews: every state + create/edit
+QuietHoursPanel.strings           ~95  i18n catalog (32 keys referenced, all covered)
+QuietHoursPanel.AdapterTests.swift 334 pure adapter + validation-copy tests + fixture
+QuietHoursPanel.Tests.swift      303   model lifecycle + accessibility tests
+
+------------------------------------------------------------------------------
+2. GATE STEPS — actually executed, real results
+------------------------------------------------------------------------------
+[xcodegen] xcodegen generate
+   => "Created project at .../TeslaSync.xcodeproj"                XCODEGEN_EXIT=0   OK
+   (sources are glob-included; the 15 new QuietHoursPanel.* files are picked up
+    automatically — git shows ONLY these files added on a clean base.)
+
+[iOS BUILD] xcodebuild -scheme TeslaSync \
+   -destination 'platform=iOS Simulator,name=iPhone 16' build  (whole app, incl. surface)
+   Shared.xcframework staged by the build's pre-action (Gradle KMP, ADR-004).
+   => ** BUILD SUCCEEDED **                                       IOS_BUILD_EXIT=0  OK
+   (my surface compiles + links into the real app target against the real
+    Shared.xcframework; zero QuietHours errors/warnings.)
+
+[macOS BUILD] xcodebuild -scheme TeslaSync-macOS build           (whole app, incl. surface)
+   => ** BUILD SUCCEEDED **                                       MAC_BUILD_EXIT=0  OK
+
+[iOS TEST] xcodebuild -scheme TeslaSync \
+   -destination 'platform=iOS Simulator,name=iPhone 16' test
+   => ** TEST FAILED ** at TEST-BUNDLE COMPILE on PRE-EXISTING, NON-OWNED files
+      (see section 4). The TeslaSync XCTest bundle compiles ALL *Tests.swift of
+      all ~280 surfaces as one module; a single base file's error fails the whole
+      bundle, so this surface's own tests cannot be reached.            IOS_TEST_EXIT=BLOCKED
+   Evidence my files are clean: across 3 full test-bundle compiles, EVERY reported
+   error was a non-owned file; `grep -i QuietHours <log> | grep error:` => NONE.
+
+[macOS TEST] xcodebuild -scheme TeslaSync-macOS test
+   => same shared XCTest bundle, same PRE-EXISTING base breakage          MAC_TEST_EXIT=BLOCKED
+
+[swiftlint] swiftlint lint --strict --config .swiftlint.yml QuietHoursPanel*.swift
+   => "Done linting! Found 0 violations, 0 serious in 14 files."          LINT_EXIT=0       OK
+
+[swiftformat] swiftformat --lint QuietHoursPanel*.swift
+   => "0/14 files require formatting."                                    FORMAT_EXIT=0     OK
+
+[check-placeholders] pwsh check-placeholders.ps1 -Path <surface files> -Language swift
+   => "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0"              PLACEHOLDER_EXIT=0 OK
+   (also run exactly as the gate specifies — EXIT=0.)
+
+------------------------------------------------------------------------------
+3. ADDITIONAL SURFACE-LEVEL PROOF (iOS 18 / Swift 6) — tests typecheck green
+------------------------------------------------------------------------------
+swiftc -typecheck -sdk iphonesimulator -target arm64-apple-ios18.0-simulator
+       -swift-version 6  <surface production files + shared component library>
+   => exit 0   (all 12 production files type-check clean)                 SWIFTC_PROD_EXIT=0
+swiftc -typecheck  <surface files + Tests + AdapterTests (vs the REAL types,
+       XCTest assertion shim)>
+   => exit 0   (both test files type-check clean against the real surface API)
+                                                                          SWIFTC_TESTS_EXIT=0
+Conclusion: the surface AND its tests are type-correct under Swift 6 strict
+concurrency; the tests simply cannot be RUN because the shared XCTest bundle
+will not compile (section 4).
+
+------------------------------------------------------------------------------
+4. PLATFORM-CAPABILITY / PRE-EXISTING-BLOCKER EVIDENCE (why `test` is BLOCKED)
+------------------------------------------------------------------------------
+Platform IS fully capable: SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15
+toolchain present; the WHOLE APP builds on BOTH platforms (section 2). So this is
+NOT a capability gap and NOT a fault of this surface.
+
+The blocker is that the base repo's shared XCTest bundle does not compile under
+Swift 6 — a PRE-EXISTING condition in files this prompt is NOT allowed to touch
+(allowed files = QuietHoursPanel.* only). Confirmed by the compiler across three
+real test-bundle builds; representative errors:
+
+  a) Non-Sendable global/static localize helpers (Swift 6 concurrency):
+     - PresetGallery.ModelTests.swift / PresetGallery.Tests.swift
+         "let 'passthroughLocalize' is not concurrency-safe because non-'Sendable'
+          type '(String, String) -> String' may have shared mutable state"
+     - SlideRenderer.FixturesTests.swift  ("static property 'echo' ... not
+          concurrency-safe ...")
+     - ActiveSessionsSection.{Tests,ModelTests}.swift, AnomalyInlineRow.{Tests,
+       ModelTests}.swift, NoVehicleSelected.{Tests,ModelTests}.swift,
+       ScheduledExportsPanel.Tests.swift  (same 'passthroughLocalize' pattern)
+  b) Duplicate XCTestCase class names across sibling surfaces (redeclaration):
+     - ChargeStatusWidget.Tests.swift  vs  ChargeStatusLiveWidget.Tests.swift
+         ("invalid redeclaration of 'ChargeStatusAdapterTests'" + 4 peers)
+     - SafetyFeaturesWidget.ModelTests.swift vs SafetyHistoryWidget.ModelTests.swift
+     - DrivingCoachSection.ModelTests.swift vs DrivingCoachWidget.Tests.swift
+     - MonthlyCostTable.Tests.swift vs MonthlyCostChart.Tests.swift
+
+This surface's two test files use ONLY instance-scoped helpers (e.g.
+`private let fallback` inside an @MainActor XCTestCase) and uniquely-named test
+classes, so they are Swift-6-clean (proven by SWIFTC_TESTS_EXIT=0 above and by
+contributing zero errors to every test-bundle compile). Fixing the ~dozen base
+files would require editing non-owned surfaces — outside the allowed-files scope.
+
+------------------------------------------------------------------------------
+5. PARITY CHECKLIST vs web source (every item reproduced)
+------------------------------------------------------------------------------
+Composition : FadeIn(0.135) > GlassPanel > purple IconBox(Moon) + title + subtitle
+              + "Add window" (shown only when !draft) ; list of window rows ;
+              editor form appended when a draft is open.                         OK
+Row (<li>)  : Enabled/Disabled badge, "start -> end (tz)" summary (summarizeWindow),
+              next-change hint (nextWindowChangeLabel wrap-around logic, verbatim),
+              Edit + Delete (Delete shows isPending spinner), read-only weekday
+              chip strip, "Always allow:" + bypass-severity badges.              OK
+Editor form : title (Edit/New), Enabled toggle, Start/End time pickers (HH:MM <->
+              Date 24h bridge), Timezone (IANA) menu (listTimezones), weekday
+              toggle chips, severity toggle chips, inline validation error,
+              Cancel + Update/Create (isPending).                                OK
+Validation  : validateDraft reproduced VERBATIM — HHMM regex on start then end,
+              start!=end (endEqual), timezone required, weekday mask 1..127,
+              empty bypass allowed; message map incl. "?? start_local" default.  OK
+States      : loading(spinner+skeleton) / empty(ContentUnavailable) /
+              error(retry) / content(list) / editing(form) / stale(chip+1-shot
+              auto-refresh) / offline(cached rows+chip) — ALL render, never blank. OK
+Data (P1/S8): useQuietHours + useSaveQuietHours + useDeleteQuietHours + useToast
+              bound via QuietHoursStore seam; NO HTTP in the view.               OK
+Feedback    : useToast success/error reproduced as a dismissible inline callout
+              (created/updated/removed + save/delete error w/ detail), auto-expire. OK
+i18n (P1/S10): 32 catalog keys quietHours.* + toast.quietHours.* — every key the
+              views resolve is present in QuietHoursPanel.strings; NO English
+              literals in Swift (all via QuietHoursStrings facade).             OK
+Telemetry   : view.opened emitted once on first appear, slug "QuietHoursPanel".  OK
+A11y        : VoiceOver labels on every control (add/edit/delete/toggle chips/
+              pickers), combined row label (state+summary+next), list summary,
+              isHeader traits, isSelected on chips, Dynamic Type (semantic fonts),
+              reduce-motion respected (TSFadeIn/skeleton), high-contrast tokens.  OK
+Seed seam   : applySeed (web seedDraft from the sibling AI advisor) reproduced —
+              opens a create form pre-filled, id cleared so Save stays canonical. OK
+No stubs    : check-placeholders clean (0); no TODO/stub/mock/placeholder/Lorem.  OK
+
+------------------------------------------------------------------------------
+RESULT
+------------------------------------------------------------------------------
+Surface deliverable: COMPLETE and verified GREEN by every gate tool that CAN run —
+  whole-app iOS build (EXIT=0) AND macOS build (EXIT=0) WITH the surface linked,
+  swiftlint --strict (0), swiftformat --lint (0), check-placeholders (0), plus
+  iOS 18 / Swift 6 swiftc -typecheck of BOTH the production code (0) and the test
+  code (0). The surface contributes ZERO compile errors to the shared XCTest bundle.
+
+The only un-green gate step is the whole-app `xcodebuild ... test` RUN, which
+fails at TEST-BUNDLE COMPILE on PRE-EXISTING, NON-OWNED base test files (section 4)
+that the allowed-files scope (QuietHoursPanel.* only) forbids fixing. Per the
+honesty covenant these two whole-app `test` exits are reported BLOCKED, not
+fabricated as 0 — hence the aggregate EXIT below is non-zero.
+
+XCODEGEN_EXIT=0
+IOS_BUILD_EXIT=0
+MAC_BUILD_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFTC_PROD_EXIT=0
+SWIFTC_TESTS_EXIT=0
+IOS_TEST_EXIT=BLOCKED
+MAC_TEST_EXIT=BLOCKED
+
+EXIT=1
+STATUS=BLOCKED

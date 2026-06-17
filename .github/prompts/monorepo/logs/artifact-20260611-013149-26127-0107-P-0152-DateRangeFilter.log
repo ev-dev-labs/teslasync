@@ -1,0 +1,140 @@
+=== P4 Shared surface 0152 DateRangeFilter (Apple) ===
+Runner: macOS (Darwin), Xcode 26.5 (build 17F42), Swift 6.3.2, swiftlint + swiftformat (Homebrew),
+        xcodegen 2.45.4, pwsh available, iPhone 16 simulator present (iOS 26.5).
+Branch: auto/20260611-013149-26127/107
+Date:   2026-06-11
+
+Deliverable (Allowed files — apps/apple/TeslaSync/shared-surfaces/DateRangeFilter.*):
+  DateRangeFilter.swift            (121 loc)  public View — prop init + injected-model seam, body, lifecycle
+  DateRangeFilter.Adapter.swift    (306 loc)  surface slug, i18n seam, preset catalog (port of @/lib/datePresets)
+  DateRangeFilter.Projection.swift (113 loc)  Input / Projection / Projector (props -> view-ready)
+  DateRangeFilter.Model.swift      (232 loc)  i18n facade (S10), telemetry seam (S11), @Observable holder (S8)
+  DateRangeFilter.Views.swift      (267 loc)  flow layout, DatePicker boundary, TSButton preset chip, empty state
+  DateRangeFilter.Previews.swift   (114 loc)  7 DEBUG previews, fixed-clock
+  DateRangeFilter.strings                     S10 catalog contribution (verbatim web keys + native a11y add)
+  DateRangeFilter.AdapterTests.swift (267 loc) pure-core tests (preset math / match / projection / values)
+  DateRangeFilter.Tests.swift        (347 loc) model + view-composition + strings-facade tests
+
+Web source reproduced: components/forms/DateRangeFilter.tsx (+ composed DatePresetChips.tsx + @/lib/datePresets).
+Shared component mapped: @/components/ui/Button -> TSButton (used for Apply + each preset chip, faithful to
+  the web DatePresetChips which renders <Button variant={active?'primary':'ghost'}>). Date inputs -> SwiftUI
+  DatePicker. Charts/maps: none (web source uses none).
+
+----------------------------------------------------------------------------------------------------
+GATE (mirrors the prompt's PowerShell block via the identical underlying tools)
+----------------------------------------------------------------------------------------------------
+
+# xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=65
+  ** BUILD FAILED ** — caused EXCLUSIVELY by PRE-EXISTING, OUT-OF-SCOPE compile errors in committed files
+  (identical Swift-6 "escaping closure captures non-escaping parameter 'content'" defect — a non-@escaping
+  @ViewBuilder helper passed into TSGlassPanel/TSCard's @escaping closure):
+    apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure
+      captures non-escaping parameter 'content'
+    apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure
+      captures non-escaping parameter 'content'
+    (an earlier run also surfaced apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:141 —
+     same defect; which file the parallel compiler reaches first varies by batch/cache.)
+  Evidence these are baseline, not mine:
+    $ git diff --quiet HEAD -- <each file>  -> UNMODIFIED (committed baseline; AISignalExplorerNlFilter at
+      commit 441cd2538). git status shows ONLY the 9 untracked DateRangeFilter.* files as my changes.
+  NO error is reported in ANY DateRangeFilter file:
+    $ grep -E "DateRangeFilter[^:]*:[0-9]+:[0-9]+: error:" gate-ios.log  -> (none)
+
+# xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=65
+  ** BUILD FAILED ** — code-SIGNING / provisioning limitation of the runner (not a code defect, not my code):
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development
+      certificate. Enable development signing in the Signing & Capabilities editor.
+    TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+  The macOS app target sets ENABLE_HARDENED_RUNTIME=YES + CODE_SIGN_ENTITLEMENTS with DEVELOPMENT_TEAM="";
+  no Apple Developer signing identity exists on this runner, so the macOS scheme cannot link for ANY surface.
+
+# swiftlint --strict        (whole included tree)
+LINT_EXIT=0   -> Done linting! Found 0 violations, 0 serious.
+
+# swiftformat --lint apps/apple   (whole tree)
+FORMAT_EXIT=0 -> 0/N files require formatting.
+
+# ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/DateRangeFilter
+PLACEHOLDER_EXIT=0  -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+  (Plus a GENUINE per-file scan of all 8 shipped .swift files: PLACEHOLDER_COUNT=0 each — no TODO / stub /
+   mock / placeholder / Lorem anywhere in the surface.)
+
+----------------------------------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION OF THE SURFACE (what the blocked monolith build cannot exercise)
+----------------------------------------------------------------------------------------------------
+Because the TeslaSync app module cannot link on this runner (the pre-existing out-of-scope compile errors
+above + the macOS signing block), the surface was verified in isolation against the REAL shipped
+dependencies (design tokens + TSButton), exactly as a green app build would compile it:
+
+1. iOS typecheck (Swift 6, complete concurrency, iPhoneSimulator26.5 SDK) of all 6 source files
+   (incl. #Preview macros) + real Tokens.swift + real Buttons.swift:
+     swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator ...   EXIT=0  (clean)
+
+2. macOS typecheck (Swift 6, MacOSX26.5 SDK) of the same set:
+     swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0 ...           EXIT=0  (clean)
+
+3. Runtime logic harness driving the REAL DateRangeFilter.Adapter + .Projection through the same
+   assertions as DateRangeFilter.AdapterTests (Foundation-only, fixed Gregorian/UTC clock 2024-03-15):
+     ALL RUNTIME ASSERTIONS PASSED  (41/41)
+       ISO format/parse (5), preset resolution today/yesterday/7d/30d/90d/mtd/qtd/ytd/lastMonth/1y/all + Q4
+       qtd + unknown (13), catalog order/lookup/filter/matchPresetId/resolveAllTimeStart (14), projector
+       active-highlight + chip list + Apply/preset-row/empty flags (9), surface slug (1).
+   (The *Tests.swift XCTest bundles cannot be linked here — the app/test target won't build, and raw
+    swiftc -typecheck does not expand XCTest's C function-macros like XCTAssertEqual; same XCTest-harness
+    limitation the predecessor recorded. The test files pass swiftlint --strict + swiftformat --lint and
+    mirror the committed, building ActiveFilterChips.{Tests,AdapterTests}.swift structure verbatim.)
+
+----------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------------------------------------
+[x] Surface renders on Apple with all states from the web source reproduced
+      - start->end date row (always), optional Apply button (web {onApply &&}), optional preset chip row
+        (web {presets &&}), active-preset highlight (web matchPresetId), kept-but-empty preset group ->
+        friendly empty state (never a blank box), empty-boundary -> set-date affordance.
+      - The web component is a PURE controlled component (only useTranslation + useMemo); it has NO
+        loading/error/stale/offline branch (nothing is fetched), so — per the established precedent of the
+        sibling presentational surfaces ActiveFilterChips(0147)/InlineCallout(0124)/MetricCard(0095) — only
+        the source's REAL branches are reproduced; fabricating fetch-state chrome is documented as out of
+        parity in DateRangeFilter.Adapter.swift.
+[x] Hooks bind to the shared S8 state-holder layer; no direct HTTP from the view
+      - useTranslation -> DateRangeFilterStrings facade (S10); useUrlBatch is a CONSUMER concern routed
+        through page closures (onStartDateChange/onEndDateChange/onRangeChange/onApply), exactly as web.
+        DateRangeFilterModel is the @Observable @MainActor holder (S8). No networking in the view.
+[x] Every i18n key from source has a matching key in the S10 catalog
+      - date.range.start / date.range.end / date.range.apply (DateRangeFilter.tsx),
+        date.preset.label (DatePresetChips.tsx), date.preset.{today,yesterday,last7,last30,last90,mtd,qtd,
+        ytd,lastMonth,last1y,all} (datePresets.ts) + native dateRangeFilter.noPresets. All in
+        DateRangeFilter.strings; resolved via NSLocalizedString(value:) fallbacks (deterministic in tests).
+[x] Accessibility labels present on every interactive element
+      - start/end DatePicker -> "Start date"/"End date"; Apply -> "Apply"; each preset chip -> its label +
+        .isSelected trait when active (web aria-pressed); preset group -> "Quick date range" container;
+        decorative calendar glyph + "->" separator -> accessibilityHidden. Dynamic Type via tokens;
+        reduce-motion respected (no bespoke animation introduced).
+[x] Tests: adapter unit test + per-state view test + a11y/label coverage
+      - AdapterTests: preset math, match, filter+order, resolveAllTimeStart, iso/parse, projector flags,
+        value equality, slug. Tests: model lifecycle/view.opened-once, routed setters, handlePreset
+        (atomic onRangeChange vs both setters, always onApply), apply, update, bridging; view composition
+        for every branch; strings-facade fallbacks. (Logic proven at runtime here; see harness above.)
+[x] Telemetry: view.opened with surface slug "DateRangeFilter" (S11) — emitted once per instance, idempotent.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code — PLACEHOLDER_COUNT=0 (verbatim + per-file).
+[ ] EXIT=0 — NOT achievable on this runner: blocked by (a) pre-existing out-of-scope iOS compile errors in
+      committed AI* surfaces and (b) the macOS code-signing environment limitation. Neither is caused by,
+      nor fixable within, this prompt's allowed file scope (DateRangeFilter.* + this log). Per the TeslaSync
+      engineering guidelines ("Don't fix pre-existing issues unrelated to your task") and the parallel-slot
+      ownership model, those AI* files were left untouched (a temporary local @escaping patch was used only
+      to confirm my files compile past them, then fully reverted — git shows them UNMODIFIED).
+
+----------------------------------------------------------------------------------------------------
+ASSESSMENT
+----------------------------------------------------------------------------------------------------
+The DateRangeFilter surface is COMPLETE and fully verified to the limit the runner allows: it typechecks
+clean on iOS AND macOS under Swift 6 strict concurrency against the real design tokens + TSButton, its core
+logic passes 41/41 runtime assertions, and swiftlint --strict / swiftformat --lint / placeholder are all
+green. The official `build test` gate is RED solely due to causes external to this surface and outside its
+allowed file scope: pre-existing committed compile errors in unrelated AI* surfaces (iOS) and the absence of
+a macOS code-signing identity on the runner (macOS). No DateRangeFilter file produces any error or warning.
+
+EXIT=65
+STATUS=BLOCKED

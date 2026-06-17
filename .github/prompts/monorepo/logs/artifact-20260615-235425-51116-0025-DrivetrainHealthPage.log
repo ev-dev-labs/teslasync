@@ -1,0 +1,180 @@
+================================================================================
+p4-apple · P7 · page:driving/DrivetrainHealth — SwiftUI / HIG parity
+  web source : web/src/features/driving/pages/DrivetrainHealthPage.tsx  (route /drivetrain-health)
+  output     : apps/apple/Sources/Features/Driving/DrivetrainHealth*.swift
+               (the live Xcode project — like the sibling DriveScorePage — hosts feature
+                pages under Sources/Features/<Domain>/; the prompt's nominal
+                apps/apple/TeslaSync/Features/Driving/** is the allowed-files alias,
+                reconciled here. `Sources/` is the only hand-written group compiled by
+                project.yml; the generated TeslaSync.xcodeproj is git-ignored + rebuilt
+                via xcodegen.)
+  parity     : page:driving/DrivetrainHealth  (manifest PARITY_REQUIRED=7 = 4 states + 3 strings)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI DrivetrainHealthPage at web parity: a pure @Observable state holder
+(ADR-004 — no networking in the view) over an injectable DrivetrainHealthDataSource seam whose
+methods keep the web hook names at the Swift call sites (loadVehicles ← useSelectedVehicle/GET
+/vehicles, useDrivetrainHealth ← GET /drivetrain/health, useDrives ← GET /drives, useDrivingStats ←
+GET /drives/stats, useMotorLatest ← GET /motor/latest, useMotorHistory ← GET /motor, useVehicleLive
+← the live SSE isolation-resistance slice). Every derivation (sensors, chartData filter/sort/cap-30,
+tempTrend, peak/avg/min-regen power, motorChartData, recommendations, severity colors) is ported
+verbatim into the deterministic, unit-tested DrivetrainHealthEngine.
+
+The page reproduces the web chrome (PageContainer title + subtitle + the global VehicleSelect + the
+date RangePicker) and ALL TWELVE web sub-component sections — even though the manifest's automatic
+extractor found 0 named panels (the web page delegates to components/drivetrain-health/*), the
+honesty covenant's "no scope narrowing" mandate was honored by opening the web source and
+reproducing every region in the same data + grouping + order:
+
+  HealthOverview (elevated/critical AlertBanner + the health-summary GlassPanel with state icon,
+  headline, motor state, status badge + animated health score), HealthGaugeGrid (the health-score
+  RadialGauge + the Motor-Details KVList + a real-time indicator + the Drive-Statistics KVList),
+  TemperatureGauges (four severity-tinted value/max gauges), TemperatureMetricCards (four neon
+  sensor tiles + health + peak-power), ThermalLoadPanel (four severity MetricBars + four inline
+  metrics), LiveMotorStatus (four headline tiles + nine inline RPM/torque/temp/HV-isolation metrics,
+  with its own no-telemetry empty), StatorTempChart (3-series line + 60/80 °C refs), TorqueHistory
+  (area + 0 ref), TemperatureTrend (line + 35/0 °C refs), PowerOutput (2-series area + 0 ref),
+  HealthRecommendations (priority-ordered tips), and DetailCards (Temperature-Details + Power-Summary
+  KVLists).
+
+All measurements stay SI canonical in the model (°C / meters / m·s⁻¹ / watts / watt-hours);
+conversion to the user's unit preference happens ONLY at the SwiftUI render boundary via the shared
+KMP Units facade + DrivetrainHealthPageFormat (ADR-005). Power stays kW (the web power chart/cards are
+never unit-converted — mirrored faithfully). The four charts use the P3 native Swift Charts wrappers
+(TSLineChart / TSAreaChart / TSChartContainer), never a WKWebView, and each renders a
+ContentUnavailableView empty state instead of the web's hide-on-too-few-points (never a blank region,
+ADR-011). Adaptive across macOS/iPad regular width vs. iPhone compact (ADR-002/006): the gauge grid,
+metric grid, live tiles, thermal inline grid, and detail cards reflow. Every visible literal resolves
+from Localizable.xcstrings with the web key names (zero hardcoded text; +108 drivetrain.* + route key
++ 3 shared keys surfaced by the page). a11y: accessibilityElement/Label/Value on panels, gauges, and
+charts; Dynamic Type via the shared theme; light/dark/increased-contrast via the generated tokens.
+
+Navigation: a new .drivetrainHealth AppRoute case (pathSegment "drivetrain-health") was added so the
+page is a real sidebar/tab destination AND deep-linkable at /drivetrain-health without breaking the
+sibling DriveScore, which already owns the single .driving route (registering DrivetrainHealth on
+.driving would have evicted DriveScore — "no predecessor bypass"). DrivetrainHealthRouteRegistration
+registers the host; TeslaSyncApp threads it through the shared registry.
+
+The data sources are request/response + a polled live slice (not a durable SSE replay), so no >2 min
+staleness banner applies; the live panel surfaces its own empty state when no snapshot exists.
+
+FILES (apps/apple/Sources/Features/Driving/):
+  DrivetrainHealthModels.swift              value types (health/sensor/drive/stats/motor/live/vehicle/
+                                            chart-point/recommendation), SI canonical
+  DrivetrainHealthEngine.swift              pure derivations (sensors / severity / chartData /
+                                            motorChartData / power aggregates / recommendations)
+  DrivetrainHealthPageFormat.swift          display-boundary formatters (number/temp/distance/speed/
+                                            energy/power/torque/rpm/isolation/percent/date)
+  DrivetrainHealthPageModel.swift           @Observable model + DrivetrainHealthDataSource + phase
+  DrivetrainHealthPageModel.Sample.swift    sample / empty / failing data sources
+  DrivetrainHealthPage.swift                View + header + phase switch (loading/empty/error/ready) +
+                                            previews
+  DrivetrainHealthTones.swift               severity/status → brand-tone extensions
+  DrivetrainHealthPage.Sections.swift       gauge + range control + overview + gauge-grid +
+                                            temperature-gauges + skeleton
+  DrivetrainHealthPage.Panels.swift         metric-tile + temperature-metric-cards + thermal-load +
+                                            recommendations
+  DrivetrainHealthPage.LiveMotor.swift      live motor tiles + inline metrics + internal empty
+  DrivetrainHealthPage.ChartChrome.swift    legend / axis / reference / chart-empty chrome
+  DrivetrainHealthPage.Charts.swift         stator / torque / temperature-trend / power-output charts
+  DrivetrainHealthPage.DetailCards.swift    temperature-details + power-summary KVLists
+  DrivetrainHealthRouteRegistration.swift   route host registration (.drivetrainHealth)
+  Tests/Unit/Features/Driving/DrivetrainHealthEngineTests.swift       12 engine/derivation tests
+  Tests/Unit/Features/Driving/DrivetrainHealthPageModelTests.swift    8 model state-machine tests
+
+EDITED (navigation registration + string catalog + ledger, in allowed scope):
+  Sources/App/AppRoute.swift                +case .drivetrainHealth (+ pathSegment / systemImage / group)
+  Sources/TeslaSyncApp.swift                DrivetrainHealthRouteRegistration.registry(base:)
+  Localization/Localizable.xcstrings        +112 keys (drivetrain.* + route.drivetrainHealth +
+                                            error.title / chart.copyData / chart.export — the shared
+                                            keys the page surfaces; additive only)
+  apps/parity/apple-ledger.json             +2 rows (apple-macos + apple-ios, done, 7/7)
+
+PRE-EXISTING BASE FIXES (NOT introduced by this work — required to keep the shared --strict lint +
+the whole-app build + the monolithic test bundle green; each is minimal + behavior-preserving and is
+called out here per the honesty covenant's "no silent drift"):
+  TeslaSync/feature-views/AnomalyInlineRow.Previews.swift   wrapped 2 lines > 120 cols (swiftlint --strict)
+  Sources/Features/Diagnostics/AnomalyDashboardModels.swift split a chained .map().sorted() with a type
+                                            hint (compiler "unable to type-check in reasonable time"
+                                            under the added compilation load)
+  Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift  nonisolated static fixture + Date-accuracy
+                                            compare via timeIntervalSince1970 (Swift 6 concurrency)
+  Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift   nonisolated static factory (Swift 6)
+  Sources/Features/Analytics/TimelinePageModel.swift         utcDayKey + formatter made nonisolated
+                                            (pure UTC-day utility; resolves the test's call from a
+                                            nonisolated context)
+
+--------------------------------------------------------------------------------
+GATES  (run on macOS 26.5 / Xcode 26.5 / Swift 6.3; Darwin host — PowerShell gate
+        commands adapted to bash + pwsh, results recorded verbatim)
+--------------------------------------------------------------------------------
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Driving -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=1   (the sibling DriveScorePage.Sections.swift `.placeholder` redaction marker)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build ---
+** BUILD SUCCEEDED **
+BUILD_EXIT=0
+
+--- xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build CODE_SIGNING_ALLOWED=NO ---
+  (CODE_SIGNING_ALLOWED=NO — the runner has no Apple development certificate; the macOS app +
+   widget entitlements require one to sign, which is an environment limitation, not a compile error)
+** BUILD SUCCEEDED **
+BUILD_EXIT=0
+
+--- swiftlint --strict  (config `included:` lints the whole repo regardless of the path arg) ---
+0 violations
+LINT_EXIT=0
+--- swiftformat --lint apps/apple/Sources/Features/Driving + Tests/Unit/Features/Driving ---
+0/32 files require formatting
+LINT_EXIT=0
+
+--- xcodebuild test -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+      -only-testing:TeslaSyncTests/DrivetrainHealthEngineTests
+      -only-testing:TeslaSyncTests/DrivetrainHealthPageModelTests ---
+  (the monolithic TeslaSyncTests bundle compiles all test files together; the bundle first had to be
+   unblocked by the pre-existing Swift-6 test fixes above before any test — incl. these — could run)
+Test Suite 'Selected tests' passed
+Executed 20 tests, with 0 failures (0 unexpected)
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=7
+--------------------------------------------------------------------------------
+[x] state  — loading
+       DrivetrainHealthPage.swift `content` → `case .loading: DrivetrainHealthSkeleton()`;
+       DrivetrainHealthPageModel.phase `.loading`; DrivetrainHealthPage.Sections.swift
+       `struct DrivetrainHealthSkeleton`. Test: DrivetrainHealthPageModelTests.testInitialPhaseIsLoading.
+[x] state  — empty
+       DrivetrainHealthPage.swift `case .empty: emptyView` → `TSEmptyState(title:"drivetrain.noData")`
+       (ContentUnavailableView); model.phase `.empty` when health resolves nil.
+       Test: DrivetrainHealthPageModelTests.testEmptySourceResolvesToEmpty.
+[x] state  — error
+       DrivetrainHealthPage.swift `case let .error(message): errorView(message)` →
+       `TSErrorDisplay(message:onRetry:)` with a Retry affordance; model.phase `.error` on a thrown
+       useDrivetrainHealth. Test: DrivetrainHealthPageModelTests.testFailingSourceResolvesToError.
+[x] state  — success
+       DrivetrainHealthPage.swift `case .ready: readyView` (all twelve bound sections); model.phase
+       `.ready`. Test: DrivetrainHealthPageModelTests.testLoadReadyWithSample (health + sensors(4) +
+       chartPoints + motorPoints + isolation + recommendations all bound).
+[x] string — drivetrain.noData
+       DrivetrainHealthPage.swift `TSEmptyState(title: "drivetrain.noData", …)` (empty region) +
+       DrivetrainHealthPage.Panels.swift sensor "No data" subtitle. Catalog: Localizable.xcstrings
+       "drivetrain.noData" = "No data".
+[x] string — drivetrain.subtitle
+       DrivetrainHealthPage.swift `titleBlock` → `Text("drivetrain.subtitle")`. Catalog:
+       "drivetrain.subtitle" = "Motor, inverter, and battery thermal status".
+[x] string — drivetrain.title
+       DrivetrainHealthPage.swift `TSPageTitle("drivetrain.title")` + `.navigationTitle(Text(
+       "drivetrain.title"))`. Catalog: "drivetrain.title" = "Drivetrain Health".
+--------------------------------------------------------------------------------
+PARITY_COVERED=7
+--------------------------------------------------------------------------------
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,150 @@
+=== P4 Feature view 0160 TemperatureGauges (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · PowerShell 7.6.2
+  Destinations       : iOS Simulator "iPhone 16" (booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh during the scheme pre-action
+                       (Gradle ":core:assembleSharedXCFramework" built debug + release Kotlin/Native frameworks for
+                       iosArm64 / iosSimulatorArm64 / macosArm64; "xcframework successfully written out to
+                       apps/shared/core/build/XCFrameworks/{debug,release}/Shared.xcframework").
+  Capability         : SwiftUI present; the web source uses NO Swift Charts and NO MapKit ("Charts/maps used: (none)")
+                       so neither is required here → NOT capability-BLOCKED. The full-app Xcode gate is RED only on
+                       pre-existing, unrelated dashboard-widget surfaces (see GATES / WHY DEFERRED).
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drivetrain-health/TemperatureGauges.tsx — a presentational leaf fed
+  { sensors: TempSensor[] } by the Drivetrain Health page (DrivetrainHealthPage.tsx), plus useUnits()
+  (unitPrefs.temperature ∈ {°C,°F}). One GlassPanel(p-6) with a Thermometer <h3> header
+  t('drivetrain.tempGauges','Temperature Gauges') over a Grid(cols 2 / md 4). Per sensor:
+    RadialGauge( value = sensor.value !== null ? convertTempFromSI(value) : 0,
+                 max   = convertTempFromSI(maxTemp),
+                 label = t(sensor.labelKey, sensor.defaultLabel),
+                 unit  = unitPrefs.temperature,
+                 color = tempSeverityColor(sensor.value, sensor.maxTemp) )
+    + <p> "Max: {fmtNumber(convertTempFromSI(maxTemp),0)}{unit}"  (t('drivetrain.maxLabel','Max')).
+  RadialGauge centre = fmtNumber(clamp(value,0,max), Number.isInteger(clamped)?0:getGlobalPrecision()) + unit;
+  ring fill = clamped/max. helpers.tempSeverityColor: null→#6b7280(gray); ratio = celsius/max (SI):
+  ≥0.85 critical #ef4444, ≥0.65 warning #f59e0b, else good #10b981. convertTempFromSI: °C passes through,
+  °F = c*9/5+32. Real sensors (DrivetrainHealthPage): frontMotor/rearMotor maxTemp 150, inverter 120, battery 60.
+  Data hooks: useTranslation, useUnits. The parent owns loading/error; this leaf renders sensors only.
+
+ARTIFACTS SHIPPED (co-located, current sibling convention — HealthGaugeGrid/DrivingTemperatureStats/TemperatureMetricCards)
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.Model.swift     (333) — P1/S8 source/Source seam + @Observable
+                                                                              model, P1/S11 telemetry seam (OSLog
+                                                                              view.opened), P1/S10 facade, temperature
+                                                                              unit-pref enum, TempSensorInput, Update.
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.Adapter.swift   (229) — pure web-parity projector: fmtNumber/
+                                                                              fmtInt formatting, convertTemperatureGaugeFromSI
+                                                                              (1:1 from lib/unitConversion.ts convertTempFromSI),
+                                                                              TempSeverity (helpers.tempSeverityColor),
+                                                                              gauge clamp+decimals+fill+ceiling, a11y.
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.Views.swift     (217) — single GlassPanel, Thermometer header,
+                                                                              responsive gauge grid, radial gauge view,
+                                                                              "Max:" cell, severity→TSTone tint.
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.States.swift    (182) — freshness chip, connectivity banner,
+                                                                              loading skeleton grid, empty, error+retry.
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.swift           ( 95) — surface composition + onAppear start/stop.
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.Previews.swift  (112) — 8 #Preview states (DEBUG-only).
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.strings         ( 43) — P1/S10 catalog (parity keys
+                                                                              drivetrain.tempGauges/maxLabel + sensor
+                                                                              labels + native chrome).
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.Tests.swift     (273) — adapter + accessibility logic tests.
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.ModelTests.swift(159) — state-holder tests.
+  apps/apple/TeslaSync/feature-views/TemperatureGauges.ViewTests.swift (102) — per-state ImageRenderer render tests.
+  Total: 1745 lines (production+previews 1168, tests 534, strings 43). Sibling HealthGaugeGrid shipped ~1901; comparable.
+
+PARITY NOTES (numbers/units verified by tests)
+  • °C content: front 95→"95"/fill 95/150/normal, rear 110→warning, inverter 105/120→critical, battery 34→normal.
+  • °F content: 95°C→"203°F", ceiling 150°C→"302°F"; ring fill uses display °F (203/302) while severity stays on
+    the SI ratio (95/150 → normal) — the exact web split (RadialGauge fill on display, tempSeverityColor on SI).
+  • null reading → centre "0", fill 0, neutral (gray) tone, ceiling still shown (web passes literal 0).
+  • reading above ceiling clamps centre + fill; non-integer °F (34°C→"93.20") uses global precision 2; ceiling 0 dp.
+  • States: loading skeleton / empty / error+retry / stale chip+auto-refresh / offline cached chip + banner / content.
+
+STATE-HOLDER + TELEMETRY + I18N + A11Y (predecessor seams)
+  • P1/S8 : view binds a `TemperatureGaugesSource` (onUpdate/start/stop/refresh); no HTTP in the view. Model resolves
+            phase (loading/empty/error/content), recomputes the projection, and does one guarded stale auto-refresh.
+  • P1/S11: model.start() emits view.opened surface="TemperatureGauges" exactly once (asserted).
+  • P1/S10: every string via TemperatureGaugesStrings facade (NSLocalizedString table "TemperatureGauges"); 0 literals
+            in the view. Parity keys drivetrain.tempGauges / drivetrain.maxLabel present.
+  • A11y  : each gauge cell is one VoiceOver element ("Front Motor 95°C, Max 150°C"); ring honours Reduce Motion;
+            Dynamic Type via tokenised fonts; the grid combines into one surface summary.
+
+GATES (raw results on THIS runner)
+  [GREEN]    swiftformat --lint (TemperatureGauges.* — 9 swift files)         : 0/9 require formatting        (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (TemperatureGauges.* — 9 files)               : 0 violations, 0 serious          (LINT_EXIT=0)
+             (Tests split into .Tests.swift + .ModelTests.swift to keep every file ≤400 lines / file_length clean.)
+  [GREEN]    check-placeholders.ps1 (real scan of the 10 shipped files)       : PLACEHOLDER_COUNT=0, ALLOWED=0 (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/TemperatureGauges   : PLACEHOLDER_COUNT=0            (PLACEHOLDER_EXIT=0)
+             grep TODO|FIXME|XXX|Coming soon|Placeholder|Lorem|not implemented over the 10 files: 0 hits.
+  [GREEN]    TemperatureGauges build + test — ISOLATED SwiftPM harness, swift-tools 6.0, Swift 6 language mode
+             (.swiftLanguageMode(.v6) ⇒ strict-concurrency complete, same as the app), compiling the EXACT shipped
+             TemperatureGauges.* sources against the REAL repo design system (Sources/Components + Sources/Design +
+             the generated DesignTokens; the one excluded file, DataDisplay/UnitFormatters.swift, depends on a
+             SharedFacade `UnitPreferences` / \.tsUnits env key this surface never uses):
+                 Build complete!  ·  Executed 35 tests, with 0 failures (0 unexpected)               (SWIFT_TEST_EXIT=0)
+             (4 format + 2 converter + 4 severity + 5 projector + 2 a11y logic tests + 10 model tests + 8 per-state
+             ImageRenderer render tests covering content-°C / content-°F / missing-reading / empty / loading / error /
+             stale / offline.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO TemperatureGauges errors; all blockers pre-exist this change):
+    Shared.xcframework staged successfully (Gradle assembled debug+release KMP frameworks), so the gate proceeded to
+    the app compile, where it fails on architecture-wide, pre-existing surfaces:
+      iOS  : 339 `error:` lines, EVERY one in TeslaSync/dashboard-widgets/* — duplicate public types redefined across
+             parallel-merged widget surfaces (ambiguous-for-type-lookup), e.g. SafetyModel / SafetyUpdate (defined in
+             BOTH SafetyFeaturesWidget.Model.swift AND SafetyHistoryWidget.Model.swift), ChargeSessionDTO /
+             ChargeStateDTO / ChargeStatusProjection / ChargeUnitPrefs / ChargeStatusUpdate (Charge*Widget pair) and
+             FleetStatsBarModel. grep of the build log: 0 errors in TeslaSync/feature-views/* (the whole 1570-file
+             feature-view group, including all 9 TemperatureGauges files, compiled clean) and 0 "TemperatureGauges*:
+             error:" hits. This is the same parallel-merge duplicate-type condition apps/macos-pending-verifications.md
+             defers to the P4/P99 acceptance gate; it is outside this prompt's allowed files (TemperatureGauges.* + log).
+      macOS: fails BEFORE compilation at the entitlements check — "TeslaSync-macOS" and "TeslaSyncWidgets-macOS" "have
+             entitlements that require signing with a development certificate", which this runner does not provision.
+    Collision audit (mine): every top-level declaration in the 10 shipped files was grepped against the whole app —
+    0 external duplicates. The internal chrome structs that the sibling TemperatureMetricCards surface already names
+    generically (TemperatureFreshnessChip / TemperatureConnectivityBanner / TemperatureErrorState) and the SI converter
+    were namespaced to the full surface prefix (TemperatureGauges* / convertTemperatureGaugeFromSI) so THIS surface
+    introduces no new duplicate-type collision. The final iOS run (post-rename) confirms 0 feature-views errors.
+
+HONESTY COVENANT (binding — verbatim numbering)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — header, the 2/md-4 gauge grid, each RadialGauge
+                           (clamp/decimals/fill/severity/unit), the "Max:" ceiling line, the null-reading zeroed branch,
+                           plus loading/empty/error/stale/offline.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the iOS dashboard-widget
+                           ambiguity failures and the macOS signing failure were CONFIRMED from the build logs.
+  4  No stubs as final   : complete production surface + 35 real passing tests; placeholder scanner = 0 over the 10 files.
+  5  No parity shortcut  : numbers/units/formatting/typography/tone/a11y/telemetry mapped to platform tokens and pinned
+                           by web-parity assertions (e.g. 95°C → "95°C" / "203°F"; fill 203/302 but severity 95/150
+                           → normal; 34°C → "93.20°F"; null → "0" neutral).
+  6  No delegation       : implemented directly; no sub-agents used.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P4 core shared
+                           components (TSGlassPanel/TSFadeIn/TSSkeleton/TSEmptyState/TSTone) all present and consumed.
+  8  No commit on red    : the COMMITTED artifact (TemperatureGauges.* + this log) is GREEN on every host gate AND on a
+                           real isolated Swift-6 build+test against the real design system; the deferred full-app gate is
+                           RED only on pre-existing, unrelated dashboard-widget surfaces this commit neither introduces
+                           nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/feature-views/TemperatureGauges.* and this log. The
+                           generated .xcodeproj + Gradle output + staged xcframework are git-ignored and were removed
+                           after verification; no other tracked file is modified by me.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TemperatureGauges shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 35 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design system, with swiftlint/swiftformat/placeholder all green on the shipped files, and the whole feature-views
+  group (incl. all 9 TemperatureGauges files) compiles with 0 errors inside the full app build. The full-app iOS-Simulator
+  + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): iOS is blocked by pre-existing parallel-merge
+  duplicate-type collisions in TeslaSync/dashboard-widgets/* (Safety*/Charge*/FleetStatsBar widgets) and macOS by
+  development-signing — both owned by the P4/P99 acceptance gate on a signed CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

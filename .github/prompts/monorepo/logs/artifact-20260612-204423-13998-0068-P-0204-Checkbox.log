@@ -1,0 +1,138 @@
+=== P4 Shared surface · 0204 · Checkbox (Apple) ===
+date(UTC): 2026-06-13T22:13Z
+host: macOS 26.5.1 (Darwin arm64)
+toolchain(runner): Xcode 26.5 (17F42) · Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+toolchain(locked, apps/apple/versions.lock.md): Xcode 26 · Swift 6.0.1   <-- runner is NEWER than the locked baseline
+web source (spec): web/src/components/ui/Checkbox.tsx
+
+Deliverable — apps/apple/TeslaSync/shared-surfaces/Checkbox.* (9 files, mirrors the Toggle 0230 control pattern):
+  Checkbox.Adapter.swift      pure core: size geometry, tri-state visual, glyph, input snapshot, a11y
+  Checkbox.Projection.swift   CheckboxResolved + pure CheckboxProjector.resolve
+  Checkbox.Model.swift        telemetry seam, i18n facade, @Observable @MainActor CheckboxModel
+  Checkbox.Views.swift        CheckboxIndicator (box+glyph+focus ring), CheckboxLabel, CheckboxMotion
+  Checkbox.swift              public Checkbox view (prop init + Binding convenience)
+  Checkbox.Previews.swift     DEBUG previews — every real state/size/label/controlled branch
+  Checkbox.strings            P1/S10 a11y value strings (checked/unchecked/mixed/unlabeled)
+  Checkbox.AdapterTests.swift / Checkbox.Tests.swift   adapter + model/view/strings coverage
+
+Parity note (honest scope): the web Checkbox is a PURE presentational control with NO data fetch, so it has
+no loading/empty/error/stale/offline axis. Reproducing those would FABRICATE states the source lacks. The
+REAL branches are reproduced in full: unchecked / checked / indeterminate(mixed); controlled(`checked`) vs
+uncontrolled(`defaultChecked`); disabled; optional label; sizes sm/md/lg; onChange(boolean). Same disposition
+as siblings Accordion(0203) / Toggle(0230). Native a11y: .isToggle trait + spoken checked/unchecked/mixed value.
+
+================================================================================
+SECTION A — Checkbox surface verification (the per-surface bar) — ALL GREEN
+================================================================================
+
+[A1] swiftc -typecheck  (Swift 6 language mode, -strict-concurrency=complete, iOS-18 simulator SDK)
+     inputs: design/generated/apple/Tokens.swift + Checkbox.{Adapter,Projection,Model,Views,swift,Previews}
+     result: 0 errors / 0 warnings
+     TYPECHECK_EXIT=0
+
+[A2] swiftlint --strict  (--config apps/apple/.swiftlint.yml) over the 8 Checkbox *.swift files
+     "Done linting! Found 0 violations, 0 serious in 8 files."
+     LINT_CHECKBOX_EXIT=0
+
+[A3] swiftformat --lint  over the 8 Checkbox *.swift files
+     "0/8 files require formatting."
+     FORMAT_CHECKBOX_EXIT=0
+
+[A4] check-placeholders.ps1 -Language swift  over the actual Checkbox.* files (staged copy)
+     PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+     PLACEHOLDER_CHECKBOX_EXIT=0
+
+[A5] KMP Shared.xcframework (build-shared-xcframework.sh / Gradle :core:assembleSharedXCFramework)
+     "BUILD SUCCESSFUL in 11m 13s" ; "Shared.xcframework staged" (ios-arm64 + ios-arm64-simulator + macos-arm64)
+     SHARED_BUILD_EXIT=0
+
+[A6] App-module type-check in the FULL app build INCLUDING the Checkbox files:
+     "EmitSwiftModule normal arm64 (in target 'TeslaSync')" completed with 0 errors.
+     => Checkbox type-checks correctly inside the real whole-module context. The later failure is a pure
+        IRGen (code-gen) crash while compiling a DIFFERENT, pre-existing baseline file (see Section C).
+
+================================================================================
+SECTION B — Full-app acceptance gate steps (as specified) — actual results
+================================================================================
+destination note: gate names 'iPhone 16'; that simulator is present + booted, used verbatim.
+
+[B1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     ** BUILD FAILED **  — swift-frontend (6.3.2) IRGen CRASH, not a source error (0 "error:" lines).
+       "While evaluating request IRGenRequest(IR Generation for file
+        ".../feature-views/AppearanceSettings.Controls.swift")"
+       "While emitting IR SIL function @$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+     IOS_EXIT=65   [BLOCKED — pre-existing toolchain bug, NOT the Checkbox surface; see Section C]
+
+[B2] xcodebuild -scheme TeslaSync-macOS build test
+     ** BUILD FAILED / TEST FAILED **
+       error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+       error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+     (fails before compilation; the macOS app target also compiles the same AppearanceSettings.Controls.swift
+      and is therefore additionally subject to the [B1] IRGen crash once signing is provided.)
+     MAC_EXIT=65   [BLOCKED — environment lacks a macOS development-signing identity]
+
+[B3] swiftlint --strict  (whole tree, gate step)
+     "Done linting! Found 3 violations, 3 serious in 5292 files."
+     The 3 are ALL pre-existing and in another surface (zero in Checkbox):
+       TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52-54  identifier_name ('a','b','c')
+     LINT_EXIT=2   [BLOCKED by pre-existing other-surface violations; Checkbox = 0 violations]
+
+[B4] swiftformat --lint apps/apple  (whole tree, gate step)
+     "1/5590 files require formatting" — pre-existing, in another surface (zero in Checkbox):
+       TeslaSync/feature-views/RecentDrivesSection.Previews.swift:28  redundantType
+     FORMAT_EXIT=1   [BLOCKED by a pre-existing other-surface file; Checkbox = clean tree-wide]
+
+[B5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Checkbox   (exact gate cmd)
+     PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+     PLACEHOLDER_EXIT=0
+
+================================================================================
+SECTION C — Root cause + proof the blocker is PRE-EXISTING and surface-independent
+================================================================================
+Crash thunk demangled (xcrun swift-demangle):
+  $sSbScA_pSgIeAghyg_SbIeAghn_TR  -->
+  "reabstraction thunk helper from @escaping @isolated(any) @callee_guaranteed @Sendable
+   (@unowned Swift.Bool, @guaranteed Swift.Actor?) -> () to ... @Sendable (@in_guaranteed Swift.Bool) -> ()"
+
+Trigger (BASELINE file, git-tracked, OUTSIDE this prompt's allowed files):
+  apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift:107
+      let onChange: @MainActor (Bool) -> Void
+  ...:122
+      Toggle("", isOn: Binding(get: { isOn }, set: onChange))
+  A @MainActor (Bool)->Void used as a @Sendable Binding setter makes the compiler emit the @isolated(any)
+  reabstraction thunk above; swift-frontend 6.3.2 segfaults during IRGen of that thunk. This is a toolchain
+  regression (runner Swift 6.3.2 > locked Swift 6.0.1). The Checkbox surface uses a plain ((Bool)->Void)?
+  — never @MainActor/@Sendable/@isolated(any) on a Bool closure — so it cannot and does not emit this thunk.
+
+DECISIVE reproduction WITHOUT the Checkbox surface:
+  1. moved all 9 Checkbox.* files OUT of the tree
+  2. xcodegen generate ; xcodebuild -scheme TeslaSync -destination '...iPhone 16' build
+  -> identical crash, same file:
+     "Please submit a bug report ..."
+     "While evaluating request IRGenRequest(IR Generation for file ".../AppearanceSettings.Controls.swift")"
+     "** BUILD FAILED **"   BASELINE_EXIT=65
+  (files then restored; xcodegen regenerated. The crash exists with ZERO Checkbox files present.)
+
+Repo convention (apps/macos-pending-verifications.md): every P4 Apple surface prompt reaches this same
+terminal state — surface verified green in isolation, full-app `xcodebuild build test` blocked by
+pre-existing parallel-merge collisions + macOS development-signing — and is classified "macOS-pending",
+deferred to `p4-apple/P99-0001-apple-acceptance-gate` (runs on macos-latest WITH signing identities).
+This Checkbox run matches that convention; the only slot-specific blocker here is the additional Swift 6.3.2
+IRGen toolchain crash on AppearanceSettings.Controls.swift, proven pre-existing above.
+
+================================================================================
+CONCLUSION
+================================================================================
+- The Checkbox surface is COMPLETE and GREEN on every check within scope + runner capability
+  (A1-A6: typecheck, swiftlint --strict, swiftformat --lint, placeholder, KMP framework, whole-module typecheck).
+- The full-app `build test` gate CANNOT reach EXIT=0 on THIS runner due to factors that are pre-existing and
+  independent of this surface (proven by baseline reproduction): a Swift 6.3.2 IRGen toolchain crash on the
+  baseline file feature-views/AppearanceSettings.Controls.swift, plus macOS dev-signing, plus pre-existing
+  other-surface lint/format nits — none in any Checkbox.* file, none modifiable under this prompt's allowed
+  files (Checkbox.* + this log).
+- Per the prompt's capability clause ("If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+  and Honesty Covenant rule 1 (No red-as-green) / rule 8 (No commit on red of one's OWN work), the full-app
+  gate is reported red/BLOCKED, NOT green. The surface itself is shipped + isolated-verified.
+
+EXIT=65
+STATUS=BLOCKED

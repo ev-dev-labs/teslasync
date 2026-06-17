@@ -1,0 +1,117 @@
+================================================================================
+p4-apple · P7 · page:admin/DevTools — SwiftUI / HIG parity
+Artifact: apps/apple/Sources/Features/Admin/DevToolsPage.swift (+ infra section,
+          route registration, tests); navigation registration; string catalog.
+Web source: web/src/features/admin/pages/DevToolsPage.tsx  (route /dev-tools)
+Generated/verified: 2026-06-14
+================================================================================
+
+SUMMARY
+-------
+Native SwiftUI parity of the web DevTools page — a thin tabbed shell:
+PageContainer(title, subtitle) over a 5-tab TabNav (Fleet API · Telemetry ·
+Infrastructure · Utilities · Reference), each tab hosting its section. Reproduced
+1:1 with TSTabs + a TSRouteTransition keyed on the tab (web <FadeIn key={tab}>),
+adaptive across macOS (regular) and iOS (compact/regular). Every section binds
+through its own @Observable model (P1/S8), injected by DevToolsRouteRegistration.
+
+Four of the five web devtools sections already have Apple parity components
+(FleetApiSection, FleetTelemetryHealth, ClientUtilitiesSection,
+ReferenceLinksSection — under apps/apple/TeslaSync/feature-views). The web devtools
+"InfrastructureSection" (a grid of backend dev-tool cards) has NO dedicated Apple
+component — the like-named feature-views component is the *system status* surface
+(parity of features/system/components/status/InfrastructureSection.tsx). It is
+therefore composed in-page (DevToolsInfrastructureSection) from the canonical
+BackendTool parity component: db-stats, migration-status, an MQTT tool (BackendTool
++ topic/message inputs in its `extra` slot = web children), env-check, runtime-info
+— in the exact web source order.
+
+FILES (in scope: Features/Admin/**, navigation registration, Localizable.xcstrings)
+----------------------------------------------------------------------------------
+ A apps/apple/Sources/Features/Admin/DevToolsPage.swift
+ A apps/apple/Sources/Features/Admin/DevToolsInfrastructureSection.swift
+ A apps/apple/Sources/Features/Admin/DevToolsRouteRegistration.swift
+ A apps/apple/Tests/Unit/Features/Admin/DevToolsRouteRegistrationTests.swift
+ M apps/apple/Sources/App/AppRoute.swift            (+ .devTools case/pathSegment/icon/group)
+ M apps/apple/Sources/App/AppRouteParser.swift      (/devtools alias -> .devTools)
+ M apps/apple/Sources/TeslaSyncApp.swift            (compose DevToolsRouteRegistration)
+ M apps/apple/Localization/Localizable.xcstrings    (+route.devTools, tab + infra labels)
+
+NOTE ON PATHS / DESTINATION
+---------------------------
+- The generated prompt names apps/apple/TeslaSync/Features/Admin/** as the output
+  dir; the real project lays sibling admin pages under apps/apple/Sources/Features/
+  Admin/** (see ApiPlaygroundPage, TeslaOrdersPage, …). Files were placed there so
+  the XcodeGen app target (sources: Sources) compiles them. Verified present in the
+  generated project + compiled (DevToolsPage.o, DevToolsInfrastructureSection.o,
+  DevToolsRouteRegistration.o produced).
+- The KMP Shared.xcframework was assembled via Gradle
+  (:core:assembleSharedXCFramework, BUILD SUCCESSFUL) and staged to
+  apps/apple/Frameworks. Its release slices are ios-arm64, ios-arm64-simulator,
+  macos-arm64 — there is no x86_64 simulator slice. The build therefore targets the
+  arm64 iOS Simulator (the native simulator arch on this Apple-silicon runner) via
+  EXCLUDED_ARCHS=x86_64. A generic-destination build links arm64 cleanly and only
+  the (unavailable) x86_64 slice fails to link — an arch-availability limit of the
+  prebuilt vendor framework, not of this artifact's code.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0        # apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift  → PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=6
+BUILD_EXIT=0             # xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS Simulator' EXCLUDED_ARCHS=x86_64 build  → ** BUILD SUCCEEDED ** (0 errors)
+LINT_EXIT=0             # swiftlint --strict (apps/apple/.swiftlint.yml)  → Done linting! Found 0 violations, 0 serious in 5683 files
+TEST_EXIT=0            # xcodebuild test -only-testing:TeslaSyncTests/DevToolsRouteRegistrationTests -only-testing:TeslaSyncTests/RouteTests  → ** TEST SUCCEEDED ** (16 tests, 0 failures)
+
+TEST DETAIL
+-----------
+Test Suite 'DevToolsRouteRegistrationTests' passed — Executed 8 tests, 0 failures.
+Test Suite 'RouteTests'                     passed — Executed 8 tests, 0 failures.
+Total: 16 tests, 0 failures (RouteTests is re-run because .devTools was added to
+the AppRoute enum + parser; it confirms unique path segments + group resolution
+still hold).
+
+PRE-EXISTING / OUT-OF-SCOPE BLOCKER (fully disclosed — not introduced here)
+--------------------------------------------------------------------------
+The full TeslaSyncTests bundle currently fails to COMPILE on a duplicate-class
+collision that predates and is unrelated to this artifact:
+  invalid redeclaration of 'RecentActivityFeedProjectionTests'
+  - apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Tests.swift:106
+  - apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift:103
+Both are co-located test files merged from other parallel prompts (HEAD a2ed2aa34
+"merge(parallel): … P-0144-Toast"); neither is in this artifact's allowed-files
+scope. `git status` confirms this changeset touches only the in-scope files above.
+To obtain the TEST_EXIT evidence, the colliding class in the (mis-named) feature-
+views file was renamed locally ONLY to let the shared bundle compile, the focused
+tests were run (result above), and the rename was reverted (git checkout) so the
+committed changeset stays strictly in scope. This collision is left for its owning
+prompt to resolve.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+- [x] string — devtools.title
+       catalog key  : translation.devtools.title = "Developer Tools"
+       render symbol: DevToolsPage.header → TSPageTitle("translation.devtools.title")
+       file         : apps/apple/Sources/Features/Admin/DevToolsPage.swift:67
+- [x] string — devtools.subtitle
+       catalog key  : translation.devtools.subtitle = "Fleet API, telemetry, infrastructure & utilities"
+       render symbol: DevToolsPage.header → Text("translation.devtools.subtitle")
+       file         : apps/apple/Sources/Features/Admin/DevToolsPage.swift:68
+PARITY_COVERED=2
+
+ACCEPTANCE
+----------
+[x] Every named panel implemented; every anonymous region of the web page source
+    reproduced (title, subtitle, 5-tab bar in order, per-tab section host).
+[x] Both parity items render from bound @Observable state (page chrome + injected
+    section models).
+[x] loading / empty / error states honored — delegated to each section's own model
+    (FleetApiSection / FleetTelemetryHealth / ClientUtilitiesSection /
+    ReferenceLinksSection) and, for Infrastructure, to BackendToolModel's
+    idle/loading/success/error/stale/offline lifecycle.
+[x] All visible strings from Localizable.xcstrings; key names match web
+    (translation.devtools.title / .subtitle); zero hardcoded literals.
+[x] Dark mode + Dynamic Type + a11y + SwiftUI-native (TSTabs/TSRouteTransition/
+    design tokens); no web cloning. No non-SI storage on this surface.
+[x] build + lint + test + placeholder green for this artifact; PARITY_COVERED==PARITY_REQUIRED.
+[x] apple ledger rows for page:admin/DevTools set covered (apple-macos + apple-ios).
+
+EXIT=0
+STATUS=DONE

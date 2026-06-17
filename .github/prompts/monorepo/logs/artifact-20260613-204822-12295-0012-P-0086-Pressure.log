@@ -1,0 +1,183 @@
+=== P4 Shared surface 0086 Pressure (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/Pressure.*
+Web src  : components/data-display/format/Pressure.tsx
+Runner   : Darwin arm64 · Xcode 26.5 (17F42) · Apple Swift 6.3.2 · swiftlint/swiftformat (Homebrew)
+Date     : 2026-06-13
+
+────────────────────────────────────────────────────────────────────────────
+SUMMARY
+────────────────────────────────────────────────────────────────────────────
+The Pressure shared surface was authored in full (8 files) as a 1:1 native
+parity of the web source, mirroring the proven 0085 Distance peer. Every
+in-scope verification is GREEN:
+
+  FORMAT_EXIT=0       swiftformat --lint .......... 0/7 files require formatting
+  LINT_EXIT=0         swiftlint --strict .......... 0 violations, 0 serious (7 files)
+  PLACEHOLDER_EXIT=0  check-placeholders.ps1 ...... PLACEHOLDER_COUNT=0
+  LOGIC_VERIFY=PASS   standalone swiftc -swift-version 6 + run .. ALL_PASS (54 assertions)
+
+The two platform build/test steps could NOT reach EXIT=0, each blocked by a
+PRE-EXISTING / ENVIRONMENT issue OUTSIDE this prompt's allowed-file scope
+(allowed: apps/apple/TeslaSync/shared-surfaces/Pressure.* + this log):
+
+  IOS_EXIT=65   swift-frontend (compiler) IRGen crash in
+                TeslaSync/feature-views/AppearanceSettings.Controls.swift
+                (NOT a Pressure file; reproduced deterministically, 2/2 batches).
+  MAC_EXIT=65   code-signing failure: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS"
+                "has entitlements that require signing with a development
+                certificate" — no DEVELOPMENT_TEAM / signing identity in this
+                environment (project.yml sets DEVELOPMENT_TEAM: "").
+
+The Pressure surface itself COMPILED CLEANLY inside the real iOS app-target
+build (see evidence below) and caused zero errors/warnings. The blockers are
+unrelated to this change, which is purely additive (git shows only Pressure.*).
+
+EXIT=65
+STATUS=BLOCKED  (platform build/test blocked by out-of-scope compiler crash +
+                 unavailable macOS signing identity; all in-scope gates green)
+
+════════════════════════════════════════════════════════════════════════════
+STEP 1 — swiftformat --lint (FORMAT_EXIT)
+════════════════════════════════════════════════════════════════════════════
+$ swiftformat --lint TeslaSync/shared-surfaces/Pressure.swift \
+    Pressure.Adapter.swift Pressure.Model.swift Pressure.Projection.swift \
+    Pressure.Views.swift Pressure.Previews.swift Pressure.Tests.swift
+Reading config file at apps/apple/.swiftformat
+SwiftFormat completed in 27.31s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+════════════════════════════════════════════════════════════════════════════
+STEP 2 — swiftlint --strict (LINT_EXIT)
+════════════════════════════════════════════════════════════════════════════
+$ swiftlint lint --strict --no-cache TeslaSync/shared-surfaces/Pressure.*.swift
+Linting 'Pressure.swift' (1/7)
+Linting 'Pressure.Adapter.swift' (2/7)
+Linting 'Pressure.Model.swift' (4/7)
+Linting 'Pressure.Projection.swift' (3/7)
+Linting 'Pressure.Views.swift' (5/7)
+Linting 'Pressure.Previews.swift' (6/7)
+Linting 'Pressure.Tests.swift' (7/7)
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+════════════════════════════════════════════════════════════════════════════
+STEP 3 — placeholder / stub gate (PLACEHOLDER_EXIT)
+════════════════════════════════════════════════════════════════════════════
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Pressure -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+# Genuine recursive scan of the 7 real Pressure .swift files (copied to a temp
+# dir so the directory-recursing script sees them) — also clean:
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+════════════════════════════════════════════════════════════════════════════
+STEP 4 — standalone logic verification (adapter + projection + model)
+         swiftc -swift-version 6 (strict concurrency) → compiled → executed
+════════════════════════════════════════════════════════════════════════════
+Pure Pressure.Adapter/Projection/Model compiled against a minimal UnitPreferences
+stub (no KMP framework, no SwiftUI), then run as an executable harness asserting
+the same expectations as Pressure.Tests.swift. Proves the math + formatting
+parity with the web source independent of the Xcode app build:
+
+  === Formatting (convertPressureFromSI + fmtNumber parity) ===  [17 PASS]
+  === Source normalization (bar-first -> SI kPa + tooltip) ===   [ 8 PASS]
+  === Display (kPa -> user unit, with space) ===                 [ 4 PASS]
+  === Projection (per-state snapshot) ===                        [13 PASS]
+  === Meta + Accessibility ===                                   [ 5 PASS]
+  === Model (state-holder) ===                                   [ 4 PASS]
+  ALL_PASS
+  RUN_EXIT=0
+Key parity checks: 2.5 bar→"250.00 kPa"(metric)/"36.26 psi"(imperial)/"2.50 bar";
+32 psi→"220.63 kPa"; bar-over-psi precedence; non-finite skip; precision override
+"245.7 kPa"; empty sentinel "—" + "No pressure data"; once-only view.opened.
+
+════════════════════════════════════════════════════════════════════════════
+STEP 5 — Shared.xcframework (KMP core, ADR-004 dependency) + xcodegen
+════════════════════════════════════════════════════════════════════════════
+$ apps/shared/gradlew :core:assembleSharedXCFramework
+> Task :core:assembleSharedReleaseXCFramework
+xcframework successfully written out to:
+  apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+BUILD SUCCESSFUL in 14m 27s
+# staged → apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+$ xcodegen generate
+Created project at apps/apple/TeslaSync.xcodeproj   (XCODEGEN_EXIT=0)
+
+════════════════════════════════════════════════════════════════════════════
+STEP 6 — iOS build test (IOS_EXIT)   [BLOCKED — pre-existing, out of scope]
+════════════════════════════════════════════════════════════════════════════
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+EVIDENCE — the Pressure surface compiled cleanly (its own SwiftCompile batch):
+  Compiling PresetGallery.Seams.swift, ... Pressure.Adapter.swift,
+  Pressure.Model.swift, Pressure.Previews.swift, Pressure.Projection.swift,
+  Pressure.Views.swift, Pressure.swift   (no error, no warning)
+  grep 'Pressure\.(swift|Adapter|Model|Projection|Views|Previews|Tests)' + (error|crash) → NONE
+
+BLOCKER — swift-frontend crashed during IR generation of a PRE-EXISTING file
+(not a Pressure file, outside the allowed-file scope), deterministically in
+both compile batches that touched it:
+
+  4.  While evaluating request IRGenRequest(IR Generation for file
+      ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+  Stack dump:
+   5  libsystem_c.dylib   abort + 148
+   7  swift-frontend      llvm::report_fatal_error(llvm::Twine const&, bool)
+   8  swift-frontend      report_at_maximum_capacity(unsigned long)
+   9  swift-frontend      llvm::SmallVectorBase<unsigned int>::grow_pod(...)
+   10 swift-frontend      SyncCallEmission::setArgs(irgen::Explosion&, ...)
+   11 swift-frontend      IRGenSILFunction::visitFullApplySite(swift::FullApplySite)
+  Command SwiftCompile failed with a nonzero exit code   (x2)
+  ** TEST FAILED **  /  Testing cancelled because the build failed.
+
+This is a swift-frontend (Xcode 26.5 / Swift 6.3.2) IRGen compiler bug on an
+existing feature-views file. It is not editable under this prompt's allowed
+files and is independent of the additive Pressure surface.
+IOS_EXIT=65
+
+════════════════════════════════════════════════════════════════════════════
+STEP 7 — macOS build test (MAC_EXIT)   [BLOCKED — environment signing]
+════════════════════════════════════════════════════════════════════════════
+$ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build test
+TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require
+  signing with a development certificate. Enable development signing in the
+  Signing & Capabilities editor. (in target 'TeslaSync-macOS')
+TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that
+  require signing with a development certificate. (in target 'TeslaSyncWidgets-macOS')
+** BUILD FAILED **  /  ** TEST FAILED **
+# No code-signing identity / DEVELOPMENT_TEAM in this environment (project.yml
+# DEVELOPMENT_TEAM: ""). Pressure files produced no errors. Platform-capability
+# blocker, unrelated to this change.
+MAC_EXIT=65
+
+════════════════════════════════════════════════════════════════════════════
+SCOPE / HONESTY NOTE
+════════════════════════════════════════════════════════════════════════════
+git status --short  (change is additive — only the new surface):
+  ?? apps/apple/TeslaSync/shared-surfaces/Pressure.Adapter.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/Pressure.Model.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/Pressure.Previews.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/Pressure.Projection.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/Pressure.Tests.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/Pressure.Views.swift
+  ?? apps/apple/TeslaSync/shared-surfaces/Pressure.strings
+  ?? apps/apple/TeslaSync/shared-surfaces/Pressure.swift
+AppearanceSettings.Controls.swift is unmodified (pre-existing, out of scope).
+
+Acceptance criteria status:
+  [x] Surface renders all web states (value + empty) — projection + previews + tests.
+  [x] Hooks bind via shared P1/S8 state-holder (PressureModel); no HTTP in view.
+  [x] i18n via P1/S10 facade (PressureStrings); empty-state a11y key in Pressure.strings.
+  [x] Accessibility labels on the value + empty branches (VoiceOver).
+  [x] Tests: adapter unit + per-state projection + model + a11y + view-compose.
+  [x] No TODO/stub/mock/placeholder/Lorem (placeholder gate = 0).
+  [~] EXIT=0 — BLOCKED by out-of-scope compiler crash (iOS) + macOS signing.
+
+EXIT=65
+STATUS=BLOCKED

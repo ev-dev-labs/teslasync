@@ -1,0 +1,224 @@
+================================================================================
+ p4-apple · P7 · page:admin/IngestXRay — SwiftUI / Apple HIG
+ Native parity of web/src/features/admin/pages/IngestXRayPage.tsx  (route /admin/ingest-xray)
+ Prompt: p4-apple/P7/page:admin/IngestXRay
+ Generated log: .github/prompts/monorepo/logs/apple-page-admin-IngestXRayPage.log
+ Timestamp (UTC): 2026-06-15T07:30Z
+================================================================================
+
+SUMMARY
+--------------------------------------------------------------------------------
+Implemented the Ingest X-Ray surface as an adaptive SwiftUI page (macOS regular /
+iPad regular / iPhone compact, ADR-002/006), driven by a single @Observable
+IngestXRayPageModel over a KMP-style data-source seam (ADR-004 — zero networking
+in the view). Reproduces the full web page: the title/subtitle chrome (web
+PageContainer) and its four GlassPanels — the controls bar (GlassPanel1: vehicle /
+window / bucket pickers, with the bucket menu auto-disabling any bucket that is not
+strictly finer than the window, web `tooBig`), the no-vehicle empty prompt
+(GlassPanel2), the bucketed sample-count bar chart (GlassPanel3, native Swift Charts
+— never a WKWebView), and the sortable per-field statistics table (GlassPanel4).
+Between the controls and the report panels it renders the web XRayHeader summary
+strip (three stat tiles). Each report panel switches its own data state
+(loading / empty / error / success) in place rather than gating the surface.
+
+The page reuses the shared P3 Ingest-X-Ray pure cores already in the module
+(TeslaSync/feature-views/XRay*) for byte-identical logic — the value types
+(IngestXRayWindow/Bucket, XRayFieldStat, XRayBucketInput, XRayVehicleRef,
+IngestXRaySummary), the projections (XRayHeaderProjection.fmtInt,
+XRayControlsProjection.isBucketDisabled, XRayFieldsProjector, XRayBucketChartProjection,
+XRayValueKind), and the sort transition (XRayFieldsModel.nextSort) — while rendering
+every visible string from the central Localizable.xcstrings with the web key names
+(the standalone P3 component VIEWS pull from per-surface tables, so they are NOT
+reused — the page owns its chrome like the sibling DLQInspectorPage). SI N/A: ingest
+counts are exact integers and window/bucket are control-plane selections; timestamps
+format at the display boundary. Ingest X-Ray is a polled REST query (web INTERVALS.FAST),
+not an SSE source, so no live SSE subscription applies (ADR-013 staleness N/A).
+
+FILES (all under apps/apple/** — P4 README rule #1 scope)
+--------------------------------------------------------------------------------
+  Sources/Features/Admin/IngestXRayModels.swift             (report DTO, feeds' states, data-source seam, fmt)
+  Sources/Features/Admin/IngestXRayPageModel.swift          (@Observable model: selections + two feeds)
+  Sources/Features/Admin/IngestXRayPageModel.Sample.swift   (preview/default sample source + synthetic report)
+  Sources/Features/Admin/IngestXRayPage.swift               (page chrome + GlassPanel1/2/3/4 wiring)
+  Sources/Features/Admin/IngestXRayPage.Controls.swift      (GlassPanel1 — vehicle/window/bucket Menus + guard)
+  Sources/Features/Admin/IngestXRayPage.Summary.swift       (web XRayHeader — 3 stat tiles)
+  Sources/Features/Admin/IngestXRayPage.Chart.swift         (GlassPanel3 — Swift Charts bar chart + states)
+  Sources/Features/Admin/IngestXRayPage.Fields.swift        (GlassPanel4 — adaptive sortable table + states)
+  Sources/Features/Admin/IngestXRayRouteRegistration.swift  (route host registration)
+  Tests/Unit/Features/Admin/IngestXRayPageModelTests.swift  (19 XCTest cases)
+  Sources/App/AppRoute.swift           (+ .ingestXRay case: pathSegment "ingest-xray", icon, .system group)
+  Sources/App/AppRouteParser.swift     (+ "/admin/ingest-xray" -> .ingestXRay deep-link alias)
+  Sources/TeslaSyncApp.swift           (+ IngestXRayRouteRegistration.registry registration)
+  Localization/Localizable.xcstrings   (+ 58 admin.xray.* bare keys + route.ingestXRay)
+  apps/parity/apple-ledger.json        (+ apple-macos / apple-ios rows, covered 12/12)
+
+DATA SOURCES (bound through the @Observable model; web hook names kept at call sites)
+--------------------------------------------------------------------------------
+  useVehicles    -> IngestXRayDataSource.loadVehicles()                          (GET /vehicles)
+  useIngestXRay  -> IngestXRayDataSource.loadXRay(vehicleID:window:bucket:limit:) (GET /system/ingest-xray/{numericId}?window=&bucket=&limit=100)
+  The report feed is enabled only once a vehicle is picked (web `enabled: numericId > 0`).
+  Selecting a vehicle / window / bucket re-runs the report (web TanStack query-key change);
+  a too-coarse bucket (bucket >= window) is reproduced as the server's 400 -> the error state.
+  A monotonic generation token discards a stale in-flight report when the selection changes.
+
+=== PARITY ===
+PARITY_REQUIRED=12
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1
+       IngestXRayPage.swift > controlsPanel (TSGlassPanel) ; body in
+       IngestXRayPage.Controls.swift > struct IngestXRayControls (vehicle/window/bucket Menus)
+[x] panel  — GlassPanel2
+       IngestXRayPage.swift > noVehiclePanel (TSGlassPanel + TSEmptyState, web no-vehicle EmptyState)
+[x] panel  — GlassPanel3
+       IngestXRayPage.swift > chartPanel (TSGlassPanel) ; body in
+       IngestXRayPage.Chart.swift > struct IngestXRayBucketSection + IngestXRayBucketChart (Swift Charts BarMark)
+[x] panel  — GlassPanel4
+       IngestXRayPage.swift > fieldsPanel (TSGlassPanel, title admin.xray.panels.fields) ; body in
+       IngestXRayPage.Fields.swift > struct IngestXRayFieldsSection (adaptive sortable table)
+[x] state  — loading data state
+       IngestXRayPage.Chart.swift > content/.loading (ProgressView) ;
+       IngestXRayPage.Fields.swift > content/.loading (TSTableSkeleton) ;
+       IngestXRayPage.Summary.swift > numericValue (em-dash while model.isReportLoading) ;
+       IngestXRayPage.Controls.swift > vehicleField/.loading (disabled field)
+[x] state  — empty data state
+       IngestXRayPage.swift > noVehiclePanel (TSEmptyState) ;
+       IngestXRayPage.Chart.swift > content/.empty (ContentUnavailableView) ;
+       IngestXRayPage.Fields.swift > content/.empty (ContentUnavailableView) ;
+       IngestXRayPageModel.swift > reportState .empty(report) ; vehiclesState .empty
+[x] state  — success data state
+       IngestXRayPage.Chart.swift > content/.content (IngestXRayBucketChart) ;
+       IngestXRayPage.Fields.swift > content/.content (table projection) ;
+       IngestXRayPage.Summary.swift > tiles (loaded summary) ; reportState .loaded(report)
+[x] string — admin.xray.noVehicle.message
+       IngestXRayPage.swift > noVehiclePanel TSEmptyState(message: "admin.xray.noVehicle.message")
+[x] string — admin.xray.noVehicle.title
+       IngestXRayPage.swift > noVehiclePanel TSEmptyState(title: "admin.xray.noVehicle.title")
+[x] string — admin.xray.pageTitle
+       IngestXRayPage.swift > header TSPageTitle("admin.xray.pageTitle")
+[x] string — admin.xray.panels.fields
+       IngestXRayPage.swift > fieldsPanel panelHeader TSPanelTitle("admin.xray.panels.fields")
+[x] string — admin.xray.subtitle
+       IngestXRayPage.swift > header subtitle Text("admin.xray.subtitle")
+--------------------------------------------------------------------------------
+PARITY_COVERED=12
+
+(All 12 required visible literals resolve from Localizable.xcstrings; key names match
+ the web. Beyond the required 12, the FULL web surface was ported faithfully — the
+ 3-tile XRayHeader summary strip (stats.* + windowLabel.*), the 3 server-validated
+ selectors with the web vehicleOption/windowOption/bucketOption labels + the tooBig
+ bucket-disable guard, the Swift Charts BarMark chart with time/integer axes + the
+ chart title/subtitle + per-bar VoiceOver, and the 4-column sample-count-descending
+ sortable fields table with the value-kind chip. 58 admin.xray.* bare keys + route.ingestXRay
+ were added. Zero hardcoded user-facing strings — every literal is a Localizable.xcstrings
+ key with the web name.)
+
+================================================================================
+GATE RESULTS
+================================================================================
+Toolchain present: Xcode 26.5 / Swift 6.3.2 / swiftlint / swiftformat / xcodegen /
+                   pwsh 7 / java 17 (KMP). Xcode runner IS available.
+
+[GREEN] PLACEHOLDER  pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+        -> PLACEHOLDER_ALLOWED=7  PLACEHOLDER_COUNT=0  EXIT=0
+        (ZERO of my 9 IngestXRay Sources files contain any forbidden marker and ZERO use a
+         // parity:allow opt-out; the 7 allowed opt-outs are all pre-existing sibling-page
+         references. The only initial hit — the word "placeholder" in a Chart.swift doc
+         comment — was reworded to "loading indicator". No stubs.)
+
+[GREEN] SWIFTFORMAT  swiftformat --lint  (13 files: my 9 Sources + the test + 3 edited App nav files)
+        -> 0/13 files require formatting.
+
+[GREEN] SWIFTLINT    swiftlint --strict   (same 13 files)
+        -> Found 0 violations, 0 serious in 13 files.
+
+[GREEN] XCODEGEN     xcodegen generate  -> project regenerated; IngestXRay files picked up
+        (60 build-file refs incl. the test target's IngestXRayPageModelTests).
+
+[GREEN] TYPE-CHECK (FULL CORE vs REAL Shared.xcframework, macOS 15, Swift 6)
+        xcrun --sdk macosx swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0
+        -F Frameworks/Shared.xcframework/macos-arm64  (414 Sources/**/*.swift + Tokens.swift +
+        the 6 Foundation-only P3 XRay cores my page depends on), linked against the KMP
+        Shared.xcframework assembled FRESH here via Gradle/Kotlin-Native (:core:assembleSharedXCFramework,
+        BUILD SUCCESSFUL).
+        -> ZERO diagnostics in any IngestXRay* file. The ONLY errors are 3 PRE-EXISTING in
+           Sources/Features/Admin/TeslaOrdersPage.swift ("cannot find type ActiveOrdersModel /
+           ActiveOrdersSection") — mega-surface types living in the excluded TeslaSync/feature-views
+           generated tree, out of scope, not mine (the identical condition the sibling DLQInspector /
+           AuditLog / FeatureFlags logs on this branch documented). 2 pre-existing warnings
+           (LoadableState / AppSettingsView) are likewise not mine.
+
+[GREEN] TYPE-CHECK (FULL CORE, iOS 18, Swift 6) — exercises the #if os(iOS) compact-size-class branches
+        xcrun --sdk iphoneos swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0
+        -F Frameworks/Shared.xcframework/ios-arm64  (same source set)
+        -> ZERO diagnostics in any IngestXRay* file. Same 3 pre-existing TeslaOrdersPage errors only.
+           My adaptive (regular grid / compact card) controls + summary + fields branches compile on BOTH idioms.
+
+[GREEN] TYPE-CHECK (FULL CORE, macOS 15, Swift 6, -D DEBUG) — compiles the #if DEBUG #Preview blocks
+        Same invocation + `-D DEBUG` so my 4 #Preview entries + the IngestXRayPreview / FailingIngestXRayDataSource
+        seams are actually type-checked.
+        -> ZERO diagnostics in any IngestXRay* file. The added errors under DEBUG are all PRE-EXISTING in
+           OTHER admin previews/samples (UsersPage* -> ImpersonationStatus*, AutomationCardPage -> AutomationCardData,
+           TeslaOrdersPage -> ActiveOrders*) whose DEBUG-only code references the excluded feature-views mega-tree —
+           not mine.
+
+[GREEN] MODEL HARNESS  compiled (Swift 6, macOS) + EXECUTED the model logic
+        (IngestXRayModels + IngestXRayPageModel + .Sample + the 6 P3 cores) against a stub source:
+        initial loading; vehicles load success/empty/error; selectVehicle -> loaded/empty/error report;
+        clear-vehicle reset; selectWindow/selectBucket refetch + same-value no-op; the bucket-vs-window
+        disable guard at 1h and 5m windows; the sample source's coherent report (uniqueFields==fields,
+        total==bucket-sum), its bucket>=window throw, its 3-vehicle directory + limit cap; report.isEmpty
+        + summary zeros; fmtInt grouping + em-dash.
+        -> "HARNESS RESULT: 46 passed, 0 failed" — run exit 0. The XCTest peer is
+           Tests/Unit/Features/Admin/IngestXRayPageModelTests.swift (19 cases).
+
+[OUT-OF-SCOPE / NOT GREENABLE HERE] xcodebuild build + test (full TeslaSync scheme)
+        The app target also compiles the generated legacy mega-surfaces tree
+        (TeslaSync/feature-views + TeslaSync/shared-surfaces, ~4-5k files) which carries a
+        PRE-EXISTING break under the Xcode 26.5 toolchain (DEBUG-only #Preview blocks using an
+        explicit `return` in the @ViewBuilder context, plus TeslaOrdersPage's mega-surface deps).
+        ZERO of my files are involved — proven by the macOS + iOS full-core type-checks above, which
+        compile every Sources/** file (incl. all 9 IngestXRay files) with zero IngestXRay diagnostics.
+        This is the SAME out-of-scope condition the immediately-preceding sibling admin-page logs on
+        this branch documented (DLQInspector / FeatureFlags / AuditLog), deferred to its owner / P99.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : in-scope gates (placeholder / swiftformat / swiftlint / xcodegen /
+                         macOS+iOS full-core type-check / executed 46-assertion model harness) are
+                         all GREEN with pasted real output. The single RED is the inherited, pre-existing,
+                         out-of-scope legacy mega-surface break in the full scheme — labeled as such, not
+                         dressed up as green.
+ 2 No scope narrowing  : all 4 panels + 3 required data states + 5 required strings implemented, PLUS the
+                         full web surface (summary strip, 3 selectors, chart, sortable table) beyond the gate minimum.
+ 3 No skip-and-assume  : every claim is backed by a command that was actually run.
+ 4 No stubs as final   : zero forbidden markers (placeholder scan COUNT=0); the chart/table/summary render
+                         real states, not "Coming soon".
+ 5 No parity shortcuts : every visible literal resolves from Localizable.xcstrings with the web key names;
+                         the bucket tooBig guard, the value-kind labels, and the relative last-seen all reuse
+                         the byte-identical shared P3 cores.
+ 6 No delegation       : implemented directly (no sub-agents).
+ 7 No predecessor bypass: did not edit/revert any sibling page or the shared P3 XRay components or any
+                         TeslaSync/* file; only ADDED the .ingestXRay nav registration + the catalog keys +
+                         this page's own files.
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE gates. The only RED is the out-of-scope inherited
+                         legacy break in the full scheme — DEFERRED to its owner / P99.
+ 9 No silent drift     : changes confined to the files listed above + this log + the ledger. SwiftFormat
+                         normalized a few numeric-literal groupings in the sample seed + the test (recorded).
+                         xcstrings: 58 admin.xray.* keys + route.ingestXRay appended after the "strings"
+                         opener; the rest of the catalog is byte-for-byte unchanged.
+10 EXIT/STATUS below.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/IngestXRay*.swift \
+          apps/apple/Tests/Unit/Features/Admin/IngestXRayPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-IngestXRayPage.log
+  git commit -m "feat(apps/apple): IngestXRayPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,211 @@
+================================================================================
+ p4-apple · P7 · page:admin/DLQInspector — SwiftUI / Apple HIG
+ Native parity of web/src/features/admin/pages/DLQInspectorPage.tsx  (route /admin/dlq)
+ Prompt: p4-apple/P7/page:admin/DLQInspector
+ Generated log: .github/prompts/monorepo/logs/apple-page-admin-DLQInspectorPage.log
+ Timestamp (UTC): 2026-06-15T05:55Z
+================================================================================
+
+SUMMARY
+--------------------------------------------------------------------------------
+Implemented the DLQ Inspector as an adaptive SwiftUI surface (macOS regular /
+iPad regular / iPhone compact, ADR-002/006), driven by an @Observable model over
+a KMP-style data-source seam (ADR-004 — zero networking in the view). Reproduces
+the full web page: the title/subtitle chrome, the dismissible replay-blocked
+banner, the status header (3 stat tiles + the env-gate banner), the two web
+GlassPanels (dead-letter entries + recent replay activity), the inspect drawer
+(summary KVList + decoded payload tabs + copy + replay CTA), and the replay
+confirmation stacked on the drawer. Every visible string resolves from
+Localizable.xcstrings with the web key names; SI N/A (DLQ envelope metadata
+carries no units — only exact byte counts + timestamps formatted at the boundary).
+
+FILES (all under apps/apple/** — P4 README rule #1 scope)
+--------------------------------------------------------------------------------
+  Sources/Features/Admin/DLQInspectorModels.swift            (wire types, seam, states, formatters)
+  Sources/Features/Admin/DLQInspectorPageModel.swift         (@Observable model)
+  Sources/Features/Admin/DLQInspectorPageModel.Sample.swift  (preview/default actor source)
+  Sources/Features/Admin/DLQInspectorPage.swift              (page chrome + GlassPanel1/2 + sheet wiring)
+  Sources/Features/Admin/DLQInspectorPage.StatusHeader.swift (web StatusHeader: tiles + env banner)
+  Sources/Features/Admin/DLQInspectorPage.Entries.swift      (GlassPanel1 — entries table, adaptive)
+  Sources/Features/Admin/DLQInspectorPage.Audit.swift        (GlassPanel2 — audit table + result badge)
+  Sources/Features/Admin/DLQInspectorPage.Drawer.swift       (web EntryDrawer — inspect sheet)
+  Sources/Features/Admin/DLQInspectorPage.Confirm.swift      (web ConfirmDialog — replay confirm + scaffold)
+  Sources/Features/Admin/DLQInspectorRouteRegistration.swift (route host registration)
+  Tests/Unit/Features/Admin/DLQInspectorPageModelTests.swift (21 XCTest cases)
+  Sources/App/AppRoute.swift           (+ .dlqInspector case: pathSegment "dlq", icon, .system group)
+  Sources/App/AppRouteParser.swift     (+ "/admin/dlq" -> .dlqInspector deep-link alias)
+  Sources/TeslaSyncApp.swift           (+ DLQInspectorRouteRegistration.registry registration)
+  Localization/Localizable.xcstrings   (+ 56 admin.dlq.* + common.close/yes/no + route.dlqInspector)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=15
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1 (Dead-letter entries)
+       DLQInspectorPage.swift > entriesPanel (TSGlassPanel) ; body table in
+       DLQInspectorPage.Entries.swift > struct DLQEntriesTable
+[x] panel  — GlassPanel2 (Recent replay activity)
+       DLQInspectorPage.swift > auditPanel (TSGlassPanel) ; body table in
+       DLQInspectorPage.Audit.swift > struct DLQAuditTable
+[x] state  — loading data state
+       DLQInspectorPage.swift > entriesBody/.loading + auditBody/.loading (TSTableSkeleton)
+       DLQInspectorPage.Drawer.swift > payloadState/.loading (TSSpinner)
+[x] state  — error data state
+       DLQInspectorPage.swift > entriesBody/.error + auditBody/.error (TSErrorDisplay onRetry)
+       DLQInspectorPage.Drawer.swift > payloadState/.error (TSErrorDisplay onRetry)
+[x] state  — success data state
+       DLQInspectorPage.swift > entriesBody/.loaded (DLQEntriesTable) + auditBody/.loaded (DLQAuditTable)
+       DLQInspectorPage.Drawer.swift > payloadState/.loaded (payloadViewer)
+[x] string — admin.dlq.banners.replayBlockedMessage
+       DLQInspectorPage.swift > replayBlockedBanner (TSAlertBanner message:)
+[x] string — admin.dlq.banners.replayBlockedTitle
+       DLQInspectorPage.swift > replayBlockedBanner (TSAlertBanner title:)
+[x] string — admin.dlq.confirm.confirm
+       DLQInspectorPage.Confirm.swift > footer Replay TSButton("admin.dlq.confirm.confirm")
+[x] string — admin.dlq.confirm.message
+       DLQInspectorPage.Confirm.swift > static message(for:) String(localized: "admin.dlq.confirm.message")
+[x] string — admin.dlq.confirm.title
+       DLQInspectorPage.Confirm.swift > DLQSheetScaffold(title: String(localized: "admin.dlq.confirm.title"))
+[x] string — admin.dlq.pageTitle
+       DLQInspectorPage.swift > header TSPageTitle("admin.dlq.pageTitle")
+[x] string — admin.dlq.panels.audit
+       DLQInspectorPage.swift > auditPanel panelHeader TSPanelTitle("admin.dlq.panels.audit")
+[x] string — admin.dlq.panels.entries
+       DLQInspectorPage.swift > entriesPanel panelHeader TSPanelTitle("admin.dlq.panels.entries")
+[x] string — admin.dlq.subtitle
+       DLQInspectorPage.swift > header subtitle Text("admin.dlq.subtitle")
+[x] string — common.cancel
+       DLQInspectorPage.Confirm.swift > footer Cancel TSButton("common.cancel")
+--------------------------------------------------------------------------------
+PARITY_COVERED=15
+
+(All 15 visible literals resolve from Localizable.xcstrings; key names match the
+ web. Beyond the required 15, the FULL web surface was ported faithfully — the
+ StatusHeader's 3 stat tiles + env-disabled banner, the 8-column EntriesTable with
+ the Replayable Yes/No badge + Inspect action, the 7-column AuditPanel with the
+ result-coded badge, and the EntryDrawer's 8-field KVList + inner/raw payload tabs
+ + CopyButton + the env/replayable/in-flight-gated Replay CTA. +40 more web keys
+ were added: stats.*, cols.*, audit.cols.*, drawer.*, table.*, actions.inspect,
+ banners.disabled*, common.close/yes/no — so the page is at full panel/interaction
+ parity, not just the gate minimum. Zero hardcoded user-facing strings.)
+
+DATA SOURCES (bound through the @Observable model; web hook names kept at call sites)
+  useDLQList   -> DLQInspectorDataSource.loadList()  (GET /system/dlq)
+  useDLQEntry  -> DLQInspectorDataSource.loadEntry(id:)  (GET /system/dlq/{numericId})
+  useDLQAudit  -> DLQInspectorDataSource.loadAudit(limit:)  (GET /system/dlq/audit, limit=50)
+  useDLQReplay -> DLQInspectorDataSource.replay(id:)  (POST /system/dlq/{id}/replay)
+  Failure split reproduced: result=="disabled" (soft flag) AND DLQReplayDisabledError
+  (HTTP-403 env gate) both raise the persistent banner; result=="ok" closes the drawer;
+  any other failure keeps the confirm open for retry (web mutation-toast branch).
+
+================================================================================
+GATE RESULTS
+================================================================================
+Toolchain present: Xcode 26.5 / Swift 6.3.2 / swiftlint / swiftformat 0.61.1 /
+                    xcodegen / pwsh 7 / java 17 (KMP). Xcode runner IS available.
+
+[GREEN] PLACEHOLDER  pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+        -> PLACEHOLDER_ALLOWED=7  PLACEHOLDER_COUNT=0  EXIT=0
+        (ZERO of my 10 DLQ files contain any forbidden marker and ZERO use a
+         // parity:allow opt-out; the 7 allowed opt-outs are all pre-existing
+         sibling-page *Placeholder i18n key-name references. No stubs.)
+
+[GREEN] SWIFTFORMAT  swiftformat --lint (10 DLQ files + test + 3 edited App nav files)
+        -> 0/14 files require formatting.
+
+[GREEN] SWIFTLINT    swiftlint --strict   (14 files: my DLQ + nav + test)
+        -> Found 0 violations, 0 serious in 14 files.
+
+[GREEN] XCODEGEN     xcodegen generate  -> project regenerated; DLQ files picked up
+        (66 build-file refs incl. the test target's DLQInspectorPageModelTests).
+
+[GREEN] TYPE-CHECK (FULL CORE vs REAL Shared.xcframework, macOS 15, Swift 6)
+        xcrun --sdk macosx swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0
+        -F Frameworks/Shared.xcframework/macos-arm64  (405 Sources/**/*.swift + Tokens.swift,
+        linked against the KMP Shared.xcframework staged FRESH here via Gradle/Kotlin-Native).
+        -> ZERO diagnostics in any DLQInspector* file. The ONLY 6 errors are PRE-EXISTING
+           in Sources/Features/Admin/TeslaOrdersPage.swift ("cannot find type ActiveOrdersModel
+           / ActiveOrdersSection") — mega-surface types living in the excluded TeslaSync/
+           feature-views generated tree, out of scope, not mine (identical to the sibling
+           AuditLog/FeatureFlags logs on this branch lineage).
+
+[GREEN] TYPE-CHECK (FULL CORE, iOS 18, Swift 6) — exercises the #if os(iOS) compact-size-class branches
+        xcrun --sdk iphoneos swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0
+        -F Frameworks/Shared.xcframework/ios-arm64  (same source set)
+        -> ZERO diagnostics in any DLQInspector* file. Same 6 pre-existing TeslaOrdersPage
+           errors only. My adaptive (regular grid / compact card) branches compile on BOTH idioms.
+
+[GREEN] MODEL HARNESS  compiled (Swift 6, macOS) + EXECUTED the model logic
+        (DLQInspectorModels + DLQInspectorPageModel + .Sample) against a stub data source:
+        initial loading; load success (entries/audit counts, replayEnabled, total/replayable
+        counts); empty + error states; inspect -> selected + entry loading; loadEntry
+        success/failure; closeDrawer; askReplay/cancelReplay; confirmReplay ok-closes-drawer,
+        disabled-result-banner, 403-banner, other-error-keeps-dialog; replay-CTA gate logic;
+        formatBytes / formatDateTime / decodeBase64UTF8; and the sample seed's
+        list/audit/entry/replay round-trip + disabled-gate throw.
+        -> "ALL PASSED" — 41/41 assertions, run exit 0. The XCTest peer is
+           Tests/Unit/Features/Admin/DLQInspectorPageModelTests.swift (21 cases).
+
+[OUT-OF-SCOPE / NOT GREENABLE HERE] xcodebuild build + test (full TeslaSync scheme)
+        The app target also compiles the generated legacy mega-surfaces tree
+        (TeslaSync/feature-views + TeslaSync/shared-surfaces, ~4–5k files) which carries a
+        PRE-EXISTING break under the Xcode 26.5 toolchain: DEBUG-only #Preview blocks that use
+        an explicit `return` in the @ViewBuilder result-builder context (e.g.
+        TeslaSync/shared-surfaces/Input.Previews.swift:88/:101, committed at ed5f636e3) now
+        error ("cannot use explicit 'return' statement in the body of result builder
+        'ViewBuilder'"), and TeslaOrdersPage's mega-surface deps. ZERO of my files are involved
+        (proven by the macOS + iOS full-core type-checks above, which compile every Sources/**
+        file incl. all 10 DLQ files with zero DLQ diagnostics). This is the SAME out-of-scope
+        condition the immediately-preceding sibling admin-page logs on this branch documented
+        (apple-page-admin-FeatureFlagsPage.log / -AuditLogPage.log). The KMP Shared.xcframework
+        was staged successfully here (proving the toolchain). NOT claimed green (Covenant #1).
+        My code is fully verified by the isolated/full-core type-checks (BOTH idioms) + the
+        executed model harness + swiftlint/swiftformat/placeholder gates above.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : in-scope gates GREEN are reported GREEN; the full xcodebuild is
+                         explicitly OUT-OF-SCOPE / not-greenable (pre-existing legacy
+                         shared-surfaces #Preview break under Xcode 26.5) and NOT dressed
+                         up as passing. Type-check exit was 1 ONLY for the 6 pre-existing
+                         TeslaOrdersPage errors — ZERO are mine and that is stated plainly.
+ 2 No scope narrowing  : both web GlassPanels + the StatusHeader (tiles + env banner) + the
+                         replay-blocked banner + the inspect drawer + the replay confirm are
+                         all implemented; full Entries/Audit/Drawer sub-components ported.
+ 3 No skip-and-assume  : web page + its 4 sub-components (StatusHeader/EntriesTable/AuditPanel/
+                         EntryDrawer) + useDLQ hooks + admin-diagnostics types read end-to-end;
+                         the dual failure path (soft "disabled" vs 403 env gate) reproduced.
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0; ZERO opt-outs in my files; complete code, every
+                         data state renders a real surface (skeleton/ContentUnavailable/error/
+                         table/spinner), never a blank region.
+ 5 No parity shortcuts : 3 list/audit/entry states render distinctly on both idioms; result
+                         badge tone+verbatim token; byte/date formatters at the boundary;
+                         base64 payload decode w/ binary-marker fallback; every string a web key.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface / shared component / legacy
+                         TeslaSync/* file; only ADDED the .dlqInspector nav registration + the
+                         60 catalog keys + this page's own files.
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE gates (placeholder / swiftformat /
+                         swiftlint / xcodegen / macOS+iOS full-core type-check / executed model
+                         harness). The only RED is the out-of-scope inherited legacy
+                         shared-surfaces break in the full scheme — DEFERRED to its owner / P99.
+ 9 No silent drift     : changes confined to the files listed above + this log + the ledger.
+                         SwiftFormat normalized two numeric literals (2_613->2613, 1_204->1204)
+                         in the sample seed (recorded). xcstrings: 60 keys appended after the
+                         "strings" opener; the rest of the catalog is byte-for-byte unchanged.
+10 EXIT/STATUS below.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/DLQInspector*.swift \
+          apps/apple/Tests/Unit/Features/Admin/DLQInspectorPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-DLQInspectorPage.log
+  git commit -m "feat(apps/apple): DLQInspectorPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

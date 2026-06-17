@@ -1,0 +1,104 @@
+=== P4 Feature view 0288 BatteryRangeCharts (Apple) ===
+Surface: features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx → native SwiftUI parity
+Output:  apps/apple/TeslaSync/feature-views/BatteryRangeCharts.*  (13 files: 12 .swift + 1 .strings)
+Runner:  Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / swiftlint + swiftformat (Homebrew) / xcodegen 2.45.4
+Date:    2026-06-13
+
+--------------------------------------------------------------------------------
+DELIVERED FILES
+--------------------------------------------------------------------------------
+BatteryRangeCharts.swift              main view: phase switch (loading/empty/error/content) + freshness overlay + view.opened
+BatteryRangeCharts.Model.swift        P1/S8 source seam, P1/S11 telemetry seam, P1/S10 strings facade, @Observable model, in-memory source
+BatteryRangeCharts.Adapter.swift      pure value types: Snapshot, DriveSample, DistanceUnit, UnitPrefs, gauge/stat/bar/point/overview/trend/content models
+BatteryRangeCharts.Math.swift         pure SI conversion + fmtNumber + formatDate + batteryColor band (web lib/* parity)
+BatteryRangeCharts.Projection.swift   web render branches → content model (gauge, Battery/Range readouts, Current/Remaining bars, reversed drive trend / empty)
+BatteryRangeCharts.States.swift       loading skeleton, empty (ContentUnavailableView), error+retry (QueryError peer), freshness chip, stale/offline banner
+BatteryRangeCharts.Charts.swift       Swift Charts: battery BarMark chart + drive AreaMark/LineMark trend chart (legend, selection)
+BatteryRangeCharts.ChartParts.swift   chart tooltips (web ChartTooltip) + AXChartDescriptor (VoiceOver data series)
+BatteryRangeCharts.Views.swift        responsive 2-panel grid (grid-cols-1 lg:grid-cols-2), radial gauge, stat tiles, panel headers, drive empty
+BatteryRangeCharts.Previews.swift     per-state previews: loading / full / low / imperial / no-drives / empty / error / stale / offline
+BatteryRangeCharts.strings            P1/S10 i18n table — all web keys + native chrome keys
+BatteryRangeCharts.Tests.swift        model/phase/telemetry/freshness/stale-auto-refresh tests
+BatteryRangeCharts.ProjectionTests.swift  math + projection + chart-data + accessibility-label tests
+
+States reproduced: loading, empty, error(+retry), stale(chip+auto-refresh), offline(cached chip), plus the web per-panel
+drive-trend empty branch ("No drive data for chart"). i18n: every source key resolves through the P1/S10 facade (no English
+literals in code). Charts: Recharts BarChart/AreaChart → Swift Charts BarMark/AreaMark+LineMark; CHART_COLORS[0]/[1] →
+TSChartPalette.color(at:0)/(at:1). Data binds through the shared P1/S8 BatteryRangeChartsSource (no HTTP in the view).
+
+--------------------------------------------------------------------------------
+SURFACE-LEVEL GATES (all green)
+--------------------------------------------------------------------------------
+swiftformat --lint  ............ 0/12 files require formatting.            FORMAT_EXIT=0
+swiftlint --strict  ............ Done linting! Found 0 violations, 0 serious in 12 files.   LINT_EXIT=0
+check-placeholders.ps1 ......... PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   (scan of the 13 shipped files)
+swiftc -typecheck .............. all 12 surface files + 2 test files type-check clean against the REAL design tokens
+                                 (apps/design/generated/apple/Tokens.swift + Sources/Design/TSDesign.swift) and the real
+                                 Charts + Accessibility frameworks (macOS 15 SDK, -swift-version 6).   TYPECHECK_EXIT=0
+xcodegen generate .............. 13 BatteryRangeCharts files integrate into the TeslaSync app + TeslaSyncTests targets.
+
+--------------------------------------------------------------------------------
+KMP DEPENDENCY (resolved on runner)
+--------------------------------------------------------------------------------
+Frameworks/Shared.xcframework was absent (only .gitkeep). Built it via the project's pre-build script:
+  apps/apple/Scripts/build-shared-xcframework.sh  →  Gradle :core:assembleSharedXCFramework
+  "BUILD SUCCESSFUL in 8m 27s" → "✓ Shared.xcframework staged"  →  apps/apple/Frameworks/Shared.xcframework
+
+--------------------------------------------------------------------------------
+GATE STEP: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+--------------------------------------------------------------------------------
+** BUILD FAILED **   (compiling the 5,711-file TeslaSync module; the failure is NOT in any BatteryRangeCharts file)
+
+Root cause = a deterministic swift-frontend (Swift 6.3.2) IRGen compiler crash in a DIFFERENT, pre-existing surface:
+
+  4.  While evaluating request IRGenRequest(IR Generation for file
+        ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+  5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"   (a Swift-6 actor-isolation reabstraction thunk)
+  ...
+  8   swift-frontend  report_at_maximum_capacity(unsigned long) + 0
+  16  swift-frontend  swift::IRGenRequest::evaluate(...)
+  Please submit a bug report (https://swift.org/contributing/#reporting-bugs) ...
+
+grep ": error:" over the full build log = 0   (no source error in any file — the frontend aborts during IRGen)
+grep "BatteryRangeCharts" + "error" over the full build log = 0   (zero issues attributable to this surface)
+
+PROOF IT IS PRE-EXISTING AND UNRELATED TO THIS SURFACE
+  The 13 BatteryRangeCharts files were moved out of apps/apple/TeslaSync/feature-views, the project was regenerated
+  (0 BatteryRangeCharts references confirmed in project.pbxproj), and the iOS app was rebuilt from that baseline:
+
+    4.  While evaluating request IRGenRequest(IR Generation for file ".../AppearanceSettings.Controls.swift")
+    5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+    8   swift-frontend  report_at_maximum_capacity(unsigned long) + 0
+    ** BUILD FAILED **
+
+  → The identical crash reproduces with NONE of this surface's files present. AppearanceSettings.Controls.swift has no
+    dependency on BatteryRangeCharts, and a per-file reabstraction thunk's IR cannot be influenced by unrelated added files.
+    The compiler crash is a property of the baseline tree, not of this change. AppearanceSettings.* is out of scope for this
+    prompt (Allowed files = BatteryRangeCharts.* + this log), so it cannot be fixed here.
+
+  IOS_EXIT=65   (xcodebuild; aborted by the sibling-file swift-frontend crash above — `test` never reached)
+
+SECONDARY ENVIRONMENT CONSTRAINT
+  The shared parallel-build volume hit 100% capacity during the builds ("No space left on device (28)"), so repeated
+  full multi-GB DerivedData builds (iOS + macOS) are not reliably runnable on this runner. Derived data was cleaned up
+  afterwards to return space to the shared volume.
+
+  MAC_EXIT=(not run — TeslaSync-macOS shares the identical TeslaSync sources, so the same AppearanceSettings.Controls.swift
+            IRGen crash applies; not re-run under the disk constraint above)
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The BatteryRangeCharts Apple surface is COMPLETE and verified to the maximum extent the runner allows: it type-checks
+cleanly (full swiftc -typecheck of every shipped + test file against the real tokens and the real Charts/Accessibility
+frameworks), is swiftlint --strict and swiftformat --lint clean, contains no placeholders/stubs, and integrates into the
+app + test targets. The end-to-end `xcodebuild ... build test` gate cannot go green on this runner solely because of a
+PRE-EXISTING swift-frontend IRGen compiler crash in an out-of-scope sibling surface (AppearanceSettings.Controls.swift) —
+reproduced identically with this surface's files removed — compounded by shared-volume disk exhaustion. Both are platform
+/baseline limitations of the runner, not defects in this surface, and neither is fixable within the allowed file scope.
+
+Per the prompt capability clause ("If unavailable on the runner → STATUS=BLOCKED with API evidence") and Honesty Covenant
+rule 10, this is reported as BLOCKED with the crash backtrace + baseline reproduction as evidence (no red reported as green).
+
+EXIT=65
+STATUS=BLOCKED

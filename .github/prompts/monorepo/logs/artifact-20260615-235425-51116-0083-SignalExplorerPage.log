@@ -1,0 +1,157 @@
+================================================================================
+p4-apple · P7 · page:telemetry/SignalExplorer — SwiftUI / Apple HIG
+Native parity of web/src/features/telemetry/pages/SignalExplorerPage.tsx
+Targets: apple-macos + apple-ios (one adaptive SwiftUI layer, ADR-002)
+================================================================================
+
+ARTIFACT
+  Output (allowed scope: apps/apple/TeslaSync/Features/Telemetry/**):
+    apps/apple/TeslaSync/Features/Telemetry/SignalExplorerPage.swift             (View + previews)
+    apps/apple/TeslaSync/Features/Telemetry/SignalExplorerPageModel.swift        (@Observable model + source seam)
+    apps/apple/TeslaSync/Features/Telemetry/SignalExplorerPageViews.swift        (HIG panels + 4 data states)
+    apps/apple/TeslaSync/Features/Telemetry/SignalExplorerStrings.swift          (localized copy facade)
+    apps/apple/TeslaSync/Features/Telemetry/SignalExplorerRouteRegistration.swift(nav registration)
+  Navigation registration (allowed):
+    apps/apple/Sources/TeslaSyncApp.swift          (+1 line: SignalExplorerRouteRegistration.registry)
+    apps/apple/Sources/App/AppRouteParser.swift    (+1 alias: "/signal-explorer": .telemetry)
+  String catalog (allowed):
+    apps/apple/Localization/Localizable.xcstrings  (+29 keys: 15 parity ports + 14 supporting)
+  Ledger:
+    apps/parity/apple-ledger.json                  (+2 rows: apple-macos, apple-ios)
+
+DESIGN NOTES
+  - Data source useSignals → GET /signals/{vehicleId}/available is bound through an
+    @Observable SignalExplorerPageModel driven by a AvailableSignalsSource seam (P1/S8).
+    The production app injects the shared KMP signals state holder; previews/tests use
+    InMemoryAvailableSignalsSource. No networking in the view.
+  - GlassPanel1 → .regularMaterial card (ADR-005). Charts(0)/Maps(0) per the manifest
+    parity unit — the post-Explore region renders the resolved query (selected signals +
+    range + page size) as a HIG summary card, not a chart canvas (no stubs, ADR-011).
+  - Adaptive macOS(regular)+iOS(compact): ScrollView + ViewThatFits controls row.
+  - Live (SSE) badge connected/disconnected + >2 min staleness chip (ADR-013).
+  - Every visible literal via String(localized:) → Localizable.xcstrings (ADR-014).
+
+================================================================================
+=== GATE ===
+================================================================================
+
+[1] PLACEHOLDER SCAN  (apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Telemetry -Language swift)
+    PLACEHOLDER_ALLOWED=1   (one `// parity:allow` on .redacted(reason:.placeholder) skeleton)
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   ✓
+
+[2] SWIFTLINT --strict
+    Exact gate form (repo root): `swiftlint --strict apps/apple/TeslaSync/Features/Telemetry`
+      Found 0 violations, 0 serious in 5 files.
+    With apple config (apps/apple/.swiftlint.yml, opt-in rules) scoped to the 5 files:
+      Found 0 violations, 0 serious in 5 files.
+    LINT_EXIT=0   ✓
+
+[3] SWIFT COMPILE VERIFICATION OF THIS ARTIFACT  (Swift 6, -strict-concurrency=complete, MacOSX SDK)
+    swiftc -typecheck  SignalExplorerStrings/Model/Views/Page.swift                 → EXIT=0  ✓
+    swiftc -typecheck  SignalExplorerRouteRegistration.swift (vs real nav-type stubs) → EXIT=0  ✓
+    swiftc -c -wmo     SignalExplorerStrings/Model/Views/Page.swift → out.o (932 KB)  → EXIT=0  ✓
+    => All five artifact files type-check AND lower to object code with zero diagnostics.
+
+[4] KMP Shared.xcframework  (apps/shared :core:assembleSharedXCFramework, ADR-004)
+    GRADLE_EXIT=0   ✓  (release Shared.xcframework assembled + staged to apps/apple/Frameworks/)
+
+[5] XCODEBUILD (whole TeslaSync app target — macOS scheme)
+    `xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build`
+    BUILD_EXIT=65   ✗  BLOCKED BY PRE-EXISTING, OUT-OF-SCOPE REPO BREAKAGE (NOT this artifact)
+
+    Root cause (proven pre-existing — both at HEAD, neither in this changeset):
+      error: filename "ScheduledExportsPanel.swift" used twice:
+        apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.swift
+        apps/apple/TeslaSync/Features/System/ScheduledExportsPanel.swift
+      `git ls-files | grep ScheduledExportsPanel.swift`  → both tracked at HEAD
+      `git status --porcelain`                           → neither is in my changeset
+
+    To isolate this artifact I TEMPORARILY renamed one duplicate (NOT committed; reverted),
+    regenerated, and rebuilt. The build then type-checked further and surfaced MANY MORE
+    pre-existing, repo-wide type ambiguities across out-of-scope files, e.g.:
+      Sources/Components/UI/Typography.swift, Badges.swift, Buttons.swift, Cards.swift
+      Sources/Features/Battery/EnergyGauge.swift, Sources/Dashboard/Widgets/ExportStatusWidget.swift
+      ~80 TeslaSync/{feature-views,shared-surfaces,widget-primitives,dashboard-widgets}/*.Previews.swift
+      "ambiguous use of 'lg'/'md'/'sm'/'xs'/'font'", "ambiguous use of 'Preview'",
+      "'ScheduledExportsPanel' is ambiguous for type lookup"
+    Errors referencing apps/apple/TeslaSync/Features/Telemetry/ : 0
+    The assembled monorepo does not compile at HEAD; this is why every prior apple-page
+    log skips xcodebuild. The duplicates live OUTSIDE this prompt's allowed files, so they
+    are not fixable here. Temp rename reverted → working tree contains only intended changes.
+    TEST_EXIT=n/a   (test action not reachable while the whole-target build is blocked)
+
+================================================================================
+=== PARITY ===   PARITY_REQUIRED=20
+================================================================================
+Each item: <kind> — <name>  →  <file>:<line> <symbol>  (bound to @Observable model)
+
+[01] panel  — GlassPanel1
+        SignalExplorerPage.swift:78  `controlsPanel` (.regularMaterial card; web `GlassPanel`)
+        composes SignalExplorerSelectorSection + timeRangeRow + controlsRow (PageViews/Page)
+[02] state  — loading
+        SignalExplorerPageViews.swift:161 `case .loading:` → :175 `loadingState` (.redacted skeleton)
+        SignalExplorerPageModel.swift:301 resolveState(.loading) ; dataState drives the branch
+[03] state  — empty
+        SignalExplorerPageViews.swift:163 `case .empty:` → :187 `emptyState` (ContentUnavailableView)
+        SignalExplorerPageModel.swift:305 resolveState(.empty / loaded-no-rows)
+[04] state  — error
+        SignalExplorerPageViews.swift:165 `case .error:` → :195 `errorState` (ContentUnavailableView + Retry)
+        SignalExplorerPageModel.swift resolveState(.failed → .error(message)) ; model.refresh() retry
+[05] state  — success
+        SignalExplorerPageViews.swift:167 `case .success:` → :208 `successState` (signal chips LazyVGrid)
+[06] string — "Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time."
+        SignalExplorerStrings.swift:32  SignalExplorerCopy.pickMessage  → PickHint (PageViews)
+[07] string — "Explore"
+        SignalExplorerStrings.swift:24  SignalExplorerCopy.explore      → SignalExplorerPage.exploreButton
+[08] string — "Per Page"
+        SignalExplorerStrings.swift:23  SignalExplorerCopy.perPage      → SignalExplorerPage.perPageMenu
+[09] string — "Pick signals and click Explore"
+        SignalExplorerStrings.swift:27  SignalExplorerCopy.pickTitle    → SignalExplorerPickHint
+[10] string — "Signal Explorer"
+        SignalExplorerStrings.swift:16  SignalExplorerCopy.title        → Page.navigationTitle + header
+[11] string — "Time Range"
+        SignalExplorerStrings.swift:22  SignalExplorerCopy.timeRange    → SignalExplorerPage.timeRangeRow
+[12] string — "Visualise signal history with chart and stats — or stream live"
+        SignalExplorerStrings.swift:19  SignalExplorerCopy.subtitle     → Page.header
+[13] string — "error.loadFailed"  (default "Failed to load data")
+        SignalExplorerStrings.swift:37  SignalExplorerCopy.loadFailed   → ErrorBanner + errorState
+[14] string — "help.signal.live.aria"  (default "More info about live signal streaming")
+        SignalExplorerStrings.swift:41  SignalExplorerCopy.liveHelpAria → LiveHelpButton.accessibilityLabel
+[15] string — "liveMonitor.connected"  (default "Connected")
+        SignalExplorerStrings.swift:45  SignalExplorerCopy.connected    → SignalExplorerLiveBadge
+[16] string — "liveMonitor.disconnected"  (default "Disconnected")
+        SignalExplorerStrings.swift:49  SignalExplorerCopy.disconnected → SignalExplorerLiveBadge
+[17] string — "signalExplorer.live"  (default "Live")
+        SignalExplorerStrings.swift:53  SignalExplorerCopy.live         → SignalExplorerPage.liveButton
+[18] string — "signalExplorer.noVehicle"  (default "Select a vehicle to begin")
+        SignalExplorerStrings.swift:61  SignalExplorerCopy.noVehicleTitle   → SignalExplorerNoVehicleView
+[19] string — "signalExplorer.noVehicleDesc"  (default "Pick a vehicle from the picker above…")
+        SignalExplorerStrings.swift:66  SignalExplorerCopy.noVehicleMessage → SignalExplorerNoVehicleView
+[20] string — "signalExplorer.stopLive"  (default "Stop live")
+        SignalExplorerStrings.swift:57  SignalExplorerCopy.stopLive     → SignalExplorerPage.liveButton
+
+PARITY_COVERED=20
+PARITY_REQUIRED=20
+
+================================================================================
+=== SUMMARY ===
+================================================================================
+Deliverable: COMPLETE and independently compile-verified.
+  - 20/20 parity items implemented and bound to the @Observable model.
+  - 4 data states (loading/empty/error/success) for the useSignals source.
+  - All 15 i18n keys + 14 supporting keys in Localizable.xcstrings; zero hardcoded text.
+  - PLACEHOLDER_EXIT=0 ; LINT_EXIT=0 ; artifact swiftc typecheck + object compile EXIT=0.
+  - Navigation: registered .telemetry host + "/signal-explorer" deep-link alias.
+
+Gate status: the whole-app `xcodebuild build/test` triad CANNOT be shown green because the
+assembled monorepo does NOT compile at HEAD due to PRE-EXISTING, repo-wide, OUT-OF-SCOPE
+duplications (ScheduledExportsPanel filename/type; design tokens; Typography; Preview macro)
+across files this prompt is not allowed to modify. Zero build errors originate in
+apps/apple/TeslaSync/Features/Telemetry/. Per the Honesty Covenant (1 No red-as-green;
+8 No commit on red) and the prompt's own escape ("the gate → STATUS=BLOCKED"), this is
+reported as BLOCKED — not falsely green — and no git commit was created. Flip both ledger
+rows to "done" once the pre-existing repo-wide build breakage (outside this scope) is fixed.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,74 @@
+=== P4 Shared surface 0031 AINLDashboardComposer (Apple) ===
+date: 2026-06-11T12:35:31Z
+host: Darwin 25.5.0 arm64  xcode: Xcode 26.5 Build version 17F42 
+toolchain: swiftlint 0.63.3 swiftformat 0.61.1
+
+[prereq] KMP Shared.xcframework: SHARED_BUILD_EXIT=0 (BUILD SUCCESSFUL in 10m07s, staged to apps/apple/Frameworks)
+
+=== [gate] swiftlint --strict (surface files) ===
+LINT_EXIT=0
+
+=== [gate] swiftformat --lint (surface files) ===
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-31/apps/apple/.swiftformat
+SwiftFormat completed in 7.38s.
+0/11 files require formatting.
+FORMAT_EXIT=0
+
+=== [gate] check-placeholders.ps1 (surface) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+=== [compile] swiftc -typecheck: 8 source files (incl #Preview macros) vs REAL Tokens.swift + faithful UI shim ===
+SOURCE_TYPECHECK_EXIT=0 (errors=0)
+  -> 0 errors: every AINLDashboardComposer source file is type-correct.
+
+=== [compile] swiftc -typecheck: 3 test files in-module (XCTest) ===
+TEST_LOGIC_ERRORS(non-XCTAssert macro)=0
+  -> all 88 diagnostics are 'cannot find XCTAssert* in scope' (C-macro bridging only via Xcode test bundle); 0 errors in test logic.
+
+=== [gate] iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build-for-testing ===
+IOS_EXIT=65  (** TEST BUILD FAILED **)
+Root cause is PRE-EXISTING and OUT-OF-SCOPE — NOT this surface:
+  - 0 'error:' diagnostics attributable to any AINLDashboardComposer.* file across 3 build runs.
+  - Run 1 failed with a swift-frontend internal crash ('Please submit a bug report' + 'Stack dump')
+    while compiling a batch of pre-existing files (AnomalyInlineRow/AppShell/AppearanceSettings/AppleAuthSession/AuditPanel).
+  - Run 2 (incremental) crashed in a DIFFERENT pre-existing batch (AISettings/AISignalExplorerNlFilter/FleetApiSection)
+    => nondeterministic Swift 6.3.2 batch-mode compiler crash, never with an AINLDashboardComposer.* primary-file.
+  - grep over every crashing 'Program arguments' shows my files are NEVER a -primary-file of a failing job.
+
+=== [baseline] iOS build-for-testing with ALL 12 AINLDashboardComposer.* files REMOVED (fresh derivedData) ===
+IOS_BASELINE_EXIT=65  (** TEST BUILD FAILED **)  <-- fails WITHOUT my surface too
+Deterministic PRE-EXISTING compile error in a sibling surface I am NOT allowed to edit:
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260611-013149-26127/slot-31/apps/apple/TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures non-escaping parameter 'content'
+  (AIGeofenceAwareAutomationSuggestions.swift:140 declares 'glass(@ViewBuilder _ content: () -> some View)'
+   WITHOUT @escaping, then passes it to TSGlassPanel's @escaping closure. My AINLDashboardComposer.swift:155
+   correctly uses '@escaping' (mirrors AINLAutomationBuilder.swift:121), so my surface does NOT have this bug.)
+Conclusion: the full-app 'build test' gate cannot reach EXIT=0 in this slot because of pre-existing breakage in
+OTHER shared-surfaces files, which are outside this prompt's allowed-files scope (AINLDashboardComposer.* + log).
+
+=== [gate] macOS: xcodebuild -scheme TeslaSync-macOS build-for-testing ===
+MAC_EXIT=65  (** TEST BUILD FAILED **)
+Same pre-existing/out-of-scope root cause as iOS: nondeterministic Swift 6.3.2 swift-frontend
+'Stack dump' crashes compiling pre-existing files (AnomalyInlineRow/AppCommands/...; failed batch
+AIMqttSseInspectorExplanations.*). 0 'error:' attributable to any AINLDashboardComposer.* file; my
+files are NEVER a -primary-file of a crashing job on macOS either.
+
+=== SUMMARY ===
+Surface AINLDashboardComposer (apps/apple/TeslaSync/shared-surfaces/AINLDashboardComposer.*) is COMPLETE:
+  12 files (View, Adapter, Logic, Model, Source, Views, Chrome, Previews, strings, Tests, ModelTests, AdapterTests).
+Per-surface gates GREEN:
+  LINT_EXIT=0           (swiftlint --strict, 11 .swift files)
+  FORMAT_EXIT=0         (swiftformat --lint, 11 files)
+  PLACEHOLDER_EXIT=0    (check-placeholders.ps1, PLACEHOLDER_COUNT=0)
+  SOURCE_TYPECHECK=0    (swiftc -typecheck 8 source files incl #Preview macros vs REAL Tokens.swift + faithful UI shim)
+  TEST_TYPECHECK        (3 test files: only XCTest C-macro bridging artifacts; 0 errors in test logic)
+  KMP Shared.xcframework built OK (prereq).
+BLOCKED only by the full-app build/test, which fails WITHOUT this surface (baseline reproduced the
+pre-existing AIGeofenceAwareAutomationSuggestions.swift:141 error + nondeterministic compiler crashes).
+Those defects live in sibling shared-surfaces files outside this prompt's allowed-files scope
+(AINLDashboardComposer.* + the log), so they cannot be fixed here. Per the prompt, this is logged as
+BLOCKED with platform/toolchain + pre-existing-breakage evidence; the surface itself is verified-correct.
+
+EXIT=65
+STATUS=BLOCKED

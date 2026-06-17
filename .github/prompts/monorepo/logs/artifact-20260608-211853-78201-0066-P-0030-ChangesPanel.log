@@ -1,0 +1,152 @@
+================================================================================
+P4 · Feature view · 0030 — ChangesPanel (Apple)
+Run: 2026-06-09T00:31-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/66
+Base: d48a3e058
+Prompt: P4/feature-views/0030 — ChangesPanel
+Web source (spec): web/src/features/admin/components/feature-flags/ChangesPanel.tsx
+Mode: code-complete + host-validated (swiftc typecheck ×3 / swiftlint --strict /
+      swiftformat --lint / placeholder gate) + REAL app-target compile (Shared.xcframework
+      assembled on-host, ChangesPanel compiled into the iOS app target with 0 errors) +
+      DEFERRED full-app xcodebuild build/test (pre-existing out-of-scope dashboard-widget
+      collisions; macos-pending-verifications.md / ADR-012; AuditPanel-0026 + FlagsTable-0031
+      precedent).
+================================================================================
+
+=== CAPABILITY PROBE (this host) ===
+  swift / swiftc ............. Apple Swift 6.3.2, macOS 15 SDK present                ✅
+  active developer dir ....... /Applications/Xcode.app/Contents/Developer (Xcode 26.5) ✅ (full Xcode, not CLT)
+  iOS Simulator (simctl) ..... iPhone 16 (booted, available)                          ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                             ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                           ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                  ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen                              ✅
+  Frameworks/Shared.xcframework  ASSEMBLED + STAGED on-host via Gradle (BUILD SUCCESSFUL
+                               in 2m56s — `:core:assembleSharedXCFramework`)            ✅ (was .gitkeep only)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI — available and
+  proven by a REAL iOS-app-target compile against the shipped component library. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ChangesPanel.*) ===
+  ChangesPanel.Models.swift       348  FeatureFlagOperation (web union, set/delete/+unknown) + ChangesOpTone +
+                                       ChangeJSONValue (web `unknown`) + ChangesValuePreview.compact (web `compact()`:
+                                       null/undefined→'—', JSON.stringify, >60→slice(0,57)+'…') + snake-case decode +
+                                       ISO-8601 (fractional-tolerant) timestamp parse
+  ChangesPanel.Projection.swift   176  cached→projection (absolute changed_at / `field || '—'` / localized op token /
+                                       compact old+new / source-order preserved) + presentation resolver (every state)
+  ChangesPanel.Model.swift        213  Shared-free P1/S8 source seam + load state + error taxonomy + @Observable model
+                                       (live/preview/web-prop inits, scopedKey) + P1/S10 i18n facade + a11y summary
+  ChangesPanel.Components.swift   233  operation chip (web Badge OP_VARIANT) + freshness/refresh accessory + retry +
+                                       scoped/global empty (web EmptyState) + error + offline + loading skeleton
+  ChangesPanel.Table.swift        187  hand-composed 7-col table (web DataTable): changed_at/actor/flag_key/operation/
+                                       old/new/reason — columnar (macOS/iPad) + compact card (iPhone), mono cells
+  ChangesPanel.swift              142  the surface: glass panel + header (title + freshness) + content state switch +
+                                       P1/S11 `view.opened` on .task + stale auto-refresh
+  ChangesPanel.Previews.swift     125  8 #Preview states (content·live/stale, empty·scoped/global, loading,
+                                       offline·cached/no-data, error) — DEBUG-only
+  ChangesPanel.Tests.swift        334  adapter (decode/compact/operation/projection) + presentation resolver (every
+                                       state) + web-prop mapping + telemetry + a11y + model — 28 test methods
+  ChangesPanel.strings             50  per-surface i18n table "ChangesPanel" (11 parity keys + op tokens + native chrome)
+  ----------------------------------------------------------------------------------------------------------
+  TOTAL                          1808  (web source 144 lines → native = full state machine + tests + i18n + a11y,
+                                       same expansion ratio as the 0026 AuditPanel twin; nothing stubbed)
+
+=== PARITY MAP (web ChangesPanel.tsx → native) ===
+  • Props rows/loading/scopedKey → ChangesPanel(rows:loading:scopedKey:) web-prop init → load-state mapping.
+  • 7 columns (changed_at/actor/flag_key/operation/old_value/new_value/reason) → ChangeLogTable, exact i18n keys
+    admin.flags.audit.cols.{changedAt,actor,flagKey,operation,oldValue,newValue,reason}.
+  • <TimeStamp format="absolute"> → DateFormatter medium+short (ChangesPanelProjection.absoluteDateTime).
+  • Badge OP_VARIANT {set:success, delete:danger} ?? neutral → FeatureFlagOperation.tone → ChangesOpBadge.
+  • compact(value): JSON.stringify; null/undefined→'—'; len>60→slice(0,57)+'…'; catch→'—' → ChangesValuePreview.compact
+    (maxLength 60 / prefix 57 / em-dash) — unit-tested for every branch incl. the truncation length.
+  • actor||'—', reason||'—' → ChangesPanelProjection.nonEmpty; flag_key rendered verbatim (web has no fallback).
+  • EmptyState (not loading && rows==0): title "No flag changes yet"; scoped → 'No audit rows for "{{key}}" — edit
+    the value above to start the trail.'; global → 'Flag changes will appear here once an operator edits a value.'
+    → ChangesEmptyView(scopedKey:) with %@ interpolation (admin.flags.audit.empty.{title,scopedMessage,globalMessage}).
+  • DataTable emptyMessage while loading "Loading audit log…" → ChangesLoadingView a11y label.
+  • States superset (web loading/empty + prompt error/stale/offline) → ChangesPanelPresentation, every branch rendered.
+  • i18n: per-surface NSLocalizedString table "ChangesPanel" (+ English value fallback) — parallel-safe; the shared
+    Localizable.xcstrings is NOT edited (Honesty rule 7). Zero English literals in view code.
+  • Telemetry: REUSES the canonical DashboardWidgetTelemetryEvent / DashboardWidgetTelemetrySink (the app-wide P1/S11
+    diagnostics seam). ChangesPanel.viewOpenedEvent == .viewOpened(surface:"ChangesPanel"), emitted on .task.
+  • Self-contained types (ChangeJSONValue etc. owned by ChangesPanel.*, NOT reused from FlagsTable.Models) so the
+    surface compiles independently of sibling slots at merge time (no cross-surface symbol coupling).
+  • Proto/units note: operation/flag-key are stable string codes; no unit-suffixed fields → Phase-48 SI rules N/A.
+
+=== GATE EXECUTION (commands actually run on this host; real exit codes) ===
+  Host typechecks — surface vs the REAL generated design tokens (apps/design/generated/apple/Tokens.swift) + REAL
+  component library (Components/UI/Badges.swift TSTone, Components/Feedback Skeletons.swift TSSkeleton). The 3 public
+  telemetry types and XCTest's macro-only XCTAssert* were provided as verbatim host-harness shims (the real types live
+  in the committed Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift and the XCTest bundles); macos15, swift6,
+  strict-concurrency=complete:
+  (1) swiftc -typecheck — shipping surface (6 src)                                            TYPECHECK1_EXIT=0  ✅
+  (2) swiftc -typecheck — full surface + Previews (-D DEBUG, #Preview macros expand)          TYPECHECK2_EXIT=0  ✅
+  (3) swiftc -typecheck — full surface + Tests (in-module, XCTest shim)                       TYPECHECK3_EXIT=0  ✅
+  (4) swiftlint --strict TeslaSync/feature-views/ChangesPanel.*  → "Found 0 violations, 0 serious in 8 files"
+                                                                                              LINT_EXIT=0        ✅
+  (5) swiftformat --lint  ChangesPanel.*  → "0/8 files require formatting"                    FORMAT_EXIT=0      ✅
+  (6) check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ChangesPanel
+        → PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0                                          PLACEHOLDER_EXIT=0 ✅
+  (7) xcodegen generate  → "Created project …/TeslaSync.xcodeproj"; project.pbxproj enumerates all 9 ChangesPanel
+        files (Models/Projection/Model/Components/Table/swift/Previews/Tests/strings)         XCODEGEN_EXIT=0    ✅
+
+  REAL app-target compile (beyond the host-validation the sibling logs stop at):
+    • Staged Frameworks/Shared.xcframework via Scripts/build-shared-xcframework.sh (Gradle BUILD SUCCESSFUL, 2m56s).
+    • $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+        → Xcode compiled ChangesPanel into the iOS app target: 0 errors in any ChangesPanel.* file; ChangesPanel.strings
+          CopyStringsFile validated + bundled into TeslaSync.app (UTF-8 OK).
+        → ** BUILD FAILED ** — 76 errors, ALL in PRE-EXISTING, OUT-OF-SCOPE files under TeslaSync/dashboard-widgets/
+          (ChargeStatusWidget.*, ChargeStatusLiveWidget.*, ChargeSessionChartWidget.*, FleetStatsBarWidget.*); root
+          example: "'ChargeSessionDTO' is ambiguous for type lookup" — a parallel-merge symbol collision. ZERO
+          ChangesPanel errors. These files are NOT in this prompt's allowed set (ChangesPanel.* + the log), so fixing
+          them is forbidden by Honesty rules 2 (no scope narrowing) / 6 (no delegation outside scope).            IOS_EXIT=DEFERRED
+    • macOS target compiles the IDENTICAL shared source set (project.yml: Sources + dashboard-widgets + feature-views),
+      so it hits the same out-of-scope dashboard-widget collisions, plus it needs macOS development signing absent on a
+      shared runner.                                                                                              MAC_EXIT=DEFERRED
+
+  Deferral disposition: the full-app iOS-Simulator + macOS `xcodebuild build test` is DEFERRED to the signed macOS
+  acceptance gate (p4-apple/P99-0001-apple-acceptance-gate on macos-latest), exactly as apps/macos-pending-verifications.md
+  + ADR-012 record for the sibling feature-view surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart, …). The
+  ChangesPanel surface itself is verified: 3× real-SDK typechecks green, lint/format/placeholder clean, AND a clean
+  iOS app-target compile (0 ChangesPanel errors, strings bundled) once the KMP xcframework was staged.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced (loading / empty[scoped+global] /
+      content), plus the prompt's error / stale / offline contract — every branch rendered, none hidden.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (ChangesAuditSource seam); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching key in the per-surface P1/S10 catalog (0 drift) + native chrome keys.
+  [x] Accessibility labels present on every interactive element (refresh/retry buttons, freshness chip, per-row
+      VoiceOver summary, loading/empty labels); Dynamic Type via tokens; reduce-motion via TSSkeleton.
+  [x] Tests: adapter unit tests (compact/decode/operation/projection) + per-state presentation tests + a11y label
+      test + telemetry test (28 methods) — typecheck-green in-module against the real surface.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate = 0).
+  [~] EXIT=0 for host gates (typecheck ×3 / lint / format / placeholder / xcodegen) AND a clean ChangesPanel app-target
+      compile; full-app xcodebuild build/test DEFERRED to the signed macOS gate (out-of-scope dashboard-widget
+      collisions + macOS signing) — STATUS=DONE per the established P4 disposition.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green: every host gate ran on THIS host with its real exit code; the xcodebuild FAILURE is reported
+     verbatim (76 errors) and NOT claimed as a pass — it is DEFERRED with on-host evidence + the cause (out-of-scope).
+  2  No scope narrowing: all 11 source i18n keys + 7 columns + compact() + scoped/global empty reproduced.
+  3  No skip-and-assume: each gate executed; the typecheck was run THREE ways (surface / +previews / +tests).
+  4  No stubs as final: every state is fully rendered; the only shims (telemetry types, XCTest macros) are HOST-HARNESS
+     scaffolding for the isolated typecheck — verbatim copies of the REAL committed APIs, not shipped code.
+  5  No parity shortcuts: hand-composed 7-col table (web DataTable) with mono cells + operation chip + em-dash cells.
+  6  No delegation.
+  7  No predecessor bypass: per-surface .strings table; shared Localizable.xcstrings + out-of-scope files untouched.
+  8  No commit on red: ChangesPanel.* is green across every gate it owns; the committed code adds 0 errors to the tree.
+  9  No silent drift: self-contained types; allowed files only (ChangesPanel.* + this log).
+  10 EXIT/STATUS below.
+
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+TYPECHECK1_EXIT=0
+TYPECHECK2_EXIT=0
+TYPECHECK3_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE

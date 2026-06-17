@@ -1,0 +1,255 @@
+================================================================================
+P4 · P99 · 0001 — Apple macOS + iOS acceptance gate
+Run:    2026-06-14T23:35-0700
+Host:   macOS 26.5.1 (25F80) — Darwin 25.5.0 arm64
+Repo:   HEAD c7126a31b6a7fac28cbb82f32ec3a0cd60da50b9
+        Branch auto/20260614-231658-97646/2
+Prompt: .github/prompts/monorepo/p4-apple/P99-0001-apple-acceptance-gate.prompt.md
+Role:   ACCEPTANCE GATE — run only, do NOT fix code, do NOT narrow scope,
+        do NOT delegate. Record evidence; DONE/BLOCKED per the gate formula.
+================================================================================
+
+=== PREFLIGHT ===================================================================
+
+-- Runner capability probe ---------------------------------------------------
+  uname -mrs .................. Darwin 25.5.0 arm64
+  sw_vers ..................... macOS 26.5.1 (25F80)
+  xcode-select -p ............. /Applications/Xcode.app/Contents/Developer
+                               (full Xcode active — no DEVELOPER_DIR override needed)
+  xcodebuild -version ......... Xcode 26.5 (Build 17F42)                        OK
+  iPhone 16 simulator ......... 83717DEE-70A3-4325-AA61-CBDDD3140989 (Booted)   OK
+  swiftlint ................... 0.63.3                                          OK
+  swiftformat ................. 0.61.1                                          OK
+  xcodegen .................... 2.45.4                                          OK
+  pwsh ........................ 7.6.2                                           OK
+  java ........................ OpenJDK 17.0.19 (for KMP Shared.xcframework)    OK
+  security find-identity -v -p codesigning .... 0 valid identities found        FAIL
+                               -> no development certificate, no development team.
+                               The prompt capability clause requires "signing
+                               identities, and archive credentials"; absent here.
+
+-- Predecessor logs (Honesty Covenant rule 7 — "No predecessor bypass") ------
+  "Depends on: P4/P0..P9 all STATUS=DONE, all generated P7 page prompts DONE."
+  Source of truth = canonical phase logs in .github/prompts/monorepo/logs/.
+    p4-p0-0001-apple-scaffold ............... STATUS=DONE      OK
+    p4-p1-0001-shared-facade ................ STATUS=DONE      OK
+    p4-p2-0001-design-tokens ................ STATUS=DONE      OK
+    p4-p3-0001-ui-components ................ STATUS=DONE      OK
+    p4-p3-0002-charts-components ............ STATUS=DONE      OK
+    p4-p3-0003-data-display-components ...... STATUS=DONE      OK
+    p4-p3-0004-feedback-forms-components .... STATUS=DONE      OK
+    p4-p3-0005-maps-motion-components ....... STATUS=DONE      OK
+    p4-p4-0001-app-structure-navigation ..... STATUS=DONE      OK
+    p4-p5-0001-auth-onboarding .............. STATUS=DONE      OK
+    p4-p6-0001-live-data-sse ................ STATUS=DONE      OK
+    p4-p6-0002-push-notifications ........... STATUS=DONE      OK
+    p4-p8-0001-widgetkit-widgets ............ STATUS=DONE      OK
+    p4-p8-0002-intents-handoff-menus ........ STATUS=DONE      OK
+    p4-p8-0003-watchos-companion-settings ... STATUS=DONE      OK
+    p4-p9-0001-xctest-unit .................. STATUS=DONE      OK
+    p4-p9-0002-xcuitest-ui .................. CANONICAL LOG ABSENT             FAIL
+       (no .github/prompts/monorepo/logs/p4-p9-0002-xcuitest-ui.log; only
+        cross-run artifact-*/parallel-* copies from OTHER run timestamps exist —
+        those are not THIS tree's predecessor evidence.)
+    P7 generated page prompts ............... 153 *.prompt.md under
+       p4-apple/pages/** ; only 31 apple-page-*.log evidence logs exist
+       (all 31 STATUS=DONE).  31/153 DONE -> 122 page prompts have NO log    FAIL
+  -> PREDECESSOR SET INCOMPLETE. P9-0002 (canonical log absent) and P7 (31/153)
+     are not STATUS=DONE. Rule 7 alone forces STATUS=BLOCKED; recorded, not bypassed.
+
+-- Clean-tree check (rule 9 — "No silent drift") -----------------------------
+  git status --porcelain (tracked) .......... EMPTY — no tracked drift          OK
+  Generated build artifacts are git-IGNORED (confirmed via git check-ignore):
+     apps/apple/TeslaSync.xcodeproj          (xcodegen output)
+     apps/apple/Frameworks/Shared.xcframework (KMP staging)
+     apps/shared/core/build                  (Gradle output)
+  DerivedData lives outside the repo. No untracked, non-ignored files exist.
+
+-- Required parity ledgers + checker (rule 5 — "No parity shortcuts") ---------
+  apps/parity/apple-macos-ledger.json .......... ABSENT                         FAIL
+  apps/parity/apple-ios-ledger.json ............ ABSENT                         FAIL
+  apps/tools/check-parity-ledger.ps1 (gate tool) ABSENT                         FAIL
+  (Only a combined apps/parity/apple-ledger.json exists; it is NOT either of the
+   two files the gate names, and the checker the gate invokes does not exist.)
+  -> The two check-parity-ledger.ps1 gate commands cannot execute and neither
+     required ledger can report 100%. Authoring ledgers/checker is explicitly
+     Out of Scope and outside this prompt's Allowed files (apps/apple/**, the log);
+     fabricating them would be a parity shortcut (rule 5) + stub (rule 4).
+
+=== SURVEY ======================================================================
+  Apple sources: 5,831 .swift files (App, Auth, Components, Design, Live,
+    Notifications, Platform, SharedFacade, WatchBridge, Widgets, Dashboard,
+    DashboardWidgets, Features/**, plus TeslaSync/{shared-surfaces,feature-views}).
+    Sources/Features now contains partially generated P7 page material (the prior
+    P4/P99 run on a different checkout had only 256 .swift and no Features/).
+  project.yml (XcodeGen 2.45.4) defines schemes TeslaSync (iOS) and
+    TeslaSync-macOS, each with a "Stage Shared.xcframework" pre-build Run Script
+    (Scripts/build-shared-xcframework.sh -> Gradle :core:assembleSharedXCFramework).
+  No .xcodeproj is committed; it is generated. To make the xcodebuild halves
+    runnable, the project was generated and the KMP Shared.xcframework was built
+    from source (the exact pre-build dependency); see GATE. No code was modified.
+
+=== GATE (verbatim prompt commands) =============================================
+
+-- Pre-dependency: project generation + KMP Shared.xcframework ----------------
+  xcodegen generate (cwd apps/apple) .......... Created TeslaSync.xcodeproj   OK
+  xcodebuild -list ............................ Schemes: TeslaSync,
+                                                TeslaSync-macOS, TeslaSyncActivities,
+                                                TeslaSyncWatch, TeslaSyncWidgets,
+                                                TeslaSyncWidgets-macOS, ...        OK
+  apps/shared/gradlew :core:assembleSharedXCFramework --console=plain
+     BUILD SUCCESSFUL in 6m56s — Shared.xcframework {ios-arm64,
+     ios-arm64-simulator, macos-arm64} assembled + staged.  XCFRAMEWORK_EXIT=0  OK
+
+-- [1] iOS Simulator build + test --------------------------------------------
+  xcodebuild -scheme TeslaSync \
+    -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ** TEST FAILED **  (Testing cancelled because the build failed)
+    Compile error in generated shared-surface sources, e.g.:
+      AIDataRepairSuggestions.Previews.swift, AICrossRuleConflictDetection.*.swift
+      error: Cannot use explicit 'return' statement in the body of result
+             builder 'ViewBuilder'   (3+ occurrences)
+  IOS_EXIT=65                                                                   FAIL
+  NOTE (not a green-wash): this is a genuine COMPILE failure in generated P7 /
+  shared-surface Swift — the iOS app target does not build. (Distinct from the
+  prior run's simulator-runner crash; here the code itself fails to compile.)
+
+-- [2] macOS build + test ----------------------------------------------------
+  xcodebuild -scheme TeslaSync-macOS build test
+    error: "TeslaSync-macOS" has entitlements that require signing with a
+           development certificate. Enable development signing...
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+           development certificate.
+    ** TEST FAILED **  (Testing cancelled because the build failed)
+  MAC_EXIT=65                                                                   FAIL
+  ROOT CAUSE: capability gap — 0 valid codesigning identities on this host; the
+  macOS app + widget carry dev-cert-required entitlements that cannot be ad-hoc
+  signed.
+
+-- [3] swiftlint --strict   (cwd apps/apple; .swiftlint.yml lives there) ------
+    Done linting! Found 0 violations, 0 serious in 5831 files.
+  LINT_EXIT=0                                                                   OK
+
+-- [4] swiftformat --lint apps/apple -----------------------------------------
+    Source input did not pass lint check.
+    9/6129 files require formatting, 2 files skipped.
+    Offending files (wrapPropertyBodies / blankLinesBetweenScopes / wrap /
+    wrapFunctionBodies / noForceUnwrapInTests):
+      Sources/Features/Admin/UsersPageModel.swift
+      Sources/Features/Battery/SleepEfficiencyModels.swift
+      Sources/Features/Battery/SleepEfficiencyPageModel.swift
+      Sources/Features/Dashboard/GlanceModels.swift
+      Sources/Features/Dashboard/GlancePage.Sections.swift
+      Sources/Features/Dashboard/GlancePageModel.Sample.swift
+      Sources/Features/Dashboard/GlancePageModel.swift
+      Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift
+      Tests/Unit/Features/Dashboard/GlancePageModelTests.swift
+  FORMAT_EXIT=1                                                                 FAIL
+
+-- [5] ./apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift ---
+    PLACEHOLDER_ALLOWED=241   PLACEHOLDER_COUNT=65   (script computed) EXIT=1
+    Unresolved placeholders/TODOs in generated sources, e.g.:
+      TeslaSync/shared-surfaces/VehicleHeroCard.{Projector,Strings,Tests,Views}.swift
+      TeslaSync/feature-views/TelemetryGrid.Tests.swift
+  PLACEHOLDER_EXIT=1                                                            FAIL
+
+-- [6] ./apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-macos-ledger.json -RequiredPercent 100
+    The term './apps/tools/check-parity-ledger.ps1' is not recognized ...
+    (checker script absent AND apps/parity/apple-macos-ledger.json absent)
+  MAC_LEDGER_EXIT=FAIL (non-zero; gate command unrunnable, ledger missing)      FAIL
+
+-- [7] ./apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-ios-ledger.json -RequiredPercent 100
+    The term './apps/tools/check-parity-ledger.ps1' is not recognized ...
+    (checker script absent AND apps/parity/apple-ios-ledger.json absent)
+  IOS_LEDGER_EXIT=FAIL (non-zero; gate command unrunnable, ledger missing)      FAIL
+
+-- [8] iOS archive -----------------------------------------------------------
+  xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS' archive
+    error: Signing for "TeslaSync" requires a development team.
+    error: Signing for "TeslaSyncWidgets" requires a development team.
+    error: Signing for "TeslaSyncActivities" requires a development team.
+    ** ARCHIVE FAILED **        archive path: (none produced)
+  IOS_ARCHIVE_EXIT=65                                                           FAIL
+
+-- [9] macOS archive ---------------------------------------------------------
+  xcodebuild -scheme TeslaSync-macOS archive
+    error: "TeslaSync-macOS" has entitlements that require signing with a
+           development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+           development certificate.
+    ** ARCHIVE FAILED **        archive path: (none produced)
+  MAC_ARCHIVE_EXIT=65                                                           FAIL
+
+-- Gate formula --------------------------------------------------------------
+  EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER/MAC_LEDGER/IOS_LEDGER/
+                 IOS_ARCHIVE/MAC_ARCHIVE all 0.
+    IOS_EXIT=65  MAC_EXIT=65  LINT_EXIT=0  FORMAT_EXIT=1  PLACEHOLDER_EXIT=1
+    MAC_LEDGER_EXIT=FAIL  IOS_LEDGER_EXIT=FAIL  IOS_ARCHIVE_EXIT=65  MAC_ARCHIVE_EXIT=65
+  -> 8 of 9 RED (only LINT green) => aggregate gate EXIT is NON-ZERO.
+
+=== PARITY ======================================================================
+  PARITY_UNIT = apple-macos-ledger.json + apple-ios-ledger.json (100% required).
+  PARITY_COVERED  = 0   (neither required ledger exists; checker tool absent)
+  PARITY_REQUIRED = 100%
+  -> PARITY_COVERED < PARITY_REQUIRED => STATUS=BLOCKED. Not faked, not stubbed.
+
+=== ACCEPTANCE CRITERIA =========================================================
+  [ ] All P4/P0..P9 and P7 predecessor logs STATUS=DONE
+        — NO: p4-p9-0002 canonical log absent; P7 pages 31/153 logged DONE.
+  [ ] apple-macos-ledger.json AND apple-ios-ledger.json both 100%
+        — NO: both required ledgers absent; checker tool absent.
+  [ ] iOS + macOS build/test, SwiftLint, SwiftFormat, placeholder green
+        — NO: LINT green; iOS TEST FAILED (65, compile error in generated AI*
+          shared-surfaces); macOS TEST FAILED (65, signing); FORMAT FAILED (1);
+          placeholder FAILED (1).
+  [ ] iOS/iPadOS + macOS archives sign; paths recorded
+        — NO: both ARCHIVE FAILED (65/65, no dev team / no dev cert); 0 archives.
+  [x] EXIT/STATUS recorded below = BLOCKED, with exact failing commands/capability.
+
+=== DISPOSITION =================================================================
+  STATUS=BLOCKED. Independent, evidence-backed blockers (any one is decisive):
+    A. Predecessors incomplete — p4-p9-0002 canonical log absent and P7 pages
+       31/153 logged DONE (122 missing). The acceptance gate sits on top of an
+       unfinished P4 stack (rule 7).
+    B. Required parity ledgers absent — apple-macos-ledger.json &
+       apple-ios-ledger.json do not exist; checker apps/tools/check-parity-ledger.ps1
+       does not exist. Parity cannot be evaluated, let alone be 100% (rule 5).
+    C. Code-signing capability absent — 0 valid identities => macOS build/test
+       FAILS (65) and BOTH archives FAIL (65/65); no signed archive is producible.
+       This is the core deliverable of an "archives sign" gate and is exactly the
+       capability the prompt flags as a BLOCKED condition.
+    D. Host quality gates RED on generated code — iOS build FAILS to COMPILE
+       (65; ViewBuilder 'return' errors in generated AI* shared-surfaces),
+       SwiftFormat FAILS (1; 9 files), placeholder scan FAILS (1; 65 TODOs).
+  Genuine forward progress this run (recorded honestly, does NOT flip the verdict):
+  the project was generated, the KMP Shared.xcframework was built from source
+  (6m56s), and SwiftLint is GREEN (0/5831). Remediation lives in A/B/C/D: completed
+  P9-0002 + P7 predecessors, authored apple-{macos,ios}-ledger.json +
+  check-parity-ledger.ps1, a signed runner with a development team & certificate,
+  and fixing the non-compiling/unformatted/placeholder generated sources — all
+  OUT OF SCOPE for this run-only gate (Allowed files: apps/apple/**, the log).
+
+=== HONESTY COVENANT ============================================================
+  1  No red-as-green ...... 8/9 gate steps shown RED with causes; iOS shown RED
+                            for a real compile failure; no failure relabeled pass.
+  2  No scope narrowing ... ran the EXACT 9 prompt gate commands, no subset/filter;
+                            built the xcframework pre-dependency to make them runnable.
+  3  No skip-and-assume ... every command executed for real; outputs/exit codes
+                            captured directly, not inferred from the prior run.
+  4  No stubs as final .... created no fake ledgers/pages/archives to self-pass.
+  5  No parity shortcuts .. missing ledgers/checker reported, not fabricated.
+  6  No delegation ........ performed directly; no sub-agents/background tasks.
+  7  No predecessor bypass  P9-0002/P7 gaps surfaced and honored, not worked around.
+  8  No commit on red ..... commit ONLY this log; zero code, zero generated
+                            artifact, zero unrelated file staged.
+  9  No silent drift ...... tracked tree clean; generated xcodeproj/xcframework/
+                            Gradle build are git-ignored (not drift).
+  10 Footer below has EXIT=<int> and STATUS=<DONE|BLOCKED>, each on its own line.
+
+=== COMMIT ======================================================================
+  Per rule 8 (BLOCKED => commit ONLY the log file, never code):
+    git add .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+    git commit -m "chore(apps/apple): record Apple acceptance gate (P4/P99)"
+
+EXIT=65
+STATUS=BLOCKED

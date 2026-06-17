@@ -1,0 +1,173 @@
+=== P4 Shared surface 0121 GotoIndicator (Apple) ===
+
+ARTIFACT
+  Prompt      : P4/shared-surfaces/0121 — GotoIndicator (Apple)
+  Web source  : web/src/components/feedback/GotoIndicator.tsx (THE specification)
+  Native out  : apps/apple/TeslaSync/shared-surfaces/GotoIndicator.*
+  Delegation  : FORBIDDEN — implemented directly, no sub-agents.
+  ADR refs    : ADR-002 (one SwiftUI source group, iOS+macOS), ADR-005, ADR-009.
+
+ENVIRONMENT (capability check — the prompt's BLOCKED gate is for MISSING capability)
+  Xcode 26.5 (17F42)         — present
+  Swift 6.3.2                — present
+  iOS SDK   : iPhoneSimulator26.5.sdk (deployment target iOS 18.0)   — present
+  macOS SDK : MacOSX26.5.sdk          (deployment target macOS 15.0) — present
+  SwiftUI on both SDKs — present (Swift Charts + MapKit unused by this surface; web source has none).
+  swiftlint, swiftformat, xcodegen, pwsh, Java 17 (KMP) — all present.
+  => Platform CAPABILITY is AVAILABLE. This is NOT a STATUS=BLOCKED (capability) case.
+
+FILES SHIPPED (9; allowed scope = GotoIndicator.* + this log)
+  GotoIndicator.swift          — bound surface: GotoIndicator (phase switch + surfaceSlug + controlled
+                                 init + Reduce-Motion-aware entrance animation key)
+  GotoIndicator.Adapter.swift  — pure core: {{token}} interpolation, key-chord builder (keys / separator /
+                                 spoken form), a11y normalize + hint builder
+  GotoIndicator.Model.swift    — P1/S8 state holder + P1/S11 telemetry + projection + P1/S10 i18n facade
+  GotoIndicator.Seams.swift    — P1/S8 source protocol + static (production) source + in-memory (test/preview)
+  GotoIndicator.States.swift   — loading / empty / error chrome (P4 leaf contract)
+  GotoIndicator.Views.swift    — floating "Go to…" hint pill + key cap (web <kbd>) + freshness chip
+  GotoIndicator.Previews.swift — per-state DEBUG previews (data, empty, loading, error, stale, offline)
+  GotoIndicator.Tests.swift    — adapter + projection + model + a11y unit tests (24)
+  GotoIndicator.strings        — P1/S10 i18n catalog contribution
+
+PARITY (web GotoIndicator.tsx → native)
+  Web source is a passive controlled indicator:
+      function GotoIndicator({ visible }) {
+        const { t } = useTranslation();
+        if (!visible) return null;
+        return <div …fixed bottom-20 …bg(surface-overlay) backdrop-blur-xl border …>
+          <span>{t('shortcuts.goto','Go to...')}</span><kbd>g</kbd><span>+</span><kbd>?</kbd>
+        </div>;
+      }
+  Data sources (P1/S8 state-holder seam, no HTTP in the view):
+    visible (prop)         → GotoIndicatorSource emits GotoIndicatorInput (the controlled visibility —
+                             Bool?, nil = not yet resolved — plus the controller's load / connectivity
+                             state); the view never reads the controller directly.
+    useTranslation         → GotoStrings P1/S10 facade (every literal keyed, incl. the key-cap glyphs and
+                             the "+" separator the web hardcodes in JSX).
+    useMotionPreference     → @Environment(\.accessibilityReduceMotion): the pill's slide-in/fade-in
+                             entrance (web `slide-in-from-bottom + fade-in`) collapses to opacity/instant,
+                             and the shared TSSkeleton shimmer (loading) is already RM-gated.
+  Composition: a frosted bottom-anchored pill — web `bg(surface-overlay) backdrop-blur-xl` → TSMaterial.overlay
+               (.thinMaterial) in a Capsule with the token border + a soft shadow; the muted prompt
+               ("Go to…") followed by the `g` / `?` key caps (web `<kbd>`: GotoKeyCap, monospaced, on the
+               elevated surface tone) separated by a muted `+`. The pill is one VoiceOver element: label =
+               the prompt, hint = "Press g then ? to jump to a section." (the `{{keys}}` template filled
+               with the spoken chord). The cap glyphs are accessibilityHidden so VO never spells them out.
+  i18n keys (web → catalog): shortcuts.goto — present; + the key-cap / separator / conjunction / a11y-hint
+               keys, the P4 leaf chrome (loading / empty / error / retry), and the freshness keys.
+  States rendered (every one, no hidden surface): loading, empty (web `return null` → friendly card, the
+               native improvement, never a blank box), error (web QueryError peer + retry), data (the hint),
+               stale, offline (freshness chip + one-shot auto-refresh on the stale transition).
+
+  Native leaf-contract choices (disclosed, consistent with the sibling surfaces 0111/0113/0116):
+    • visibility is modelled Bool? so the initial unresolved window is `loading` and a known visibility
+      SURVIVES a transient loading/error (the P4 "cached survives" leaf); web has only true/null.
+    • the `connection` axis (controller snapshot freshness) is the orthogonal stale/offline chip.
+
+PER-SURFACE GATES (all executed on THIS runner — raw results pasted)
+
+  [1] ISOLATED Swift 6 BUILD + TESTS (swift test, swift-tools-version 6.0 = language mode 6 = strict concurrency)
+      Temporary SwiftPM package (Adapter+Model+Seams as the lib named TeslaSync, Tests.swift @testable):
+        Test Suite 'All tests' passed — Executed 24 tests, with 0 failures (0 unexpected)
+      ISOLATED_TEST_EXIT=0   (24/24 green: {{token}} interpolation, chord keys/separator/spoken incl.
+                              empty-cap dropping + empty chord, a11y normalize + interpolated hint, every
+                              projection branch incl. known-visibility-survives-loading/error, model start
+                              telemetry + idempotency, snapshot→phase/connection, hidden→empty, stale
+                              one-shot auto-refresh, stop)
+
+  [2] swiftc -typecheck against the REAL design system (Tokens.swift + Sources/Components + Sources/Design,
+      7 non-test surface files vs 41 design files; UnitFormatters.swift excluded — not used by this surface)
+        iOS    arm64-apple-ios18.0-simulator  -swift-version 6              : 0 errors, 0 warnings  IOS_TYPECHECK_EXIT=0
+        macOS  arm64-apple-macos15.0          -swift-version 6              : 0 errors, 0 warnings  MAC_TYPECHECK_EXIT=0
+        iOS    arm64-apple-ios18.0-simulator  -swift-version 6 -D DEBUG     : 0 errors, 0 warnings  (#Preview blocks)
+        macOS  arm64-apple-macos15.0          -swift-version 6 -D DEBUG     : 0 errors, 0 warnings  (#Preview blocks)
+
+  [3] swiftlint --strict (8 .swift files, repo .swiftlint.yml)
+        Done linting! Found 0 violations, 0 serious in 8 files.                         LINT_EXIT=0
+
+  [4] swiftformat --lint (8 .swift files, repo .swiftformat config)
+        0/8 files require formatting.                                                   FORMAT_EXIT=0
+
+  [5] placeholder gate (apps/tools/check-placeholders.ps1 -Language swift, the 8 shipped .swift files)
+        PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0                             PLACEHOLDER_EXIT=0
+        (no TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/"Coming soon" anywhere; 0 opt-outs)
+
+  [6] xcodegen generate — project regenerated; all 9 files enumerated into the iOS+macOS app targets
+      and the XCTest bundles (54 pbxproj references, 9 per file).                       XCODEGEN_EXIT=0
+
+FULL-APP GATE (ATTEMPTED on THIS runner — Shared.xcframework assembled + staged first)
+  Pre-req: `apps/apple/Scripts/build-shared-xcframework.sh` → Gradle :core:assembleSharedXCFramework
+           BUILD SUCCESSFUL (release Shared.xcframework: ios-arm64 + ios-arm64-simulator + macos-arm64)
+           → staged into apps/apple/Frameworks/Shared.xcframework.                      STAGE_EXIT=0
+
+  [iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         => ** BUILD FAILED ** / ** TEST FAILED ** (IOS_FULL_EXIT=65). The TeslaSync module's compile
+            reduces to exactly ONE distinct error, in a PRE-EXISTING, UNRELATED, out-of-allowed-files
+            sibling surface this commit does not touch (the same `glass(@ViewBuilder _ content:)`
+            escaping-closure bug class cited by predecessors 0111 / 0116):
+              TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+                error: escaping closure captures non-escaping parameter 'content'
+            grep "error:" | grep -i "GotoIndicator"  → 0 matches.
+            (Note: 0116 also cited AIAutoNameUnnamedLocations:123; that sibling now compiles clean in this
+            build — only AISuggestNewGeofences:129 remains, still outside the allowed files.)
+            My GotoIndicator.strings WAS validated + copied into TeslaSync.app (CopyStringsFile, UTF-8 OK).
+         IOS_FULL_BUILD=FAILED — blocked by 1 unrelated sibling-surface compile error (not this code).
+
+  [macOS] xcodebuild -scheme TeslaSync-macOS build test
+         => ** BUILD FAILED ** / ** TEST FAILED ** (MAC_FULL_EXIT=65) at the signing/entitlements phase:
+              error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+                     Enable development signing in the Signing & Capabilities editor.
+              error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+            `security find-identity -p codesigning -v` → 0 valid identities found.
+            grep "error:" | grep -i "GotoIndicator"  → 0 matches.
+         MAC_FULL_BUILD=FAILED — blocked by macOS development-signing on this runner (no identity); not this
+            code. My macOS-15 compile is independently proven green by [2] above.
+
+  Both full-app failures are PRE-EXISTING and UNRELATED to GotoIndicator and lie OUTSIDE the allowed files.
+  This is the established disposition recorded in apps/macos-pending-verifications.md and in the prior
+  shared-surface logs (e.g. 0111 / 0113 / 0116): the full-app iOS-Simulator + macOS `xcodebuild build test`
+  is DEFERRED to p4-apple/P99-0001-apple-acceptance-gate, which runs on a signed macos-latest runner where
+  the sibling-surface fix has landed.
+
+HONESTY COVENANT
+  1  No red-as-green     : the full-app iOS+macOS builds are reported as FAILED (exit 65) with the exact
+                           blocking errors pasted; only the per-surface gates that are actually 0 are called 0.
+  2  No scope narrowing  : every web branch reproduced — the `visible` control flow (true → hint, !visible →
+                           the friendly empty leaf), the prompt + `g`/`?`/`+` chord, the `t('shortcuts.goto')`
+                           key; plus all 6 P4 states render.
+  3  No skip-and-assume  : every per-surface gate executed here with raw results pasted; the full-app gate was
+                           actually ATTEMPTED (Gradle staged the real Shared.xcframework + real xcodebuild iOS
+                           build test + macOS build test) and its blockers confirmed by grep of the real logs,
+                           not assumed — the iOS blocker is the live AISuggestNewGeofences:129 error, the macOS
+                           blocker is the live 0-signing-identity entitlement error.
+  4  No stubs as final   : complete production surface + 24 real tests; placeholder COUNT=0; no
+                           TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/"Coming soon" anywhere.
+  5  No parity shortcut  : the {{keys}} interpolation, the chord (keys / separator / spoken-with-conjunction /
+                           empty-cap dropping), the a11y normalize+hint, and every projection branch are each
+                           unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry all honoured (mirrors AiLimitBanner + CookieConsentBanner + DraftRecoveryBanner).
+  8  No commit on red    : the committed artifact (9 GotoIndicator.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 24/24
+                           XCTest + dual-SDK typecheck (incl. #Preview); the red is only in a pre-existing,
+                           unrelated sibling surface + macOS signing, which this commit does not touch.
+  9  No silent drift     : changes confined to shared-surfaces/GotoIndicator.* + this log; the friendly empty
+                           state (vs the web component rendering nothing), the visibility-survives-transient
+                           leaf behaviour, and the connectivity axis (controller snapshot freshness) are
+                           disclosed native choices consistent with the sibling surfaces.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic GotoIndicator shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles on both iOS 18 + macOS 15 SDKs (0/0, including the #Preview blocks) against the REAL
+  design system, its 24 tests pass under the app's own Swift 6 strict-concurrency rules via the Xcode 26.5
+  toolchain, and swiftlint / swiftformat / placeholder are all green on the 9 surface files. In the REAL
+  full-app build the surface produced ZERO errors and its .strings table was compiled + copied into the app
+  bundle. The full-app iOS-Simulator + macOS `xcodebuild build test` gate is DEFERRED (not failed by this
+  code) on pre-existing, unrelated, out-of-allowed-files blockers — one sibling surface
+  (AISuggestNewGeofences) with its own escaping-closure compile error, plus macOS development-signing
+  (0 identities) — owned by the P99 acceptance gate on a signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE

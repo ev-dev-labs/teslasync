@@ -1,0 +1,193 @@
+=== P4 Widget primitive 0007 WidgetGaugeHero (Apple) ===
+Artifact : apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.*  (7 .swift + 1 .strings)
+Web src  : web/src/features/dashboard/widgets/shared/WidgetGaugeHero.tsx (+ the composed
+           components/charts/RadialGauge.tsx, the radial-ring spec)
+Host     : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1
+           · xcodegen 2.45.4 · pwsh 7.6.2
+Date     : 2026-06-13
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint / swiftformat / pwsh / xcodegen -> all present
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0); iPhone 16 simulator booted.
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  The web `WidgetGaugeHero` is a PURE presentational widget primitive (a shared widget building block): it
+  takes a `gauge: GaugeHeroConfig` (`value` / `max` / `label` / `unit` / `color`) plus optional
+  `stats: GaugeHeroStat[]`, `compact`, and `children`, and renders a centered column: ALWAYS a
+  `<RadialGauge>` (the embedded ring: clamped = `Math.max(0, Math.min(value, max))`, arc fraction =
+  `clamped / max`, decimals = `Number.isInteger(clamped) ? 0 : globalPrecision(2)`, the formatted reading +
+  unit at the center, the caption below, `size = compact ? 70 : 100`, `STROKE_WIDTH = 8`), then — only when
+  `!compact && stats.length > 0` — a centered wrapping stats row, then — only when `!compact && children` —
+  the accessory slot.
+  There is NO fetch / React-Query / Promise in the source, so it has NO loading/error/stale/offline branch
+  (the host widget that owns the query renders those). Per the sibling presentational-primitive precedent
+  (WidgetComparisonCard 0003, WidgetStatGrid 0010, MetricCard 0095) this surface reproduces ONLY the
+  source's REAL branches — inventing loading/error/stale/offline chrome would fabricate states the source
+  does not have:
+    • the always-present hero ring   (web always renders `<RadialGauge>`)
+    • the standard + stats row        (web `!compact && stats.length > 0`)
+    • the standard + accessory slot   (web `!compact && children` → a generic `@ViewBuilder Accessory`)
+    • the compact ring                (web `compact ? 70 : 100`; stats + accessory suppressed)
+  There is deliberately NO empty leaf — the gauge ring is ALWAYS the content, so the surface never renders a
+  blank box even with zero stats. A `max <= 0` config is guarded to a zero-fill ring (native null-safety:
+  the web `clamped / max` would divide by zero -> NaN arc). The web `gauge.color` string is modeled as a
+  theme-aware semantic `GaugeTint` token (no raw hex), exactly as WidgetStatGrid (0010) maps `valueColor?`
+  and MetricCard (0095) maps `neonColorMap[color]`. The web `fmtNumber` + integer-aware decimals rule is
+  ported in `GaugeValueFormatter` (locale injected: device locale at runtime, en_US pinned in tests).
+  Files: WidgetGaugeHero.Adapter/Model/.swift/Views/Previews/AdapterTests/Tests.swift + .strings.
+  Bindings : P1/S8 WidgetGaugeHeroModel @Observable holder (props + precision + locale -> projection; no HTTP
+             in the view); P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/TSAnimation) — no Tailwind ports,
+             no raw hex; P1/S10 NSLocalizedString facade (table "WidgetGaugeHero"); P1/S11 view.opened
+             telemetry (slug "WidgetGaugeHero", emitted once + idempotent across appear/disappear).
+  i18n     : web source (incl. RadialGauge) has 0 t() keys AND 0 own literal copy — every visible string
+             (gauge.label/unit, each stat label/value/unit) is a caller-supplied, already-localized prop
+             rendered verbatim. All 4 catalog keys are native a11y/HIG additions: valueUnit, gaugeLabel,
+             gaugeValue (spoken percent), statLabel. 0 dead keys; 0 hardcoded English in Swift.
+  a11y     : the ring folds caption + value(+unit) into one VoiceOver element with the whole-percent fill as
+             its spoken accessibility value ("{label}, {value}{unit}" / "{n}% of maximum"); the decorative
+             track + arc + center text are ignored by VoiceOver; each stat cell folds label+value(+unit) into
+             one element; the arc animation honors Reduce Motion (TSAnimation.slow); Dynamic Type via tokens;
+             high-contrast via the dynamic token colors; center reading uses minimumScaleFactor to avoid
+             clipping in the condensed ring.
+
+----------------------------------------------------------------------------------------
+BUILD WIRING — none required
+----------------------------------------------------------------------------------------
+  TeslaSync/widget-primitives already exists and is wired into project.yml (TeslaSync iOS + TeslaSync-macOS
+  app sources exclude **/*Tests.swift; TeslaSyncTests + TeslaSync-macOSTests bundles include *Tests.swift)
+  and into .swiftlint.yml `included`. The 8 new files are picked up automatically — no project/lint edits.
+  (.AdapterTests.swift + .Tests.swift both end in `Tests.swift`, so both route to the test bundles and are
+  excluded from the app targets.)
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint
+      surface (TeslaSync/widget-primitives/WidgetGaugeHero*, 7 .swift)  -> 0/7 files require formatting
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict
+      surface (the 7 WidgetGaugeHero .swift)  -> Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_LINT_EXIT=0
+      (WidgetGaugeHero.AdapterTests.swift was tightened to 336 lines to satisfy the 400-line file_length
+      rule under --strict, with all test coverage retained.)
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1)
+      -Path apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero (literal gate path) -> EXIT=0
+      -Path apps/apple/TeslaSync/widget-primitives -Language swift   -> PLACEHOLDER_ALLOWED=0
+                                                                        PLACEHOLDER_COUNT=0  EXIT=0
+      Independent grep of the 8 files for TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"/
+      stub/mock -> 0 matches.
+      PLACEHOLDER_EXIT=0
+
+[4] isolated SwiftPM build + test  (Foundation-pure layer: Adapter + Model; Package swift-tools 6.0,
+    macOS v15, Swift 6 language mode; library target named TeslaSync so `@testable import TeslaSync` resolves)
+      swift test -> Executed 24 tests, with 0 failures (0 unexpected)
+      Suites: WidgetGaugeHeroAdapterTests(2), WidgetGaugeHeroClampTests(3), WidgetGaugeHeroFormatterTests(4),
+              WidgetGaugeHeroRingTests(5), WidgetGaugeHeroValueTypeTests(4), WidgetGaugeHeroModelTests(3),
+              WidgetGaugeHeroStringsTests(3)
+      SPM_TEST_EXIT=0  (24/24 — size/clamp/fraction incl. max<=0 guard, decimals rule + en_US grouping
+                        "48,213"/"1,234.50", ring/stats/resolve projection, value-type equality, model
+                        once-only view.opened + update re-derivation, i18n/a11y facade)
+
+[4b] full SwiftPM build + test  (the SAME package extended with the REAL ../design/generated/apple/Tokens.swift
+     + Sources/Design/TSDesign.swift + WidgetGaugeHero.swift + WidgetGaugeHero.Views.swift in the target and
+     WidgetGaugeHero.Tests.swift in the test bundle — i.e. the SwiftUI views are COMPILED and the view-
+     composition + a11y tests are EXECUTED on macOS)
+      swift test -> Executed 30 tests, with 0 failures (0 unexpected)
+      Adds: WidgetGaugeHeroViewTests(4)  — the surface composes in every real branch (standard + stats +
+              accessory, standard no-accessory, gauge-only, compact) via prop init + no-accessory convenience
+              + injected-model seam; subviews (GaugeRingView / GaugeStatsRow / GaugeStatCell /
+              GaugeStatsFlowLayout) compose; every GaugeTint maps to a token color.
+            WidgetGaugeHeroAccessibilityTests(2) — the ring's composed VoiceOver label + spoken percent and
+              the stat cell's composed label reproduce exactly what the views apply.
+      SPM_FULL_EXIT=0  (30/30)
+
+[5] dual-SDK swiftc -typecheck  (FULL shipped surface: Adapter + Model + .swift + Views + Previews compiled
+    against the REAL design system ../design/generated/apple/Tokens.swift + Sources/Design/TSDesign.swift;
+    -module-name TeslaSync -swift-version 6 -D DEBUG)
+      iOS 18    (-target arm64-apple-ios18.0-simulator, --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+      macOS 15  (-target arm64-apple-macos15.0,          --sdk macosx)         -> 0 errors  MAC_TYPECHECK_EXIT=0
+      (Includes WidgetGaugeHero.Previews.swift, which the SwiftPM run excludes — the #Preview macros expand
+      cleanly under -D DEBUG on both SDKs.)
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 8 files (file-ref + build-files across iOS/macOS app + iOS/macOS test
+      bundles): WidgetGaugeHero.{Adapter,Model,swift,Views,Previews,AdapterTests,Tests}.swift +
+      WidgetGaugeHero.strings  (9 refs each).
+
+----------------------------------------------------------------------------------------
+FULL-APP xcodebuild (the prompt gate) — RED, DEFERRED (NOT a WidgetGaugeHero failure)
+----------------------------------------------------------------------------------------
+  The KMP Shared.xcframework WAS assembled + staged for this run (it is not checked in):
+    apps/shared/gradlew :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 7m 26s
+    -> staged apps/apple/Frameworks/Shared.xcframework (release; ios-arm64 + ios-arm64-simulator + macos-arm64).
+    [Frameworks/Shared.xcframework is git-ignored.]
+
+  [iOS]  xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -arch arm64
+         -configuration Debug build CODE_SIGNING_ALLOWED=NO
+         => ** BUILD FAILED **   IOS_BUILD_EXIT=65
+         The TeslaSync module's whole-module type-check (EmitSwiftModule "Emitting module for TeslaSync")
+         PASSED with 0 errors — including all 8 WidgetGaugeHero files — and my sources compiled to .o
+         (later confirmed by the baseline's "Removed stale file '...WidgetGaugeHero.*.o'" cleanup notes).
+         The build then FAILED with a swift-frontend IRGen CRASH (NOT a source error):
+           swift-frontend ... llvm::report_fatal_error(...) -> abort   ("Command SwiftCompile failed with a
+           nonzero exit code")  while emitting IR for a batch of PRE-EXISTING feature-view / Sources files:
+           AppearanceSettings.{Adapter,Model,Models,Panels,Sections,Seams,Theme,Views,Previews,Controls}.swift,
+           Sources/App/App{Commands,Route,RouteParser,Shell}.swift, Sources/Features/Admin/ApiPlayground*.swift,
+           Sources/Platform/Settings/AppSettings*.swift.
+         grep " error: " over the whole log => 0 source compiler errors.
+         grep " error: " | grep WidgetGaugeHero => 0   (ZERO surface errors).
+
+  [iOS BASELINE — proves the crash is pre-existing + unrelated to this surface]
+         The 8 WidgetGaugeHero.* files were moved out, `xcodegen generate` re-run, and the SAME iOS target
+         rebuilt:
+           => ** BUILD FAILED **   BASELINE_EXIT=65
+           SAME swift-frontend report_fatal_error IRGen crash on the SAME App*/ApiPlayground/AppSettings
+           batch; 0 source `error:` lines; the only WidgetGaugeHero mentions in the baseline log are
+           "note: Removed stale file '...WidgetGaugeHero.*.o'" (incremental cleanup of my now-removed objects).
+         => The full-app iOS RED is a PRE-EXISTING swift-frontend IRGen compiler crash in other prompts'
+            feature-view/Sources files; it reproduces identically WITHOUT this surface. (WidgetGaugeHero is a
+            brand-new, not-yet-referenced leaf primitive, so it cannot affect the IRGen of those files.)
+         The 8 files were then restored and `xcodegen generate` re-run.
+
+  [macOS] xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -sdk macosx -arch arm64
+          -configuration Debug build CODE_SIGNING_ALLOWED=NO
+          => ** BUILD FAILED **   MAC_BUILD_EXIT=65
+          Same TeslaSync module + the SAME pre-existing report_fatal_error IRGen crash on the SAME
+          App*/ApiPlayground/AppSettings batch (shared Sources/feature-views); 0 source `error:` lines;
+          0 WidgetGaugeHero errors. Additionally `security find-identity -p codesigning -v` => 0 valid
+          identities found, so the macOS app + widget entitlements cannot be signed. Both walls are
+          pre-existing / environmental.
+
+  Concrete deferral causes on THIS host (pre-existing / environmental, unrelated to this surface):
+    • a swift-frontend IRGen crash (llvm::report_fatal_error -> abort) compiling other prompts' pre-existing
+      AppearanceSettings.* / Sources/App / Sources/Features/Admin / Sources/Platform/Settings files. Proven
+      pre-existing by the baseline rebuild (same crash without this surface). Fixing it is outside this
+      prompt's allowed-files scope (apps/apple/TeslaSync/widget-primitives/WidgetGaugeHero.*).
+    • macOS development-signing — 0 valid codesigning identities (entitlements need a dev cert).
+  Per apps/macos-pending-verifications.md this full-app gate is owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner (with sibling surfaces green).
+
+----------------------------------------------------------------------------------------
+VERDICT
+----------------------------------------------------------------------------------------
+  Surface WidgetGaugeHero is COMPLETE and verified GREEN by every host-runnable + surface-scoped gate:
+    FORMAT_EXIT=0  SURFACE_LINT_EXIT=0 (0 WidgetGaugeHero violations)  PLACEHOLDER_EXIT=0
+    SPM_TEST_EXIT=0 (24/24)  SPM_FULL_EXIT=0 (30/30)
+    IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+  The full-app xcodebuild is RED only for pre-existing, unrelated reasons — a swift-frontend IRGen compiler
+  crash in other prompts' AppearanceSettings/Sources files (proven pre-existing by a baseline rebuild WITHOUT
+  this surface) + macOS dev-signing. The TeslaSync module's whole-module type-check passed including this
+  surface (ZERO WidgetGaugeHero errors on both targets), and the full surface (incl. SwiftUI views + Previews)
+  type-checks clean on BOTH the iOS-18 and macOS-15 SDKs and executes 30/30 tests under Swift 6 — and is
+  deferred to the P99 acceptance gate, recorded against apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

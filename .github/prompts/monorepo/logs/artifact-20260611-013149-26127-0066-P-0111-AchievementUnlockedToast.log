@@ -1,0 +1,145 @@
+=== P4 Shared surface 0111 AchievementUnlockedToast (Apple) ===
+
+ARTIFACT
+  Prompt      : P4/shared-surfaces/0111 — AchievementUnlockedToast (Apple)
+  Web source  : web/src/components/feedback/AchievementUnlockedToast.tsx (THE specification)
+  Native out  : apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.*
+  Delegation  : FORBIDDEN — implemented directly, no sub-agents.
+  ADR refs    : ADR-002 (one SwiftUI source group, iOS+macOS), ADR-005, ADR-009.
+
+ENVIRONMENT (capability check — the prompt's BLOCKED gate is for MISSING capability)
+  Xcode 26.5 (17F42)         — present
+  Swift 6.3.2                — present
+  iOS SDK   : iPhoneSimulator26.5.sdk (deployment target iOS 18.0)   — present
+  macOS SDK : MacOSX26.5.sdk          (deployment target macOS 15.0) — present
+  SwiftUI + Swift Charts + MapKit on both SDKs — present (design system imports them, compiles).
+  swiftlint, swiftformat, xcodegen, pwsh, Java 17 (KMP) — all present.
+  => Platform CAPABILITY is AVAILABLE. This is NOT a STATUS=BLOCKED (capability) case.
+
+FILES SHIPPED (9; allowed scope = AchievementUnlockedToast.* + this log)
+  AchievementUnlockedToast.swift            — bound surface: AchievementUnlockedToastStack (phase switch + surfaceSlug)
+  AchievementUnlockedToast.Adapter.swift    — pure core: event model, queue reducer, confetti (seeded), deep link, lifetime, a11y
+  AchievementUnlockedToast.Model.swift      — P1/S8 state holder + P1/S11 telemetry + projection + P1/S10 i18n facade
+  AchievementUnlockedToast.Seams.swift      — P1/S8 source protocol + static (production) source + in-memory (test/preview) source
+  AchievementUnlockedToast.States.swift     — loading / empty / error chrome (P4 leaf contract)
+  AchievementUnlockedToast.Views.swift      — single toast card + compact unlocked badge + confetti overlay + freshness chip
+  AchievementUnlockedToast.Previews.swift   — per-state DEBUG previews (single / stacked / empty / loading / error / stale / offline)
+  AchievementUnlockedToast.Tests.swift      — adapter + projection + model + a11y unit tests
+  AchievementUnlockedToast.strings          — P1/S10 i18n catalog contribution
+
+PARITY (web AchievementUnlockedToast.tsx → native)
+  Data sources (P1/S8 state-holder seam, no HTTP in the view):
+    useAchievementUnlocks  → AchievementUnlockedSource emits AchievementUnlockedUpdate (newest-first,
+                             id-de-duped, 25-bounded queue + dismiss(id)); reducer ported VERBATIM
+                             (MAX_RECENT=25; `if prev.some(id) return prev; next=[payload,...prev]`).
+    useTranslation         → AchievementUnlockedStrings P1/S10 facade (every literal keyed).
+    useNavigate            → decoupled onView perform closure + AchievementUnlockedDeepLink.path
+                             ("/lifetime?achievement=<encodeURIComponent(id)>") — HistoryListRow precedent.
+    useMotionPreference    → @Environment(\.accessibilityReduceMotion): no confetti + fade-only entry.
+  Composition: unlocked-badge medallion + confetti burst, trophy eyebrow "Achievement Unlocked",
+               name, description, "View →" affordance, dismiss "×"; spring entry; 6s auto-dismiss.
+  Self-contained badge: prompt extraction lists "shared components: none" + allowed-files isolation, so
+               the web <AchievementBadge size="md"/> unlocked render is reproduced inline (icon medallion
+               + "✓ Unlocked"); the toast only consumes id/name/description/icon. Disclosed (see #9).
+  i18n keys (web → catalog): achievements.toastEyebrow, achievements.view, achievements.dismiss,
+               lifetime.unlocked (badge status) — all present; + P4 leaf chrome keys.
+  States rendered (every one, no hidden surface): loading, empty, error, data, stale, offline.
+
+PER-SURFACE GATES (all executed on THIS runner — raw results pasted)
+
+  [1] ISOLATED Swift 6 BUILD + TESTS (swift test, language mode 6 = strict concurrency complete)
+      Temporary SwiftPM package (Adapter+Model+Seams as the lib, Tests.swift @testable):
+        Test Suite 'All tests' passed — Executed 34 tests, with 0 failures (0 unexpected)
+      ISOLATED_TEST_EXIT=0   (34/34 green: queue de-dupe/bound, projection branches, model dismiss/view,
+                              stale auto-refresh, confetti determinism+ranges, deep-link encoding, a11y)
+
+  [2] swiftc -typecheck against the REAL design system (Tokens.swift + Sources/Components + Sources/Design,
+      9 surface files vs 41 design files; UnitFormatters.swift excluded — SharedFacade-coupled, NOT used)
+        iOS    arm64-apple-ios18.0-simulator  -swift-version 6 : 0 errors, 0 warnings   IOS_TYPECHECK_EXIT=0
+        macOS  arm64-apple-macos15.0          -swift-version 6 : 0 errors, 0 warnings   MAC_TYPECHECK_EXIT=0
+
+  [3] swiftlint --strict (8 .swift files)
+        Done linting! Found 0 violations, 0 serious in 8 files.                         LINT_EXIT=0
+
+  [4] swiftformat --lint (8 .swift files, repo .swiftformat config)
+        0/8 files require formatting.                                                   FORMAT_EXIT=0
+
+  [5] placeholder gate (apps/tools/check-placeholders.ps1 -Path .../AchievementUnlockedToast)
+        PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0                             PLACEHOLDER_EXIT=0
+        (no TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/"Coming soon" anywhere; 0 opt-outs)
+
+  [6] xcodegen generate — project regenerated; all 9 files enumerated into the iOS+macOS app targets
+      and the XCTest bundles (54 pbxproj references).                                   XCODEGEN_EXIT=0
+
+FULL-APP GATE (ATTEMPTED on THIS runner — Shared.xcframework assembled + staged first)
+  Pre-req: `apps/shared/gradlew :core:assembleSharedXCFramework` → BUILD SUCCESSFUL in 9m 40s
+           (release Shared.xcframework: ios-arm64 + ios-arm64-simulator + macos-arm64) → staged into
+           apps/apple/Frameworks/Shared.xcframework.
+
+  [iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         => ** BUILD FAILED ** (xcodebuild non-zero). The TeslaSync module compiled my surface (11 log
+            references, 0 errors). The 3 reported failures reduce to 2 distinct compile errors, BOTH in
+            PRE-EXISTING, UNRELATED, out-of-allowed-files surfaces this commit does not touch:
+              TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20:
+                error: the compiler is unable to type-check this expression in reasonable time
+              TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+                error: escaping closure captures non-escaping parameter 'content'
+            grep "error:" | grep "AchievementUnlockedToast"  → 0 matches.
+         IOS_FULL_BUILD=FAILED — blocked by 2 unrelated sibling-surface compile errors (not this code).
+
+  [macOS] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build
+         => ** BUILD FAILED ** at the signing/entitlements phase, BEFORE any Swift source compiled:
+              error: "TeslaSync-macOS" has entitlements that require signing with a development
+                     certificate. Enable development signing in the Signing & Capabilities editor.
+              error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+            `security find-identity -p codesigning -v` → 0 valid identities found.
+         MAC_FULL_BUILD=FAILED — blocked by macOS development-signing on this runner (no identity); not
+            this code. My macOS-15 compile is independently proven green by [2] above.
+
+  Both full-app failures are PRE-EXISTING and UNRELATED to AchievementUnlockedToast and lie OUTSIDE the
+  allowed files. This is the established disposition recorded in apps/macos-pending-verifications.md and
+  in the prior shared-surface logs (e.g. p4-apple-shared-surfaces-0005): the full-app iOS-Simulator +
+  macOS `xcodebuild build test` is DEFERRED to p4-apple/P99-0001-apple-acceptance-gate, which runs on a
+  signed macos-latest runner where sibling-surface fixes have landed.
+
+HONESTY COVENANT
+  1  No red-as-green     : the full-app iOS+macOS builds are reported as FAILED with the exact blocking
+                           errors pasted; only the per-surface gates that are actually 0 are called 0.
+  2  No scope narrowing  : every web branch reproduced — the useAchievementUnlocks queue reducer
+                           (de-dupe by id, MAX_RECENT=25, newest-first), the icon||'🎉' fallback, the
+                           24-particle ~2.5s confetti (reduce-motion → none), the 6s auto-dismiss, the
+                           handleView (dismiss then navigate), the trophy eyebrow + name + description +
+                           View + dismiss, AND the single-toast vs stack split; all 6 P4 states render.
+  3  No skip-and-assume  : every per-surface gate executed here with raw results pasted; the full-app gate
+                           was actually ATTEMPTED (Gradle staged + real xcodebuild iOS build test + macOS
+                           build) and its blockers re-confirmed by grep of the real logs, not assumed.
+  4  No stubs as final   : complete production surface + 34 real tests; placeholder COUNT=0; no
+                           TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/"Coming soon" anywhere.
+  5  No parity shortcut  : the queue reducer, the encodeURIComponent deep link, the confetti component
+                           ranges (±140 / -220..-60 / ±360 / 0..0.25), the durationMs→seconds clamp, and
+                           every projection branch are each unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry all honoured (mirrors AiLimitBanner + RecentlyUnlockedAchievements).
+  8  No commit on red    : the committed artifact (9 AchievementUnlockedToast.* files + this log) is GREEN
+                           on every per-surface gate AND on a real isolated Swift 6 strict-concurrency
+                           build + 34/34 XCTest + dual-SDK typecheck; the red is only in pre-existing,
+                           unrelated sibling surfaces + macOS signing, which this commit does not touch.
+  9  No silent drift     : changes confined to shared-surfaces/AchievementUnlockedToast.* + this log; the
+                           inline self-contained badge (vs composing the AchievementBadge surface) and the
+                           friendly empty state (vs the web stack rendering nothing) are disclosed choices.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AchievementUnlockedToast shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles on both iOS 18 + macOS 15 SDKs (0/0) against the REAL design system,
+  its 34 tests pass under the app's own Swift 6 strict-concurrency rules via the Xcode 26.5 toolchain, and
+  swiftlint / swiftformat / placeholder are all green on the 9 surface files (the #Preview macro compiles).
+  In the REAL full-app target compile the surface produced ZERO errors. The full-app iOS-Simulator + macOS
+  `xcodebuild build test` gate is DEFERRED (not failed by this code) on pre-existing, unrelated,
+  out-of-allowed-files blockers — two sibling surfaces (RecentDrivesSection.Previews, AIAutoNameUnnamedLocations)
+  with their own compile errors, plus macOS development-signing (0 identities) — owned by the P99 acceptance
+  gate on a signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE

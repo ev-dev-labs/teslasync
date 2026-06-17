@@ -1,0 +1,123 @@
+=== P4 Feature view 0285 TelemetryGrid (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/TelemetryGrid.*
+Web source (spec): web/src/features/vehicles/components/telemetry-panels/TelemetryGrid.tsx
+Runner: macOS (Darwin 25.5 / arm64), Xcode 26.5 (17F42), Swift 6.3.2,
+        xcodegen 2.45.4, swiftlint, swiftformat, pwsh, Java 17, iPhone 16 simulator.
+Capability: SwiftUI + Swift Charts + MapKit available — NOT a capability BLOCK.
+
+-------------------------------------------------------------------------------
+DELIVERABLE — 8 files, additive only (git status: all '??' new, nothing modified)
+-------------------------------------------------------------------------------
+  TelemetryGrid.swift           — surface view: binds model, freshness banner, state switch
+  TelemetryGrid.Views.swift     — responsive LazyVGrid (web 2/3/4/6) + stagger, tile,
+                                  loading/empty/error chrome, freshness chip, tone->token
+  TelemetryGrid.Model.swift     — P1/S8 state-holder seam, P1/S11 telemetry, Connection,
+                                  Input, Resolved/Phase, pure Projector, InMemory source,
+                                  @Observable model, P1/S10 strings facade
+  TelemetryGrid.Adapter.swift   — Reading, Field, Tone, Tile, Projection.make (cached->projection)
+  TelemetryGrid.Format.swift    — SI ports of formatDistance/formatSpeed/formatTemperature
+                                  + fmtInt/fmtNumber (lib/unitConversion.ts, lib/numberFormat.ts)
+  TelemetryGrid.Previews.swift  — data(metric)/data(imperial)/empty/loading/error/stale/offline
+  TelemetryGrid.Tests.swift     — adapter + projector + model + telemetry + a11y + field tests
+  TelemetryGrid.strings         — P1/S10 keys: common.battery/range/speed/inside/outside/
+                                  odometer/charger/sentry + native chrome words
+
+Parity: 6 tiles in source order (Battery, Speed, Inside, Odometer, Charger, Sentry),
+every web value/colour/sub branch reproduced; every state renders (loading/empty/error/
+data/stale/offline); all strings via the P1/S10 facade (no English literals); VoiceOver
+labels + Dynamic Type + Reduce Motion; view.opened "TelemetryGrid" emitted on appear.
+
+-------------------------------------------------------------------------------
+SURFACE-SCOPED GATES — ALL PASS
+-------------------------------------------------------------------------------
+[swiftformat --lint  TelemetryGrid.*.swift] : 0/7 files require formatting   FORMAT_EXIT=0
+[swiftlint --strict  TelemetryGrid.*.swift] : 0 violations, 0 serious in 7   LINT_EXIT=0
+[check-placeholders.ps1 -Path <each file>]  : PLACEHOLDER_COUNT=0 (all 7 swift)
+                                              clean of TODO/FIXME/stub/mock/placeholder/Lorem
+                                              PLACEHOLDER_EXIT=0
+[check-placeholders.ps1 -Path .../TelemetryGrid (gate form, via pwsh)] : exit 0
+
+-------------------------------------------------------------------------------
+SURFACE COMPILE + TEST PROOF (isolated from the module-wide blocker below)
+-------------------------------------------------------------------------------
+swiftc -typecheck  (full type-check; skips the crashing IRGen phase)
+  -target arm64-apple-macos15.0 -swift-version 6 (Swift 6 strict concurrency, same as app)
+  inputs: my 6 source files + real shared deps (DesignTokens, Sources/Design,
+          Components/UI {Cards,Buttons,Typography}, Components/Feedback/Skeletons,
+          Components/Motion)
+  RESULT: ERR_TOTAL=0  (0 type errors — my SwiftUI views + core all type-check)   TYPECHECK_EXIT=0
+
+swift test  (SwiftPM harness, library module "TeslaSync", @testable import,
+            -swiftLanguageMode .v6 = Swift 6 strict concurrency)
+  compiles TelemetryGrid.Format/Adapter/Model + runs TelemetryGrid.Tests.swift
+  TelemetryGridFormatTests : Executed 16 tests, 0 failures
+    (SI conversions m->km/mi, m/s->km/h/mph, C->F; number grouping/half-up/non-finite;
+     distance default-1dp + precision-0 override; speed 0dp; temp no-space; em-dash
+     sentinels; cached->projection per-tile value/tone/sub; battery 50/20 tint
+     thresholds; charger sub gating; a11y label composition; field metadata)
+  TelemetryGridModelTests  : Executed 8 tests, 0 failures
+    (projector loading/empty/error/data precedence; model view.opened-once + slug;
+     pushed-snapshot apply; start/stop/refresh forwarding; stale one-shot auto-refresh)
+  RESULT: Executed 24 tests, with 0 failures (0 unexpected)                      SWIFT_TEST_EXIT=0
+
+In all 4 full xcodebuild runs below, ZERO diagnostics reference any TelemetryGrid*.swift.
+
+-------------------------------------------------------------------------------
+ACCEPTANCE-GATE BUILD STEPS — BLOCKED by pre-existing/environment issues
+(outside the allowed edit scope: this prompt may only touch TelemetryGrid.* + this log)
+-------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ** BUILD FAILED ** / ** TEST FAILED **                                          IOS_EXIT=65
+  Cause: swift-frontend (Swift 6.3.2) SIGSEGV in IRGen while emitting the reabstraction
+         thunk  @$sSbScA_pSgIeAghyg_SbIeAghn_TR  ((Actor?) -> Bool reabstraction):
+           4. While evaluating request IRGenRequest(IR Generation for file
+              ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+           5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+              swift::irgen::IRGenModule::emitSILFunction(...) -> Stack dump
+         AppearanceSettings.Controls.swift is a PRE-EXISTING file (git: unmodified) and
+         is NOT in this prompt's allowed edit scope. The thunk type ((Actor?) -> Bool)
+         does not occur anywhere in the TelemetryGrid sources.
+  Deterministic + pre-existing — reproduced 3x, identical crash + same file:
+    (a) with my files present  (run 1) IOS_EXIT=65
+    (b) with my files present  (run 2, incremental) IOS_EXIT=65
+    (c) WITH MY 8 FILES REMOVED + project regenerated, build-only:  NOMINE_BUILD_EXIT=65
+        -> identical IRGen crash on AppearanceSettings.Controls.swift with zero
+           TelemetryGrid sources in the tree. Conclusively independent of this surface.
+
+xcodebuild -scheme TeslaSync-macOS build
+  ** BUILD FAILED **                                                              MAC_EXIT=65
+  Cause: code-signing/entitlements — "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have
+         entitlements that require signing with a development certificate; no
+         DEVELOPMENT_TEAM / signing identity is configured in this environment.
+         Environmental block, unrelated to the TelemetryGrid sources.
+  Underlying compile (re-run with CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO):
+         ** BUILD FAILED **  MAC_NOSIGN_EXIT=65 — the SAME pre-existing IRGen crash on
+         AppearanceSettings.Controls.swift (platform-independent), zero errors in my files.
+
+-------------------------------------------------------------------------------
+ASSESSMENT
+-------------------------------------------------------------------------------
+The TelemetryGrid surface is COMPLETE and VERIFIED GREEN by every check available at
+its own scope: format, lint, placeholder, full Swift-6 strict-concurrency type-check
+(macOS target), and a 24/24 passing unit-test suite covering the adapter projection,
+the state-holder/projector, the telemetry contract, and accessibility. No diagnostic in
+any build references a TelemetryGrid source.
+
+The two acceptance-gate xcodebuild steps cannot reach exit 0 because of two blockers that
+are pre-existing / environmental and lie OUTSIDE this prompt's allowed edit scope
+(TelemetryGrid.* + this log):
+  R1  iOS  : a deterministic swift-frontend IRGen compiler crash in the pre-existing,
+             unmodified AppearanceSettings.Controls.swift — proven independent of this
+             surface by reproducing it identically with the 8 TelemetryGrid files removed.
+  R2  macOS: a code-signing certificate requirement absent from this environment (and,
+             beneath it, the same R1 compiler crash on the shared source).
+Neither is fixable within the allowed files; fixing R1 would require editing
+AppearanceSettings.Controls.swift (or build settings), and R2 a signing identity —
+both forbidden by this prompt's scope.
+
+Honesty Covenant: not reported as green (no red-as-green); the module-wide build is red
+and that is stated plainly; the blocker was verified by reproduction (no skip-and-assume),
+not assumed; no stubs shipped; surface scope not narrowed.
+
+EXIT=65
+STATUS=BLOCKED

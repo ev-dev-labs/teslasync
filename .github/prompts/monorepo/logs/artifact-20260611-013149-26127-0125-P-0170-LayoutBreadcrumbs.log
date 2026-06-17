@@ -1,0 +1,139 @@
+=== P4 Shared surface 0170 LayoutBreadcrumbs (Apple) ===
+Date: 2026-06-11
+Runner: Darwin (Apple Silicon), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat present,
+        xcodegen 2.45.4, JDK 17 (for the KMP Shared.xcframework pre-action).
+
+SURFACE DELIVERED (allowed files only — apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.*):
+  LayoutBreadcrumbs.swift            — the SwiftUI surface (web LayoutBreadcrumbs.tsx parity)
+  LayoutBreadcrumbs.Adapter.swift    — slug, freshness, notice, production ROUTE_META (113 routes,
+                                       verbatim port of web lib/routeRegistry.ts + routeMeta.ts)
+  LayoutBreadcrumbs.Projection.swift — LayoutBreadcrumbsViewState + pure resolver state machine
+  LayoutBreadcrumbs.Model.swift      — i18n facade (P1/S10), telemetry seam (P1/S11), @Observable
+                                       @MainActor model bound to the shared BreadcrumbOverridesStore (P1/S8)
+  LayoutBreadcrumbs.Views.swift      — row dispatcher + state chrome (skeleton/chip/error) + DEBUG harness
+  LayoutBreadcrumbs.Previews.swift   — per-state previews
+  LayoutBreadcrumbs.strings          — P1/S10 catalog (a11y nav/home, state chrome, routes.* labels)
+  LayoutBreadcrumbs.AdapterTests.swift — pure-core tests (route table + projection state machine)
+  LayoutBreadcrumbs.Tests.swift      — model + view-composition + a11y/copy tests
+  Data sources bound: useBreadcrumbOverrides -> BreadcrumbOverridesStore (P1/S8, reused);
+                      useBreadcrumbs -> pure LayoutBreadcrumbsProjection over the route table.
+  States reproduced: rendered / suppressed / empty (web <Breadcrumbs> real branches) + the documented
+                     native adaptations loading / error / stale / offline (route + labels arrive via the
+                     async state-holder layer, not web's synchronous router). No fetch chrome invented.
+
+------------------------------------------------------------------------------------------------
+STEP 1 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------------------------------------------
+** BUILD FAILED **
+The following build commands failed:
+  SwiftCompile normal arm64 Compiling AppMenuCommands.swift, AppRoute.swift, AppRouteParser.swift,
+    AppSettings.swift, AppSettingsModel.swift, AppSettingsStore.swift, AppSettingsView.swift, ...
+  Building project TeslaSync with scheme TeslaSync
+"Command SwiftCompile failed with a nonzero exit code" (no diagnostic emitted -> swift-frontend
+process failure under heavy concurrent machine load; a sibling parallel slot, slot-124, was running
+its own full `xcodebuild ... build test` against the same toolchain throughout this run).
+Testing failed:  ** TEST FAILED **
+IOS_EXIT=65
+
+Additional PRE-EXISTING, DETERMINISTIC compile errors in the TeslaSync app target (reproduced in
+separate runs; NOT in this surface's files and outside this surface's allowed scope):
+  apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is
+    unable to type-check this expression in reasonable time; try breaking up the expression into
+    distinct sub-expressions
+  apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure
+    captures non-escaping parameter 'content'
+
+Determinism proof for the RecentDrivesSection error (standalone, IDLE machine, no contention):
+  $ swiftc -typecheck <isolated copy of the exact expression>
+  -> error: the compiler is unable to type-check this expression in reasonable time   real 4.91s
+  (the same expression rewritten with two explicitly-typed locals type-checks in 0.35s, rc=0 — i.e.
+   it is a genuine pre-existing too-complex-expression bug in that file, not load-induced and not mine.)
+
+Zero errors or warnings were attributed to any LayoutBreadcrumbs.* file. The surface's own sources
+were compiled by the app target during this run with no diagnostics:
+  LayoutBreadcrumbs.swift, .Adapter.swift, .Model.swift, .Projection.swift, .Views.swift, .Previews.swift
+
+------------------------------------------------------------------------------------------------
+STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------------------------------------
+** BUILD FAILED **
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+  development certificate. Enable development signing in the Signing & Capabilities editor.
+apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing
+  with a development certificate. Enable development signing in the Signing & Capabilities editor.
+Testing failed:  ** TEST FAILED **
+MAC_EXIT=65
+(Environmental/pre-existing: this runner has no Apple development signing identity; the macOS app +
+widget targets carry entitlements that require one. Corroborated by the repo's own
+apps/macos-pending-verifications.md. The same shared sources also carry the pre-existing compile
+errors above. Not attributable to this surface.)
+
+------------------------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict   (full gate scope: Sources + all surface dirs + Tests + widgets + watch)
+------------------------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 4477 files.
+LINT_EXIT=0      (PASS — includes all 9 LayoutBreadcrumbs.* files)
+
+------------------------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple   (full tree)
+------------------------------------------------------------------------------------------------
+SwiftFormat completed. 0/4775 files require formatting, 2 files skipped.
+FORMAT_EXIT=0    (PASS — includes all 9 LayoutBreadcrumbs.* files)
+
+------------------------------------------------------------------------------------------------
+STEP 5 — check-placeholders.ps1
+------------------------------------------------------------------------------------------------
+# Exact gate invocation (-Path apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+# Authoritative scan of the 9 shipped LayoutBreadcrumbs.* files (-Language swift):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0  (PASS — no TODO/FIXME/Placeholder/stub/Lorem/not-implemented in shipped code)
+
+------------------------------------------------------------------------------------------------
+GIT STATE (proves the failures are pre-existing baseline, not introduced by this surface)
+------------------------------------------------------------------------------------------------
+Working tree adds ONLY the 9 LayoutBreadcrumbs.* files (untracked); no tracked file modified.
+  RecentDrivesSection.Previews.swift -> committed at afff462c1 "feat(apps/apple/feature-views): add
+    RecentDrivesSection surface (P4)"; this surface made NO change to it (empty diff).
+  AISuggestNewGeofences.swift          -> likewise pre-existing committed baseline, unmodified here.
+
+------------------------------------------------------------------------------------------------
+ANALYSIS / DISPOSITION
+------------------------------------------------------------------------------------------------
+The LayoutBreadcrumbs surface is COMPLETE and passes every gate step that is within its allowed
+scope and not blocked by the environment:
+  - swiftlint --strict  : 0 violations (LINT_EXIT=0)
+  - swiftformat --lint  : 0 require formatting (FORMAT_EXIT=0)
+  - check-placeholders  : PLACEHOLDER_COUNT=0 (EXIT=0)
+  - the surface's own Swift sources compile with zero errors/warnings inside the full app build, and
+    its route-table + projection logic type-check standalone.
+
+The two xcodebuild steps cannot reach EXIT=0 because the shared TeslaSync app target does not build
+at this baseline, for reasons entirely OUTSIDE this surface and its allowed-files scope
+(apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.*, the log):
+  1. Pre-existing, deterministic too-complex-expression compile error in
+     feature-views/RecentDrivesSection.Previews.swift:24 (proven deterministic in isolation, 4.9s).
+  2. Pre-existing escaping-closure compile error in
+     shared-surfaces/AISuggestNewGeofences.swift:129.
+  3. macOS dev-signing/entitlements requirement with no signing identity on this runner
+     (see apps/macos-pending-verifications.md).
+  4. swift-frontend process failures under heavy concurrent multi-slot machine load (no diagnostic).
+
+Per the Honesty Covenant (No red-as-green; No commit on red) and the allowed-files / out-of-scope
+constraints (each other surface "has its own prompt"), these pre-existing breakages were NOT modified
+or worked around in the shipped deliverable. (A throwaway local diagnostic that temporarily rewrote
+the RecentDrivesSection expression confirmed the app then advanced past it and surfaced the next
+pre-existing error; that diagnostic edit was reverted so the deliverable stays within allowed scope.)
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

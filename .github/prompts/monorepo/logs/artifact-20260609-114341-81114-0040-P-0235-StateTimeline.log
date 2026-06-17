@@ -1,0 +1,131 @@
+=== P4 Feature view 0235 StateTimeline (Apple) ===
+
+Surface : features/system/components/state-machine/StateTimeline.tsx  ->
+          apps/apple/TeslaSync/feature-views/StateTimeline.*
+Runner  : Darwin arm64 (Apple Studio), Xcode 26.5 (17F42), Swift 6.3.2,
+          xcodegen 2.45.4, swiftlint 0.63.3, swiftformat 0.61.1, pwsh 7.6.2
+Capability present: SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 SDKs,
+          iPhone 16 simulator booted. (StateTimeline uses no chart/map; none needed.)
+
+Files shipped (11; 2223 Swift lines):
+  StateTimeline.swift              (composable View, phase switch + panel)
+  StateTimeline.Adapter.swift      (pure projection: windowTransitions + tick useMemo + nextWiderPreset)
+  StateTimeline.Accessibility.swift(slug, {{token}} interp, presetLabel/relativeLabel, VoiceOver)
+  StateTimeline.Model.swift        (@Observable @MainActor state holder, P1/S8)
+  StateTimeline.Source.swift       (telemetry seam P1/S11, i18n facade P1/S10, source seam, in-memory source)
+  StateTimeline.Views.swift        (header, freshness chip, banner, axis, ticks rail, selected detail)
+  StateTimeline.States.swift       (empty hint + widen/jump, loading skeleton, error+retry, pill button)
+  StateTimeline.Previews.swift     (7 previews: content/empty/empty+hint/loading/error/stale/offline)
+  StateTimeline.Tests.swift        (adapter + format + accessibility + slug)
+  StateTimeline.ModelTests.swift   (state-holder behavior)
+  StateTimeline.strings            (P1/S10 catalog; every web t() key + relative-time phrases)
+
+NOTE ON TYPE NAMES: the pre-existing dashboard widget StateTimelineWidget.* already
+declares StateTimelineModel/Update/Source/Connection/LoadStatus/... in the SAME module.
+To avoid duplicate-symbol ambiguity the feature-view's supporting types are prefixed
+FSMStateTimeline* (this surface IS the FSM state-machine timeline). The public View stays
+`StateTimeline` and the diagnostics slug string stays "StateTimeline".
+
+------------------------------------------------------------------------------
+GATE STEPS
+------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    RESULT: IOS_EXIT=65  (BLOCKED — pre-existing toolchain crash, NOT this surface)
+    The whole-module compile type-checks every StateTimeline.* file with ZERO errors,
+    then swift-frontend CRASHES in IRGen of an UNRELATED file:
+
+      4. While evaluating request IRGenRequest(IR Generation for file
+         ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+      5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+         (a reabstraction thunk for an @isolated(any) (any Actor)? -> Bool closure)
+      llvm::report_fatal_error(...)  -> "** TEST BUILD FAILED **"
+
+    AppearanceSettings.Controls.swift is OUTSIDE this prompt's allowed files
+    (StateTimeline.* only) and uses a (...)->Bool @isolated(any) closure that this
+    surface never references.
+
+[1b] BASELINE PROOF that the crash is environmental, not this surface:
+     Moved all StateTimeline.* feature-view files OUT, `xcodegen generate`, rebuilt:
+       BASELINE_EXIT=65 with the IDENTICAL crash:
+         While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+         IRGenRequest file = AppearanceSettings.Controls.swift
+     => The compiler crash reproduces WITHOUT this surface present. It is a pre-existing
+        Xcode 26.5 IRGen defect in unrelated code. Files were then restored.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    RESULT: MAC_EXIT=65  (BLOCKED — code signing, before any compile)
+      error: "TeslaSync-macOS" has entitlements that require signing with a development
+             certificate ... (in target 'TeslaSync-macOS')
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+    No development certificate/team is provisioned on this runner
+    (project.yml DEVELOPMENT_TEAM=""; see apps/macos-pending-verifications.md).
+    Fails at build-description stage, before compiling any Swift — unrelated to this surface.
+
+[3] swiftlint --strict (10 StateTimeline.* swift files)
+    RESULT: LINT_EXIT=0   "Done linting! Found 0 violations, 0 serious in 10 files."
+
+[4] swiftformat --lint apps/apple (10 StateTimeline.* swift files)
+    RESULT: FORMAT_EXIT=0  "0/10 files require formatting."
+
+[5] ./apps/tools/check-placeholders.ps1  (StateTimeline.* swift + strings)
+    RESULT: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/stub/mock.)
+
+------------------------------------------------------------------------------
+SURFACE-LEVEL VERIFICATION (isolating this surface from the environmental block)
+------------------------------------------------------------------------------
+
+[A] Logic + state-holder unit tests, compiled against the REAL FSMRegistry dependency,
+    Swift 6 language mode + -strict-concurrency=complete (matches the app target):
+      swift test  ->  Executed 34 tests, with 0 failures (0 unexpected)
+        FSMStateTimelineProjectorTests        11 passed
+        FSMStateTimelineModelTests            16 passed
+        FSMStateTimelineFormatTests            3 passed
+        FSMStateTimelineAccessibilityTests     4 passed
+      Covers: windowTransitions inclusive slice + last-seen tracker; nextWiderPreset
+      (smallest fitting / nil on negative or >24h); tick leftPercent (50% / 80%) +
+      sorted order + destination-state color via FSMRegistry; content/empty/loading/
+      error phase resolution; selection + selectedDetail; widen-window re-projection;
+      jump-to-last; window passthrough; view.opened once; stale auto-refresh once +
+      re-arm; offline keeps cache (no refetch); retry/stop; preset + relative-time
+      labels; VoiceOver summaries.
+
+[B] View layer type-check (StateTimeline.swift/.Views/.States/.Previews + Adapter/
+    Accessibility/Source/Model) against the REAL design tokens (Tokens.swift),
+    motion (Motion.swift) and feedback (Skeletons.swift), iOS 18 simulator SDK,
+    Swift 6 + -strict-concurrency=complete:
+      swiftc -typecheck ... -> TYPECHECK_EXIT=0  (clean)
+    (FSMStateColor.tint and the unrelated TSCard skeleton variant were shimmed only
+    because their real definitions drag in whole unrelated file chains; the in-module
+    real definitions exist and the full-build step [1] type-checked them with 0 errors.)
+
+------------------------------------------------------------------------------
+ACCEPTANCE CHECKLIST
+------------------------------------------------------------------------------
+[x] All web states reproduced: content (ticks rail), empty (web "No transitions in
+    window" + actionable "Last transition {rel}" / "Widen window to {label}" / "Jump to
+    last transition") PLUS the prompt load-envelope loading/error/stale/offline.
+[x] Hooks bind via the shared P1/S8 state-holder seam (StateTimelineSource); no HTTP in view.
+[x] Every web i18n key present in the P1/S10 catalog (debugger.window.*, debugger.timeline.*),
+    relative-time phrases keyed too; no English literals in native code.
+[x] Accessibility labels on every interactive element (each tick = labeled button with
+    value + hint + isSelected; widen/jump/retry buttons labeled; panel summary).
+[x] Tests: adapter unit + state-holder + per-state coverage + a11y label tests (34 pass).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+[ ] EXIT=0 NOT achievable on this runner: the `xcodebuild build test` steps are blocked
+    by (iOS) a pre-existing Xcode 26.5 IRGen crash in AppearanceSettings.Controls.swift
+    (proven by baseline) and (macOS) absent code-signing certificate — both environmental
+    and both outside this prompt's allowed files. Every surface-scoped check passes
+    (lint 0, format 0, placeholders 0, 34 unit tests pass, view type-check clean).
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TESTS=34/34 pass
+SURFACE_TYPECHECK=0
+
+EXIT=65
+STATUS=BLOCKED

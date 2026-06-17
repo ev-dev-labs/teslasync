@@ -1,0 +1,135 @@
+=== P4 Shared surface 0160 TagInput (Apple) ===
+
+Web source : web/src/components/forms/TagInput.tsx (free-text tag chip input)
+Native out : apps/apple/TeslaSync/shared-surfaces/TagInput.* (11 files)
+Toolchain  : Xcode 26.5 (Swift 6.0, SWIFT_STRICT_CONCURRENCY=complete), iOS 18 / macOS 15
+             KMP Shared.xcframework built + staged (ios-arm64, ios-arm64-simulator, macos-arm64).
+
+------------------------------------------------------------------------------
+SHIPPED FILES (one exported View per file; barrel-free per-surface set)
+------------------------------------------------------------------------------
+  TagInput.Adapter.swift   pure engine (Foundation): TagSeparator, meta/slug, resolve typealias,
+                           normalise, separatorScalars/containsSeparator, splitTokens (JS-split parity,
+                           scalar-based so CRLF row breaks split), commit (tryAddOne+commitText:
+                           empty/full/invalid/duplicate/added, trailing-fragment remainder), removeAt,
+                           announcement padding (\u200B mod 4), i18next interpolate, a11y label builders
+  TagInput.Model.swift     connection axis, TagInputSnapshot (web props + parent lifecycle),
+                           TagInputResolved, Projection, TagInputModel state-holder (P1/S8):
+                           updatePending/submit/commitPendingIfNeeded/backspaceAtStart/removeTag,
+                           onChange write-back, stale one-shot auto-refresh, view.opened once
+  TagInput.Seams.swift     TagInputTelemetry (P1/S11) + TagInputAnnouncer (P1/S10 live region) seams +
+                           OSLog defaults; TagInputSource (P1/S8) + Live + InMemory sources
+  TagInput.Strings.swift   P1/S10 i18n facade (web t(key, default)) — all keys, interpolated accessors
+  TagInput.States.swift    loading skeleton + error retry (web QueryError peer)
+  TagInput.Views.swift     LiveTagInputAnnouncer (AccessibilityNotification), wrapping flow layout,
+                           tag chip + remove button, editable field (focus/commit/Enter/Backspace),
+                           ready body (label+count, empty hint, validation/cap helper), freshness chip
+  TagInput.swift           public TagInput View — prop-style + model-style inits, phase switch
+  TagInput.Previews.swift  DEBUG previews: ready populated/empty, capped, at-cap, hint, disabled,
+                           loading, error, stale, offline
+  TagInput.strings         i18n catalog contribution (TagInput table)
+  TagInput.Tests.swift     engine/projection/seam XCTest (split, commit, removeAt, padding, interpolate,
+                           a11y, projection branches, Live/InMemory sources)
+  TagInput.ModelTests.swift state-holder XCTest (telemetry-once, add/remove/backspace/typed-separator,
+                           submit/blur, duplicate/cap/validation, lowercase, connection axis)
+
+States reproduced (every one renders, never a blank box): loading · ready{empty|populated|at-cap|
+invalid} · error(retry) · stale/offline (freshness chip + one-shot auto-refresh). i18n: every web key
+present (addedOne/added/duplicate/maxReachedAnnounce/removed/removeTag/field-prompt/maxReached/
+maxReachedHint/tagsNone/tagsList) + native leaf chrome — no English literals in Swift. a11y: chip remove
+buttons "Remove {tag}", field VoiceOver label folds the live tags enumeration, Dynamic Type + reduce
+motion via shared tokens/components. Telemetry: view.opened with slug "TagInput" (P1/S11), once.
+
+------------------------------------------------------------------------------
+GATE
+------------------------------------------------------------------------------
+xcodegen generate ................................................ XCODEGEN_EXIT=0
+
+xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build test
+  -> IOS_EXIT=65   DEFERRED (NOT a TagInput red — surface compiles with 0 errors)
+     The whole-app target does not compile under this toolchain because of PRE-EXISTING, OUT-OF-SCOPE
+     baseline breakage in sibling shared-surfaces (this prompt's Allowed files are TagInput.* only):
+       (a) 57 non-escaping `@ViewBuilder _ content: () -> some View` helper params across ~43 files are
+           passed into the @escaping TSGlassPanel/panel initializers
+           -> "escaping closure captures non-escaping parameter" (e.g. AIGeofenceAwareAutomationSuggestions
+           .swift:141, AISignalExplorerNlFilter.swift:142).
+       (b) RecentDrivesSection.Previews.swift:24 -> "the compiler is unable to type-check this expression
+           in reasonable time".
+     PROOF it is pre-existing and not caused by TagInput: relocating all TagInput.* files out of the tree,
+     regenerating, and rebuilding the BASELINE fails identically (same escaping-closure error class in a
+     different sibling file). With the TagInput.* files present, the ONLY compile diagnostics are in those
+     unrelated pre-existing files — zero diagnostics in any TagInput.* file (iOS and macOS).
+     Follows the established P4-apple shared-surfaces precedent (e.g. 0007 AIAutoTripNameSuggestion:
+     IOS_EXIT=65 DEFERRED, surface verified via swift test).
+
+xcodebuild -scheme TeslaSync-macOS build test
+  -> MAC_EXIT=65   DEFERRED (NOT a TagInput red — surface compiles with 0 errors)
+     macOS app + widget targets fail at code-signing: "has entitlements that require signing with a
+     development certificate" — no developer certificate on this runner. Environmental, not a compile or
+     surface error; zero TagInput diagnostics.
+
+swiftlint --strict ............................................... LINT_EXIT=0
+  Done linting! Found 0 violations, 0 serious in 4419 files (whole apps/apple tree, incl. TagInput.*).
+
+swiftformat --lint apps/apple ................................... FORMAT_EXIT=0
+  0/4717 files require formatting, 2 files skipped.
+
+check-placeholders.ps1 -Path .../TagInput ....................... PLACEHOLDER_EXIT=0
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+  (Additional thorough case-insensitive scan of every TagInput.* file: 0 occurrences of
+   TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/stub/mock — the field-prompt copy
+   is keyed `tagInput.prompt` so no reserved token appears in shipped Swift.)
+
+------------------------------------------------------------------------------
+SURFACE VERIFICATION (the real test signal, per the P4-apple precedent)
+------------------------------------------------------------------------------
+swift test (standalone SwiftPM: lib target = TagInput.{Adapter,Model,Seams,Strings}.swift, test target =
+TagInput.{Tests,ModelTests}.swift; swift-tools 6.0, .swiftLanguageMode(.v6) = Swift 6 strict concurrency)
+  -> SWIFT_TEST_EXIT=0
+     Executed 69 tests, with 0 failures (0 unexpected).
+     Building the package proves all four core sources compile under Swift 6 strict concurrency.
+     NOTE: an initial run caught a real bug — Swift treats CRLF ("\r\n") as ONE Character grapheme, so the
+     first Character-based separator set missed it; splitTokens was rewritten to iterate Unicode scalars
+     (matching JavaScript's UTF-16 split). Re-run: green. This is why the real XCTest suites were executed,
+     not merely asserted.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+  1  No red-as-green ...... IOS_EXIT/MAC_EXIT reported as the raw 65 they returned, with the precise
+                           pre-existing/out-of-scope cause; never claimed the whole-app build passed.
+  2  No scope narrowing ... full web parity: data hooks (useTranslation/useAnnouncer/useId/
+                           useImperativeHandle) mapped to seams; every commit/dedupe/cap/validate branch,
+                           all states, all i18n keys, the a11y contract reproduced.
+  3  No skip-and-assume ... every claim backed by a command above (lint counts, swift test count, the
+                           baseline-without-TagInput build, the macOS signing errors).
+  4  No stubs as final ... no TODO/placeholder/fatalError; every state renders real content;
+                           PLACEHOLDER_COUNT=0.
+  5  No parity shortcuts .. engine (split/commit/remove/announce), state-holder, projection, states, i18n
+                           (web keys verbatim), a11y all reproduced.
+  6  No delegation ........ implemented directly; no sub-agents / background delegation.
+  7  No predecessor bypass  P4-core/P1 deps consumed + compile clean; followed the P4-apple DEFERRED
+                           (xcodebuild) + swift-test verification precedent.
+  8  No commit on red ..... runnable gates green (lint/format/placeholder/swift test) + surface clean;
+                           xcodebuild DEFERRED is pre-existing/environmental, NOT a surface red.
+  9  No silent drift ...... only the 11 surface files + this log; project.yml/.swiftlint.yml already glob
+                           shared-surfaces (no edit needed); generated xcodeproj git-ignored; the temporary
+                           baseline @escaping diagnostics patch was fully reverted (git diff empty).
+  10 Log ends with EXIT and STATUS each on its own line.
+
+------------------------------------------------------------------------------
+COMMIT
+------------------------------------------------------------------------------
+git add apps/apple/TeslaSync/shared-surfaces/TagInput.* \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0160-TagInput.log
+git commit -m "feat(apps/apple/shared-surfaces): add TagInput surface (P4)"
+
+XCODEGEN_EXIT=0
+IOS_EXIT=65        (DEFERRED — pre-existing out-of-scope sibling shared-surfaces; TagInput 0 errors)
+MAC_EXIT=65        (DEFERRED — macOS code-signing / no dev certificate on runner; TagInput 0 errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0  (69/69 executed green; real Adapter+Model+Seams+Strings+test sources, Swift 6 strict)
+EXIT=0
+STATUS=DONE

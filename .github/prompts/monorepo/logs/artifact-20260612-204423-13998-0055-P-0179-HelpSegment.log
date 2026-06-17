@@ -1,0 +1,155 @@
+=== P4 Shared surface 0179 HelpSegment (Apple) ===
+Artifact: apps/apple/TeslaSync/shared-surfaces/HelpSegment.*
+Web source (spec): web/src/components/layout/status-bar/HelpSegment.tsx
+Runner: Darwin arm64 · Xcode 26.5 (17F42) · Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+        swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+Honesty Covenant: 1 No red-as-green … 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+------------------------------------------------------------------------------
+CAPABILITY
+------------------------------------------------------------------------------
+SwiftUI + Swift Charts + MapKit toolchain is PRESENT (full Xcode 26.5, iOS 18+
+SDK, iPhone 16 simulator booted). The surface itself ships SwiftUI only (no
+charts/maps in the web source — see "states" note below). Capability is NOT the
+blocker; see the xcodebuild section for the platform/toolchain block.
+
+------------------------------------------------------------------------------
+ARTIFACT (8 Swift files + 1 strings table — mirrors the merged HelpIcon set)
+------------------------------------------------------------------------------
+HelpSegment.Adapter.swift      pure core: slug, density (iconOnly×xl), action
+                               identity, 7 web t() keys+fallbacks, projector
+HelpSegment.Seams.swift        action seam: NotificationCenter posting the exact
+                               web window-event names (toggle-keyboard-shortcuts,
+                               teslasync:tour:openLauncher, open-feedback-modal)
+HelpSegment.Model.swift        i18n facade (P1/S10), telemetry seam (P1/S11),
+                               @Observable state-holder (P1/S8)
+HelpSegment.swift              public View; iconOnly prop × horizontalSizeClass
+                               (native peer of the web xl: breakpoint)
+HelpSegment.Views.swift        bar, icon-led action button, ? key cap, a11y id
+HelpSegment.Previews.swift     every density branch + injected model + prop-driven
+HelpSegment.strings            7 web i18n keys, table "HelpSegment"
+HelpSegment.Tests.swift        model/views/strings/action-seam/a11y (TeslaSyncTests)
+HelpSegment.AdapterTests.swift pure projector/value-type/notification (TeslaSyncTests)
+
+STATES — faithful-parity note (honesty, no fabrication): the web HelpSegment is a
+PURE presentational segment. Its only data source is useTranslation; it takes one
+`iconOnly` prop and renders three tooltip'd buttons that dispatch window events.
+There is NO fetch / React-Query / Promise, hence NO loading|error|stale|offline
+branch to reproduce (nothing to fetch, fail, age, or lose connectivity to).
+Inventing such chrome would fabricate states the source lacks. The REAL branches —
+reproduced and tested in full — are the three densities (iconOnly / compact /
+expanded = the native peer of `iconOnly` × the `xl:` breakpoint) crossed with the
+three shortcuts/tour/feedback affordances. Same disposition as the merged sibling
+pure primitive HelpIcon (0215).
+
+------------------------------------------------------------------------------
+OWNED DETERMINISTIC GATES  (all GREEN, run on the 8 shipped files)
+------------------------------------------------------------------------------
+swiftlint lint --strict --no-cache <8 files>
+    "Done linting! Found 0 violations, 0 serious in 8 files."   -> LINT_EXIT=0
+
+swiftformat --lint <8 files>
+    "0/8 files require formatting."                              -> FORMAT_EXIT=0
+
+check-placeholders.ps1 -Path <each of the 8 files>
+    PLACEHOLDER_COUNT=0 on every file (TODO/FIXME/XXX/Placeholder/
+    Lorem/not-implemented + swift stub patterns all absent)
+    PLACEHOLDER_TOTAL_ACROSS_8_FILES=0                           -> PLACEHOLDER_EXIT=0
+    NB: the prompt's literal gate path ".../HelpSegment" (no extension) is not a
+    real directory, so Get-ChildItem -LiteralPath scans 0 files and trivially
+    passes; the per-file runs above are the HONEST scan of the actual artifact.
+
+------------------------------------------------------------------------------
+COMPILE + RUNTIME PROOF OF THE SHIPPED CODE  (all GREEN)
+------------------------------------------------------------------------------
+Swift 6 strict-concurrency typecheck of the 6 production files against the REAL
+design tokens (apps/design/generated/apple/Tokens.swift), the exact language mode
+the app uses (project.yml: SWIFT_VERSION 6.0, SWIFT_STRICT_CONCURRENCY complete):
+    xcrun swiftc -typecheck -D DEBUG -swift-version 6 -target arm64-apple-macos15.0 \
+        Tokens.swift HelpSegment.{Adapter,Seams,Model,swift,Views,Previews}.swift
+    (no diagnostics)                                             -> TYPECHECK_EXIT=0
+
+Logic-exec harness — compiles HelpSegment.Adapter.swift + HelpSegment.Seams.swift
+with a main.swift under -swift-version 6 and EXECUTES the real projector / density /
+copy-resolution / action→window-event-name mapping / live NotificationCenter seam:
+    "CHECKS=38 FAILURES=0 ALL GREEN"                             -> LOGIC_EXEC_EXIT=0
+
+------------------------------------------------------------------------------
+XCODEBUILD GATE  (BLOCKED — pre-existing swift-frontend compiler crash; NOT my code)
+------------------------------------------------------------------------------
+xcodegen generate ; xcodebuild -scheme TeslaSync \
+    -destination 'platform=iOS Simulator,name=iPhone 16' build-for-testing
+RESULT: ** BUILD FAILED **  -> IOS_EXIT=65
+
+Root cause is a swift-frontend CRASH (a compiler bug, not a source error) while
+emitting IR for a Swift-concurrency reabstraction thunk:
+    1.  Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+    5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+        (reabstraction thunk for a `(Bool, (any Actor)?)`-isolated closure)
+    "Please submit a bug report (https://swift.org/contributing/#reporting-bugs)"
+    "Command SwiftCompile failed with a nonzero exit code"
+There are ZERO "error:" diagnostics in the whole build log (grep -c ": error:" = 0)
+— it is a pure compiler crash, not a type error. Memory was not the cause
+(68 GB RAM, 26 GB unused, 20 cores at crash time).
+
+PROOF THE CRASH IS PRE-EXISTING AND NOT FROM HelpSegment
+  (a) The crashing SwiftCompile job's 25 -primary-file entries are entirely
+      pre-existing app/feature-views files — NONE are HelpSegment:
+        TeslaSync/feature-views/AnomalyInlineRow.{Model,Previews,Seams,States,Views,swift}
+        Sources/Features/Admin/ApiPlayground{Page,PageModel,RouteRegistration}.swift
+        Sources/Platform/Menus/{AppCommandActions,AppMenuCommands}.swift
+        Sources/App/{AppCommands,AppRoute,AppRouteParser,AppShell}.swift
+        Sources/SharedFacade/AppContainer.swift
+        Sources/Platform/Settings/{AppSettings,AppSettingsModel,AppSettingsStore,AppSettingsView}.swift
+        TeslaSync/feature-views/AppearanceSettings.{Adapter,Controls,Model,Models,Panels}.swift
+        grep '-primary-file' | grep -i HelpSegment  ->  NONE
+  (b) Control build with the 8 HelpSegment files MOVED OUT OF THE TREE
+      (xcodegen regenerated, 0 HelpSegment refs in the pbxproj) reproduces the
+      IDENTICAL crash in the IDENTICAL job:
+        same batch (AnomalyInlineRow.* … AppShell.swift … AppearanceSettings.*)
+        same thunk  "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+        same "Please submit a bug report" + 0 "error:" lines
+        ** BUILD FAILED **                                       -> HEAD_NO_MINE_EXIT=65
+  => The full-app iOS build cannot go green on this runner for reasons entirely
+     outside this PR's allowed scope (HelpSegment.* + this log). The crashing files
+     are core app/feature-views modules I am not permitted to modify, and the fault
+     is an upstream Swift 6.3.2 compiler bug regardless.
+
+xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build
+RESULT: ** BUILD FAILED **  -> MAC_EXIT=65
+  Additionally blocked BEFORE any Swift compilation by code signing — the macOS
+  targets carry entitlements that require a development certificate, absent on this
+  runner:
+    error: "TeslaSync-macOS" has entitlements that require signing with a
+           development certificate. Enable development signing ...
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+  (and the same pre-existing swift-frontend crash applies once past signing).
+
+------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------
+The HelpSegment surface is COMPLETE and verified by every gate that can actually
+run on this runner: swiftlint --strict (0), swiftformat --lint (0), placeholder (0),
+Swift-6 strict-concurrency typecheck of all production files (0), and a runtime
+logic-exec harness (38/38 green). The surface reproduces the web source's data,
+composition, every real (density) state, i18n keys, action dispatch, and a11y.
+
+The required xcodebuild build+test gate is RED due to a PRE-EXISTING swift-frontend
+compiler crash in unrelated core app files (proven by the primary-file list and the
+files-removed control build) plus macOS code-signing — both outside this artifact's
+allowed file scope and unfixable here. Per Honesty Covenant rule 1 (No red-as-green)
+this cannot be reported as DONE/EXIT=0; it is reported as BLOCKED with the raw
+platform/toolchain evidence above, exactly as the acceptance criterion permits
+("STATUS=BLOCKED with platform-capability evidence in the log").
+
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+TYPECHECK_EXIT=0
+LOGIC_EXEC_EXIT=0
+IOS_EXIT=65
+MAC_EXIT=65
+HEAD_NO_MINE_EXIT=65
+
+EXIT=65
+STATUS=BLOCKED

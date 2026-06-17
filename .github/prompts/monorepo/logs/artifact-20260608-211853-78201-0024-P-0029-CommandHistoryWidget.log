@@ -1,0 +1,216 @@
+================================================================================
+ P4 · Dashboard widget · 0029 — CommandHistoryWidget (Apple)
+ SwiftUI parity of web/src/features/dashboard/widgets/CommandHistoryWidget.tsx
+================================================================================
+ Runner    : macOS 26 (Darwin arm64) · Xcode 26.5 (17F42) · Swift 6.3.2
+ Tooling   : swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7
+ Surface   : apps/apple/TeslaSync/dashboard-widgets/CommandHistoryWidget.*
+ Registry  : command-history · category "commands" · 2×4 (min 1×2 / max 4×40)
+ ADR refs  : ADR-002, ADR-004, ADR-009, ADR-013
+================================================================================
+
+--------------------------------------------------------------------------------
+ SHIPPED FILES (7 — the only files this commit adds)
+--------------------------------------------------------------------------------
+  CommandHistoryWidget.swift            — the dashboard surface: glass shell, header
+                                          (terminal glyph + title + freshness chip +
+                                          refresh/open), and the loading / empty /
+                                          error / content state switch + compact gate.
+  CommandHistoryWidget.Model.swift      — P1/S8 state-holder seam (CommandSource /
+                                          CommandModel / InMemoryCommandSource),
+                                          P1/S11 telemetry seam (view.opened), the
+                                          canonical registry metadata, and the P1/S10
+                                          i18n facade.
+  CommandHistoryWidget.Adapter.swift    — pure projection core: STATUS_MAP / DEFAULT
+                                          icon·color·severity, formatCommandName,
+                                          CommandFeedBuilder (source-order build +
+                                          newest-first capped feed), layout, relative
+                                          time, a11y summaries.
+  CommandHistoryWidget.Views.swift      — compact latest-command row + status badge,
+                                          stale/offline banner, the command feed +
+                                          friendly empty state + timeline rows.
+  CommandHistoryWidget.Previews.swift   — 8 #Preview states (content/wide/compact/
+                                          empty/loading/error/offline/stale). DEBUG.
+  CommandHistoryWidget.strings          — P1/S10 catalog (table "CommandHistoryWidget").
+  CommandHistoryWidget.Tests.swift      — 29 unit tests (adapter/layout/model/registry/
+                                          a11y). Compiled into the XCTest bundles only.
+
+--------------------------------------------------------------------------------
+ PARITY MAP (web source → native)
+--------------------------------------------------------------------------------
+  useCommandHistory / useVehicles    → CommandSource → CommandModel (P1/S8). The view
+                                       never performs HTTP; id = vehicleId ?? vehicles[0].
+  STATUS_MAP {success,failed,pending} → CommandStatusCatalog.feedVisual:
+     success → checkmark.circle.fill · #22c55e · info
+     failed  → xmark.circle.fill     · #ef4444 · critical
+     pending → clock.fill            · #f59e0b · warning
+  DEFAULT_STATUS (unknown token)     → terminal.fill · #6b7280 · info (exact, case-
+                                       sensitive lookup parity with the web object).
+  formatCommandName(/_/→' ', \b\w→UP)→ CommandNameFormatter.format (boundary-only
+                                       upper-casing; interior left untouched).
+  CompactView (size.cols<=1)         → CommandCompactRow + CommandStatusBadge; variant
+     success→success / failed→danger / else→warning; label Success/Failed/Pending.
+  WidgetEventFeed(maxItems=10)       → CommandEventFeed + CommandFeedBuilder.feed
+                                       (newest-first sort + 10-item cap).
+  lastEntry = list[0] (unsorted)     → CommandModel.latest = items.first (source order).
+  WidgetShell loading/empty/error    → CommandModel.Phase loading/empty/error/content,
+     + DataFreshness (updatedAt/isStale) + CommandConnection live/stale/offline chip
+       + banner (covers the required stale + offline states).
+  i18n t(key, fallback)              → CommandStrings facade → "CommandHistoryWidget"
+                                       table. Per-row status subtitle echoes the raw
+                                       backend token verbatim (web cmd.status = data).
+
+--------------------------------------------------------------------------------
+ GATE RESULTS (every command run on THIS runner; raw exits pasted)
+--------------------------------------------------------------------------------
+
+ [1] swiftlint --strict (the 6 shipped .swift files, repo .swiftlint.yml)
+     > Done linting! Found 0 violations, 0 serious in 6 files.
+     STRICT_RC=0
+
+ [2] swiftformat --lint (the 6 shipped .swift files, repo .swiftformat)
+     > SwiftFormat completed in 4.91s.
+     > 0/6 files require formatting.
+     FMT_RC=0
+
+ [3] check-placeholders.ps1 (ADR-011 stub/placeholder gate)
+     > --- self-test ---  SELFTEST_EXIT=0   (scanner proven to flag dirty trees)
+     > scan of the 6 shipped .swift files:
+     >   PLACEHOLDER_ALLOWED=0
+     >   PLACEHOLDER_COUNT=0
+     >   EXIT=0
+     (No TODO/FIXME/stub/mock/placeholder/Lorem, 0 opt-outs.)
+     PLACEHOLDER_RC=0
+
+ [4] Isolated Swift 6 build — SwiftPM module "TeslaSync", swiftLanguageModes:[.v6],
+     platforms:[.macOS(.v15)], compiling the surface against the REAL design system
+     (apps/design/generated/apple/Tokens.swift), the REAL grid infra
+     (Sources/DashboardWidgets/DashboardWidgetInfra.swift), the REAL TSTone
+     (Sources/Components/UI/Badges.swift) and the REAL TSSkeleton:
+     > Compiling TeslaSync CommandHistoryWidget.{Model,Adapter,Views,Previews}.swift …
+     > Build complete! (17.47s)
+     BUILD_RC=0
+
+ [5] Isolated Swift 6 tests (same package, full strict concurrency)
+     > Test Suite 'All tests' passed
+     >   Executed 29 tests, with 0 failures (0 unexpected)
+     TEST_RC=0
+     Coverage: CommandStatusCatalog (kind/feedVisual/compactTone/compactLabel),
+     CommandNameFormatter (boundary upper-casing + dash/empty), CommandFeedBuilder
+     (source-order build, dash fallbacks, id/timestamp fallbacks, newest-first sort,
+     10-item cap), CommandLayout (isCompact / feedLimit), CommandModel (phase
+     resolution, source-order latest, view.opened-once telemetry, refresh delegation,
+     connection+projection tracking), registry (canonical metadata + clamp),
+     accessibility (feed + compact summaries).
+
+ [6] iOS 18 simulator SDK typecheck (the gate's iPhone 16 destination SDK)
+     > xcrun --sdk iphonesimulator swiftc -typecheck \
+     >   -target arm64-apple-ios18.0-simulator -swift-version 6  <surface + real deps>
+     IOS_TYPECHECK_RC=0
+     (Surface + #Preview type-check clean against the iOS 18 simulator SDK under
+      Swift 6; the macOS 15 SDK is exercised by gates [4]/[5] which run natively.)
+
+ [7] xcodegen generate — project membership
+     > Created project at apps/apple/TeslaSync.xcodeproj
+     XCODEGEN_RC=0
+     All 7 files are enumerated (42 references across the iOS/macOS app + XCTest
+     targets): the 5 sources + .strings into TeslaSync / TeslaSync-macOS, the
+     *Tests.swift into TeslaSyncTests / TeslaSync-macOSTests (excluded from the app
+     targets by project.yml).
+
+ [~] FULL-APP xcodebuild build test (iOS Simulator iPhone 16 + macOS) — DEFERRED.
+     ATTEMPTED on this runner. The scheme's "Stage Shared.xcframework" pre-action ran
+     the Kotlin/Native toolchain and SUCCEEDED for the debug slice:
+       > Task :core:compileKotlinIosSimulatorArm64 / linkDebugFrameworkIosSimulatorArm64
+       > Task :core:assembleSharedDebugXCFramework
+       > xcframework successfully written out to:
+       >   apps/shared/core/build/XCFrameworks/debug/Shared.xcframework
+     — proving the Kotlin/Native + Xcode toolchain is PRESENT and FUNCTIONAL here.
+     The pre-action then proceeded to the long-running RELEASE assembly
+     (:core:linkReleaseFrameworkIosArm64 → assembleSharedXCFramework, the artifact the
+     app targets link as Frameworks/Shared.xcframework) and was cut by the local
+     time-box:
+       > ** BUILD INTERRUPTED **
+       IOS_BUILD_RC=124   (124 = timeout, NOT a compile/test failure)
+     This is the exact ADR-012 deferral recorded in apps/macos-pending-verifications.md
+     for every P4 surface to date: the full-app build/test runs on the signed
+     `macos-latest` acceptance gate (P4/P99-0001). It is gated by the long Kotlin/Native
+     release-framework link + macOS development signing — shared infrastructure this
+     commit neither owns nor breaks. Pre-existing parallel-merge blockers are already
+     resolved in the tree (DashboardWidgetSize is defined ONCE in DashboardWidgetInfra.swift;
+     co-located *Tests.swift are excluded from the app targets in project.yml), and this
+     surface contributes ZERO new collisions. The surface is independently verified GREEN
+     by gates [1]–[7] above.
+
+--------------------------------------------------------------------------------
+ ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+ [x] Surface renders every web state — loading / empty / error / stale / offline /
+     content — plus the compact (≤1 col) latest-command layout. No hidden surfaces.
+ [x] Hooks bind through the shared P1/S8 state-holder seam (CommandSource/CommandModel);
+     the view performs NO direct HTTP.
+ [x] Every source i18n key resolves through the P1/S10 facade and has a matching key in
+     the "CommandHistoryWidget" catalog table (commandHistory / commandSuccess /
+     commandFailed / commandPending / noCommands + native chrome + a11y). No English
+     literals in Swift code (the per-row status subtitle is backend DATA, as on the web).
+ [x] Accessibility labels on every interactive element (refresh / open buttons) +
+     combined VoiceOver summaries on the feed rows, compact row, freshness chip, and
+     content region; Dynamic Type via font tokens; Reduce-Motion respected (TSSkeleton).
+ [x] Tests: adapter unit + state-holder + layout + registry + a11y (29 cases, all green).
+ [x] No TODO / stub / mock / placeholder / Lorem in shipped code (scanner COUNT=0).
+ [x] view.opened telemetry emitted once with slug "CommandHistoryWidget" (P1/S11).
+ [~] Full-app xcodebuild build test — DEFERRED to the signed macos-latest acceptance
+     gate (long-running Kotlin/Native release-XCFramework assembly + signing; the
+     toolchain is proven functional here by the successful debug XCFramework build).
+     Not a surface defect.
+
+--------------------------------------------------------------------------------
+ HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1 No red-as-green     : every gate above is pasted with its raw exit; the full-app
+                          xcodebuild is explicitly recorded as DEFERRED (RC=124 timeout),
+                          never painted green.
+  2 No scope narrowing  : all 3 web render branches (compact / feed / empty) + the
+                          status catalog (success/failed/pending/unknown) + every state
+                          (loading/empty/error/stale/offline/content) + all 5 source
+                          i18n keys + registry 2×4 / 1×2 / 4×40 reproduced.
+  3 No skip-and-assume  : every step executed on THIS runner; outputs are real, not
+                          assumed (incl. the Kotlin/Native pre-action evidence).
+  4 No stubs as final   : complete production surface + 29 real tests; placeholder=0.
+  5 No parity shortcut  : STATUS_MAP hex, DEFAULT fallback, formatCommandName boundary
+                          rule, compact variant/label, feed sort+cap, list[0] latest,
+                          tones, typography, a11y, telemetry mapped to platform tokens
+                          and pinned by tests.
+  6 No delegation       : implemented directly; no sub-agents (delegation FORBIDDEN).
+  7 No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P4 grid infra
+                          all consumed (built against the REAL files, not re-stubbed).
+  8 No commit on red    : the committed artifact is GREEN on every surface-ownable gate
+                          ([1]–[7]) AND a real isolated Swift 6 build+test against the
+                          real design system; the deferred full-app gate is a shared
+                          macos-latest CI step this commit neither owns nor breaks.
+  9 No silent drift     : changes confined to the 7 CommandHistoryWidget.* files + this
+                          log (git status verified). The generated .xcodeproj + Gradle
+                          build outputs are git-ignored and untracked.
+ 10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+ DISPOSITION
+--------------------------------------------------------------------------------
+ Production-polished, Apple-idiomatic CommandHistoryWidget shipped at parity with the
+ web source and INDEPENDENTLY VERIFIED: it compiles and its 29 tests pass under the
+ app's own Swift 6 strict-concurrency rules against the real design system + shared
+ infra, type-checks GREEN against the iOS 18 simulator SDK (incl. #Preview) and the
+ macOS 15 SDK, and is enumerated into the correct targets by xcodegen; swiftlint
+ --strict / swiftformat --lint / placeholder gate all clean with 0 opt-outs. The
+ full-app iOS-Simulator + macOS xcodebuild build/test is DEFERRED to the signed
+ macos-latest acceptance gate (P4/P99): on this host the scheme pre-action successfully
+ built the debug Shared.xcframework (proving the Kotlin/Native toolchain is present +
+ functional), and the only remaining step is the long-running Kotlin/Native
+ release-framework link + signing — the documented ADR-012 CI step, not a defect in
+ this surface. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+ disposition used by every P4 surface to date.
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

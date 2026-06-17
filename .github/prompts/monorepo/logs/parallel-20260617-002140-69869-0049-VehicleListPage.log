@@ -1,0 +1,157 @@
+I'll start by exploring the repository structure to understand the task scope, then examine the web source page and the existing Apple app structure.
+
+Now let me explore the Apple app structure and recently-built pages to learn the established patterns.
+
+Let me examine the existing Vehicles files and the recently-built TripList page as references.
+
+Now let me study the TripList page (closest list-page reference) and the shared design system components.
+
+Let me examine the TripList supporting files and shared components/tokens used throughout.
+
+Let me locate the shared component library, design tokens, units system, and how the TripList format/units work.
+
+Let me find the key shared components and tokens I'll need by grepping for their definitions.
+
+Let me examine the units system, MetricCard, the TripList format helpers, and the design tokens.
+
+Let me examine the Units engine, design tokens, and key shared component APIs.
+
+Now let me find the design token definitions and the key component APIs (GlassPanel, EmptyState, FadeIn, PanelTitle, Skeleton, Badge, ErrorDisplay).
+
+Found the design system. Let me view the canonical token files and the test that validates them.
+
+I have the tokens. Now let me find the exact APIs for the shared components I'll use (GlassPanel, EmptyState, FadeIn, PanelTitle, Skeleton, Badge, MetricCardColor).
+
+Let me view these component definitions to learn their exact APIs.
+
+Let me view the Badge, MetricCard adapter, Skeleton, Typography, and Button components.
+
+Let me read the web types/hooks the page depends on, plus the parity manifest and Apple ledger.
+
+Now let me read the parity manifest entry, the Apple ledger, the log directory, and the web i18n defaults for the `vehicles.*` keys.
+
+Let me read the TripList evidence log (to model the format) and find the web i18n default strings.
+
+I now have the full picture. Let me verify the toolchain, check for symbol collisions, existing string keys, the web i18n defaults, and a shared pin button.
+
+Toolchain is fully available — the gate will execute. There's an existing `VehicleStatus` enum, so I'll prefix mine. Let me inspect the PinButton API, the existing status enum, the project config, and string sources.
+
+Excellent — there's already a reusable `VehicleStatus` enum and a shared `PinButton`. Let me view the rest of the status adapter (battery color, labels) and the PinButton view API.
+
+The PinButton infra is heavy and bucket-scoped. Let me check `VehicleCardLiveState`, the project config (how files are included), the string catalog location, and the web i18n defaults.
+
+`Features/` is auto-globbed into both targets. Let me find the string catalog and check which keys already exist, plus get the web i18n defaults.
+
+`common.delete`/`common.noData` exist; I need to add 22 keys. Let me extract the exact web i18n defaults from `en.json`.
+
+I have all defaults (`emptyMessage` uses the inline source default). Let me inspect the xcstrings format to match it, using an existing `trips.*` entry as a template.
+
+I now have all defaults and the catalog format. Let me set up tracking, then view the Button/Typography components and check for a confirm-dialog primitive.
+
+I have everything needed. Let me run a final collision check on all my planned symbol/file names, then set up tracking.
+
+All names are collision-free. Let me set up the plan and todos.
+
+Now I'll build the unit. Starting with the models, strings, and format files (independent).
+
+Confirmed: `charger_power` is SI watts. I'll reuse the `VehicleStatus` enum and format power via the Units facade. Now creating the model, strings, and format files.
+
+Now the format helpers. Let me quickly check the web `fmtNumber` default precision to match the Avg Battery card.
+
+Now the format helpers — reusing `VehicleStatus` and `BatteryTone`, converting via the Units facade at the boundary.
+
+Now the sample data sources (success/empty/failing) with SI fixtures.
+
+Models, strings, format, and sample data are in place. Let me update tracking and build the `@Observable` page model.
+
+The model is done. Before writing the view, let me verify a couple of helper i18n keys (`common.cancel`) and a battery SF Symbol exist.
+
+Now the main view with all 9 panels, 4 states, confirm dialog, toast, and skeleton.
+
+The view is written. I referenced some a11y label keys — let me verify which exist and fix any missing ones to avoid raw keys leaking to VoiceOver.
+
+I'll add 5 small a11y helper keys (pin/open/locked/sentry) alongside the 22 parity keys. First, the route registration file.
+
+All files created. Now let me inspect the exact xcstrings formatting (separator style) so my catalog insertion produces a clean, consistent diff.
+
+Now I understand the exact xcstrings style (nested entries use `" : "`). Let me do a targeted text insertion to add the 22 parity keys + 5 a11y helper keys, then validate.
+
+Catalog updated (12145 → 12172). Let me verify the inserted format is consistent and all 24 parity keys now resolve.
+
+All 24 parity keys resolve. Now let me run the fast gates: swiftlint, placeholder scan, and a syntax parse of my files.
+
+swiftlint is reading the project config and linting beyond my path. Let me scope strictly to my new files.
+
+9 violations in my files (mostly file/type length + a few quick fixes). Let me check the swiftlint config limits, then refactor into well-separated files.
+
+Key insight: `.swiftlint.yml` doesn't include `TeslaSync/Features`, but the gate passes my dir explicitly. I'll make my files fully clean (fix all 9) and split the oversized page. First, the quick model fix:
+
+Now I'll restructure the page into focused files. Let me remove the oversized page and recreate it lean, plus three new view files.
+
+Now the chrome file (banners, toast, error panel, empty view, summary grid, skeleton).
+
+Now the fleet battery panel (GlassPanel8) and the vehicle row card (GlassPanel9) files.
+
+Now let me re-run swiftlint strictly on all my files to confirm 0 violations.
+
+All 10 files: 0 violations. Now the placeholder scan and a syntax parse, then the full build.
+
+Syntax clean. Now the placeholder scan (exact gate command):
+
+Placeholder scan clean (0). Now let me check the KMP framework staging and generate the Xcode project.
+
+xcodegen succeeded, but the `Shared.xcframework` isn't staged (needed for `import Shared`). Let me check the KMP build setup and attempt to build it.
+
+Java 17 is available. The `Shared.xcframework` must be built (it's a pre-build phase). Let me kick off the KMP build in the background — this can take several minutes.
+
+The KMP build is compiling (first run downloads the Kotlin/Native toolchain). Let me keep waiting while I inspect the ledger structure for the rows I'll add.
+
+The KMP build is still compiling. Let me wait for it to finish.
+
+KMP framework built and staged. Now let me run the full app build, capturing the transcript to grep for my unit's diagnostics.
+
+Build exited 65 (pre-existing baseline, as documented for sibling pages). Let me verify my unit has zero diagnostics in the transcript.
+
+Zero errors in my unit. Now let me confirm my files were actually compiled (not skipped) and characterize the pre-existing baseline errors for the environmental note.
+
+All 10 unit files compiled (referenced in transcript) with 0 errors. The 227 errors are all in pre-existing baseline dirs. Let me characterize them to confirm they're the documented baseline breakage (not caused by my unit).
+
+Confirmed: 190 of 227 errors are the documented `#Preview` macro ambiguity in pre-existing files; my unit authors none and compiled cleanly. This matches the sibling-page baseline. Let me update the ledger and todos.
+
+The round-trip wasn't identical — my re-dump may have reformatted the whole file. Let me check the diff size and fix if needed.
+
+The original uses 2-space indent. Let me restore and re-dump with the correct indent so the diff is only my 2 rows.
+
+Indent=2 round-trips exactly. Let me redo the insertion with indent=2.
+
+Clean 18-line diff. Let me update todos and write the evidence log.
+
+My unit is 1495 lines across 10 files (323% of the 462-line web source) — well above the ≥70% bar. Now writing the evidence log.
+
+Log written. Let me do a final verification: re-lint, confirm parity counts, and review what will be committed.
+
+All green: 0 lint violations, 24 keys, parity 37/37, clean tracked changes. Generated artifacts (xcodeproj, xcframework) are gitignored. Let me stage the allowed files and commit.
+
+Exactly the intended files staged, no strays. Committing now.
+
+Commit landed (13 files, 2075 insertions). Let me verify my navigation approach matches the sibling precedent — checking whether sibling destinations are wired into a central shell I should also update.
+
+Confirmed — sibling pages use the same self-contained route-registration pattern (no central shell wiring), so my approach matches the accepted precedent. Let me finalize todos and clean up.
+
+The task is complete and verified. Let me provide the final summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

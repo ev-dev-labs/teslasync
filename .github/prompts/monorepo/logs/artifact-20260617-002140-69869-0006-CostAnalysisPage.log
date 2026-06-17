@@ -1,0 +1,133 @@
+================================================================================
+p4-apple · P7 · page:charging/CostAnalysis — SwiftUI / HIG
+Native SwiftUI implementation of web CostAnalysisPage (route /charging/costs)
+================================================================================
+
+Honesty Covenant (binding):
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ARTIFACT
+--------------------------------------------------------------------------------
+Parity unit : page:charging/CostAnalysis  (kind=page, requiredCount=7)
+Web route   : /charging/costs   (also /cost-analysis)
+Web source  : web/src/features/charging/pages/CostAnalysisPage.tsx
+Output dir  : apps/apple/TeslaSync/Features/Charging/
+Files added :
+  CostAnalysisPage.swift                — View + phase switch + skeleton + previews
+  CostAnalysisPage.Sections.swift       — success body, orchestrates 11 P3 surfaces
+  CostAnalysisPageModel.swift           — @Observable model (load/refresh/applyUnits)
+  CostAnalysisDataSource.swift          — KMP-core seam (the 2 web hooks)
+  CostAnalysisDerivations.swift         — pure useCostAnalysisData port + context
+  CostAnalysisForecast.swift            — useCostForecast payload (trend + details)
+  CostAnalysisSampleData.swift          — sample/empty/failing data sources
+  CostAnalysisRouteRegistration.swift   — NavigationDestination + factory
+Strings     : apps/apple/Localization/Localizable.xcstrings (+4 costAnalysis.* keys)
+
+--------------------------------------------------------------------------------
+ARCHITECTURE
+--------------------------------------------------------------------------------
+This page is a pure ORCHESTRATOR (ADR-004). Every web cost-analysis sub-component
+already has a native P3 feature view (apps/apple/TeslaSync/feature-views/*); the
+page derives the web useCostAnalysisData projection once (CostAnalysisDerivations)
+and feeds each shared surface through its own in-memory source. Reused existing
+types (no redefinition): ChargingSession, ChargingVehicle, ChargingDateRange,
+CostSummaryStats/UnitContext, MonthlyCostSample/Bucket, CostPerKwhSample,
+ChargerTypeDatum, SavingsCalculatorData, TimeOfUseHourSample, LifetimeCoreStats/
+Metrics/Formatting, EnvironmentalImpactData, CostForecastData, CostForecast,
+CostNarrationInput. SI energy(Wh)/power(W) kept canonical; kWh + unit display
+conversions happen only at the render boundary via Units / the P3 surfaces (ADR-005).
+
+Web region order reproduced in CostAnalysisSections (every <GlassPanel>/region):
+  1 CostSummaryCards   2 MonthlyCostChart + CostPerKwhChart (adaptive pair)
+  3 ChargerTypeBreakdown   4 SavingsCalculator   5 MonthlyCostTable
+  6 TimeOfUseAnalysis   7 AICostForecastNarration   8 CostForecastSection
+  9 ForecastDetails   10 LifetimeSummary + EnvironmentalImpact (adaptive pair)
+Adaptive macOS/iPad (regular) vs iPhone (compact) via horizontalSizeClass (ADR-002/006).
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+Toolchain: Xcode 26.5 (17F42), Swift 6.3.2, SwiftLint, xcodegen 2.45.4, pwsh — all present.
+KMP Shared.xcframework built from apps/shared (gradle :core:assembleSharedXCFramework, BUILD SUCCESSFUL)
+and staged — the framework was an empty .gitkeep at HEAD, so the iOS app target had never been built in this slot.
+
+[1] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Charging -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   ✅ PASS
+
+[2] swiftlint --strict apps/apple/TeslaSync/Features/Charging/*.swift   (the 8 new files)
+    Done linting! Found 0 violations, 0 serious in 8 files.
+    LINT_EXIT=0          ✅ PASS (my files)
+
+[3] xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+    BUILD_EXIT=65        ❌ BLOCKED — pre-existing, repo-wide, OUT-OF-SCOPE breakage.
+    The shared iOS app target does not compile at HEAD (never built — empty Shared.xcframework).
+    Errors are 100% in files this prompt may NOT touch ("Out of Scope (reject): Other pages"):
+      - Duplicate type definitions from incomplete parallel-generation dedup (the HEAD commit
+        "dedupe 11 type collisions from parallel generation" was incomplete):
+          * enum TSSpacing / enum TSRadius  redefined in Features/System/StatusApiDocsPage.swift
+          * extension TSSpacing { static let x2xl } in Features/System/TeslaAccountPageViews.swift
+            (→ 150+ "ambiguous use of 'x2xl'/'md'/'sm'" cascading errors + type-checker crashes)
+          * TirePressureUnit/Status/Thresholds/Convert (Features/VehicleSystems/* vs
+            Features/System/SystemStatusModels.swift vs dashboard-widgets/*) — DIVERGENT shapes
+          * HeroStatus / StatusHero* (shared-surfaces/StatusHero*) — DIVERGENT shapes
+          * duplicate filename ScheduledExportsPanel.swift (feature-views vs Features/System)
+      - access-level + API-mismatch errors in DBHealthPage, BatteryRadialGaugeModel,
+        ChargingSession.startTs, TirePressureThresholds.normalMin/MaxPa (other slots' pages)
+      - Debug only: module-wide "ambiguous use of 'Preview'" (SwiftUI vs UIKit #Preview macro
+        on the iOS 26 SDK) across ~227 *.Previews.swift in files this prompt does not own.
+
+    EVIDENCE that the CostAnalysis page itself is correct (not a skip-and-assume):
+      Temporarily resolving ONLY the two duplicate-token definitions above (in others' files)
+      dropped the module error count 393 → 135 and produced ZERO errors attributed to any
+      apps/apple/TeslaSync/Features/Charging/* file. The temp edits were reverted; this prompt's
+      committed diff touches only its allowed files. My code type-checks within the module;
+      the residual 135 errors are entirely pre-existing collisions in other features.
+
+[4] xcodebuild ... test
+    TEST_EXIT=(not run) — blocked by [3] (build is a prerequisite for the test action).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=7
+--------------------------------------------------------------------------------
+[x] state  — loading
+      CostAnalysisPage.swift :: CostAnalysisPageModel.Phase.loading →
+      CostAnalysisPage.content (case .loading) → struct CostAnalysisSkeleton (redacted
+      header + 6 summary tiles + trend pair + table). Web LoadingSkeleton parity.
+[x] state  — empty
+      CostAnalysisPage.swift :: Phase.empty → CostAnalysisPage.emptyView →
+      TSEmptyState(title:"costAnalysis.empty.title", message:"costAnalysis.empty.message",
+      systemImage:"dollarsign.circle"). Web sessions.length===0 branch.
+[x] state  — success
+      CostAnalysisPage.swift :: Phase.ready → CostAnalysisPage.readyView (header +
+      CostAnalysisSections) ; CostAnalysisPage.Sections.swift :: struct CostAnalysisSections
+      composes all 11 P3 surfaces from CostAnalysisProjection (CostAnalysisDerivations.project).
+[x] string — costAnalysis.title
+      CostAnalysisPage.swift :: TSPageTitle("costAnalysis.title") + .navigationTitle(Text(
+      "costAnalysis.title")) ; Localizable.xcstrings key "costAnalysis.title" = "Cost Analysis".
+[x] string — costAnalysis.subtitle
+      CostAnalysisPage.swift :: header → Text("costAnalysis.subtitle") ;
+      Localizable.xcstrings key "costAnalysis.subtitle" =
+      "Electricity cost trends, gas savings, and charging economics".
+[x] string — costAnalysis.empty.title
+      CostAnalysisPage.swift :: emptyView → TSEmptyState(title:"costAnalysis.empty.title") ;
+      Localizable.xcstrings key "costAnalysis.empty.title" = "No Charging Data".
+[x] string — costAnalysis.empty.message
+      CostAnalysisPage.swift :: emptyView → TSEmptyState(message:"costAnalysis.empty.message") ;
+      Localizable.xcstrings key "costAnalysis.empty.message" =
+      "Start charging your vehicle to see cost analysis and savings trends.".
+
+PARITY_COVERED=7
+--------------------------------------------------------------------------------
+All 7 parity items are implemented and validated (placeholder + swiftlint --strict clean;
+0 type-check errors attributed to the page). The apple ledger row is intentionally NOT
+flipped to "covered/done" because the build+test gate is red for pre-existing,
+out-of-scope reasons — marking it done would violate covenant #1 (No red-as-green).
+
+EXIT=65
+STATUS=BLOCKED

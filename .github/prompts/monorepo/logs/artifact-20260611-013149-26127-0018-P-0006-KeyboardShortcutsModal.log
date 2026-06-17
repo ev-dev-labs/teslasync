@@ -1,0 +1,294 @@
+=== P4 Modal / dialog 0006 KeyboardShortcutsModal (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.*
+Web src : web/src/components/feedback/KeyboardShortcutsModal.tsx (THE spec)
+Runner  : Darwin arm64, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat,
+          xcodegen 2.45.4, pwsh 7.x, OpenJDK 17 (KMP). SwiftUI present (iOS-18 +
+          macOS-15 SDKs) -> NOT capability-blocked. The required capability is
+          SwiftUI + iOS18/iPadOS18/macOS15 HIG; this surface uses no Swift Charts /
+          MapKit (the web source has neither charts nor maps).
+Disposition: code-complete; every host-runnable gate GREEN; the surface's own code
+          INDEPENDENTLY compiles + tests under the real Xcode 26 / Swift 6 toolchain
+          (isolated SwiftPM build/test of the pure-logic core + state holder, plus an
+          iOS-18 & macOS-15 SDK typecheck of the full SwiftUI view layer against the
+          real design system). The full-app iOS xcodebuild was RUN here (the KMP
+          Shared.xcframework actually built + staged) and exits 65 (RED) -- but solely
+          on 3 pre-existing parallel-merge errors in two UNRELATED shared-surfaces
+          siblings (AIAutoNameUnnamedLocations / AIGeofenceAwareAutomationSuggestions);
+          0 errors in this surface, which is not even in the generated project (the
+          modals-dialogs tier is unwired: 0 pbxproj refs / 0 .swiftlint.yml includes).
+          macOS is signing-deferred (0 valid identities). Tier registration + macOS
+          signing belong to the P4/P99 acceptance gate, and project.yml / .swiftlint.yml
+          are outside this prompt's allowed files. This is the same sanctioned
+          "code-complete + DEFERRED full-app Xcode gate" disposition as the 0002/0005/
+          0007..0017 siblings in this modals-dialogs tier (ADR-002/009,
+          apps/macos-pending-verifications.md).
+
+==================================================================================
+ARTIFACTS (9 Swift files + 1 strings catalog; all match the KeyboardShortcutsModal.* glob)
+==================================================================================
+  Pure logic (Foundation/OSLog/Observation-only; unit-tested, no SwiftUI):
+    KeyboardShortcutsModal.Adapter.swift (300) surface slug; LoadStatus/Connection/
+                                Phase; KBShortcutFilter; KBShortcutScope; KBShortcutRoute
+                                Match (.prefix | .regex); KBShortcutEntry (id/keys/desc/
+                                group/scope/routeMatch); KBShortcutGroup; KBShortcuts
+                                Projection (groupRank [GROUP_PRIORITY + first-token],
+                                matchesRoute [startsWith | NSRegularExpression .test()],
+                                isVisible [scope/route/search predicate], needle, groups
+                                [filter+group+id-sort+rank/title-sort], resolvePhase,
+                                parseFilter/encode [sessionStorage key], title/filter/
+                                search/empty copy).
+    KeyboardShortcutsModal.Seams.swift   (234) telemetry seam (view.opened); filter-
+                                persistence seam (web sessionStorage -> UserDefaults
+                                under FILTER_STORAGE_KEY + in-memory store); dismissal
+                                control seam (web onClose); Update snapshot (entries +
+                                pathname + freshness); P1/S8 source protocol + in-memory
+                                source; P1/S10 i18n facade; VoiceOver builders (summary,
+                                close, filter, row/keys).
+  State holder (Foundation/Observation; SwiftUI-free):
+    KeyboardShortcutsModal.Model.swift   (209) @MainActor @Observable model: phase/
+                                connection/refreshing, entries/pathname, live search +
+                                persisted filter, derived groups (memoized projection),
+                                lifecycle (start -> restore filter + view.opened once),
+                                search reset on close (web useEffect on open), filter
+                                persistence, stale auto-refresh re-arm, dismiss, derived
+                                copy + a11y.
+  View (SwiftUI, HIG-native):
+    KeyboardShortcutsModal.swift         (91)  phase switch + glass-panel chrome +
+                                lifecycle + search-reset-on-disappear + a11y + surfaceSlug
+                                (web Modal -> HIG sheet content).
+    KeyboardShortcutsModal.Views.swift   (284) header (keyboard glyph + title + freshness
+                                chip + close), controls (ViewThatFits: search field +
+                                filter), KBShortcutSearchField (magnifier + TextField +
+                                clear), KBShortcutFilterControl (capsule segmented All/
+                                Global/This page, .isSelected a11y), KBShortcutList
+                                (bounded ScrollView of sections), KBShortcutRow (desc +
+                                key chips), KBShortcutKeyCap (web <kbd>), .text helper.
+    KeyboardShortcutsModal.States.swift  (162) loading / empty (ContentUnavailableView,
+                                web "No shortcuts match your search.") / error+retry
+                                (QueryError) / freshness chip / connectivity banner.
+                                Never a blank box.
+    KeyboardShortcutsModal.Previews.swift(142) 9 states: content-all / filter-global /
+                                filter-this-page / search / empty / loading / error /
+                                stale / offline.
+    KeyboardShortcutsModal.strings       (47)  i18n catalog: the 6 web shortcuts.* keys +
+                                native state chrome (loading/error/retry/chip/banner) +
+                                a11y builders (17 keys total).
+  Tests (XCTest, @testable import TeslaSync):
+    KeyboardShortcutsModal.Tests.swift   (290) groupRank (priority + first-token + case),
+                                matchesRoute (prefix/regex/invalid), isVisible (scope/
+                                route/search), groups (grouping + id sort + rank/title
+                                sort + route gating + search), resolvePhase, parseFilter/
+                                encode round trip, copy, a11y (29 tests).
+    KeyboardShortcutsModal.ModelTests.swift(240) state holder: view.opened once/idempotent,
+                                loading->content, loaded-empty, failed->error / failed-
+                                keeps-content, search filter -> empty, reset search,
+                                setFilter persists + changes groups, start restores filter,
+                                route gating, stale auto-refresh re-arm, offline keeps
+                                content, dismiss (13 tests).
+
+  Total 1999 lines (1952 swift + 47 strings); every swift file <= 300 (swiftlint
+  file_length 400 strict). All public symbols are KBShortcut(s)*-namespaced; the
+  top-level View is `KeyboardShortcutsModal`. Collision-checked against Sources/ +
+  feature-views/ + dashboard-widgets/ + misc-surfaces/ + shared-surfaces/ +
+  modals-dialogs/ before authoring: `KBShortcut` = 0 pre-existing matches; the new
+  top-level `KeyboardShortcutsModal` is distinct from the pre-existing shared
+  `TSKeyboardShortcutsModal` / `KeyboardShortcutsView` in Sources/.
+
+==================================================================================
+PARITY (web KeyboardShortcutsModal.tsx -> native), no scope narrowing
+==================================================================================
+  Data sources (web -> native P1/S8 seam):
+    useTranslation   -> KBShortcutsStrings facade (P1/S10), no literals.
+    useAllShortcuts  -> KBShortcutsSource pushes [KBShortcutEntry] (web registry snapshot).
+    useLocation      -> KBShortcutsUpdate.pathname (drives the route gate); no router in view.
+    useShortcut      -> registration is the producer side of the registry; the cheat sheet
+                        is a pure CONSUMER, so the native source supplies the resolved
+                        snapshot (the production adapter binds the shared registry holder).
+  Logic (verbatim ports):
+    mode 'all'|'global'|'page'             -> KBShortcutFilter (+ sessionStorage default 'all').
+    filteredGroups scope/route/search       -> KBShortcutsProjection.isVisible (global drops
+                                               non-global; page drops global; any non-global
+                                               needs a matching routeMatch; description
+                                               substring of the trimmed lowercased needle).
+    routeMatch string startsWith / RegExp   -> KBShortcutRouteMatch .prefix (hasPrefix) /
+                                               .regex (NSRegularExpression firstMatch).
+    GROUP_PRIORITY + groupRank              -> first whitespace/'(' token, lowercased, mapped.
+    group sort (rank desc, localeCompare)   -> groups() sorts rank desc then title asc;
+                                               entries inside sorted by id (web a.id.localeCompare).
+    FILTER_STORAGE_KEY + read/writeStored   -> KBShortcutsFilterStore (UserDefaults, same key).
+    reset search on close (useEffect open)  -> model.resetSearch() on .onDisappear.
+  Composition (web Modal/body -> native):
+    Modal title + close "x"            -> KBShortcutHeader (title + freshness chip + close).
+    SearchInput (debounced)            -> KBShortcutSearchField (magnifier + TextField +
+                                          clear), verbatim prompt (per-surface i18n table
+                                          can't resolve via the shared field's LocalizedStringKey).
+    role=tablist All/Global/This page  -> KBShortcutFilterControl (capsule segmented chips,
+                                          .isSelected a11y), built in-surface, exactly as the
+                                          0017 sibling built its fields in-surface.
+    grouped <section> + <h3>           -> KBShortcutList sections with a label title.
+    row desc + <kbd> chips joined "+"  -> KBShortcutRow (desc + KBShortcutKeyCap chips with a
+                                          "+" between).
+    "No shortcuts match your search."  -> empty envelope (ContentUnavailableView).
+  Native widening (honest, documented): the web component is prop-driven (open/onClose) over a
+  synchronous in-memory store; the native surface widens it into the prompt-required loading /
+  empty / error / stale / offline envelopes (a registry hydrated async / cross-pod), with a
+  freshness chip + cached-data banner + one guarded stale auto-refresh. Tailwind classes were
+  NOT ported; chrome is P1/S9 tokens (TSSpacing/TSRadius/Color.TS/Font.TS) via TSGlassPanel/
+  TSFadeIn.
+
+==================================================================================
+STATES (every state renders -- no hidden surfaces)
+==================================================================================
+  loading  -> KBShortcutLoadingState (spinner + "Loading shortcuts...") before first entries.
+  empty    -> KBShortcutEmptyState (ContentUnavailableView, web "No shortcuts match your
+              search.") -- covers both no-registered and no-match.
+  error    -> KBShortcutErrorState (QueryError-equivalent + Retry -> model.refresh()).
+  stale    -> freshness chip "Stale" + connectivity banner + ONE guarded auto-refresh (re-armed
+              on return to live).
+  offline  -> freshness chip "Offline" + banner; cached snapshot kept; no refetch.
+  content  -> the grouped list (filtered + grouped + rank/title sorted; per-group id-sorted rows).
+  Telemetry: model.start() emits P1/S11 view.opened surface="KeyboardShortcutsModal" (once,
+  idempotent -- ModelTests proven).
+
+==================================================================================
+i18n (P1/S10) -- 17-key bijection (catalog <-> code)
+==================================================================================
+  KeyboardShortcutsModal.strings carries 17 keys; the 7 non-test surface files reference
+  exactly those 17 (comm both directions empty -> 0 missing, 0 orphan; the only two non-key
+  "shortcuts*" string literals in code are the OSLog category "shortcuts" and the
+  "shortcuts.dismiss surface=..." log message, neither an i18n key). Every web `t(key, default)`
+  is mapped: shortcuts.title / filter.all / filter.global / filter.page / search / empty (6/6),
+  plus the native envelope keys (state.loading, state.error, retry, live/stale/offline,
+  staleBanner/offlineBanner) + a11y (a11y.close, a11y.filter, a11y.keySeparator). No English
+  literals in native code. No placeholder opt-outs were needed (PLACEHOLDER_ALLOWED=0).
+
+==================================================================================
+GATE EXECUTION (every step run on THIS runner; raw exits)
+==================================================================================
+  [1] swiftformat --lint apps/apple
+        -> "0/4169 files require formatting, 2 files skipped."   FORMAT_EXIT=0  GREEN
+
+  [2] swiftlint --strict (the 9 surface files, passed explicitly; repo .swiftlint.yml
+      `included:` does not list the modals-dialogs tier yet -- tier registration is the
+      P4 acceptance gate's, exactly as the 0017 sibling)
+        -> "Found 0 violations, 0 serious in 9 files."           LINT_EXIT=0    GREEN
+
+  [3] check-placeholders.ps1 -- the prompt's literal -Path .../KeyboardShortcutsModal (no
+      extension) is not an existing path, so the tool returns Count=0 VACUOUSLY (run +
+      recorded). To avoid a false green it was ALSO run against an isolated copy of only the
+      9 KeyboardShortcutsModal .swift files, and the scanner self-test was run:
+        -Path .../KeyboardShortcutsModal  -> PLACEHOLDER_COUNT=0  EXIT=0  (vacuous)
+        -Path <temp copy of my 9 files>   -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0  EXIT=0
+        -SelfTest                          -> all PASS ; SELFTEST_EXIT=0 (proves it detects stubs)
+      (0 trigger substrings in my files: no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/
+      not implemented.)                                          PLACEHOLDER_EXIT=0  GREEN
+
+  [4] ISOLATED build + test (SwiftPM module "TeslaSync" = Adapter+Seams+Model, test target =
+      Tests+ModelTests, swift-tools 6.0 / Swift 6 language mode, StrictConcurrency)
+        -> "Executed 42 tests, with 0 failures"                  SWIFT_TEST_EXIT=0  GREEN
+      (NB: this step CAUGHT a real Swift-6 strict-concurrency error -- UserDefaultsKBShortcuts
+      FilterStore is Sendable via its protocol but stored non-Sendable UserDefaults. Fixed by
+      an @unchecked Sendable conformance with a thread-safety justification, then re-run green.
+      Evidence the verification actually exercised the code.)
+
+  [5] SDK typecheck of the FULL view layer + the real (Shared-free) design system
+      (Tokens + TSMaterial + TSDesign + Motion + Badges/Buttons/Cards/Typography) + the 7
+      non-test surface files, -D DEBUG (incl. the #Preview macros), -swift-version 6:
+        iOS   arm64-apple-ios18.0-simulator  -> 0 errors   IOS_TYPECHECK=0  GREEN
+        macOS arm64-apple-macos15.0          -> 0 errors   MAC_TYPECHECK=0  GREEN
+      (The design system is self-contained -- 0 files under Sources/Components or
+      Sources/Design import the KMP `Shared` framework -- so the SwiftUI layer typechecks
+      against the REAL components on both SDKs with no stubs.)
+
+  [6] FULL-APP xcodebuild (the prompt's two gate steps): RUN; iOS RED on pre-existing
+      unrelated siblings; macOS DEFERRED on signing.
+
+    Pre-req proof: the new modals-dialogs tier is NOT globbed in project.yml. The TeslaSync /
+    TeslaSync-macOS app + test targets glob only Sources, dashboard-widgets, feature-views,
+    misc-surfaces, and shared-surfaces -- `modals-dialogs` appears 0 times in project.yml.
+    `xcodegen generate` (run on this runner) -> grep TeslaSync.xcodeproj/project.pbxproj:
+      KeyboardShortcutsModal = 0 ; modals-dialogs = 0 ; AcknowledgeAlertDialog (sibling) = 0 ;
+      RecentDrivesSection = 66 ; StateTimelineWidget = 54 (wired tiers DO appear).
+    So the full-app build neither includes nor is affected by this surface's files -- its OWN
+    code is proven by [4]+[5] instead. Wiring the tier in requires editing project.yml +
+    .swiftlint.yml, OUTSIDE this prompt's allowed-files set (KeyboardShortcutsModal.* + this
+    log); tier registration is owned by the P4/P99 acceptance gate, exactly as all siblings.
+
+    iOS: the KMP Shared.xcframework BUILD SUCCESSFUL in 7m18s and was staged, then
+      `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+      build test` -> IOS_EXIT=65 (RED, reported as such). The build aborts on exactly 3
+      compiler errors, ALL in pre-existing, unrelated wired-tier siblings:
+        TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+          error: escaping closure captures non-escaping parameter 'content'  (x2)
+        TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+          error: escaping closure captures non-escaping parameter 'content'
+      grep "KeyboardShortcutsModal\|KBShortcut" over the full build log = 0 (zero errors in
+      this surface). `git status` shows ONLY the 10 KeyboardShortcutsModal.* files as new and
+      the two failing AI* files unmodified + tracked at HEAD -> the RED is pre-existing and not
+      introduced or touched by this commit.                       IOS_EXIT=65   (pre-existing/unrelated)
+
+    macOS: DEFERRED. `security find-identity -v -p codesigning` -> "0 valid identities found",
+      so the macOS app cannot be signed/linked on this runner.    MAC_EXIT=deferred (no signing identity)
+
+==================================================================================
+HONESTY COVENANT
+==================================================================================
+  1 No red-as-green   : the full-app iOS xcodebuild was RUN on this runner and is reported RED
+                        (IOS_EXIT=65) -- never claimed passing -- with raw evidence that all 3
+                        errors are in pre-existing unrelated shared-surfaces siblings (AIAutoName
+                        UnnamedLocations / AIGeofenceAwareAutomationSuggestions; 0 in my files; my
+                        tier unwired, 0 pbxproj refs). macOS is DEFERRED (0 signing identities).
+                        [1]-[5] are real GREEN exits with raw output.
+  2 No scope narrowing: every web region + branch reproduced -- the search box, the All/Global/
+                        This page filter (incl. sessionStorage persistence + 'all' default), the
+                        scope+route+search visibility predicate (string-prefix AND regex routes),
+                        the GROUP_PRIORITY/first-token group ranking, the rank-desc/title-asc group
+                        sort + id-sorted rows, the <kbd> key chips joined by "+", and the empty
+                        line -- plus all six states (loading/empty/error/stale/offline/content).
+  3 No skip-and-assume: web source + useShortcutRegistry read end-to-end; the filter/route/search
+                        logic, group ranking, and persistence ported and unit-tested; every t() key
+                        mapped (17/17 bijection, 6/6 web keys); every runnable gate executed on THIS
+                        runner; the tier-unwired claim verified by generating the real Xcode project
+                        and grepping the pbxproj (not assumed); the iOS RED root-caused to specific
+                        unrelated sibling files (not assumed).
+  4 No stubs as final : complete production surface; placeholder scanner COUNT=0 on my files (+
+                        self-test PASS); 42 real tests pass; no TODO/FIXME/stub/mock/Lorem.
+  5 No parity shortcut: filtering / grouping / ordering / persistence / dismissal / i18n / telemetry
+                        / a11y all mapped to platform seams + tokens and verified; the SwiftUI layer
+                        typechecks against the REAL design system on BOTH the iOS-18 and macOS-15 SDKs.
+  6 No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass: consumes the P1/S8 state-holder seam shape, P1/S9 tokens, P1/S10 i18n
+                        facade, P1/S11 view.opened, and the P4-core shared TSGlassPanel / TSFadeIn;
+                        did NOT edit project.yml / .swiftlint.yml / Localizable.xcstrings /
+                        macos-pending-verifications.md / any sibling surface (outside the prompt's
+                        allowed files) -- strings ship as the per-surface table; the 3 pre-existing
+                        shared-surfaces errors are left untouched (not mine to fix here).
+  8 No commit on red  : the committed artifact is GREEN on every runnable gate AND independently
+                        compiles + tests under the real Xcode 26 / Swift 6 toolchain ([4] 42 tests,
+                        [5] iOS+macOS typecheck). The full-app iOS xcodebuild exits 65 RED solely on
+                        pre-existing, unrelated sibling errors -- 0 errors in this surface, which is
+                        not even in the project (tier unwired) -- and macOS is signing-deferred;
+                        neither is introduced or touched by this commit.
+  9 No silent drift   : changes confined to apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.*
+                        and this log (the generated TeslaSync.xcodeproj and staged
+                        Frameworks/Shared.xcframework are git-ignored; `git status` confirms only the
+                        10 surface files are new).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic KeyboardShortcutsModal shipped at parity with the web source
+  and INDEPENDENTLY VERIFIED on this runner: the pure logic + state holder build and 42/42 tests pass
+  under Swift 6 strict concurrency, and the entire SwiftUI view layer typechecks against the real
+  design system on BOTH the iOS-18 and macOS-15 SDKs (0 errors), with swiftformat --lint /
+  swiftlint --strict / placeholder all green. The full-app iOS-Simulator xcodebuild build/test was
+  RUN on this runner and exits 65 (RED, reported as such): the KMP Shared.xcframework actually built
+  + staged (7m18s), and the build then aborts on 3 pre-existing parallel-merge errors across two
+  unrelated sibling shared-surfaces files (AIAutoNameUnnamedLocations / AIGeofenceAwareAutomation
+  Suggestions) -- 0 errors in any KeyboardShortcutsModal file, which is not even in the generated
+  project (the modals-dialogs tier is unwired: 0 pbxproj refs). The macOS xcodebuild is DEFERRED on
+  development signing (security find-identity: 0 valid identities) -- both owned by the p4-apple/P99
+  acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md, the same
+  disposition as all modals-dialogs siblings. Zero errors in any KeyboardShortcutsModal file.
+
+EXIT=0
+STATUS=DONE

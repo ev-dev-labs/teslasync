@@ -1,0 +1,121 @@
+=== P4 Feature view 0250 OperationsSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/OperationsSection.*
+Web src : web/src/features/system/components/status/OperationsSection.tsx
+Tier    : Feature view (composed system-status accordion below page level)
+ADRs    : ADR-002 (shared SwiftUI source) · ADR-004 (KMP Shared core) · ADR-009
+Host    : macOS (Darwin) · Xcode 26.5 (17F42) · Apple Swift 6.3.2
+          xcodegen 2.45.4 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh ·
+          iPhoneSimulator 26.5 SDK + MacOSX 26.5 SDK
+
+--- WHAT SHIPPED (8 files, established feature-view multi-file pattern) -------------
+  OperationsSection.Adapter.swift   (268 ln) models (NotificationStatsSnapshot,
+        NotificationLogItem, AuditLogItem) + delivery-status classification (web
+        getStatusIcon/statusTextClass) + formatters number/int/percent/dateTime (ports
+        of numberFormat.ts + dateFormat.ts) + success-rate derivation + channel summary
+        + a11y builders. Pure (no store/bundle/view).
+  OperationsSection.Model.swift     (319 ln) P1/S11 telemetry seam, connection axis,
+        input snapshot, resolved + projection, P1/S8 source seam + in-memory source,
+        @Observable model (stale one-shot auto-refresh), P1/S10 strings facade.
+  OperationsSection.swift           (171 ln) main View: bespoke accordion chrome
+        (bell icon/title/description/success-rate badge/chevron) + freshness toolbar +
+        phase switch. surfaceSlug = "OperationsSection".
+  OperationsSection.Views.swift     (335 ln) header badge, freshness chip + banner,
+        delivery block (stat-card grid + success radial gauge + recent-notifications
+        table | empty states) + audit block (table | EmptyState), loading + error chrome.
+  OperationsSection.Tables.swift    (186 ln) notification-log TSDataTable (status·title·
+        message·time) + audit TSDataTable (time·action·resource·details) + comparators.
+  OperationsSection.Previews.swift  (148 ln) data / logs-empty / stats-empty / loading /
+        error / stale / offline previews (DEBUG).
+  OperationsSection.strings         (i18n) table "OperationsSection": every web t() key
+        + native chrome (description, freshness/empty/error copy, accordion a11y).
+  OperationsSection.Tests.swift     (399 ln) 8 suites / 37 tests.
+
+  States reproduced (no hidden surface): loading (web two-skeleton h-32 over h-48) ·
+  ready (delivery block — stats → 4 metric cards + success radial gauge + recent-
+  notifications table, or the web "No data available" / "No recent notifications" empty,
+  the section is never hidden — over the audit block — table or the web "No audit log
+  entries" EmptyState) · error (QueryError peer + retry) · stale + offline (freshness
+  chip + banner + one-shot auto-refresh on the stale transition).
+
+  Data binding: the three web polling useQuery feeds (notification stats 15s,
+  notification logs 15s, audit logs 30s) coalesce into one `OperationsInput` pushed by
+  the P1/S8 `OperationsSource` seam; the view performs zero networking.
+
+--- HOST-RUNNABLE GATES (all green) ------------------------------------------------
+  swiftformat --lint <7 .swift> ............... 0/7 require formatting               FORMAT_EXIT=0
+  swiftlint lint --strict <7 .swift> .......... Found 0 violations, 0 serious        LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_ALLOWED=0 COUNT=0        PLACEHOLDER_EXIT=0
+        (scanned all 7 shipped .swift; -SelfTest PASS — gate proven to detect stubs)
+  swiftc -typecheck iPhoneSimulator (target arm64-apple-ios18.0-simulator,
+        swift6, -strict-concurrency=complete, real SDK, bound against the REAL shared
+        Sources/Components + Sources/Design + design Tokens) ..................... IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (target arm64-apple-macos15.0,
+        swift6, -strict-concurrency=complete, real SDK, same dep set) ........... MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6,
+        bound against the REAL shared Components + design Tokens) ............... 37/37 passed, TEST_EXIT=0
+      → OperationsFormatNumberTests · OperationsFormatDateTests ·
+        OperationsStatusKindTests · OperationsSuccessRateTests ·
+        OperationsProjectionTests · OperationsResolvedTests ·
+        OperationsModelTests · OperationsAccessibilityTests
+  xcodegen generate (project spec re-generated with the 8 new files; all wired into the
+        iOS/macOS app + co-located XCTest targets) ............................. XCODEGEN_EXIT=0
+
+  Typecheck dep-set note: the surface is bound against the REAL shared component library
+  and design tokens. The single file Sources/Components/DataDisplay/UnitFormatters.swift
+  is excluded from the host typecheck/test dep-set because it depends on `Units` from the
+  KMP `Shared` xcframework (the deferred artifact below) and is NOT a dependency of this
+  surface — OperationsSection uses no unit-conversion component.
+
+--- DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ------------
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED state in the shared app
+    target — ZERO of which originates in this surface. A deterministic single-target
+    build (no scheme pre-action) emits exactly one error, and it is the framework, not
+    this code:
+
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build
+        → error: There is no XCFramework found at
+          '/…/apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **
+
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep). The
+        scheme pre-action builds it via the Kotlin/Native Gradle toolchain
+        (apps/shared/gradlew :core:assembleSharedXCFramework) — tracked macOS-pending in
+        apps/macos-pending-verifications.md.
+      • The feature-view *.Tests.swift files (this surface's + every sibling's) are
+        assigned to the app target by the current XcodeGen spec and `@testable import
+        TeslaSync` into it — an integration-wiring gap shared by all ported surfaces.
+      • No macOS development-signing identity (ADR-012).
+
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above, EXIT=0 both) and its logic runs green (37/37 XCTest under Swift 6
+    strict concurrency). The full-app build/test is the same deferral recorded for
+    p4-apple/feature-views/0242-DataPipelineSection (and 0010-ToolCard, 0180-
+    AlertMessageEditor); it belongs to the p4-apple/P99-0001-apple-acceptance-gate on a
+    macos-latest runner with signing.
+
+--- ACCEPTANCE CRITERIA ------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline).
+  [x] Hooks (useQuery ×3: notification stats + notification logs + audit logs) bind to the
+      shared P1/S8 `OperationsSource` seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (OperationsSection.strings).
+  [x] Accessibility labels present on every interactive element (accordion toggle, refresh,
+      status rows, badge) + per-row summaries; Dynamic Type + reduce-motion honoured via
+      shared components.
+  [x] Tests: adapter unit tests + projection/model per-state tests + a11y label tests (37 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [x] Telemetry: `view.opened` emitted with surface slug "OperationsSection" (P1/S11) — asserted by test.
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers
+      above); host-runnable equivalents (real-SDK typecheck both platforms + 37/37 XCTest +
+      lint/format/placeholder + xcodegen) green.
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+TEST_EXIT=0
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE

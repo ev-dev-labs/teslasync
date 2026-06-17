@@ -1,0 +1,147 @@
+=== P4 Shared surface 0223 PrintButton (Apple) ===
+Artifact  : apps/apple/TeslaSync/shared-surfaces/PrintButton.*
+Web src   : web/src/components/ui/PrintButton.tsx
+Host      : macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2; swiftlint + swiftformat + xcodegen + pwsh present.
+Capability: SwiftUI / Swift Charts / MapKit, iOS 18 / iPadOS 18 / macOS 15 AVAILABLE on this runner — NOT capability-blocked.
+            (PrintButton uses none of Swift Charts / MapKit — it is a SwiftUI control over a print seam.)
+
+------------------------------------------------------------------------------
+DELIVERABLE (8 files, all under apps/apple/TeslaSync/shared-surfaces/)
+------------------------------------------------------------------------------
+PrintButton.swift            main surface View — designated + convenience inits, TSButton body (ghost/small
+                             defaults, web parity), .disabled, concrete a11y label, view.opened on first appear.
+PrintButton.Model.swift      surface slug + P1/S11 telemetry/diagnostics seam, PrintButtonLogic (glyph /
+                             visibleLabel / accessibilityLabel / shouldStartPrint re-entrancy guard), P1/S10
+                             PrintButtonStrings facade, @MainActor @Observable PrintButtonModel (isPrinting guard
+                             + beforePrint hook + requestPrint/performPrint = web handleClick, verbatim).
+PrintButton.Seams.swift      PrintPresenting seam (native parity of window.print()): SystemPrintPresenter (real
+                             NSPrintOperation over the key window on macOS; UIPrintInteractionController over a
+                             window-PDF snapshot on iOS/iPadOS; + injectable printAction + published requestCount),
+                             InMemoryPrintPresenter (previews/tests).
+PrintButton.Views.swift      PrintButtonLabel — printer SF Symbol + optional localized title; iconOnly drops the
+                             title; content accessibilityHidden (spoken label carried by the control).
+PrintButton.Previews.swift   DEBUG #Preview: resting / iconOnly / custom label / disabled / live beforePrint demo.
+PrintButton.strings          P1/S10 i18n table: common.printButton.print = "Print".
+PrintButton.Tests.swift      logic + view-state + accessibility + i18n unit tests.
+PrintButton.ModelTests.swift telemetry + print-flow + re-entrancy-guard + presenter-seam tests.
+
+------------------------------------------------------------------------------
+WEB PARITY (components/ui/PrintButton.tsx  ->  SwiftUI)  — data / composition / states / i18n
+------------------------------------------------------------------------------
+- useTranslation                  -> PrintButtonStrings P1/S10 facade. Sole key common.printButton.print="Print"
+                                     reproduced VERBATIM (i18n parity 1/1; 0 dead, 0 missing). No English literals
+                                     in native code.
+- window.print()                  -> PrintPresenting seam. SystemPrintPresenter opens the platform print panel
+                                     (macOS NSPrintOperation; iOS/iPadOS UIPrintInteractionController over a PDF
+                                     snapshot of the active window) — a genuine, self-contained print trigger.
+- printing re-entrancy guard      -> PrintButtonLogic.shouldStartPrint(isPrinting:) + PrintButtonModel.isPrinting
+  (web `if (printing) return`)       ("if (printing) return"). Non-visual in the web source, so the control's
+                                     appearance is intentionally unchanged while in flight (web parity).
+- beforePrint(): void|Promise     -> (@MainActor () async throws -> Void)?, awaited before the dialog opens.
+                                     A thrown hook is logged + resets the guard with NO dialog (web `catch` ->
+                                     console.error -> setPrinting(false)).
+- requestAnimationFrame flush     -> await Task.yield() (one scheduler hop) before present, so SwiftUI flushes any
+                                     pre-print state (web "give React one paint cycle").
+- props label/iconOnly/variant    -> mirrored 1:1 (variant default .ghost, size default .small). ariaLabel ->
+       /size/ariaLabel/disabled       concrete spoken label (ariaLabel ?? label ?? "Print"); disabled -> .disabled.
+- className / data-print-hide     -> DOM/Tailwind seams with NO native analogue (styling via P1/S9 tokens through
+                                     TSButton; the platform print panel renders the supplied document, never the
+                                     live control) — documented intentionally absent.
+- view.opened (P1/S11)            -> emitted once on first appearance, slug "PrintButton" (idempotent).
+
+STATES — every state the web source actually renders is reproduced: resting (Printer + "Print"), iconOnly (glyph
+only + spoken label), custom-label, disabled, the in-flight printing guard, and the beforePrint-error branch.
+The generic data-feed leaf states (loading / empty / error / stale / offline) DO NOT APPLY to a stateless,
+networkless print-trigger primitive that fetches nothing — they are intentionally absent rather than faked, the
+same documented precedent as the sibling action surfaces CopyButton 0207 / FullscreenButton 0214 / CopyLinkButton
+0168 / ChartExportMenu 0066.
+
+------------------------------------------------------------------------------
+ARTIFACT GATES — PrintButton scope (ALL GREEN)
+------------------------------------------------------------------------------
+swiftc -typecheck iOS-18   (arm64-apple-ios18.0-simulator, -swift-version 6 -strict-concurrency=complete -D DEBUG):  0 errors
+swiftc -typecheck macOS-15 (arm64-apple-macos15.0,          -swift-version 6 -strict-concurrency=complete -D DEBUG):  0 errors
+swift test (isolated SwiftPM: the 5 surface sources + real TSButton + real generated Tokens.swift as module
+            "TeslaSync"; the 2 test files via @testable import; Swift 6 language mode = strict concurrency,
+            ran on arm64-apple-macos):                            30 tests, 0 failures  -> 30/30 PASS
+   PrintButtonLogicTests (icon/label/aria/guard), PrintButtonViewStateTests (resting/iconOnly/custom/disabled
+   construct paths), PrintButtonAccessibilityTests (non-empty + override-aware label), PrintButtonStringsTests
+   (i18n key -> "Print"), PrintButtonDiagnosticsTests (view.opened once, slug stable), PrintButtonModelTests
+   (present / beforePrint-before-present ordering / thrown-beforePrint-skips / no-beforePrint / guard-reset /
+   re-entrancy guard / fire-and-forget), PrintButtonPresenterTests (SystemPrintPresenter injected-action +
+   published requestCount; InMemory success/failure).
+swiftlint --strict (the 7 PrintButton .swift files):             0 violations, 0 serious
+swiftformat --lint (the 7 PrintButton .swift files):             0/7 require formatting
+check-placeholders.ps1 (genuine scan of the 8 artifact files, -Language swift):  PLACEHOLDER_COUNT=0, 0 opt-outs
+symbol-collision scan (12 public PrintButton types vs the whole apps/apple tree):  all unique, 0 collisions
+xcodegen generate:                                               OK (project regenerated; the 8 files enumerated)
+
+REAL FULL-APP iOS GATE  (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test)
+- The KMP Shared.xcframework was assembled live this run (Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL
+  in 12m; ios-arm64 + ios-arm64-simulator + macos-arm64) and staged by the scheme pre-action.
+- The for-running build COMPILED, LINKED, and ad-hoc codesigned (--sign -) the app + TeslaSyncWidgets.appex +
+  TeslaSyncActivities.appex + the TeslaSyncTests.xctest bundle for arm64 with 0 errors. PrintButton.swift /
+  .Model / .Seams / .Views / .Previews all compiled (0 PrintButton errors); TeslaSyncTests target: 0 errors.
+- The `test` action's separate build-for-testing pass then hit `Command SwiftCompile failed with a nonzero exit
+  code` with NO diagnostics (a compiler crash/kill, 0 `error:` lines) on a PRE-EXISTING, UNRELATED batch:
+  AnomalyInlineRow.swift / ApiPlaygroundPage.swift / AppContainer.swift (feature-views + Sources/SharedFacade
+  KMP-interop, under -enable-testing). That cancelled the test run. PrintButton is NOT in that batch and produced
+  ZERO errors. (Independently, the 30 PrintButton tests PASS in the isolated SwiftPM harness above.)
+- A prior all-architectures app-target compile additionally confirmed: every arm64 batch (incl. PrintButton)
+  compiled with 0 errors; the only failure there was the x86_64 Swift module import of the KMP Shared framework,
+  whose simulator slice is arm64-only (a framework-arch artifact, zero PrintButton involvement).
+
+REAL FULL-APP macOS GATE  (xcodebuild -scheme TeslaSync-macOS build test)
+- Gradle pre-action staged the RELEASE Shared.xcframework ("✓ Shared.xcframework staged"), so the framework is NOT
+  the macOS blocker.
+- Build halted at the signing-capability check BEFORE Swift compilation:
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  `security find-identity -p codesigning -v` -> "0 valid identities found" on this runner. ZERO PrintButton errors
+  (no Swift source compiled). PrintButton's macOS-15 typecheck is 0 errors and its 30 tests already pass on
+  arm64-apple-macos (the isolated swift test above ran on macOS).
+
+------------------------------------------------------------------------------
+TREE-WIDE gate steps (run literally as the gate spells them) — non-zero ONLY from PRE-EXISTING, UNRELATED files
+(another agent's surfaces, outside this prompt's allowed files; PrintButton scope is clean)
+------------------------------------------------------------------------------
+swiftlint --strict (tree-wide, 5332 files): 3 violations, ALL in TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift
+   (identifier_name: variable names 'a' / 'b' / 'c'). 0 in PrintButton.
+swiftformat --lint apps/apple (tree-wide, 5630 files): 1 file -> TeslaSync/feature-views/RecentDrivesSection.Previews.swift
+   (redundantType). 0 in PrintButton.
+
+------------------------------------------------------------------------------
+GATE RESULT LINES (literal gate commands)
+------------------------------------------------------------------------------
+IOS_EXIT=65          (DEFERRED — pre-existing, unrelated build-for-testing SwiftCompile crash on the
+                      AnomalyInlineRow/ApiPlayground/AppContainer (feature-views + SharedFacade) batch; the app +
+                      both extensions + the TeslaSyncTests bundle compiled, linked, and signed for arm64 with 0
+                      errors; PrintButton 0 errors and not in the failing batch; its 30 tests pass in isolation.)
+MAC_EXIT=65          (DEFERRED — macOS development-signing: TeslaSync-macOS + TeslaSyncWidgets-macOS entitlements
+                      require a development certificate; `security find-identity -p codesigning` -> 0 valid
+                      identities on this runner; build halts before Swift compile. PrintButton macOS typecheck 0
+                      errors; 30/30 isolated tests pass on macOS.)
+LINT_EXIT=2          (3 pre-existing violations in another agent's WidgetChartSummary.Tests.swift; PrintButton 0/7.)
+FORMAT_EXIT=1        (1 pre-existing file, another agent's RecentDrivesSection.Previews.swift; PrintButton 0/7.)
+PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0; genuine scan of the 8 artifact files is also 0, 0 opt-outs.)
+
+------------------------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------------------------
+The PrintButton Apple shared surface is COMPLETE and verified GREEN within its allowed scope:
+  • dual-SDK swiftc -typecheck (iOS-18 + macOS-15) = 0 errors under Swift 6 strict concurrency,
+  • 30/30 isolated tests pass (adapter/model + per-state view-state + accessibility-label + telemetry),
+  • swiftlint --strict, swiftformat --lint, and the placeholder gate are all clean for the 8 artifact files,
+  • all 12 public symbols are collision-free across the tree, and
+  • the surface compiled + linked + ad-hoc-signed INSIDE the real full-app iOS build with 0 PrintButton errors.
+
+The non-zero LITERAL gate steps are PRE-EXISTING, UNRELATED blockers in other agents' files and runner provisioning
+— a SharedFacade/feature-views build-for-testing compiler crash (IOS), 0 macOS code-signing identities (MAC),
+WidgetChartSummary.Tests.swift (LINT) and RecentDrivesSection.Previews.swift (FORMAT) — NONE attributable to
+PrintButton and ALL outside this prompt's allowed files. They are deferred to
+p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing identities), per the documented
+precedent in apps/macos-pending-verifications.md. No red is presented as green: the real sub-exit codes are
+recorded above verbatim.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,132 @@
+=== P4 Shared surface 0081 Delta (Apple) ===
+Date: 2026-06-10
+Runner: Darwin (arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh, JDK 17
+Web source (spec): web/src/components/data-display/Delta.tsx
+Native output:      apps/apple/TeslaSync/shared-surfaces/Delta.*
+
+------------------------------------------------------------------------------
+CAPABILITY CHECK (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG; if unavailable -> BLOCKED with evidence")
+------------------------------------------------------------------------------
+- Toolchain present: xcodebuild (Xcode 26.5), swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh.
+- KMP shared core: built `Shared.xcframework` via Gradle (:core:assembleSharedXCFramework)
+  BUILD SUCCESSFUL in 8m10s; staged to apps/apple/Frameworks/Shared.xcframework
+  (slices: ios-arm64, ios-arm64-simulator, macos-arm64).
+- iPhone 16 simulator available (booted).
+=> Platform capability is AVAILABLE. The block below is NOT a capability gap.
+
+------------------------------------------------------------------------------
+DELIVERABLE (files created — all within the allowed `Delta.*` scope)
+------------------------------------------------------------------------------
+  Delta.swift             — public SwiftUI surface (binds DeltaModel; phase switch; parity inits)
+  Delta.Adapter.swift     — data model: connectivity/lifecycle/metric-semantics registry/input/meta
+  Delta.Units.swift       — useUnitLabels + fmtNumber/formatAbsolute port (locale-aware)
+  Delta.Signals.swift     — colorForDelta + arrow selection + VoiceOver label builders
+  Delta.Projection.swift  — pure render-body port (signedDelta/pct/display switch/em-dash fallback)
+  Delta.Model.swift       — @Observable state holder, telemetry seam (view.opened), source seam, i18n facade
+  Delta.Views.swift       — per-state subviews (value chip, em-dash, skeleton, retry, freshness dot)
+  Delta.Previews.swift    — DEBUG previews for every state + display form + freshness
+  Delta.Tests.swift       — model + view-composition + accessibility tests
+  Delta.AdapterTests.swift— pure adapter/projection "cached -> projection" tests
+  Delta.strings           — P1/S10 i18n catalog (web keys delta.noComparison, delta.title + P4 chrome)
+
+States reproduced (all render — no hidden surface): loading (skeleton), empty (em-dash "No
+comparison data"), unavailable (QueryError-peer retry), presented (arrow + coloured value:
+percent/absolute/both, incl. previous==0 em-dash fallback), + connection axis live/stale/offline
+(freshness dot + one-shot stale auto-refresh). i18n: every string via P1/S10 facade. Accessibility:
+decorative arrow voiced as a direction word; freshness note appended off-live; interactive freshness
+dot + retry labelled. Telemetry: view.opened(surface:"Delta") once on first resolved outcome.
+
+==============================================================================
+GATE STEPS (literal commands; bash equivalents of the prompt's PowerShell)
+==============================================================================
+
+[1] iOS:  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (** BUILD FAILED **)
+    Delta.* compiler errors: 0
+    "ambiguous for type lookup" errors: 120
+    Delta.strings copied into TeslaSync.app: yes (surface integrates; build aborts elsewhere)
+
+[2] macOS: xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (** BUILD FAILED **)
+    Delta.* compiler errors: 0
+    "ambiguous for type lookup" errors: 96
+
+[3] swiftlint --strict            (whole apps/apple tree, the gate scope)
+    LINT_EXIT=0   (0 violations across the whole tree; 0 in Delta.* files)
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=0 (0/3915 files require formatting)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Delta -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+    (Real scan of the actual Delta.* files in a temp tree also: PLACEHOLDER_COUNT=0.)
+
+------------------------------------------------------------------------------
+ROOT CAUSE OF [1]/[2] — PRE-EXISTING, OUT-OF-SCOPE, NOT THIS SURFACE
+------------------------------------------------------------------------------
+The TeslaSync app target compiles dashboard-widgets + feature-views into ONE module
+(apps/apple/project.yml). Two PRE-EXISTING surfaces declare the SAME public type names, so the
+module has duplicate declarations -> "ambiguous for type lookup". 8 distinct colliding types:
+
+  RecentDrivesModel / RecentDrivesUpdate / RecentDrivesLoadStatus / RecentDrivesConnection
+    declared in BOTH:
+      apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+      apps/apple/TeslaSync/feature-views/RecentDrivesSection.{Model,Adapter,Seams}.swift
+  StateTimelineModel / StateTimelineUpdate / StateTimelineLoadStatus / StateTimelineConnection
+    declared in BOTH:
+      apps/apple/TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+      apps/apple/TeslaSync/feature-views/StateTimeline.{Source,...}.swift
+
+Evidence this is pre-existing and unrelated to Delta:
+  - These files are tracked at HEAD and UNMODIFIED by this prompt (git status clean outside Delta.*).
+  - This change is purely ADDITIVE: `git status --porcelain` lists ONLY the 11 new Delta.* files.
+  - 0 of the 120 (iOS) / 96 (macOS) compiler errors are in any Delta.* file.
+  - Fixing these collisions requires editing files OUTSIDE this prompt's allowed scope
+    (Allowed files: apps/apple/TeslaSync/shared-surfaces/Delta.*, + this log). Per the Honesty
+    Covenant (#2 no scope narrowing / #6 no delegation) those siblings are owned by their own prompts.
+
+==============================================================================
+PER-SURFACE VERIFICATION OF Delta.* (everything within scope is GREEN)
+==============================================================================
+- swiftlint --strict  (10 Delta files):            0 violations
+- swiftformat --lint  (10 Delta files):            0/10 require formatting
+- check-placeholders  (real scan of Delta files):  PLACEHOLDER_COUNT=0
+- Pure logic standalone compile (swiftc -O of Adapter+Units+Signals+Projection + 28 assertions
+  mirroring Delta.AdapterTests expectations): ALL 28 PASS, RUN_EXIT=0
+    e.g. percent "10.0%", absolute "2.80 kWh", both "2.80 kWh (4.6%)", previous==0 -> "—",
+         registry has 17 metrics, currency prefix, efficiency Wh/mi|Wh/km, en-US grouping "1,234.5".
+- DeltaModel runtime behaviour (swiftc -O of Adapter+Units+Signals+Projection+Model + 9 assertions
+  mirroring Delta.Tests model expectations): ALL 9 PASS, RUN_EXIT=0
+    start idempotent; loading/failed emit no telemetry; presented & empty each emit view.opened once;
+    stale -> one-shot auto-refresh + re-arm after returning live; offline never auto-refreshes;
+    stop-then-start re-arms.
+- Full-surface isolated type-check (swiftc -typecheck, macOS 15 SDK, -swift-version 6) of the 8
+  non-test Delta files AGAINST THE REAL shared layer — DesignTokens (Tokens.swift) + Sources/Design
+  + Sources/Components (TSSkeleton/TSButton/Color.TS/Font.TS/TSSpacing/TSRadius) + Units facade +
+  linked Shared.xcframework — and EXCLUDING the broken sibling surfaces:
+        TYPECHECK_EXIT=0   (0 errors)
+  (A 2-line throwaway shim stood in for UnitPreferences.metric/.imperial, which live in the
+   out-of-scope AppContainer.swift; not committed.)
+- Test files (Delta.Tests / Delta.AdapterTests) type-checked in-module: every reference to the
+  Delta API resolves; the only unresolved symbols are the XCTest assertion macros (XCTAssertEqual,
+  etc.), which raw `swiftc -typecheck` cannot expand but the xcodebuild XCTest target provides.
+
+==============================================================================
+CONCLUSION
+==============================================================================
+The Delta surface is COMPLETE and production-polished, and passes every per-surface gate that can
+run independently of the broken siblings: swiftlint --strict (0), swiftformat --lint (0/3915 whole
+tree), placeholder (0), pure-logic tests (28/28), and a clean type-check against the REAL design
+tokens + shared component library + Units facade + Shared.xcframework.
+
+The whole-app `build test` steps ([1] iOS, [2] macOS) are RED solely because of PRE-EXISTING
+duplicate-type declarations in OTHER surfaces (RecentDrives*, StateTimeline*) that are outside this
+prompt's allowed file scope. No Delta.* code is implicated (0 Delta errors of 120/96). Per the
+Honesty Covenant (#1 no red-as-green, #8 no commit on red), the aggregate gate cannot be reported
+green, and the colliding siblings cannot be edited from this prompt.
+
+EXIT=1
+STATUS=BLOCKED

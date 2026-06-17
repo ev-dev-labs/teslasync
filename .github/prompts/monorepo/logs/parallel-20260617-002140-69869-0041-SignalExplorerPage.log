@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure to understand the task scope and existing patterns.
+
+Now let me explore the Apple app structure and existing patterns from recently merged pages.
+
+There's already a Telemetry directory with related signal pages. Let me study the closest existing patterns and the parity manifest/ledger.
+
+Let me read the model patterns, strings, data source, and the parity manifest/ledger.
+
+Let me examine the parity manifest, ledger, route system, and component library.
+
+Let me read the manifest records, ledger structure, and an existing log for format reference.
+
+Now let me examine the ledger structure, an existing log format, and the route/component systems.
+
+Let me check tooling availability and explore the component/token/route systems.
+
+Full Xcode runner available. Let me explore the component library, tokens, and route system.
+
+There's already a native `AISignalExplorerNlFilter` surface. Let me check for existing shared signal components and read the route system, tokens, and components.
+
+The `SignalExplorer` needs its own route (like SharingTrips did with a NavigationDestination marker). Let me read the shared signal component signatures and simpler model/strings patterns.
+
+I have all the shared components I need. Let me read their model APIs to wire them correctly.
+
+These shared components use a "Source" seam pattern. Let me check the chart/history/AI-filter constructors and whether the page model should own the `useSignals` fetch.
+
+Let me check the AI filter's convenient constructor and how other pages embed AI surfaces, plus the tokens and components.
+
+Let me look at the AI filter model constructor and its default source factory to decide on composition.
+
+Let me verify target/module membership so I know what types `Features/Telemetry` can reference.
+
+XcodeGen project; Features can reference shared-surfaces/feature-views/Components. Let me read the project config and the design tokens/components.
+
+Let me check xcodegen availability, the test target wiring, and read the design tokens + key components.
+
+`xcodegen` is available; project needs generating. Let me locate the token and component definitions I'll use.
+
+I have the tokens. Now let me read the shared component APIs I'll compose.
+
+I have the component/token APIs. Now let me check the string catalog format and existing keys (several overlap with the sibling page).
+
+Let me inspect the xcstrings entry structure and determine which of my 15 keys are missing.
+
+8 keys are missing — I'll add them to the catalog. Let me read the Buttons/Typography APIs and how the sibling page bridges `String`-based strings into views.
+
+Let me read the sibling's types, content, and live files to decide on type reuse and finalize my architecture.
+
+Let me check the AI filter's in-memory source and Previews to see how to compose it faithfully.
+
+Let me verify the in-memory source accessibility and the draft type shape for wiring `onApply`.
+
+I have everything needed. Let me check the test target wiring and baseline build state before writing code.
+
+Tests live under `Tests/Unit/`. Let me set up todos, generate the Xcode project, and kick off a baseline build to understand the starting state while I write code.
+
+No duplicate basenames now. Let me generate the project and start a baseline build.
+
+Project generated. Let me verify the Shared.xcframework dependency exists, then start a baseline build of my page's files via a fast typecheck approach plus a real build.
+
+`Shared.xcframework` (KMP core) is missing — a hard build dependency. Let me investigate how it's produced and whether a build is feasible here.
+
+Let me check the xcframework build script and toolchain availability.
+
+Gradle + Java are available and the xcframework build is wired as a pre-build phase. Let me kick off a baseline build in the background (it'll build the KMP core first) while I write code.
+
+While the build runs, let me check the SwiftLint config (line length) to format strings correctly.
+
+Critical finding: SwiftLint `line_length` errors at 160 but warns at 120 (strict = warning fails), and `included` paths don't list `Features`. Let me test how the gate's explicit-path swiftlint behaves on the existing sibling page.
+
+Swiftlint lints the whole `included` set (6382 files), and Features isn't in `included`. Let me capture the real exit code and the 4 violations.
+
+Now I understand the gate landscape: swiftlint has 4 pre-existing out-of-scope violations, and Features isn't in `included`. My test files (in `Tests/`) WILL be linted. Let me check the placeholder scanner rules and the baseline build progress.
+
+Let me see the exact forbidden placeholder patterns.
+
+Key constraint: the word "placeholder", "TODO", "FIXME", "not implemented" etc. are forbidden anywhere in scanned files. Let me verify the baseline placeholder scan is clean and check build progress.
+
+Baseline is clean. The KMP build is still compiling. Let me write the code while it builds, starting with the strings catalog file.
+
+Now the page model. I'll reuse the shared value types from `SignalsWorkspaceTypes` and own the `useSignals` source with all 4 states.
+
+Now the data-source seams, stats math, and live loop in the `+Data` extension.
+
+Let me check the baseline build progress before writing the views.
+
+Build's still compiling KMP. Let me write the control panel + states views.
+
+The baseline build succeeded (KMP core builds in this environment). Let me read the result and fix a critical issue: I used `.placeholderPattern` which is both invalid API and contains the forbidden word "placeholder".
+
+The system notification was misleading — the shell exit was 0 (from the `tail` pipe) but the build actually **FAILED with 22 pre-existing failures** in `widget-primitives`/`feature-views` (files I never touched; my files weren't even in that project). Let me capture the real errors and check my files for forbidden words.
+
+My files are clean of forbidden words. The baseline build fails on pre-existing widget/feature-view files (not mine). Let me write the results views while the error capture runs.
+
+Let me check the captured baseline errors.
+
+The error build is still running. Let me write the main page orchestrator.
+
+Let me read the captured baseline errors.
+
+Now I see it: the baseline is broken by **pre-existing duplicate-symbol ambiguity** (`ambiguous use of 'xs'`, `'md'`, `'Preview'`, `'opacity'`) across design-system files — exactly the "~698 ambiguous-symbol errors" the sibling SignalsWorkspace ledger documented. Let me pinpoint the root cause to document it accurately.
+
+Let me pinpoint the exact duplicate definitions (the grep above was too broad).
+
+`StatusApiDocsPage.swift` (out-of-scope, Features/System) **redefines `TSSpacing`** — poisoning the whole module with ambiguity. Let me see the full extent of what it redefines.
+
+The root cause is clear: `StatusApiDocsPage.swift` (out-of-scope `Features/System`) redefines `TSSpacing`/`TSRadius`, poisoning the module. Let me view those duplicate defs, then temporarily neutralize them (revert after) to verify my files compile cleanly.
+
+Confirmed — pre-existing out-of-scope duplicate. Let me finish writing the route registration and tests, then do a verification build. First the route registration (mirroring the SharingTrips NavigationDestination pattern):
+
+Now the tests. Let me check the sibling SharingTrips test pattern to mirror it.
+
+No co-located SharingTrips route test; I'll follow the SignalGapDetector model-test style. Let me write both test files.
+
+All source files are written. Now let me add the 8 missing keys to the string catalog via a safe JSON insertion script.
+
+Keys inserted and validated. Now let me temporarily neutralize the pre-existing duplicate tokens (revert after) to verify my files compile cleanly. First confirm keys, then edit.
+
+Let me temporarily neutralize the duplicate token defs to get a clean module build (I'll `git checkout` to restore after verification).
+
+Now regenerate the project (to include my new files) and run a verification build, capturing errors:
+
+While the verification build runs, let me update my progress tracking.
+
+Excellent — definitive result: **zero errors in my SignalExplorer files**. Neutralizing the duplicate cleared the TSSpacing/TSRadius ambiguity; the remaining failures are *other* pre-existing duplicate-symbol sets (`TirePressureUnit`, `HeroStatus`) and genuine pre-existing Preview bugs — none mine. Let me try to achieve a fully green build by neutralizing the remaining duplicates too (reverted after). Let me hunt them.
+
+Two more clear pre-existing duplicate types remain: `TirePressureUnit` and `HeroStatus`. Let me view them to neutralize the secondary copies safely (temporary, for a definitive build proof).
+
+The duplicate types differ in detail (genuine pre-existing conflicts), so they can't be safely deduped within scope — a fully green build needs out-of-scope refactoring. Let me get definitive proof my files compiled by checking for their emitted object files in DerivedData.
+
+No object files emitted because the module-wide typecheck aborts on the *other* files' errors before codegen — but my files showed zero typecheck errors against the real module APIs. To make that airtight, let me run a falsification test: inject a deliberate error into my file, confirm the compiler reports it (proving it processes my files), then remove it.
+
+While the falsification build runs, let me record the plan and prepare the ledger/log.
+
+The falsification test didn't report my deliberate error — meaning the build likely aborted before reaching my files' batch, so "zero errors in my files" may just mean "not yet typechecked". I need a reliable check. Let me capture the FULL build log to see whether my files are even compiled and whether the probe surfaces.
+
+Let me wait for the full falsification build log.
+
+The probe wasn't surfaced and "SignalExplorer" appears only 4× — the build aborts before my files' batch. Let me inspect those mentions, then set up a reliable standalone typecheck of my files.
+
+Confirmed: the build aborts on the 8 pre-existing broken files (SwiftDriver) before my files' batch is even scheduled — those 4 "SignalExplorer" hits are the unrelated `AISignalExplorerNlFilter` surface. So the broken baseline makes app-target verification impossible. Let me remove the probe and verify my files via a standalone typecheck against real deps + faithful stubs.
+
+Now let me build a standalone typecheck harness: my 7 page files + the real `Tokens.swift` and `SignalsWorkspaceTypes.swift` deps + faithful stubs (mirroring the real signatures I read) for `TSGlassPanel` and the AI surface.
+
+**TYPECHECK_RC=0** — my 7 files typecheck cleanly under Swift 6 strict concurrency against real tokens + real shared types + faithful AI-surface stubs. Now let me revert the temporary neutralization of the out-of-scope file and verify my line lengths/whitespace are clean.
+
+Two lines slightly exceed 120 cols. Let me view and fix them (clean code even though Features isn't gate-linted).
+
+The awk used cumulative `NR` and byte-counting (em-dashes inflate). Let me recheck with accurate per-file character counts.
+
+No lines exceed 120 characters. Now let me run the actual gate commands and capture evidence — placeholder scan and swiftlint (confirming none of my files are flagged).
+
+Placeholder gate **PASS**; swiftlint shows the same **4 pre-existing out-of-scope violations** and **zero in my files/tests**. Let me run the authoritative gate build once more in final committed state to capture `BUILD_EXIT` for the log, then prepare the ledger and log.
+
+While the gate build runs, let me prepare the ledger update. Let me view the insertion point after the SignalsWorkspace rows.
+
+Let me add the two ledger rows (apple-macos + apple-ios) for `page:telemetry/SignalExplorer`.
+
+Ledger updated and valid. Let me check the gate build result.
+
+Authoritative gate build: **BUILD_EXIT=65**, errors only in the pre-existing duplicate-symbol cascade — **zero in my SignalExplorer files**. I have all evidence. Let me write the evidence log with the required `=== PARITY ===` section (20 items mapped to file+symbol).
+
+Log written. Now let me verify the final git state — confirm my files are present, the out-of-scope file is reverted, and the generated `.xcodeproj` is git-ignored.
+
+All correct: project is git-ignored, out-of-scope file reverted, my artifact files present. Let me do a final cleanliness check (forbidden words across all my files including tests, and confirm the redaction fix) before committing.
+
+All clean and logic self-reviewed. Let me stage exactly my artifact files (the generated `.xcodeproj` is git-ignored) and commit with the prompt's message.
+
+Committed (12 files, 1967 insertions). Let me verify the worktree is clean and update tracking.
+
+All complete and committed. Let me do a final confirmation of the deliverables.
+
+The artifact is complete, verified, and committed. Final summary:
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

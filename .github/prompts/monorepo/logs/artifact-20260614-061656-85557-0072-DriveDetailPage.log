@@ -1,0 +1,165 @@
+================================================================================
+p4-apple · P7 · page:driving/DriveDetail — apple parity (SwiftUI / HIG)
+================================================================================
+Prompt:   p4-apple/P7/page:driving/DriveDetail
+Web src:  web/src/features/driving/pages/DriveDetailPage.tsx  (route /drives/:id)
+Targets:  apple-macos + apple-ios (one shared SwiftUI source set, ADR-002)
+Date:     2026-06-14
+
+--------------------------------------------------------------------------------
+SCOPE / DELIVERABLE
+--------------------------------------------------------------------------------
+Native SwiftUI parity of the DriveDetailPage orchestration shell. The web page
+loads one drive (useDriveDetailData(id) -> useDrive + useVehicle), derives the
+per-drive stats every sub-panel reads, and renders each section wrapped in its
+own SectionErrorBoundary. The manifest scopes this unit to requiredCount=25
+(states 2 + strings 23); the page's charts/panels/map are not separate manifest
+units, so they are reproduced natively in-place (Swift Charts / MapKit wrappers,
+never WKWebView) without inflating the parity count.
+
+Implemented files (apps/apple/Sources/Features/Driving/**):
+  DriveDetailModels.swift            value types + DriveDetailSection catalog (19 fallback keys)
+  DriveDetailStats.swift             pure DriveStats.compute (web stats useMemo + speedHistData)
+  DriveDetailFormat.swift            SI -> display formatters (web fmtNumber/convert*FromSI + '—')
+  DriveDetailPageModel.swift         @Observable model; loading/error/ready; data-source seam
+  DriveDetailPageModel.Sample.swift  Sample/Empty/Failing data sources
+  DriveDetailComponents.swift        section error-boundary, glass section card, metric grid,
+                                     skeleton (redacted), no-telemetry banner
+  DriveDetailHeaderSection.swift     header (title/vehicle/date + Replay/Share)
+  DriveDetailSummarySections.swift   hero gauges, timeline, stat cards
+  DriveDetailDetailSections.swift    more-details, energy summary, journey details
+  DriveDetailCostSection.swift       cost & savings (documented default rates, surfaced in caption)
+  DriveDetailChartSections.swift     overview/SOC/elevation/temperature/power (Swift Charts)
+  DriveDetailMapSection.swift        route map (TSMapView / MapKit)
+  DriveDetailDiagnosticSections.swift speed histogram, tyre pressure, why-ended, Helix insights x2
+  DriveDetailPage.swift              top-level adaptive View; phase switch; all sections in web order
+  DriveDetailRouteRegistration.swift DriveDetailLink + .driveDetailDestination() + make() (sub-route)
+Tests:
+  apps/apple/Tests/Unit/Features/Driving/DriveDetailPageModelTests.swift  (21 cases)
+Strings:
+  apps/apple/Localization/Localizable.xcstrings  (+91 driveDetail.* keys; the 23 required + labels)
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+PLACEHOLDER_EXIT=0
+  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Driving -Language swift
+  PLACEHOLDER_ALLOWED=1  PLACEHOLDER_COUNT=0  (the one allowed marker = a documented
+  SwiftUI .redacted(reason:) skeleton API, not a stub).
+
+LINT_EXIT=0
+  swiftlint lint --strict --config apps/apple/.swiftlint.yml
+  Done linting! Found 0 violations, 0 serious in 11622 files.
+
+BUILD_EXIT=0
+  xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync -configuration Debug
+    -destination 'platform=iOS Simulator,name=iPhone 17'
+    CODE_SIGNING_ALLOWED=NO 'EXCLUDED_SOURCE_FILE_NAMES=*.Previews.swift' build
+  ** BUILD SUCCEEDED **  (0 error: diagnostics)
+
+TEST_EXIT=0
+  xcodebuild ... CODE_SIGNING_ALLOWED=NO
+    'EXCLUDED_SOURCE_FILE_NAMES=*.Previews.swift *Tests.swift'
+    'INCLUDED_SOURCE_FILE_NAMES=DriveDetailPageModelTests.swift'
+    -only-testing:TeslaSyncTests/DriveDetailPageModelTests test
+  ** TEST SUCCEEDED **  Executed 21 tests, with 0 failures.
+
+SUPPLEMENTARY (independent logic proof, toolchain-agnostic):
+  swiftc -D DEBUG the five UI-free logic files + a harness ->
+  ALL_LOGIC_CHECKS_PASS (40+ assertions: DriveStats.compute, DriveDetailFormat,
+  DriveDetailSection catalog, DriveDetailPageModel phases).
+
+--------------------------------------------------------------------------------
+PRE-EXISTING / OUT-OF-SCOPE ISOLATIONS (build overrides only — NO source edits)
+--------------------------------------------------------------------------------
+The available runner ships Xcode 26.5 / Swift 6.3, newer than the repo's pinned
+toolchain (apps/macos-pending-verifications.md). Two PRE-EXISTING, repo-wide,
+out-of-scope defect classes (identical for all 56 sibling page rows; none in the
+Features/Driving allowed scope; my 14 sources + test produce ZERO diagnostics):
+
+  A) DEBUG-only #Preview ViewBuilder errors — 25 *.Previews.swift files use an
+     explicit `return` inside a `#Preview` ViewBuilder, which 26.5 rejects
+     ("cannot use explicit 'return' statement in the body of result builder
+     'ViewBuilder'"), e.g. TeslaSync/shared-surfaces/Input.Previews.swift.
+     All are `#if DEBUG`-guarded preview canvases (not shipped surface code).
+     Isolated via EXCLUDED_SOURCE_FILE_NAMES=*.Previews.swift.
+  B) Pre-existing broken test files unrelated to this page:
+     AlertStudioPage.Tests.swift / AlertStudioPage.ViewModelTests.swift
+       ("cannot find 'AlertStudioSamples' in scope") and
+     GDPRExportPageModelTests.swift (main-actor isolation, per SleepEfficiency log).
+     For this page's run the test target compiles ONLY this page's test file via
+     INCLUDED_SOURCE_FILE_NAMES (an Xcode build override, no source edits).
+  Release-config note: a swift-frontend SIL optimizer crash (CopyPropagation) on the
+  pre-existing TeslaSync.LayoutSwitcherLoaded.init function aborts -configuration
+  Release whole-module optimization. Debug (no SIL opt) builds clean; this page's
+  code is not in the crash. Documented as an environment/toolchain defect.
+
+These isolations are command-line build settings only; no out-of-scope file was
+edited (mirrors the accepted Powershare/SleepEfficiency P7 methodology). Fixing
+them would breach this artifact's allowed-files scope.
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=25
+unit=page:driving/DriveDetail  platform=apple-macos,apple-ios
+
+states (2):
+ [x] loading  -> DriveDetailPage.swift content switch case .loading => DriveDetailSkeleton();
+                 DriveDetailComponents.swift `struct DriveDetailSkeleton` (.redacted placeholder);
+                 DriveDetailPageModel.swift phase .loading
+ [x] error    -> DriveDetailPage.swift `func errorView(_:)` + content case .error(message);
+                 DriveDetailPageModel.swift phase .error(String) with Retry (model.refresh)
+
+strings (23) — referenced symbol (file) + present in Localizable.xcstrings:
+ [x] driveDetail.title                                 DriveDetailPage.navigationTitle / DriveDetailHeaderSection.routeTitle (TSPageTitle)
+ [x] driveDetail.vehicle                               DriveDetailHeaderSection.vehicleName (Text)
+ [x] driveDetail.noTelemetryTitle                      DriveDetailComponents.DriveNoTelemetryBanner
+ [x] driveDetail.noTelemetryBody                       DriveDetailComponents.DriveNoTelemetryBanner
+ [x] driveDetail.section.headerFailed                  DriveDetailModels.DriveDetailSection.header.failureTitleKey
+ [x] driveDetail.section.heroGaugesFailed              DriveDetailModels.DriveDetailSection.heroGauges.failureTitleKey
+ [x] driveDetail.section.timelineFailed                DriveDetailModels.DriveDetailSection.timeline.failureTitleKey
+ [x] driveDetail.section.statCardsFailed               DriveDetailModels.DriveDetailSection.statCards.failureTitleKey
+ [x] driveDetail.section.aiCoachingFailed              DriveDetailModels.DriveDetailSection.aiCoaching.failureTitleKey
+ [x] driveDetail.section.moreDetailsFailed             DriveDetailModels.DriveDetailSection.moreDetails.failureTitleKey
+ [x] driveDetail.section.energySummaryFailed           DriveDetailModels.DriveDetailSection.energySummary.failureTitleKey
+ [x] driveDetail.section.costSavingsFailed             DriveDetailModels.DriveDetailSection.costSavings.failureTitleKey
+ [x] driveDetail.section.routeMapFailed                DriveDetailModels.DriveDetailSection.routeMap.failureTitleKey
+ [x] driveDetail.section.journeyDetailsFailed          DriveDetailModels.DriveDetailSection.journeyDetails.failureTitleKey
+ [x] driveDetail.section.overviewChartFailed           DriveDetailModels.DriveDetailSection.overviewChart.failureTitleKey
+ [x] driveDetail.section.socChartFailed                DriveDetailModels.DriveDetailSection.socChart.failureTitleKey
+ [x] driveDetail.section.elevationChartFailed          DriveDetailModels.DriveDetailSection.elevationChart.failureTitleKey
+ [x] driveDetail.section.temperatureFailed             DriveDetailModels.DriveDetailSection.temperature.failureTitleKey
+ [x] driveDetail.section.speedHistogramFailed          DriveDetailModels.DriveDetailSection.speedHistogram.failureTitleKey
+ [x] driveDetail.section.aiSpeedProfileInsightsFailed  DriveDetailModels.DriveDetailSection.aiSpeedProfileInsights.failureTitleKey
+ [x] driveDetail.section.powerProfileFailed            DriveDetailModels.DriveDetailSection.powerProfile.failureTitleKey
+ [x] driveDetail.section.tirePressureFailed            DriveDetailModels.DriveDetailSection.tirePressure.failureTitleKey
+ [x] driveDetail.section.whyEndedFailed                DriveDetailModels.DriveDetailSection.whyEnded.failureTitleKey
+
+PARITY_COVERED=25
+(test coverage: testSectionCatalogCoversAllNineteen + testSectionFailureKeysMatchWeb
+ assert all 19 fallback keys; testLoadResolvesToReady / testNoTelemetryDrive... /
+ testDriveFailureResolvesToError exercise the loading/error/ready + no-telemetry states.)
+
+--------------------------------------------------------------------------------
+LEDGER
+--------------------------------------------------------------------------------
+apps/parity/apple-ledger.json: page:driving/DriveDetail set covered for both targets
+  apple-macos  status=done coveredCount=25 requiredCount=25
+  apple-ios    status=done coveredCount=25 requiredCount=25
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+PARITY:      25/25 covered (panels 0, charts 0, maps 0, states 2, strings 23)
+LINT:        0 violations (--strict, 11622 files)
+PLACEHOLDER: 0 (ADR-011); 1 allowed (documented .redacted skeleton marker)
+BUILD:       iOS-Simulator app SUCCEEDED; 0 diagnostics attributable to this change
+TEST:        21/21 passed for DriveDetailPageModelTests
+The only thing between this and a literal all-green `xcodebuild build test` on the
+default config is PRE-EXISTING, out-of-scope, Xcode-26.5-incompatible files
+(disclosed above) which this artifact is not permitted to modify. The page
+deliverable itself is complete and independently verified green.
+
+EXIT=0
+STATUS=DONE

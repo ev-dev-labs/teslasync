@@ -1,0 +1,196 @@
+=== P4 Feature view 0204 AppearanceSettings (Apple) ===
+Runner: Darwin 25.5.0 arm64 | Xcode 26.5 | Swift version 6.3.2
+Date: 2026-06-09T10:22:52Z
+Surface files (13 Swift + 1 .strings; co-located *Tests.swift -> XCTest bundle):
+  AppearanceSettings.Adapter.swift
+  AppearanceSettings.Components.swift
+  AppearanceSettings.Localization.swift
+  AppearanceSettings.Model.swift
+  AppearanceSettings.Models.swift
+  AppearanceSettings.Previews.swift
+  AppearanceSettings.Projection.swift
+  AppearanceSettings.Sections.swift
+  AppearanceSettings.States.swift
+  AppearanceSettings.Stores.swift
+  AppearanceSettings.strings
+  AppearanceSettings.swift
+  AppearanceSettings.Tests.swift
+  AppearanceSettings.Views.swift
+
+================ SURFACE-SCOPED GATES (host-runnable) ================
+>>> swiftformat --lint
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-211853-78201/slot-113/apps/apple/.swiftformat
+SwiftFormat completed in 5.71s.
+0/13 files require formatting.
+FORMAT_EXIT=0
+>>> swiftlint --strict
+Linting Swift files at paths TeslaSync/feature-views/AppearanceSettings.Adapter.swift, TeslaSync/feature-views/AppearanceSettings.Components.swift, TeslaSync/feature-views/AppearanceSettings.Localization.swift, TeslaSync/feature-views/AppearanceSettings.Model.swift, TeslaSync/feature-views/AppearanceSettings.Models.swift, TeslaSync/feature-views/AppearanceSettings.Previews.swift, TeslaSync/feature-views/AppearanceSettings.Projection.swift, TeslaSync/feature-views/AppearanceSettings.Sections.swift, TeslaSync/feature-views/AppearanceSettings.States.swift, TeslaSync/feature-views/AppearanceSettings.Stores.swift, TeslaSync/feature-views/AppearanceSettings.swift, TeslaSync/feature-views/AppearanceSettings.Tests.swift, TeslaSync/feature-views/AppearanceSettings.Views.swift
+Linting 'AppearanceSettings.Components.swift' (2/13)
+Linting 'AppearanceSettings.Adapter.swift' (1/13)
+Linting 'AppearanceSettings.Localization.swift' (3/13)
+Linting 'AppearanceSettings.Model.swift' (4/13)
+Linting 'AppearanceSettings.Models.swift' (5/13)
+Linting 'AppearanceSettings.Previews.swift' (6/13)
+Linting 'AppearanceSettings.Projection.swift' (7/13)
+Linting 'AppearanceSettings.Sections.swift' (8/13)
+Linting 'AppearanceSettings.States.swift' (9/13)
+Linting 'AppearanceSettings.Stores.swift' (10/13)
+Linting 'AppearanceSettings.swift' (11/13)
+Linting 'AppearanceSettings.Tests.swift' (12/13)
+Linting 'AppearanceSettings.Views.swift' (13/13)
+Done linting! Found 0 violations, 0 serious in 13 files.
+LINT_EXIT=0
+>>> check-placeholders.ps1
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+>>> xcodegen generate (enumerates surface files)
+AppearanceSettings files enumerated in TeslaSync.xcodeproj: 14
+XCODEGEN_EXIT=0
+
+================ ISOLATED SURFACE BUILD + TESTS (Swift 6, strict concurrency = complete) ================
+Harness: SwiftPM package compiling AppearanceSettings.* + design tokens + the shared components it composes.
+[0/1] Planning build
+Building for debugging...
+[0/1] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.21s)
+ISO_BUILD_EXIT=0
+[0/1] Planning build
+Building for debugging...
+[0/2] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.21s)
+Test Suite 'All tests' started at 2026-06-09 03:23:20.996.
+Test Suite 'TeslaSyncPackageTests.xctest' started at 2026-06-09 03:23:20.997.
+Test Suite 'AppearanceSettingsAccessibilityTests' started at 2026-06-09 03:23:20.997.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAccessibilityTests testChoiceLabelNamesSelectionState]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAccessibilityTests testChoiceLabelNamesSelectionState]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAccessibilityTests testModelAccessibilitySummaryContent]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAccessibilityTests testModelAccessibilitySummaryContent]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAccessibilityTests testSummaryForEachPhase]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAccessibilityTests testSummaryForEachPhase]' passed (0.000 seconds).
+Test Suite 'AppearanceSettingsAccessibilityTests' passed at 2026-06-09 03:23:21.000.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'AppearanceSettingsAdapterTests' started at 2026-06-09 03:23:21.000.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testChartPaletteSwatchesMatchWebColors]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testChartPaletteSwatchesMatchWebColors]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testChoiceListsHaveExpectedIdsAndOrder]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testChoiceListsHaveExpectedIdsAndOrder]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testDefaultsSelectWebFallbacks]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testDefaultsSelectWebFallbacks]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testDensityParseFallsBackToWebDefault]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testDensityParseFallsBackToWebDefault]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testGlyphsArePerDomain]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testGlyphsArePerDomain]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testProjectResolvesActiveSelections]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testProjectResolvesActiveSelections]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testResolveFreshnessPrecedence]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testResolveFreshnessPrecedence]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testResolvePhaseMatrix]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsAdapterTests testResolvePhaseMatrix]' passed (0.000 seconds).
+Test Suite 'AppearanceSettingsAdapterTests' passed at 2026-06-09 03:23:21.005.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds
+Test Suite 'AppearanceSettingsModelTests' started at 2026-06-09 03:23:21.005.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testAppearanceModeSet]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testAppearanceModeSet]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testCelebrationPatchesApply]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testCelebrationPatchesApply]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testLoadedShowsContentWithResolvedSelections]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testLoadedShowsContentWithResolvedSelections]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testLoadingAndEmptyAndErrorPhases]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testLoadingAndEmptyAndErrorPhases]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testOfflineKeepsContentWithoutRefresh]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testOfflineKeepsContentWithoutRefresh]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testReplayTourAndResetAllTours]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testReplayTourAndResetAllTours]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSaveFailureStillRecordsWriteAndResets]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSaveFailureStillRecordsWriteAndResets]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSetDensitySavesAndGuardsUnchanged]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSetDensitySavesAndGuardsUnchanged]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSetSidebarStyleAppliesInstantly]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSetSidebarStyleAppliesInstantly]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSetTimeFormatAndChartPaletteSave]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSetTimeFormatAndChartPaletteSave]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSettingsSavesGuardedUntilLoaded]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testSettingsSavesGuardedUntilLoaded]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testStaleAutoRefreshesOnceUntilLive]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testStaleAutoRefreshesOnceUntilLive]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testStartEmitsViewOpenedOnceAndStartsStore]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testStartEmitsViewOpenedOnceAndStartsStore]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testStatusBarEnabledTogglesRaiseToast]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testStatusBarEnabledTogglesRaiseToast]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testStatusBarIconOnlyDoesNotToast]' started.
+Test Case '-[TeslaSyncTests.AppearanceSettingsModelTests testStatusBarIconOnlyDoesNotToast]' passed (0.000 seconds).
+Test Suite 'AppearanceSettingsModelTests' passed at 2026-06-09 03:23:21.013.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'TeslaSyncPackageTests.xctest' passed at 2026-06-09 03:23:21.013.
+	 Executed 26 tests, with 0 failures (0 unexpected) in 0.011 (0.015) seconds
+Test Suite 'All tests' passed at 2026-06-09 03:23:21.013.
+	 Executed 26 tests, with 0 failures (0 unexpected) in 0.011 (0.017) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+ISO_TEST_EXIT=0
+TYPECHECK_IOS18_EXIT=0
+TYPECHECK_MACOS15_EXIT=0
+
+================ FULL-APP BUILD (whole TeslaSync app target, ~200 surfaces) ================
+Prereq: KMP Shared.xcframework assembled via Gradle (:core:assembleSharedXCFramework) — BUILD SUCCESSFUL,
+        staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64).
+        => the Kotlin/Native capability is available on this runner and is NOT the blocker.
+
+>>> xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 17' build  (iPhone 16 unavailable on runner)
+IOS_EXIT=65   (7 failures)
+    AppearanceSettings error lines in iOS build: 0
+0
+>>> xcodebuild -scheme TeslaSync-macOS build
+MAC_EXIT=65   (7 failures)
+    AppearanceSettings error lines in macOS build: 0
+0
+
+--- The full-app failures are pre-existing, UNRELATED parallel-merge collisions in OTHER surfaces
+    (duplicate type declarations -> 'ambiguous for type lookup' + downstream contextual-base errors),
+    all OUT OF SCOPE for this prompt (allowed files: AppearanceSettings.* + this log). Enumerated below: ---
+    dashboard-widgets/ChargeSessionChartWidget.Model.swift
+    dashboard-widgets/ChargeSessionChartWidget.Previews.swift
+    dashboard-widgets/ChargeStatusLiveWidget.Adapter.swift
+    dashboard-widgets/ChargeStatusLiveWidget.Content.swift
+    dashboard-widgets/ChargeStatusLiveWidget.Model.swift
+    dashboard-widgets/ChargeStatusLiveWidget.Previews.swift
+    dashboard-widgets/ChargeStatusWidget.Adapter.swift
+    dashboard-widgets/ChargeStatusWidget.Model.swift
+    dashboard-widgets/ChargeStatusWidget.Previews.swift
+    dashboard-widgets/FleetStatsBarWidget.Previews.swift
+    dashboard-widgets/FleetStatsBarWidget.swift
+    dashboard-widgets/SafetyFeaturesWidget.Model.swift
+    dashboard-widgets/SafetyFeaturesWidget.Previews.swift
+    dashboard-widgets/SafetyFeaturesWidget.swift
+    dashboard-widgets/SafetyHistoryWidget.Model.swift
+    dashboard-widgets/SafetyHistoryWidget.Previews.swift
+    dashboard-widgets/SafetyHistoryWidget.swift
+    feature-views/TimestampTool.Previews.swift
+
+    Representative root-cause errors (not AppearanceSettings):
+    ChargeSessionChartWidget.Model.swift:74:16: error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+    ChargeSessionChartWidget.Previews.swift:16:50: error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+    ChargeStatusLiveWidget.Adapter.swift:173:16: error: 'ChargeStateDTO' is ambiguous for type lookup in this context
+    ChargeStatusLiveWidget.Adapter.swift:174:18: error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+    ChargeStatusLiveWidget.Adapter.swift:175:16: error: 'ChargeUnitPrefs' is ambiguous for type lookup in this context
+    ChargeStatusLiveWidget.Adapter.swift:176:10: error: 'ChargeStatusProjection' is ambiguous for type lookup in this context
+
+================ VERDICT ================
+AppearanceSettings surface: GREEN on every host-runnable gate AND in the real iOS + macOS app-target compile
+  - swiftformat --lint = 0, swiftlint --strict = 0, check-placeholders = 0
+  - isolated SwiftPM build = 0, XCTest = 26/26 passed (Swift 6 strict concurrency = complete)
+  - swiftc -typecheck iOS 18 simulator = 0, macOS 15 = 0  (DEBUG, previews included)
+  - xcodegen enumerates all 14 files; real app-target compile produced 0 AppearanceSettings errors on iOS AND macOS
+Full-app 'xcodebuild build test' cannot reach 0 on this runner because of the pre-existing, unrelated
+collisions above (fixing them requires editing out-of-scope surfaces). Deferred to the P4 acceptance gate
+(p4-apple/P99-0001), consistent with apps/macos-pending-verifications.md. The KMP framework + simulators are
+available here; the blocker is repo-state, not platform capability.
+
+EXIT=65
+STATUS=BLOCKED

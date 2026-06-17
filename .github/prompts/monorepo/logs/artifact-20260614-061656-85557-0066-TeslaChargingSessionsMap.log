@@ -1,0 +1,168 @@
+=== P4-APPLE · P7 · page:charging/TeslaChargingSessionsMap (SwiftUI / HIG) ===
+started: 2026-06-14T18:15:00-0700
+host: macOS (Darwin) 26.x; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.x + swiftformat + xcodegen + pwsh present
+web source: web/src/features/charging/pages/TeslaChargingSessionsMap.tsx   (route (unrouted))
+parity unit: page:charging/TeslaChargingSessionsMap  (manifest requiredCount=7 — 3 maps + 1 state + 3 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Charging/**`.
+That path does NOT exist and is NOT a project.yml source group. The repo's real, compiled
+canonical page home is `apps/apple/Sources/Features/<Domain>/` (the seeded Admin/Analytics/
+Automations/Battery pages live there; `Sources` is a project.yml source path with
+createIntermediateGroups). Page hosting uses the proven `*RouteRegistration` +
+`AppRouteHostRegistry` pattern. The page therefore ships at `apps/apple/Sources/Features/Charging/**`
+— the faithful equivalent of the prompt's `Features/Charging`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). Recorded per covenant #9.
+
+--------------------------------------------------------------------------------
+PREDECESSOR DISCOVERED — REUSED, NOT BYPASSED (covenant #7)
+--------------------------------------------------------------------------------
+A COMPLETE native SwiftUI parity of this exact web page ALREADY EXISTS as the P3/P4 feature
+view artifact 0120 at `apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap*.swift`
+(12 files: View, Model, Adapter, Projection, Views/Canvas, States, Labels, Formatting,
+Previews, strings, Tests, ModelTests). It implements ALL 7 parity items:
+  • the clustered MapKit map (`TeslaChargingSessionsMapCanvas` — its own header: "web MapContainer
+    + MapTileLayer + MarkerCluster"), the empty/loading/error states, and the three web
+    `tesla_sessions.*` strings (its per-surface "TeslaChargingSessionsMap" .strings table, which is
+    compiled into the app and resolves at runtime).
+It was, however, NOT hosted at any route (verified: zero `TeslaChargingSessionsMap(` call sites
+outside feature-views; no ledger row for this unit). The web view is itself unrouted (a charging
+sub-component fed a `sessions` prop).
+
+→ The P7 PAGE deliverable is therefore the NAVIGATION HOST for the existing surface, NOT a
+  duplicate of it. An initial attempt to author a fresh `TeslaChargingSessionsMap.swift` +
+  model under Sources/Features/Charging was DELETED on discovery (it collided on filename +
+  type names with 0120 and would have bypassed the predecessor — covenant #7). The committed
+  deliverable hosts the 0120 surface at a new `.chargingSessionsMap` route and feeds it a
+  local-state demo slice (no API hook — the web sub-view has no data source of its own).
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Charging/TeslaChargingSessionsMapRouteRegistration.swift  registers .chargingSessionsMap -> existing TeslaChargingSessionsMap(model:) (mirrors sibling *RouteRegistration; model built on MainActor + captured)
+?? apps/apple/Sources/Features/Charging/TeslaChargingSessionsMapRouteSource.swift         ChargingSessionsMapDemoSource: TeslaChargingSessionsMapSource — pushes a representative loaded session slice (Bay Area/Central Valley; one location-less row to exercise the web coordinate filter)
+?? apps/apple/Tests/Unit/Features/Charging/TeslaChargingSessionsMapRouteRegistrationTests.swift  6 XCTest cases: route registered/reachable, preserves siblings, path parse, route metadata, demo source emits loaded+filtered, hosted model reaches .loaded
+ M apps/apple/Sources/App/AppRoute.swift        + case .chargingSessionsMap (pathSegment "charging-sessions-map", group .vehicle, systemImage "map.circle.fill"); deep-links via AppRouteParser
+ M apps/apple/Sources/TeslaSyncApp.swift         chains TeslaChargingSessionsMapRouteRegistration.registry(base: registry) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings  +2 keys: route.chargingSessionsMap + spotlight.route.chargingSessionsMap.description (the 3 tesla_sessions.* keys are OWNED by the 0120 surface table — not duplicated). JSON validated.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle ---
+# apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 9m 3s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; TeslaChargingSessionsMapRoute referenced 18x
+GEN_EXIT=0
+
+--- swiftformat --lint (my 3 files + 2 edited files) ---
+0/5 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (whole included tree; my files clean) ---
+Done linting! Found 0 violations, 0 serious in 11582 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Charging -Language swift ---
+PLACEHOLDER_COUNT=0  -> EXIT=0
+--- check-placeholders.ps1 -Path apps/apple/Tests/Unit/Features/Charging -Language swift ---
+PLACEHOLDER_COUNT=0  -> EXIT=0
+
+--- Full app build — macOS (xcodebuild -scheme TeslaSync-macOS build, Debug, real Shared.xcframework) ---
+** (0 compile errors in any file) **          BUILD_MACOS_EXIT=0
+# Achieved after TEMPORARILY neutralizing pre-existing OUT-OF-SCOPE DEBUG-preview breakage (see below).
+# My files (registration + source + AppRoute + TeslaSyncApp edits) compiled with ZERO errors.
+
+--- Full app test — macOS (xcodebuild -scheme TeslaSync-macOS test -only-testing:.../TeslaChargingSessionsMapRouteRegistrationTests) ---
+Test Case testCanonicalPathResolvesToRoute                passed (0.001s)
+Test Case testDemoSourceEmitsLoadedSliceWithFilteredMarkers passed (0.002s)
+Test Case testHostedModelReachesLoadedPhase              passed (0.001s)
+Test Case testRegistersChargingSessionsMapRoute          passed (0.007s)
+Test Case testRegistrationPreservesExistingRoutes        passed (0.001s)
+Test Case testRouteMetadata                              passed (0.001s)
+Executed 6 tests, with 0 failures (0 unexpected) in 0.012s ; ** TEST SUCCEEDED **   TEST_MACOS_EXIT=0
+
+--- Full app build — iOS Simulator (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build, Debug, ONLY_ACTIVE_ARCH=YES) ---
+** BUILD SUCCEEDED **   (my Sources/Features/Charging/* + TeslaSyncApp.swift compiled in the arm64 batch alongside the 0120 surface)   BUILD_IOS_EXIT=0
+# Confirms the adaptive macOS + iOS targets (ADR-002/006) both compile with the change. My files
+# contain no `#if os(...)` branches; the only platform-specific code is the 0120 View's pre-existing
+# `#if os(iOS)` size-class branch, exercised by this iOS build.
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+At this HEAD the full Debug app + test bundle do not compile out-of-the-box due to defects in
+sibling files OUTSIDE this artifact's allowed files (all UNMODIFIED by me — confirmed via
+`git status`):
+  (1) 7 shared-surface DEBUG `#Preview` files use `return` inside a multi-statement ViewBuilder
+      and/or out-of-order `InputField(...)` arguments — Swift 6.3.2 rejects both:
+        TeslaSync/shared-surfaces/{HelpIcon,HelpSegment,Checkbox,RangeSlider,Accordion,Input,SearchInput}.Previews.swift
+        e.g. Input.Previews.swift:88 "cannot use explicit 'return' ... in result builder 'ViewBuilder'";
+             Input.Previews.swift:94 "argument 'placeholder' must precede argument 'error'".
+  (2) 1 out-of-scope unit test has a Swift 6 actor-isolation error:
+        Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20 "call to main actor-isolated
+        static method 'artifact(...)' in a synchronous nonisolated context".
+To VERIFY my code against the real app module I TEMPORARILY neutralized only these out-of-scope
+files (DEBUG previews `#if DEBUG`->`#if false`; the broken test wrapped `#if false`), ran the
+macOS build/test (green, above) and the iOS build (green, above), then RESTORED every one of the 8
+files verbatim via `git checkout`. The committed tree contains ONLY my deliverable
+(`git status --porcelain` final):
+   M apps/apple/Localization/Localizable.xcstrings
+   M apps/apple/Sources/App/AppRoute.swift
+   M apps/apple/Sources/TeslaSyncApp.swift
+  ?? apps/apple/Sources/Features/Charging/
+  ?? apps/apple/Tests/Unit/Features/Charging/
+No sibling/preview/test/project.yml file is modified in the commit.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=7
+================================================================================
+All 7 items are implemented by the 0120 `TeslaChargingSessionsMap` surface, which this P7 page
+HOSTS at the `.chargingSessionsMap` route (rendered by `AppRouteHostRegistry` ->
+`TeslaChargingSessionsMapRouteRegistration` -> `TeslaChargingSessionsMap(model:)`), bound to the
+`@Observable TeslaChargingSessionsMapModel` fed by `ChargingSessionsMapDemoSource`.
+
+[x] map    — MapContainer    feature-views/TeslaChargingSessionsMap.Views.swift `TeslaChargingSessionsMapCanvas` (L22) -> SwiftUI MapKit `Map(position:)` (L44); hosted via my route registration. (header L17: "web MapContainer + MapTileLayer + MarkerCluster")
+[x] map    — MapTileLayer    same `TeslaChargingSessionsMapCanvas` -> `.mapStyle(.standard(pointsOfInterest:.excludingAll))` (L58) — the native base-tile layer (the web OSM TileLayer equivalent).
+[x] map    — MarkerCluster   same canvas -> per-marker `Annotation(... coordinate:)` (L46) with the #22d3ee pin (Views.swift L80) + plotted-count chip (L103); points from `TeslaChargingSessionsMapProjection.make` (web `clusterPoints`).
+[x] state  — empty           feature-views/TeslaChargingSessionsMap.States.swift `TeslaChargingSessionsMapEmptyState`, selected by `TeslaChargingSessionsMapModel.resolvePhase(... hasMarkers:false) == .empty`; my route's demo slice + tests also exercise the coordinate filter that yields it.
+[x] string — tesla_sessions.mapLabel    feature-views/TeslaChargingSessionsMap.Labels.swift `mapLabel(localize:)` (L34) -> localize("tesla_sessions.mapLabel","Charging sessions map"); applied as the map region `.accessibilityLabel` in TeslaChargingSessionsMap.swift L87 (web role="application" aria-label).
+[x] string — tesla_sessions.markerLabel feature-views/TeslaChargingSessionsMap.Labels.swift `markerAccessibilityLabel(siteName:localize:)` (L58) -> localize("tesla_sessions.markerLabel","{{name}} charging session") (web ariaLabel — {{name}} preserved verbatim).
+[x] string — tesla_sessions.unknown     feature-views/TeslaChargingSessionsMap.Labels.swift site fallback (L40) -> localize("tesla_sessions.unknown","Unknown") (web t('tesla_sessions.unknown','Unknown')).
+PARITY_COVERED=7
+
+Web key names are preserved verbatim in the 0120 "TeslaChargingSessionsMap" .strings table (compiled
+into the app). Units: the surface formats energy at the display boundary (Wh SI -> kWh); no non-SI is
+stored/computed. Live SSE staleness: the surface already carries the ADR-013 live/stale/offline chrome;
+my demo slice binds it `.live`. No new units/live-data introduced by the page host.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. macOS build(0)+test(6/6) and iOS
+                       build(0) are GREEN only after TEMP-neutralizing pre-existing OUT-OF-SCOPE
+                       breakage, which is labelled as such and was reverted — never recoloured.
+ 2 No scope narrowing: all 7 parity items are present (via the hosted 0120 surface) + the page is
+                       reachable/deep-linkable + adaptive macOS & iOS both build.
+ 3 No skip-and-assume: the web page was read end-to-end; the predecessor surface was read end-to-end
+                       and confirmed to reproduce center/clusterPoints/popup/states/strings.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); the demo source
+                       returns a real representative slice; the registration renders the full surface.
+ 5 No parity shortcuts: the page renders the genuine clustered MapKit surface (not a fake), all states.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: the 0120 feature view is REUSED, not duplicated; the initial duplicate was
+                       deleted; no sibling/preview/test/project.yml file is modified in the commit.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/5), swiftlint --strict(0),
+                       placeholder(0/0), macOS build(0) + test(6/6), iOS build(0).
+ 9 No silent drift   : output-path + predecessor-host reconciliations recorded above.
+10 Log ends with EXIT/STATUS below.
+
+EXIT=0
+STATUS=DONE

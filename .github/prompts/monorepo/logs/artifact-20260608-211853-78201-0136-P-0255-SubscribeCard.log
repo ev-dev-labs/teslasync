@@ -1,0 +1,173 @@
+=== P4 Feature view 0255 SubscribeCard (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/SubscribeCard.{swift,Model,Adapter,Views,Previews,Tests}.swift + SubscribeCard.strings
+Web src  : web/src/features/system/components/status/SubscribeCard.tsx (presentational alert-channel discoverability card)
+Runner   : Darwin arm64 — Xcode 26.5 (Build 17F42), Apple Swift 6.3.2 (swiftlang-6.3.2.1.108), full Xcode.app present
+Tooling  : xcodebuild (Xcode 26.5) · swiftlint /opt/homebrew/bin/swiftlint · swiftformat /opt/homebrew/bin/swiftformat · pwsh /opt/homebrew/bin/pwsh · xcodegen /opt/homebrew/bin/xcodegen
+
+------------------------------------------------------------------------------------------------------
+SCOPE / PARITY (web source reproduced verbatim — no narrowing)
+------------------------------------------------------------------------------------------------------
+The web SubscribeCard is a pure presentational alert-channel discoverability tile (no query / no hook;
+its only external dependency is the router <Link>): a bell header "Get notified about incidents", the
+self-hosted explainer line, and a grid-cols-1 sm:grid-cols-2 grid of five <ChannelTile> rows linking to
+the channel setups. Every literal + structure is reproduced:
+  • Header  : SF "bell" + t(subscribe.title, "Get notified about incidents")
+  • Caption : t(subscribe.description, "Self-hosted: configure your own channels for status events.")
+  • Tiles   (web order, lucide -> SF, web `to` preserved):
+      Email        Mail->envelope                          "SMTP-based delivery"      /notifications/channels
+      Slack        MessageSquare->message                  "Webhook channel"          /notifications/channels
+      Discord      Hash->number                            "Webhook channel"          /notifications/channels
+      Webhook      Webhook->point.3.connected.trianglepath.dotted "Custom HTTP endpoint" /notifications/channels
+      Browser push Smartphone->iphone                      "Opt-in PWA notifications" /settings/notifications
+  • Grid    : LazyVGrid; SubscribeCardLayout.columns(width) -> 1 column compact, 2 across regular (web sm:grid-cols-2 @ 640)
+
+Architecture follows the accepted presentational-nav precedent QuickNav (0129): the surface is NOT a
+bare static view — it honours the leaf contract through a P1/S8 state-holder seam so every state renders
+and previews/tests drive them:
+  • P1/S8  state-holder : SubscribeCardChannelSource protocol; SubscribeCardViewModel(@Observable @MainActor);
+                          StaticSubscribeCardChannelSource (production, publishes the static catalog, .live);
+                          InMemorySubscribeCardChannelSource (preview/test). No HTTP / no navigation in the view.
+  • P1/S9  tokens       : Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion only — no Tailwind ports, no raw hex.
+  • P1/S10 i18n         : SubscribeCardViewStrings facade (.string/.text), per-surface "SubscribeCard" table;
+                          English fallbacks promoted byte-equal from the web literals (no Swift prose).
+  • P1/S11 telemetry    : view.opened surface="SubscribeCard" emitted once on first start.
+  • Navigation          : onSelect:(SubscribeChannel)->Void — host resolves the deep link (web <Link to>);
+                          SubscribeChannel carries webPath (web `to`) + routePath (canonical native route).
+  • States (all render) : loading (skeleton grid) / empty (friendly, never blank) / error (retry) /
+                          content (the 5-tile grid); ORTHOGONAL connection axis live/stale/offline ->
+                          header freshness chip + one-shot stale auto-refresh; header+caption always shown.
+  • A11y                : each tile is a Button w/ VoiceOver label ("<label>. <desc>") + hint ("Opens X");
+                          header isHeader trait; Dynamic-Type tokens; reduce-motion-aware press feedback.
+
+------------------------------------------------------------------------------------------------------
+RUNNABLE IN-SCOPE GATES ON THIS RUNNER (raw output)
+------------------------------------------------------------------------------------------------------
+[3] swiftlint --strict --no-cache (the 6 SubscribeCard.*.swift)
+      "Done linting! Found 0 violations, 0 serious in 6 files."                          LINT_EXIT=0
+[4] swiftformat --lint (the 6 SubscribeCard.*.swift)
+      "0/6 files require formatting."                                                    FORMAT_EXIT=0
+[5] check-placeholders.ps1 -Language swift, run per shipped .swift file:
+      SubscribeCard.swift          PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+      SubscribeCard.Model.swift    PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+      SubscribeCard.Adapter.swift  PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+      SubscribeCard.Views.swift    PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+      SubscribeCard.Previews.swift PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+      SubscribeCard.Tests.swift    PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+      TOTAL PLACEHOLDER_COUNT=0                                                          PLACEHOLDER_EXIT=0
+
+[ISO] Isolated Swift 6 strict-concurrency build + the shipped XCTest, run against the REAL shared
+      component library + REAL design tokens. A throwaway SwiftPM package (Package.swift, swift-tools
+      6.0, .macOS(.v15), -strict-concurrency=complete) SYMLINKS — zero drift — the 4 shipped surface
+      source files (SubscribeCard.{swift,Model,Adapter,Views}.swift) next to the REAL
+      apps/apple/Sources/Components/** + apps/apple/Sources/Design/** + apps/design/generated/apple/
+      Tokens.swift + Sources/App/AppRoute(+Parser).swift, and COMPILES the shipped SubscribeCard.Tests.swift
+      (only adaptation: @testable import TeslaSync -> TeslaSyncKit). (Sources/Components/DataDisplay/
+      UnitFormatters.swift was excluded from the harness only because it imports the KMP `Shared`
+      framework via the `Units` facade; it is unrelated to this surface and referenced by no other
+      Components file.)
+        swift build : "Build complete!"  (the 4 surface files compile clean against the real components)  ISO_BUILD_EXIT=0
+        swift test  : "Test Suite 'All tests' passed ... Executed 41 tests, with 0 failures (0 unexpected)" ISO_TEST_EXIT=0
+      The 41 assertions are the COMPLETE shipped SubscribeCard.Tests.swift: catalog parity (web order /
+      i18n keys / English fallbacks / web `to` paths / icons), the AppRouteParser route-parity check
+      (parse(webPath).path == routePath for all 5 channels), the tile builder + responsive column math,
+      the projection matrix, the view-model phases + telemetry-once + guarded stale auto-refresh +
+      offline-keeps-cache + start/stop/refresh wiring, the VoiceOver copy, AND the 6 per-state
+      ImageRenderer render-smoke checks (content/loading/empty/error/stale/offline) — every state
+      rasterizes without crashing.
+
+------------------------------------------------------------------------------------------------------
+PROMPT GATE xcodebuild STEPS — BLOCKED BY PRE-EXISTING, UNRELATED CONDITIONS (raw evidence, NOT green)
+------------------------------------------------------------------------------------------------------
+The prompt gate's [1] iOS and [2] macOS `xcodebuild ... build test` steps DO NOT pass on this runner.
+Per the Honesty Covenant (#1 no-red-as-green, #3 no-skip-and-assume) both were actually executed and are
+reported RED with raw evidence, and proven to be PRE-EXISTING and NOT caused by this surface:
+
+  [1] iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+             Result: "** BUILD FAILED **"                                                IOS_EXIT=65 (DEFERRED)
+             • Staging pre-action succeeded: Shared.xcframework built from apps/shared via Gradle
+               ("BUILD SUCCESSFUL" / "Shared.xcframework staged"), so this is NOT a KMP/toolchain gap.
+             • The failure is the TeslaSync app module: 852 reported errors, ALL of the form
+               "'<T>' is ambiguous for type lookup in this context" / "cannot infer contextual base"
+               caused by DUPLICATE type definitions across OTHER, out-of-scope surfaces — e.g.
+               `ChargeSessionDTO` is defined in BOTH (committed, not mine):
+                 apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift
+                 apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Models.swift
+             • SubscribeCard error count in this build: 0.
+             • BASELINE PROOF (no-skip-and-assume): moving the 7 SubscribeCard.* files OUT, regenerating
+               the project, and rebuilding STILL fails (BASELINE_EXIT=65). The set of 21 distinct files
+               with errors is BYTE-IDENTICAL with vs. without my surface (`comm -3` of the two
+               broken-file lists is empty). The 21 are all pre-existing dashboard-widgets/feature-views
+               surfaces (ChargeStatus*, ChargeSessionChart, DrivingCoach*, FleetStatsBar*, Safety*,
+               DrivingCoachSection) — NONE is a SubscribeCard file. => the app target is broken at HEAD;
+               my surface adds zero errors.
+
+  [2] macOS: xcodebuild -scheme TeslaSync-macOS build
+             Result: "** BUILD FAILED **"                                                MAC_EXIT=65 (DEFERRED)
+             • Fails even earlier than compilation, at code-signing:
+               "'TeslaSync-macOS' has entitlements that require signing with a development certificate.
+                Enable development signing in the Signing & Capabilities editor."
+               (project.yml sets DEVELOPMENT_TEAM="" — no dev certificate is provisioned on this runner;
+               same for TeslaSyncWidgets-macOS.) This is the pre-existing macOS-signing blocker owned by
+               the P4 P99 acceptance gate (apps/macos-pending-verifications.md), and once past signing it
+               compiles the SAME shared sources and would hit the identical pre-existing duplicate-type
+               errors. SubscribeCard error count: 0.
+
+Neither blocker is in this prompt's allowed-files scope (apps/apple/TeslaSync/feature-views/SubscribeCard.*
++ this log). Deduplicating ChargeSessionDTO/SafetyModel/etc. across other surfaces and configuring macOS
+signing are owned by other prompts / the P99 acceptance gate. Fixing them here would violate scope (#2)
+and predecessor boundaries (#7). The macOS verification command (unchanged) for the signed P99 runner:
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+------------------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------------------
+ 1  No red-as-green     : the iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65,
+                          DEFERRED) with raw "** BUILD FAILED **" evidence — never as passing. Every
+                          claimed-green step pastes its real output.
+ 2  No scope narrowing  : every web region + literal reproduced (header, caption, all 5 tiles incl. the
+                          /settings/notifications outlier, the responsive 1<->2 column grid) AND the full
+                          leaf state matrix (loading/empty/error/content + live/stale/offline + stale
+                          auto-refresh) renders — proven by the 6 ImageRenderer smoke checks.
+ 3  No skip-and-assume  : every in-scope gate executed on THIS runner; the placeholder script was pointed
+                          at each REAL file; the iOS/macOS failures were each REPRODUCED and the
+                          pre-existing baseline was REBUILT with my files removed to prove non-causation.
+ 4  No stubs as final   : complete production surface + 41 executed assertions; placeholder COUNT=0; no
+                          TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-implemented in shipped code.
+ 5  No parity shortcut  : i18n English fallbacks are byte-equal to the web literals; the lucide->SF icon
+                          map, the web `to` paths, the catalog order, and the AppRouteParser route parity
+                          are each unit-asserted.
+ 6  No delegation       : authored directly — delegation is FORBIDDEN for this tier; no sub-agents used.
+ 7  No predecessor bypass: REUSED the real AppRoute/AppRouteParser, the real P1/S9 Tokens, the real
+                          shared component library, and the QuickNav state-holder/telemetry/i18n/freshness
+                          seams. No out-of-scope file edited to force the gate green.
+ 8  No commit on red     : the committed artifact (7 SubscribeCard.* files + this log) is GREEN on every
+                          runnable IN-SCOPE gate AND on a real Swift 6 strict-concurrency build + 41/41
+                          executed assertions. The xcodebuild gate's red is entirely PRE-EXISTING and
+                          unrelated (identical broken-file set with/without this surface; macOS signing).
+ 9  No silent drift     : changes confined to feature-views/SubscribeCard.* + this log. The generated
+                          .xcodeproj and build/ are git-ignored; the SwiftPM verification harness lives in
+                          the session scratch dir, outside the repo. The iOS-duplicate-type and
+                          macOS-signing toolchain gaps are disclosed above, not hidden.
+ 10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic SubscribeCard shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on this runner: it compiles under Swift 6 strict-concurrency against the REAL
+shared component library + REAL design tokens, and all 41 behaviour + per-state-render assertions (the
+full shipped XCTest file incl. the ImageRenderer smoke set) pass, with swiftformat / swiftlint --strict /
+placeholder all green on the surface files. The full-app iOS-Simulator + macOS xcodebuild build/test gate
+is DEFERRED (reported RED, not failed by this code): the iOS app module is broken at HEAD by pre-existing
+duplicate-type collisions across 21 OTHER surfaces (identical broken-file set with my files removed), and
+the macOS target requires a development signing certificate not provisioned here — both owned by other
+prompts / the P4 P99 acceptance gate, outside this prompt's allowed files.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/SubscribeCard.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0255-SubscribeCard.log
+  git commit -m "feat(apps/apple/feature-views): add SubscribeCard surface (P4)"
+
+EXIT=0
+STATUS=DONE

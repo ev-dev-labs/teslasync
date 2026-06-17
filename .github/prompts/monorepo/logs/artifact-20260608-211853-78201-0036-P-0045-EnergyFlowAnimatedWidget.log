@@ -1,0 +1,147 @@
+=== P4 Dashboard widget 0045 EnergyFlowAnimatedWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.*
+Web spec: web/src/features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx
+Registry: energy-flow-animated · category=energy · default/min 2x4 · max 3x40
+Sibling template followed: LivePowerFlowWidget.* (same flow-diagram architecture)
+
+Toolchain (runner):
+  Xcode 26.5 (build 17F42); Swift 6.3.2; swiftlint + swiftformat (homebrew);
+  pwsh 7; JDK 17 + Gradle 8.14.5 (Kotlin 2.0.21); iPhone 16 simulator booted.
+
+------------------------------------------------------------------------------
+DELIVERABLES (all under the allowed glob EnergyFlowAnimatedWidget.*)
+------------------------------------------------------------------------------
+  EnergyFlowAnimatedWidget.Models.swift    domain value types (snapshot, node,
+                                           arrow, projection, enums) — port of
+                                           WidgetFlowDiagram types
+  EnergyFlowAnimatedWidget.Builder.swift   pure cached->projection adapter +
+                                           diagram stroke/visibility math
+  EnergyFlowAnimatedWidget.Model.swift     P1/S8 state-holder seam, P1/S11
+                                           telemetry seam (view.opened), P1/S10
+                                           i18n facade, kW/percent format, a11y
+  EnergyFlowAnimatedWidget.Palette.swift   cyan/emerald/amber semantic palette
+  EnergyFlowAnimatedWidget.Diagram.swift   SwiftUI flow diagram (Canvas arrows +
+                                           node views) + compact fallback
+  EnergyFlowAnimatedWidget.swift           the surface: header + state switch
+                                           (loading/empty/error/stale/offline/
+                                           content) + connectivity banner
+  EnergyFlowAnimatedWidget.Previews.swift  per-state previews
+  EnergyFlowAnimatedWidget.Tests.swift     adapter + model + registry + a11y +
+                                           format unit tests (30 cases)
+  EnergyFlowAnimatedWidget.strings         i18n catalog (table
+                                           "EnergyFlowAnimatedWidget")
+
+Parity i18n keys reproduced from the web source (namespace dashboard,
+energyFlowAnimated): title, battery, drive, regen, charger, idle, noData.
+
+------------------------------------------------------------------------------
+GATE RESULTS
+------------------------------------------------------------------------------
+[1] xcodegen generate ............................. XCODEGEN_EXIT=0  (PASS)
+      TeslaSync.xcodeproj created; all 9 surface files referenced
+      (8 .swift in app/test targets + .strings resource).
+
+[2] KMP Shared.xcframework (scheme pre-action) .... BUILD SUCCESSFUL in 12m59s
+      Scripts/build-shared-xcframework.sh -> :core:assembleSharedXCFramework
+      staged apps/apple/Frameworks/Shared.xcframework (iosArm64 + iosSimArm64 +
+      macosArm64). (PASS)
+
+[3] swiftformat --lint apps/apple ................. SWIFTFORMAT_EXIT=0  (PASS)
+      "0/2005 files require formatting, 3 files skipped."
+
+[4] swiftlint --strict (whole apps/apple) ......... SWIFTLINT_EXIT=2  (BLOCKED)
+      "Found 1 violation, 1 serious in 2001 files."
+      The single violation is PRE-EXISTING and OUT OF SCOPE (a sibling surface):
+        TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+        warning: Opening Brace Spacing Violation (opening_brace)
+      My 8 EnergyFlowAnimatedWidget Swift files: 0 violations (verified by a
+      scoped `swiftlint lint --strict` over exactly those files -> 0 serious).
+
+[5] check-placeholders.ps1 ........................ PLACEHOLDER_EXIT=0  (PASS)
+      Literal gate path (extension-less prefix): PLACEHOLDER_COUNT=0, EXIT=0.
+      Honest scan of the 8 actual .swift files (temp copy, -Language swift):
+      PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0, EXIT=0.
+
+[6] xcodebuild -scheme TeslaSync -destination
+    'platform=iOS Simulator,name=iPhone 16' build .. IOS_BUILD_EXIT=65 (BLOCKED)
+      ** BUILD FAILED ** — but EVERY error is PRE-EXISTING and in OTHER surfaces;
+      ZERO errors reference any EnergyFlowAnimatedWidget file. Root causes
+      (out-of-scope sibling files, committed at HEAD, unmodified in this branch):
+        a) Duplicate type 'ChargingProjection' in the single app module:
+             dashboard-widgets/ChargeStatusWidget.Adapter.swift:118  (public struct)
+             feature-views/ChargingDetailSection.Adapter.swift:240   (public enum)
+           -> "invalid redeclaration of 'ChargingProjection'" +
+              "'ChargingProjection' is ambiguous for type lookup".
+        b) feature-views/ChargeCostTrackerWidget.Adapter.swift:328:69:
+             error: ambiguous use of 'miles'.
+      These belong to other P4 surface prompts ("Out of Scope: Other surfaces in
+      the same feature (each has its own prompt)"). Editing them is forbidden by
+      this prompt's scope + Honesty Covenant #6 (No delegation) / the allowed-file
+      list. They are not introduced by this surface.
+
+------------------------------------------------------------------------------
+ISOLATED VERIFICATION OF THIS SURFACE (since the monorepo build is blocked by the
+unrelated sibling defects above, the surface was verified in a clean room using
+its REAL module dependencies — generated DesignTokens + DashboardWidgetInfra —
+plus a faithful TSSkeleton shim matching the real signature):
+------------------------------------------------------------------------------
+[A] Whole-module iOS compile dispatch (xcodebuild, after temporarily renaming the
+    pre-existing duplicate enum locally — NEVER committed, reverted via
+    `git checkout`): all EnergyFlowAnimatedWidget.* files were dispatched to
+    SwiftCompile and produced 0 diagnostics; the build then stopped on the
+    unrelated ChargeCostTrackerWidget 'miles' error. (my files: 0 errors)
+
+[B] swiftc -typecheck under the app's exact flags
+      (-swift-version 6 -strict-concurrency=complete,
+       -target arm64-apple-ios18.0-simulator, iPhoneSimulator26.5.sdk):
+      FULL_EXIT=0 — 0 errors, 0 warnings across all 7 production files
+      (Models, Builder, Model, Palette, Diagram, Widget, Previews).
+
+[C] Unit tests executed in an isolated SwiftPM package (macOS 15) wrapping the
+    surface + its deps; Tests.swift retargeted @testable import EFVerify:
+      Test Suite 'All tests' passed — Executed 30 tests, with 0 failures.
+        EnergyFlowBuilderTests   (adapter parity: nodes/positions/magnitudes,
+                                  driveMode, 3 arrows always present, consuming/
+                                  regen/charging activation, dead-band thresholds,
+                                  visibleArrows compact, maxArrowValue, stroke)
+        EnergyFlowModelTests     (phase resolution loading/empty/error/content,
+                                  telemetry-once, refresh delegation, connection
+                                  + projection tracking, compact threshold)
+        EnergyFlowRegistryTests  (canonical energy-flow-animated metadata + clamp)
+        EnergyFlowAccessibilityTests (per-node VoiceOver summary + empty fallback)
+        EnergyFlowFormatTests    (percent whole-number, kW unit + digit count)
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] All web states reproduced: loading / empty (no energy data) / error / stale /
+    offline / content, plus compact fallback and driving/regen/idle/charging.
+[x] Binds via shared P1/S8 state-holder seam (EnergyFlowSource/EnergyFlowModel);
+    no direct HTTP in the view.
+[x] Every web i18n key present in the P1/S10 catalog (.strings).
+[x] Accessibility labels on every interactive element (refresh + open buttons,
+    freshness chip, connectivity banner) and a per-node diagram a11y value.
+[x] Tests: adapter unit test + per-state model test + a11y label test + format
+    test (30 cases, all green in isolation).
+[x] No TODO / stub / mock / placeholder / Lorem (placeholder gate = 0).
+[!] Full monorepo `xcodebuild build test` + `swiftlint --strict` cannot reach
+    EXIT=0 due solely to PRE-EXISTING, out-of-scope sibling defects (see [4]/[6]).
+    This surface itself is complete and verified DONE-quality ([A]/[B]/[C]).
+
+------------------------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------------------------
+This surface is implemented to full parity with the web source, compiles cleanly
+in-module and in isolation (Swift 6, strict concurrency complete) with 0 errors /
+0 warnings, passes 30/30 of its own unit tests, and is clean under swiftformat,
+the scoped swiftlint, and the placeholder gate. The monorepo-wide build/lint gate
+is RED only because of pre-existing compile + lint defects in OTHER P4 surfaces
+(ChargeStatusWidget / ChargingDetailSection 'ChargingProjection' duplicate;
+ChargeCostTrackerWidget 'miles' ambiguity; LiveSignalSparklinesWidget brace
+spacing) that are out of this prompt's allowed-file scope and forbidden to edit.
+Per the prompt's escalation path, this is reported as BLOCKED-on-predecessor with
+the evidence above rather than green-washed.
+
+EXIT=1
+STATUS=BLOCKED

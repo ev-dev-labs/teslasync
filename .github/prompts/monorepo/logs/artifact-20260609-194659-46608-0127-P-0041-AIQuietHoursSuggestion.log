@@ -1,0 +1,141 @@
+=== P4 Shared surface 0041 AIQuietHoursSuggestion (Apple) ===
+Date: 2026-06-10
+Surface: apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.*
+Web source of truth: web/src/components/ai/AIQuietHoursSuggestion.tsx
+
+Honesty Covenant: this log records RAW outcomes. The full-scheme xcodebuild gate is RED
+(EXIT 65) due to PRE-EXISTING compile breakage in UNRELATED sibling surfaces + a macOS
+code-signing environment limitation — both outside this prompt's allowed-files scope
+(AIQuietHoursSuggestion.*). The new surface itself is GREEN on every in-scope check and
+contributes ZERO compile errors. Evidence below, including a baseline build with the new
+files removed that reproduces the identical failures.
+
+----------------------------------------------------------------------------------------
+CAPABILITY (not BLOCKED on platform)
+----------------------------------------------------------------------------------------
+Xcode 26.5 (build 17F42); Swift 6.3.2; swiftlint + swiftformat present;
+iOS Simulator "iPhone 16" available; pwsh present; Java 17 (KMP).
+
+----------------------------------------------------------------------------------------
+STEP 1 — swiftlint --strict (new surface files)
+----------------------------------------------------------------------------------------
+$ swiftlint lint --strict --config .swiftlint.yml <AIQuietHoursSuggestion.* .swift x13>
+Done linting! Found 0 violations, 0 serious in 13 files.
+LINT_EXIT=0
+
+----------------------------------------------------------------------------------------
+STEP 2 — swiftformat --lint (new surface files)
+----------------------------------------------------------------------------------------
+$ swiftformat --lint <AIQuietHoursSuggestion.* .swift x13>
+0/13 files require formatting.
+FORMAT_EXIT=0
+
+----------------------------------------------------------------------------------------
+STEP 3 — check-placeholders.ps1 (new surface dir)
+----------------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path .../AIQuietHoursSuggestion
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------------------------
+STEP 4 — KMP Shared.xcframework (scheme pre-action dependency)
+----------------------------------------------------------------------------------------
+$ apps/shared/gradlew :core:assembleSharedXCFramework
+BUILD SUCCESSFUL in 7m 13s
+xcframework written to apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+Staged -> apps/apple/Frameworks/Shared.xcframework
+GRADLE_EXIT=0
+
+----------------------------------------------------------------------------------------
+STEP 5 — iOS full-scheme build test  (THE GATE)
+----------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=65
+
+Real Swift compile errors: 162. Errors attributed to AIQuietHoursSuggestion: 0.
+ALL errors are in PRE-EXISTING, UNRELATED sibling surfaces (outside allowed scope):
+  - TeslaSync/dashboard-widgets/RecentDrivesListWidget.{swift,Model,Previews}
+  - TeslaSync/dashboard-widgets/StateTimelineWidget.{swift,Model,Previews}
+  - TeslaSync/feature-views/RecentDrivesSection.{Seams,Previews}
+  - TeslaSync/feature-views/StateTimeline.{Source,Previews}
+Root cause (pre-existing): duplicate type definitions across two sibling surfaces make
+these names module-ambiguous (single-module build, ADR-002):
+  'RecentDrivesModel'/'RecentDrivesConnection'/'RecentDrivesLoadStatus'/'RecentDrivesUpdate'
+  defined in BOTH dashboard-widgets/RecentDrivesListWidget.Model.swift
+  AND feature-views/RecentDrivesSection.Model.swift (+ .Adapter.swift);
+  'StateTimeline{Model,Connection,LoadStatus,Update}' defined in BOTH
+  dashboard-widgets/StateTimelineWidget.Model.swift AND feature-views/StateTimeline.Source.swift.
+None of these files are created or modified by this prompt (git status: only the 14
+AIQuietHoursSuggestion.* files are new; nothing else changed).
+
+----------------------------------------------------------------------------------------
+STEP 5b — BASELINE proof: same build with the 14 new files REMOVED
+----------------------------------------------------------------------------------------
+$ (moved AIQuietHoursSuggestion.* out) ; xcodegen generate ; xcodebuild ... build
+BASELINE_EXIT=65   real Swift errors: 108  (identical files: RecentDrives*/StateTimeline*)
+=> The failure pre-exists and is independent of this surface. Files then restored.
+
+----------------------------------------------------------------------------------------
+STEP 5c — iOS build test with the pre-existing-broken siblings temporarily quarantined
+          (RecentDrivesListWidget.*, StateTimelineWidget.* moved aside; verification only,
+           restored before commit). Proves the new surface compiles in the REAL module.
+----------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync ... build test -only-testing:<my 11 test classes>
+Module type-check PASSED: ambiguity errors = 0; AIQuietHoursSuggestion errors = 0.
+Remaining error count: 1 — and it is ALSO pre-existing & unrelated:
+  TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123
+  "escaping closure captures non-escaping parameter 'content'"
+=> The new surface's views + logic type-check cleanly in the real TeslaSync module;
+   the only remaining blocker is yet another unrelated pre-existing file. Quarantine
+   restored afterwards (git: only the 14 new files remain).
+
+----------------------------------------------------------------------------------------
+STEP 6 — ISOLATED test run of the new surface (real sources, real XCTest)
+          SwiftPM package "TeslaSync" = the surface's pure-Foundation sources
+          (Adapter, Parser, Model, Projection, Seams) + the 4 *Tests.swift files.
+          (The SwiftUI View + design tokens belong to the app module — verified in 5c.)
+----------------------------------------------------------------------------------------
+$ swift test
+Executed 80 tests, with 0 failures (0 unexpected)
+Test Suite 'All tests' passed.
+SWIFT_TEST_EXIT=0
+Coverage: SSE parser (every frame + tool_result proposal capture), proposal field guards,
+reducer (proposal capture gated on tool name + ok), endpoint, apply-patch, accessibility,
+projection (gatedOff/loading/idle/thinking/proposal/prose/error/offline + localized lines),
+model state-holder (telemetry once, gate, suggest/cancel/retry/refresh guards, stale
+auto-refresh re-arm, offline keeps cached proposal), and the live SSE request builder.
+
+----------------------------------------------------------------------------------------
+STEP 7 — macOS build
+----------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build
+MAC_EXIT=65
+Failed at the build-description stage (4s, before Swift compile) on a code-signing
+ENVIRONMENT limitation:
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+  certificate. Enable development signing in the Signing & Capabilities editor.
+  error: "TeslaSyncWidgets-macOS" ... (same)
+No development certificate is available on this runner. Beyond signing, the macOS app
+shares the same shared-surfaces sources, so it inherits the same pre-existing baseline
+Swift errors from Step 5. The new surface is cross-platform (the Step 6 SwiftPM run
+compiled + tested it on arm64 macOS). MAC errors attributed to AIQuietHoursSuggestion: 0.
+
+----------------------------------------------------------------------------------------
+SUMMARY
+----------------------------------------------------------------------------------------
+New surface AIQuietHoursSuggestion (14 files) — GREEN on every in-scope check:
+  LINT_EXIT=0 · FORMAT_EXIT=0 · PLACEHOLDER_EXIT=0 · isolated tests 80/80 pass (EXIT=0) ·
+  0 compile errors attributed to the surface · views+logic type-check in the real module.
+
+Full-scheme gate — RED due to factors OUTSIDE this prompt's allowed scope, proven
+pre-existing:
+  IOS_EXIT=65  (duplicate-type ambiguity in RecentDrives*/StateTimeline* + an unrelated
+               escaping-closure error in AIAutoNameUnnamedLocations.swift)
+  MAC_EXIT=65  (macOS development-certificate signing unavailable on runner; same shared
+               baseline errors)
+These cannot be fixed within the allowed files (AIQuietHoursSuggestion.*) and are not
+caused by this surface (baseline build with the surface removed = identical failures).
+
+EXIT=65
+STATUS=BLOCKED

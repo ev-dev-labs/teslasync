@@ -1,0 +1,146 @@
+=== P4 Feature view 0191 NotificationRow (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/NotificationRow.*
+Web source: web/src/features/notifications/components/NotificationRow.tsx
+Host: Darwin arm64 · Xcode/xcodebuild · Swift 6 (strict concurrency = complete)
+Date: 2026-06-09
+
+────────────────────────────────────────────────────────────────────────
+SUMMARY
+────────────────────────────────────────────────────────────────────────
+The NotificationRow surface is PRODUCTION-COMPLETE and verified GREEN by every
+host-runnable, surface-scoped gate (swiftlint --strict, swiftformat --lint,
+placeholder gate, isolated SwiftPM build + 38 tests, real iOS-18 + macOS-15
+swiftc -typecheck, xcodegen enumeration, and ZERO NotificationRow errors in the
+real full-app iOS compile).
+
+The full-app `xcodebuild build test` (both platforms) is BLOCKED by PRE-EXISTING,
+UNRELATED factors that are out of scope for this surface prompt:
+  • iOS  — 226 compile errors, ALL 17 failing files under TeslaSync/dashboard-widgets/*
+           (ChargeStatusWidget / ChargeStatusLiveWidget / SafetyFeaturesWidget /
+           SafetyHistoryWidget / ChargeSessionChartWidget / FleetStatsBarWidget):
+           "X is ambiguous for type lookup" duplicate-type collisions
+           (e.g. ChargeStatusProjection + ChargeConnection each defined 2× across
+           ChargeStatusWidget.* and ChargeStatusLiveWidget.*). 0 NotificationRow errors.
+  • macOS — development-signing required for TeslaSync-macOS / TeslaSyncWidgets-macOS
+           entitlements (no signing identity on this host). 0 NotificationRow errors.
+  • swiftlint --strict (repo-wide) — 1 pre-existing violation:
+           dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158 (opening_brace).
+           0 NotificationRow violations.
+
+These are the SAME parallel-merge collisions + macOS-signing blockers recorded in
+apps/macos-pending-verifications.md for the prior P4 surfaces (ToolCard,
+AlertMessageEditor, FSMTimelineChart, DriveEfficiencyChartWidget). They belong to
+OTHER surfaces' prompts ("Out of Scope: Other surfaces … each has its own prompt")
+and were NOT authored or modified here (git status: only NotificationRow.* added;
+dashboard-widgets/* untouched). Deferred to p4-apple/P99-0001-apple-acceptance-gate
+on a clean macOS CI runner with signing identities.
+
+════════════════════════════════════════════════════════════════════════
+A. SURFACE-SCOPED GATES (all GREEN — real, host-runnable)
+════════════════════════════════════════════════════════════════════════
+
+[A1] swiftformat --lint (11 NotificationRow .swift files)
+     → "0/11 files require formatting." FORMAT_EXIT=0
+
+[A2] swiftlint lint --strict --no-cache (11 NotificationRow .swift files)
+     → "Done linting! Found 0 violations, 0 serious in 11 files." LINT_EXIT=0
+
+[A3] check-placeholders.ps1 (targeted scan of the 11 NotificationRow .swift files)
+     → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+     (grep for TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|
+      fatalError("unimpl|fatalError("not → NONE FOUND)
+
+[A4] Isolated SwiftPM build — Package(swiftLanguageMode: .v6), platforms
+     macOS 15 / iOS 18; target vendors NotificationRow.* (non-test) + the real
+     Tokens.swift / Motion.swift (TSFadeIn) / TSSkeleton dependency files.
+     $ swift build
+     → "Build complete! (11.07s)" BUILD_EXIT=0
+
+[A5] Isolated SwiftPM tests (NotificationRow.Tests.swift + NotificationRow.ModelTests.swift)
+     $ swift test
+     → "Executed 38 tests, with 0 failures (0 unexpected)" TEST_EXIT=0
+       Suites: NotificationRowSeverityTests, NotificationRowProjectionTests,
+       NotificationRowDrillthroughTests, NotificationRowProjectorTests,
+       NotificationRowAccessibilityTests, NotificationRowLocalizationTests,
+       NotificationRowModelTests (incl. in-flight action guard via a gated source).
+
+[A6] Real SDK typecheck (Swift 6, -strict-concurrency=complete) over the surface's
+     app-target sources + real token/motion/skeleton deps:
+     iOS 18 simulator (arm64-apple-ios18.0-simulator)  → IOS_TYPECHECK_EXIT=0
+     macOS 15        (arm64-apple-macos15.0)            → MAC_TYPECHECK_EXIT=0
+
+[A7] xcodegen generate → "Created project at .../TeslaSync.xcodeproj" XCODEGEN_EXIT=0
+     All 11 NotificationRow .swift files + NotificationRow.strings enumerated;
+     NotificationRow.Tests.swift + NotificationRow.ModelTests.swift routed to the
+     XCTest bundles (project.yml `**/*Tests.swift` include), the rest to the app target.
+
+════════════════════════════════════════════════════════════════════════
+B. FULL-APP GATE (as specified by the prompt) — BLOCKED (pre-existing/out-of-scope)
+════════════════════════════════════════════════════════════════════════
+
+[B1] Shared.xcframework (ADR-004 KMP core) — assembled + staged successfully.
+     $ apps/shared/gradlew :core:assembleSharedXCFramework
+     → "BUILD SUCCESSFUL in 9m 55s"; release Shared.xcframework staged into
+       apps/apple/Frameworks/ (ios-arm64, ios-arm64-simulator, macos-arm64).
+
+[B2] iOS gate — xcodebuild -scheme TeslaSync
+       -destination 'platform=iOS Simulator,name=iPhone 16' build
+     → ** BUILD FAILED **  IOS_EXIT=65 (build phase fails before `test` can run)
+       226 `error:` lines / 25 unique messages — ALL 17 failing files under
+       TeslaSync/dashboard-widgets/* ; 0 in NotificationRow.* (or anywhere else).
+       Representative: "'ChargeStatusProjection' is ambiguous for type lookup",
+       "'ChargeConnection' is ambiguous", "'SafetyConnection' is ambiguous",
+       "'FleetStatsBarModel' is ambiguous" — duplicate type definitions across
+       parallel dashboard-widget surfaces:
+         ChargeStatusProjection ∈ {ChargeStatusLiveWidget.Adapter.swift,
+                                    ChargeStatusWidget.Adapter.swift}
+         ChargeConnection       ∈ {ChargeStatusLiveWidget.Model.swift,
+                                    ChargeStatusWidget.Model.swift}
+       (These files were NOT touched by this prompt — git status confirms only
+        NotificationRow.* added.)
+
+[B3] macOS gate — xcodebuild -scheme TeslaSync-macOS build
+     → ** BUILD FAILED **  MAC_EXIT=65
+       Error: '"TeslaSync-macOS" has entitlements that require signing with a
+       development certificate' (+ TeslaSyncWidgets-macOS). No signing identity on
+       host. 0 NotificationRow errors.
+
+[B4] swiftlint --strict (repo-wide, gate form)
+     → "Found 1 violation, 1 serious in 2356 files." LINT_EXIT=2
+       The sole violation: dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158
+       (opening_brace) — pre-existing, recorded in macos-pending-verifications.md.
+       0 NotificationRow violations.
+
+[B5] swiftformat --lint apps/apple (repo-wide, gate form)
+     → "0/2360 files require formatting, 2 files skipped." FORMAT_EXIT=0 (clean)
+
+[B6] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/NotificationRow
+     → the prompt's literal path is a file STEM (the surface ships NotificationRow.*
+       files, not a NotificationRow/ subdir), so the recursive scan resolves no
+       directory and returns PLACEHOLDER_COUNT=0 / EXIT=0 vacuously. The MEANINGFUL
+       scan of the 11 actual files is [A3] above (PLACEHOLDER_COUNT=0).
+
+────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────
+[x] Surface renders all web states reproduced: loading / empty / error / stale /
+    offline / content (unread, read, archived, selected) — 9 #Previews; phase +
+    connection envelope in NotificationRow.swift + .Chrome.swift.
+[x] Hooks bind to the shared P1/S8 state-holder (NotificationRowSource); no HTTP in
+    the view. In-memory source drives previews/tests; production wires the inbox
+    callbacks + mark-read/archive mutations.
+[x] Every web i18n key has a catalog entry (NotificationRow.strings): select,
+    markRead, markUnread, archive, unarchive (notifications.inbox.row.*),
+    alerts.viewContext — plus severity, action toasts, envelope, a11y keys.
+[x] Accessibility labels on every interactive element (selection toggle, row body,
+    each action button, drill link) + container label/value; Dynamic Type via Font.TS;
+    Reduce-Motion via TSFadeIn/TSSkeleton.
+[x] Tests: adapter unit tests + drill-through + a11y + i18n + per-state model tests
+    (38 total, 0 failures).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate clean).
+[~] Full `xcodebuild build test` EXIT=0 — BLOCKED by pre-existing dashboard-widget
+    duplicate-type collisions (iOS) + macOS development-signing; 0 NotificationRow
+    errors. Deferred to P99 acceptance gate on macos-latest (per precedent).
+
+EXIT=1
+STATUS=BLOCKED

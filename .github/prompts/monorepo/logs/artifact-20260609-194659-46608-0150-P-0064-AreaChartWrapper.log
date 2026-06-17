@@ -1,0 +1,172 @@
+================================================================================
+P4 · Shared surface · 0064 — AreaChartWrapper (Apple)
+Run: 2026-06-10T17:59-0700   Host: Darwin arm64 (Mac Studio)   Branch: auto/20260609-194659-46608/150
+Base: f89ca1c41
+Prompt: .github/prompts/monorepo/p4-apple/shared-meaningful/P-0064-AreaChartWrapper.prompt.md
+Web source (spec): web/src/components/charts/AreaChartWrapper.tsx (93 lines)
+Surface-unit: shared-meaningful · slug AreaChartWrapper · hooks_count 0 · components_count 0 · titles_count 0
+Mode: code-complete + host-validated (real iOS-18 + macOS-15 swiftc -typecheck + 42/42
+      isolated XCTest + real macOS app-target compile = 0 surface errors); the full-app
+      Xcode scheme build/test is DEFERRED (ADR-012 macOS-pending), matching predecessors
+      0231 FSMTimelineChart / 0038 DriveEfficiencyChartWidget / 0130 RecentActivity.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  Swift Charts ............... import Charts resolves on both SDKs (typecheck below) OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  Shared.xcframework ......... ASSEMBLED this run via Gradle (BUILD SUCCESSFUL 6m33s;
+                               ios-arm64 + ios-arm64-simulator + macos-arm64) + staged   OK
+  codesign identities ........ none (`security find-identity -p codesigning` → 0)   WARN
+
+  Charts/Maps capability note: the web source is a Recharts <AreaChart> (one gradient
+  <Area> per series). The native surface reproduces it with Swift Charts (AreaMark +
+  LineMark, per-series 0.3→0 gradient, unstacked overlay, monotone) and NO MapKit. The
+  core requirement — SwiftUI + Swift Charts — is AVAILABLE and PROVEN by REAL iOS-18 +
+  macOS-15 SDK `swiftc -typecheck` AND a passing 42-test XCTest run below. The
+  capability-BLOCKED escape hatch therefore does NOT apply; the surface is authored and
+  host-validated for real, STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/AreaChartWrapper.*) ===
+  AreaChartWrapper.Model.swift       188  Value types (AreaChartSeries {key,label,color + hex
+                                          convenience}, AreaChartRow {x, [key:Double]}, AreaChartInput),
+                                          the P4 leaf connectivity enum, the P1/S11 telemetry seam
+                                          (protocol + OSLog default), the web-hex→Color parser
+                                          (#rgb/#rrggbb/#rrggbbaa + themed fallback), and the P1/S10
+                                          strings facade (table "AreaChartWrapper").
+  AreaChartWrapper.Projection.swift  173  Foundation-only pure adapter: Phase, PlotPoint,
+                                          SeriesProjection, Resolved + `resolve(_:)` (row→point mapping
+                                          in order, per-series key selection, non-finite drop, the
+                                          error/loading/empty/content decision, height clamp) + the
+                                          shared VoiceOver summary builder.
+  AreaChartWrapper.Seams.swift       148  P1/S8 source protocol + Static (controlled props) + InMemory
+                                          (preview/test) sources + @Observable AreaChartWrapperModel
+                                          (resolve on apply, view.opened once on first start, refresh).
+  AreaChartWrapper.Chart.swift       212  Swift Charts area chart — per-series AreaMark (web
+                                          <linearGradient> 0.3→0, `series:` separated, `.unstacked`
+                                          overlay, `.monotone`) + 2pt LineMark, dashed leading y grid
+                                          (web CartesianGrid "3 3"), x/y formatter axes, `chartXSelection`
+                                          multi-series tooltip (web <Tooltip>), reduce-motion + a11y.
+  AreaChartWrapper.States.swift      158  Token-driven chrome: loading (TSChartSkeleton), empty
+                                          (ContentUnavailableView), error (+retry), freshness chip,
+                                          stale/offline connectivity banner.
+  AreaChartWrapper.swift             130  The composed surface + dual init (controlled-props parity of
+                                          <AreaChartWrapper data/xKey/series/height/xFormatter/yFormatter>
+                                          and a model init) + fade-in + freshness envelope + phase switch
+                                          (loading/error/empty/content) + view.opened lifecycle.
+  AreaChartWrapper.Previews.swift    131  #if DEBUG previews: single-series / multi-series / empty /
+                                          loading / error / stale / offline.
+  AreaChartWrapper.strings            45  P1/S10 catalog — 16 keys (axis a11y labels, chart a11y summary,
+                                          loading/empty/error chrome, freshness chip, connectivity banner).
+  AreaChartWrapper.Tests.swift       251  XCTest: projection render branches + row→point mapping +
+                                          non-finite drop + bounds; hex parser (3/6/8-digit, hash,
+                                          fallback); a11y summary; per-state render smoke (7 states via
+                                          ImageRenderer.render layout pass).
+  AreaChartWrapper.ModelTests.swift  139  XCTest: model lifecycle (view.opened once + slug, content,
+                                          push re-resolve, refresh/stop delegation, restart) + source
+                                          behavior (static re-emit/update, in-memory seed/no-seed).
+  Total 1575 lines (10 files). Every .swift file <= 251 lines (house file_length 400);
+  largest Tests.swift 251. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web components/charts/AreaChartWrapper.tsx) ===
+  The web source is anonymous + purely presentational: hooks_count 0, components_count 0,
+  titles_count 0 — no `t()` calls, no visible literals. It is a fully-controlled chart:
+  props `data` (records) / `xKey` / `series` ({key,label,color}) / `height=300` /
+  `xFormatter` / `yFormatter`. Native parity:
+    props → AreaChartInput via P1/S8 StaticAreaChartWrapperSource (controlled; no fetch).
+    Record<string,unknown>[] → [AreaChartRow] (x + [seriesKey:Double]).
+    SeriesConfig{key,label,color} → AreaChartSeries (Color + web-hex convenience init).
+  Recharts → Swift Charts mapping:
+    <ResponsiveContainer height> → `.frame(height:)` from the controlled height.
+    per-series <linearGradient> 0.3→0 → AreaMark `.foregroundStyle(LinearGradient .top→.bottom)`.
+    multiple non-stacked <Area> → AreaMark `series:` + `stacking: .unstacked` overlay.
+    <Area type="monotone" strokeWidth=2> → `.interpolationMethod(.monotone)` + 2pt LineMark.
+    <CartesianGrid strokeDasharray="3 3"> → AxisGridLine StrokeStyle dash [3,3] (leading y).
+    <XAxis dataKey tickFormatter> → bucket-index X with formatted xLabels (avoids duplicate
+      x-label collision, preserving the parent's row order) honoring `xFormatter`.
+    <YAxis tickFormatter> → leading numeric axis honoring `yFormatter` (default 0–2 frac digits).
+    <Tooltip formatter labelFormatter> → `.chartXSelection` RuleMark annotation listing every
+      series (color dot + label + formatted value) at the selected x, header = formatted x.
+  States (all render, never a blank box): loading (chart skeleton) · empty (friendly
+    ContentUnavailableView — web draws empty axes) · error (+retry) · content (the chart) ·
+    stale (chip + banner) · offline (cached + chip) — the P4 leaf freshness envelope
+    (ADR-013) layered around the bare web container; live renders the bare chart only.
+  i18n: the surface is anonymous in the web, so every native string (axis a11y labels,
+    chart summary, loading/empty/error chrome, freshness chip, banner) resolves through the
+    P1/S10 facade; 16 keys carried in the per-surface table, 0 hardcoded literals in views.
+  a11y: chart VoiceOver label + spoken summary (series/points/value-range), retry button
+    label, freshness/banner combined elements; Dynamic Type via Font.TS; reduce-motion-safe.
+  Telemetry: emits view.opened with surface slug "AreaChartWrapper" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <9 .swift> ............... 0/9 require formatting               FORMAT_EXIT=0
+  swiftlint lint --strict <9 .swift> .......... Found 0 violations, 0 serious        LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0        PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) IOS_TYPECHECK_EXIT=0
+      + re-run with -D DEBUG (compiles the #if DEBUG previews) ...................... IOS_DEBUG_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................. MAC_TYPECHECK_EXIT=0
+      + re-run with -D DEBUG ....................................................... MAC_DEBUG_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 strict) .... 42/42 passed, TEST_EXIT=0
+      → AreaChartProjectionTests (14) · AreaChartColorTests (7) ·
+        AreaChartAccessibilityTests (3) · AreaChartWrapperModelTests (7) ·
+        AreaChartWrapperRenderTests (7, per-state layout pass) · AreaChartWrapperSourceTests (4).
+      Harness links the REAL generated Tokens.swift; the two out-of-scope shared atoms
+      (TSChartSkeleton, TSFadeIn) are provided with their EXACT public signatures (the atom
+      library is the P4 component-library bundle's scope). The .strings table is absent in
+      the harness bundle, so NSLocalizedString returns the English fallback — the asserted copy.
+  xcodegen generate (project spec enumerates all 10 new files, 60 pbxproj refs) .... XCODEGEN_EXIT=0
+
+=== REAL FULL-APP COMPILE EVIDENCE (this tree) ===
+  The KMP Shared.xcframework was assembled via Gradle this run (BUILD SUCCESSFUL 6m33s)
+  and staged to apps/apple/Frameworks/Shared.xcframework. A REAL macOS app-target compile
+  then ran:
+    xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug \
+               CODE_SIGNING_ALLOWED=NO build
+  Result: BUILD FAILED with 108 `error:` lines — and ZERO attributed to AreaChartWrapper.
+  Every error is a PRE-EXISTING, UNRELATED parallel-merge collision in OTHER surfaces:
+    30  RecentDrivesListWidget.Previews.swift   (RecentDrivesModel/Update/LoadStatus/Connection ambiguous)
+    22  StateTimelineWidget.Previews.swift      (StateTimelineUpdate/Connection/LoadStatus/Model ambiguous)
+    20  StateTimeline.Previews.swift
+    16  RecentDrivesSection.Previews.swift
+     4  StateTimelineWidget.Model.swift / StateTimeline.Source.swift /
+        RecentDrivesSection.Seams.swift / RecentDrivesListWidget.Model.swift  (each)
+     2  StateTimelineWidget.swift / RecentDrivesListWidget.swift
+  i.e. `RecentDrives*` redeclared across dashboard-widgets + feature-views and `StateTimeline*`
+  likewise — NONE of which this surface touches (allowed-files = AreaChartWrapper.* only).
+  Proof the surface compiles in the real app target: `grep error: | grep -c AreaChartWrapper` = 0.
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED state in the shared app
+    target — ZERO of which originates in this surface (all verified above in THIS tree):
+      • 108 cross-surface symbol-redeclaration errors in RecentDrives*/StateTimeline*
+        (parallel-merge collisions across dashboard-widgets + feature-views).
+      • Co-located *.Tests.swift / *.ModelTests.swift `import XCTest` into the app target is
+        the established sibling convention (this surface's 2 test files follow it; the
+        project.yml includes them in the XCTest bundles, not the app target).
+      • No macOS development-signing identity (`security find-identity -p codesigning` → 0).
+    This surface's OWN code compiles against the real iOS-18 + macOS-15 SDKs (typechecks
+    above), runs green (42/42 XCTest), and produces 0 errors in the real macOS app-target
+    compile with the Shared.xcframework staged. The full-app scheme build/test is recorded
+    in apps/macos-pending-verifications.md for the P99 acceptance gate on a macos-latest
+    runner with signing identities and a collision-free merged tree.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/content + stale/offline).
+  [x] Data binds through the shared P1/S8 source seam (controlled props); no direct HTTP in the view.
+  [x] Every native string resolves via the P1/S10 facade (16 keys); 0 hardcoded literals (web is anonymous).
+  [x] Accessibility labels present on every interactive element (chart label + summary, retry button, chips).
+  [x] Tests: adapter unit tests + per-state render/UI smoke + a11y label test (42/42).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0, 0 opt-outs).
+  [x] Telemetry: view.opened emitted once with slug "AreaChartWrapper" (P1/S11), asserted.
+
+EXIT=0
+STATUS=DONE

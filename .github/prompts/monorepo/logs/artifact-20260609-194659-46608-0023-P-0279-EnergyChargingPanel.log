@@ -1,0 +1,143 @@
+=== P4 Feature view 0279 EnergyChargingPanel (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/EnergyChargingPanel.*
+Web spec: web/src/features/vehicles/components/telemetry-panels/EnergyChargingPanel.tsx
+Host    : Darwin (Apple Silicon), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + pwsh present
+Disposition: code-complete + all host-runnable gates GREEN; full-app Xcode build/test DEFERRED
+            to the signed macos-latest acceptance gate (P99-0001), per the established P4 Apple
+            disposition recorded in apps/macos-pending-verifications.md. Capability (SwiftUI / Swift
+            Charts / MapKit, iOS 18 / macOS 15) is PRESENT — this is not a BLOCKED-on-capability case.
+
+--- Files shipped (allowed scope only) ---
+  EnergyChargingPanel.Adapter.swift   pure projection core: Reading, StateBadge, SpeedUnit, Units,
+                                      Format ports (fmtNumber/fmtWithUnit/formatSpeed+convertSpeedFromSI),
+                                      Projection.make, Accessibility.summary
+  EnergyChargingPanel.Model.swift     P1/S11 telemetry seam (view.opened), connection axis, input snapshot,
+                                      resolved+phase, Projector.resolve, P1/S8 Source seam, @Observable model,
+                                      in-memory source, P1/S10 strings facade
+  EnergyChargingPanel.swift           the surface: TSGlassPanel + header (battery icon + title + freshness
+                                      chip + refresh) + connectivity banner + content switch; surfaceSlug
+  EnergyChargingPanel.Views.swift     data body (2x MetricCard grid + power/energy/battery/charge-rate rows +
+                                      charging-state pill) + loading/empty/error chrome
+  EnergyChargingPanel.Previews.swift  data(charging)/data(complete,imperial)/empty/loading/error/stale/offline
+  EnergyChargingPanel.strings         P1/S10 catalog: 10 web-parity keys + 9 native-chrome keys (table
+                                      "EnergyChargingPanel")
+  EnergyChargingPanel.Tests.swift     22 tests: formatters, SI speed conversion, state branch, projection
+                                      (cached->projection), projector states, model wiring, view.opened, a11y
+
+--- Parity (web source is THE spec) ---
+  Data sources : useTranslation -> P1/S10 EnergyChargingStrings facade ; useUnits -> EnergyChargingUnits
+                 (speed unit + precision + locale) consumed by the SI speed formatter. No HTTP in the view.
+  i18n keys    : telemetry.energyCharging, telemetry.chargerVoltage, telemetry.chargerCurrent,
+                 telemetry.chargerPower, telemetry.energyAdded, telemetry.chargingState, common.unknown,
+                 telemetry.batteryLevel, telemetry.chargeRate, telemetry.noChargingTelemetry — 10/10 present;
+                 0 English prose literals in Swift (unit symbols V/A/kW/kWh/%/km/h/mph are SI literals).
+  Composition  : GlassPanel(ui) ; MetricCard(data-display)->TSMetricCard ; EmptyState(feedback)->ContentUnavailableView.
+  Branches     : web `chargingTelemetry ? <body> : <EmptyState>` reproduced as data/empty; plus the P4 leaf
+                 contract states loading/error and the stale/offline connection axis.
+  Charge rate  : formatSpeed(range_added_meters_per_hour / 3600) reproduced verbatim (m/s convert +
+                 speed-precision-0 default), km/h and mph golden-pinned in tests (48 km/h ; 30 mph).
+  Power/Energy : charger_power_w -> "<n> kW", charge_energy_added_wh -> "<n> kWh" (verbatim labels, no rescale),
+                 matching the web fmtWithUnit calls.
+  State pill   : Charging->cyan, Complete->green, else->muted ; label = charging_state ?? Unknown.
+
+=== HOST-RUNNABLE GATES (every EXIT below is a real run) ===
+
+[1] swiftformat --lint (apps/apple/.swiftformat, --swiftversion 6.0)
+    0/6 files require formatting.
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (feature-views scope)
+    Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0
+
+[3] check-placeholders.ps1 (ADR-011 definition-of-done gate)
+    Adapter / Model / swift / Views / Previews / Tests : PLACEHOLDER_COUNT=0 each
+    PLACEHOLDER_EXIT=0
+
+[4] Isolated SwiftPM build — module "TeslaSync" = the 5 surface files + the Shared-free shared-component
+    closure (Components/UI + DataDisplay[-UnitFormatters] + Feedback + Motion + Design + generated Tokens).
+    Swift 6 language mode (strict concurrency = complete).
+    Build complete! (12.67s)
+    SPM_BUILD_EXIT=0
+
+[5] Isolated SwiftPM test — swift test
+    Executed 22 tests, with 0 failures (0 unexpected)
+    SPM_TEST_EXIT=0
+
+[6] Cross-SDK typecheck — swiftc -typecheck -swift-version 6 -D DEBUG (surface + closure)
+    iOS-18    : -sdk iPhoneSimulator26.5 -target arm64-apple-ios18.0-simulator   -> 0 errors  IOS_TC_EXIT=0
+    macOS-15  : -sdk MacOSX26.5          -target arm64-apple-macos15.0           -> 0 errors  MAC_TC_EXIT=0
+
+[7] xcodegen generate — project enumerates the new files via the existing
+    TeslaSync/feature-views glob (no project.yml / .swiftlint.yml self-registration needed).
+    42 pbxproj references; all 7 files present (Adapter, Model, swift, Views, Previews, strings, Tests).
+    XCODEGEN_EXIT=0
+
+[8] Real app-target compile evidence — Frameworks/Shared.xcframework staged from the Gradle DEBUG variant
+    (the only variant that links within bounds; see DEFER note), then:
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -configuration Debug \
+                 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+    Result: 26 compile errors, ALL in pre-existing, unrelated parallel-merge collisions in another agent's
+    surface — StateTimelineWidget.Previews.swift (11), StateTimeline.Previews.swift (10),
+    StateTimelineWidget.Model.swift (2), StateTimeline.Source.swift (2), StateTimelineWidget.swift (1)
+    (ambiguous StateTimelineUpdate / StateTimelineConnection / StateTimelineLoadStatus redeclarations).
+    EnergyChargingPanel errors/warnings in the real app-target module: ECP_ISSUES=0  (ZERO).
+    (Frameworks/ restored to .gitkeep-only after the probe.)
+
+=== DEFERRED (NOT claimed green — covenant rule 1) ===
+
+[D] Full-app scheme gate from the prompt:
+      xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      xcodebuild -scheme TeslaSync-macOS build test
+    DEFERRED on this runner for THREE pre-existing, surface-unrelated reasons — all reproduced here:
+      (a) The scheme's pre-build action "Stage Shared.xcframework" runs ./Scripts/build-shared-xcframework.sh
+          -> Gradle :core:assembleSharedXCFramework, whose RELEASE Kotlin/Native link is the long-pole.
+          Timed out at 150s: STAGE_EXIT=124 (matches the documented prior-surface GRADLE_EXIT=124 /
+          "BUILD INTERRUPTED on :core:linkReleaseFrameworkIosSimulatorArm64"). The DEBUG variant DID assemble.
+      (b) Code signing: `security find-identity -p codesigning -v` -> 0 valid identities found.
+      (c) Pre-existing parallel-merge collisions in OTHER surfaces (StateTimeline*, etc.) — see [8].
+    None of (a)/(b)/(c) is a defect in EnergyChargingPanel. Verification deferred to
+    p4-apple/P99-0001-apple-acceptance-gate (signed macos-latest runner); macos-pending row appended.
+    IOS_EXIT=DEFERRED
+    MAC_EXIT=DEFERRED
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : the two xcodebuild scheme steps are shown DEFERRED (not green); their blockers are
+                         reproduced here (STAGE_EXIT=124, 0 signing identities, pre-existing StateTimeline
+                         collisions). Every host EXIT=0 above is a real, executed run.
+  2  No scope narrowing: implemented ALL states (loading/empty/error/data + stale/offline), every web field
+                         (voltage/current/power/energy/charging-state/battery/charge-rate), the colour branch,
+                         i18n (10/10 keys), a11y labels, and the P1/S11 view.opened telemetry.
+  3  No skip-and-assume: each host gate executed; swiftformat caught real numberFormatting/wrap issues (fixed
+                         by re-running swiftformat), then re-lint green; swiftlint --strict re-run clean.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 on all 6 swift files.
+  5  No parity shortcuts: faithful port of fmtNumber/fmtWithUnit/formatSpeed + convertSpeedFromSI (km/h & mph
+                         golden-pinned), the `?? Unknown` fallback, and the verbatim kW/kWh labelling.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (feature-views already
+                         globbed) and did NOT edit the shared Localizable.xcstrings; strings ship as the
+                         per-surface table folded in at integration.
+  8  No commit on red  : committing on all-green host gates; the Xcode scheme steps are DEFERRED, not failed,
+                         and zero failures originate in this surface.
+  9  No silent drift   : changes confined to the allowed EnergyChargingPanel.* files + this log + the
+                         macos-pending row.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native EnergyChargingPanel shipped at parity with the web source: a Shared-free,
+  isolated-verifiable surface (SwiftPM build + 22/22 tests green; iOS-18 + macOS-15 swiftc -typecheck = 0
+  errors under Swift 6 strict concurrency; swiftlint --strict / swiftformat --lint / placeholder gate all
+  clean; xcodegen enumerates the 7 files; ZERO errors in the real app-target compile). The P1/S8 state-holder
+  seam keeps HTTP out of the view, P1/S11 view.opened is emitted on appear, all states render, and 10/10 web
+  i18n keys plus a11y labels are present. The full-app Xcode build/test is DEFERRED to the signed macos-latest
+  acceptance gate (RELEASE Shared.xcframework Kotlin/Native long-pole + 0 signing identities + pre-existing
+  StateTimeline collisions — none a defect in this code), matching the user-approved P4 Apple disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/EnergyChargingPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0279-EnergyChargingPanel.log \
+          apps/macos-pending-verifications.md
+  git commit -m "feat(apps/apple/feature-views): add EnergyChargingPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

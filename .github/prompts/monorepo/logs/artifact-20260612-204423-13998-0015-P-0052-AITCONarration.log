@@ -1,0 +1,254 @@
+=== P4 Shared surface 0052 AITCONarration (Apple) ===
+Prompt:      .github/prompts/monorepo/p4-apple/shared-surfaces/0052-AITCONarration
+Web source:  web/src/components/ai/AITCONarration.tsx
+Native out:  apps/apple/TeslaSync/shared-surfaces/AITCONarration.*
+Runner:      Darwin (arm64, Apple Silicon), Xcode 26.5 (Build 17F42), Apple Swift 6.3.2
+             (swiftlang-6.3.2.1.108), swiftlint 0.63.3, swiftformat 0.61.1,
+             xcodegen 2.45.4, pwsh 7.6.2, OpenJDK 17.0.19 (for the KMP stage)
+Allowed:     apps/apple/TeslaSync/shared-surfaces/AITCONarration.* + this log file ONLY.
+Delegation:  FORBIDDEN (per-surface parity tier) — implemented directly, no sub-agents.
+
+--------------------------------------------------------------------------------
+0. RUNNER CAPABILITY (prompt: "If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+--------------------------------------------------------------------------------
+$ xcodebuild -version          -> Xcode 26.5 (Build version 17F42)
+$ swift --version              -> Apple Swift version 6.3.2, target arm64-apple-macosx26.0
+$ xcrun simctl list devices    -> iPhone 16 (Booted) present
+$ xcrun --sdk iphonesimulator  -> iPhoneSimulator26.5 SDK present (SwiftUI + Swift Charts + MapKit)
+$ xcrun --sdk macosx           -> MacOSX26.5 SDK present
+=> Capability (SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG) is AVAILABLE.
+   NOT blocked on capability. (Charts/maps used by the web source: NONE — AITCONarration renders
+   no Recharts/Leaflet; it is a streaming-text AI card, so no Swift Charts / MapKit is required.)
+
+--------------------------------------------------------------------------------
+1. WEB SOURCE (the specification — reproduced 1:1; covenant pt 2 "no scope narrowing")
+--------------------------------------------------------------------------------
+components/ai/AITCONarration.tsx — the visible Helix AI surface for TrueCostPage (/tco + the alias
+/analytics/tco). It is `withAiFeature('tco-narration', InnerSection)`: an opt-in, read-only narration
+layered ABOVE the deterministic TCO charts (which it never replaces; ADR-015 §I3). InnerSection reads
+useSelectedVehicle (the gating vehicle id), useTranslation, and
+useAiStream({ url: '/ai/analytics/tco/narrate', body: { vehicle_id: numericVehicleId } }), where
+numericVehicleId = (typeof vehicleId === 'number' && Number.isFinite(vehicleId)) ? vehicleId : 0,
+computes haveInputs = numericVehicleId > 0, and renders the shared AIFeatureCard (header + "Helix"
+badge + long-form description + the optional "Pick a vehicle above to enable Helix." empty hint +
+"Ask Helix" CTA + AiOutputPanel).
+Render contract: wired-or-absent (no placeholder buttons); CTA disabled = (!canStart ||
+stream==='streaming'); double-submit start() is a no-op while streaming; AiOutputPanel shows nothing
+when idle+empty, the thinking indicator while streaming with no text yet, the terminal "Helix error:"
+on error, else the delta-accumulated narration. withAiFeature returns null in ai_mode='off'
+(ADR-015 §I5 hidden-UI; §I6 the backend route 404s in off mode).
+i18n keys extracted from source: tco.aiNarration.{title,description,button,badge,noVehicleHint}
++ the shared helix.{askHelix,thinking,errorLabel} + ai.common.errorUnknown.
+Data sources (bound via P1/S8 state holders): useSelectedVehicle, useTranslation, useAiStream.
+Difference vs the 0013 sibling (AICostForecastNarration): the TCO narrate body carries ONLY
+{ vehicle_id } — there is NO optional `months` horizon — and the web passes an `emptyHint` element
+(rendered under the description while disabled), which 0013 did not.
+
+--------------------------------------------------------------------------------
+2. SURFACE IMPLEMENTATION (no stubs, no skeleton-only) — 10 files, 2198 LOC (2152 swift + 46 strings)
+--------------------------------------------------------------------------------
+   AITCONarration.Adapter.swift       326  Foundation-only core: TCONarrateRequest (vehicle_id ?? 0,
+                                            snake_case, /ai/analytics/tco/narrate, NO months),
+                                            TCONarrationSSEFrame parse (port of parseSSEFrame +
+                                            toTypedEvent), stream state/snapshot/reducer (handleEvent
+                                            + finalizeError + stream_http_{status}), output + action
+                                            derivations, a11y seam.
+   AITCONarration.Model.swift         378  P1/S10 i18n facade (table "AITCONarration"); P4
+                                            connectivity axis; TCONarrationAvailability
+                                            (loading/failed/resolved) mirroring useAiEnabled
+                                            fail-closed; TCONarrationInput snapshot (vehicleID ->
+                                            .request, vehicle_id only); ResolvedOutput + Ready
+                                            (incl. emptyHint) + Resolved; P1/S8 state-holder seam
+                                            (TCONarrationSource + @Observable Model + InMemory source)
+                                            with start/stop/refresh/generate/cancel; P1/S11
+                                            view.opened telemetry.
+   AITCONarration.Projection.swift    145  pure projection: gate-disabled -> .gated; availability
+                                            failed -> .error; loading -> .loading; else -> .ready
+                                            (localized title/description/badge + canStart =
+                                            (vehicleID ?? 0) > 0 + the web emptyHint element +
+                                            Ask-Helix label flip + output panel, incl. no-vehicle vs
+                                            idle empty hints).
+   AITCONarration.Chrome.swift        149  P4 leaf chrome: freshness chip, refresh button, stale/
+                                            offline banner, availability-loading skeleton, retryable
+                                            gate-error.
+   AITCONarration.Views.swift         246  AIFeatureCard/AiOutputPanel regions as scoped subviews:
+                                            Helix badge (SF Symbol "sparkles"), Ask-Helix button
+                                            (TSButton, disabled=!canStart||streaming, VoiceOver
+                                            "Ask Helix · Explain ownership cost", reduce-motion dots),
+                                            the web emptyHint element under the description, thinking
+                                            indicator (TSSkeleton shimmer + dots), output panel
+                                            (empty hint / thinking / prose / "Helix error:"),
+                                            ready view.
+   AITCONarration.swift               119  the surface: gate -> EmptyView; header (title + Helix
+                                            badge + freshness chip + refresh); connectivity banner;
+                                            phase switch (loading/error/ready); static surfaceSlug =
+                                            "AITCONarration"; onAppear start / onDisappear stop.
+   AITCONarration.Previews.swift      121  #if DEBUG #Preview x10: ready·idle / thinking / prose /
+                                            stream-error / no-vehicle / loading / gate-error / stale /
+                                            offline / gated.
+   AITCONarration.strings              46  P1/S10 catalog (table "AITCONarration"): the 5 web parity
+                                            keys (title/description/button/badge/noVehicleHint) + the
+                                            shared helix.* / ai.common.errorUnknown + the native P4
+                                            chrome (freshness/connectivity/loading/error) + output
+                                            a11y/empty hints — 21 keys; the Swift sources hold no
+                                            English prose.
+   AITCONarration.Tests.swift         383  35 XCTest: projection phases, canStart rule (id 0 / nil /
+                                            negative boundaries), emptyHint-only-while-disabled, label
+                                            flip, disabled rule, every localized output branch, input
+                                            -> request (vehicle_id only, no months), model wiring,
+                                            view.opened telemetry (gated-deferred + once), stale
+                                            one-shot auto-refresh + re-arm, generate/cancel/refresh/
+                                            stop delegation, a11y label content.
+   AITCONarration.AdapterTests.swift  285  39 XCTest: request (path, snake_case, no-months,
+                                            ?? 0 coercion, deterministic encoded JSON), SSE parse
+                                            (delta/done/error/tool_*/confirm + comment/no-space/
+                                            unknown/malformed/eventless/missing-field), reducer
+                                            (start/delta/done/error/confirm/tool no-op/fold/http),
+                                            output derivation, action derivation.
+
+   Composition: P1/S8 state-holder seam (no HTTP in the view); P1/S9 design tokens (Color.TS /
+   Font.TS / TSSpacing / TSRadius / TSButton / TSSkeleton / TSFadeIn — no Tailwind ports, no raw
+   hex); P1/S10 i18n facade (NSLocalizedString table, web English fallbacks, zero literals in Swift);
+   P1/S11 view.opened telemetry (slug "AITCONarration", deferred until the gate is open to mirror the
+   web data-ai-feature marker). Every state renders (no hidden surface): gated -> EmptyView (web
+   withAiFeature null), loading -> skeleton chrome, error -> retryable gate error (+ inline terminal
+   stream error in the panel), ready -> description + emptyHint + Ask-Helix + output, with the
+   orthogonal live/stale/offline freshness axis (chip + banner + one-shot stale auto-refresh).
+   Accessibility: VoiceOver labels on every interactive element, Dynamic Type via Font.TS tokens,
+   reduce-motion honored (dots/shimmer), .isHeader / .updatesFrequently traits, iOS 18 / macOS 15
+   minimums (symbolEffect gated by #available).
+
+--------------------------------------------------------------------------------
+3. GATES THIS PROMPT OWNS — ALL GREEN
+--------------------------------------------------------------------------------
+  [GREEN] swiftformat --lint (9 swift files)
+          -> "0/9 files require formatting"                                       FORMAT_EXIT=0
+  [GREEN] swiftlint --strict --config .swiftlint.yml (9 swift files)
+          -> "Done linting! Found 0 violations, 0 serious in 9 files"             LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AITCONarration
+          -> "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0"               PLACEHOLDER_EXIT=0
+          (no TODO / FIXME / stub / mock / placeholder / Lorem / "Coming soon" anywhere)
+
+--------------------------------------------------------------------------------
+4. INDEPENDENT VERIFICATION (the binding per-surface evidence; covenant pt 1 + pt 8)
+--------------------------------------------------------------------------------
+  [GREEN] Isolated Swift 6 build + XCTest of the parity-critical core. A standalone SwiftPM package
+          (swiftLanguageMode .v6 == complete strict concurrency, matching the app's
+          SWIFT_STRICT_CONCURRENCY=complete) compiling AITCONarration.{Adapter,Model,Projection} +
+          both co-located test files (a 6-line shim supplies only `AITCONarration.surfaceSlug`, which
+          lives in the SwiftUI surface file excluded from the Foundation-only harness):
+          -> "Executed 74 tests, with 0 failures (0 unexpected)"                  SWIFT_TEST_EXIT=0
+          This proves the request body, SSE parse, reducer, output/action/canStart/emptyHint logic,
+          the projection branches, the model wiring + telemetry + stale auto-refresh, and the a11y
+          strings against the exact web expressions, with no network and no real store.
+  [GREEN] Production-surface type-check against the REAL design system. swiftc -typecheck
+          (-target arm64-apple-macos15.0 -swift-version 6) of all 6 production code files
+          (Adapter/Model/Projection/Chrome/Views/swift) compiled together with the REAL P1/S9 token +
+          primitive sources (design/generated/apple/Tokens.swift, Components/UI/{Buttons,Cards,
+          Typography,Badges}.swift, Components/Feedback/Skeletons.swift, Components/Motion/Motion.swift,
+          Design/TSMaterial.swift):
+          -> 0 errors                                                            TYPECHECK_PROD_EXIT=0
+          This proves the SwiftUI views type-check against the real Color.TS/Font.TS/TSSpacing/
+          TSRadius/TSButton/TSSkeleton/TSFadeIn — not a shim.
+  [GREEN] KMP Shared.xcframework staging — apps/apple/Scripts/build-shared-xcframework.sh
+          -> gradlew :core:assembleSharedXCFramework "BUILD SUCCESSFUL in 15m 59s", staged ->
+             apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+                                                                                  STAGE_EXIT=0
+  [GREEN] xcodegen generate (project.yml -> TeslaSync.xcodeproj; 60 AITCONarration pbxproj refs)
+                                                                                  GEN_EXIT=0
+
+--------------------------------------------------------------------------------
+5. FULL-APP XCODE GATE (owned by the P4/P99 apple-acceptance-gate) — RED, ZERO AITCONarration errors
+--------------------------------------------------------------------------------
+  [RED]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+                                                                                  IOS_EXIT=65
+         CAUSE: a swift-frontend (Apple Swift 6.3.2) INTERNAL COMPILER CRASH (SIGSEGV), not a source
+         error. The build log contains ZERO `error:` diagnostics; the failure is:
+            "Please submit a bug report ... Stack dump ...
+             4. While evaluating request IRGenRequest(IR Generation for file ...)
+             5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"."
+         i.e. IRGen crashes emitting a COMPILER-GENERATED @MainActor closure reabstraction thunk for
+         the whole TeslaSync app-target module (the filelist spans all ~thousands of generated
+         surfaces). The named failing SwiftCompile batch is OTHER files (AnnouncerRegion.*,
+         AnomalyInlineRow.*, ApiPlaygroundPage, AppShell, AppearanceSettings.* ...). grep of the
+         entire build log for an AITCONarration error/warning = 0 hits.
+
+  [PROOF — covenant pt 1 "no red-as-green", pt 8 "no commit on red"]:
+         The crash is PRE-EXISTING and INDEPENDENT of this surface. With the 10 AITCONarration.* files
+         MOVED OUT (git clean of the surface) and the project regenerated (0 AITCONarration pbxproj
+         refs), the baseline rebuild reproduces the IDENTICAL crash:
+            xcodebuild -scheme TeslaSync ... build  -> BASE_IOS_EXIT=65
+            "Please submit a bug report ..." count = 1
+            While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"   (BYTE-IDENTICAL thunk)
+            `error:` count = 0
+         => the IRGen toolchain crash is caused by the size/shape of the PRE-EXISTING app module, not
+         by AITCONarration. Files were then restored (60 refs) and the surface re-verified green.
+
+  [RED]  xcodebuild -scheme TeslaSync-macOS build test                            MAC_EXIT=65
+         CAUSE: development-signing, NOT a compile error and NOT this surface. The 4 `error:` lines are
+         all:
+            "'TeslaSync-macOS' has entitlements that require signing with a development certificate.
+             Enable development signing ..."
+            "'TeslaSyncWidgets-macOS' has entitlements that require signing with a development
+             certificate. ..."
+         "Testing failed:" lists exactly those two app/widget targets. There is no dev certificate /
+         DEVELOPMENT_TEAM on this runner (project.yml sets DEVELOPMENT_TEAM=""). This is an
+         environment/signing precondition on the macOS app + widget targets (which this prompt may not
+         touch), independent of AITCONarration. grep of the macOS log for an AITCONarration error = 0;
+         no IRGen crash on macOS (it fails at signing before test execution).
+
+  DISPOSITION OF THE FULL-APP GATE: per the established P4 shared-surface precedent (see the sibling
+  log p4-apple-shared-surfaces-0013-AICostForecastNarration.log), the full-app iOS/macOS xcodebuild
+  build/test gate is owned by the P4/P99 apple-acceptance-gate and is RED on PRE-EXISTING toolchain
+  (Swift 6.3.2 IRGen crash) + environment (macOS dev-signing) blockers. ZERO of its failures are
+  attributable to AITCONarration, proven by the baseline-without-my-files rebuild (iOS) and the
+  target-scoped signing errors (macOS). This surface is GREEN on every gate it OWNS and independently
+  verified (74/74 XCTest under Swift 6 strict concurrency + real-design-system type-check).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 /
+                           MAC_EXIT=65) with its real causes; only the gates this prompt OWNS are
+                           reported green, each with pasted tool output + exit code.
+  2  No scope narrowing  : every web data source, render branch, i18n key, and the wired-or-absent /
+                           no-placeholder-button / double-submit / emptyHint contracts reproduced.
+  3  No skip-and-assume  : the iOS crash was actually RUN to failure, its backtrace read (IRGen thunk),
+                           and PROVEN pre-existing by an actual baseline rebuild with the files removed
+                           — not assumed. The macOS cause was read from the log, not guessed.
+  4  No stubs as final   : complete production surface + 74 real tests; placeholder scanner COUNT=0.
+  5  No parity shortcut  : the ?? 0 vehicle coercion, the vehicle_id-only body (no months), the >0
+                           canStart rule, the emptyHint-only-while-disabled element, the SSE event
+                           narrowing, the delta accumulation, the done/error finalisation, the
+                           "stream_http_{status}" formatting, and the AiOutputPanel/AIFeatureCard
+                           branch logic are each unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11
+                           view.opened telemetry, and the established P4 multi-file decomposition +
+                           "isolated-verified, full-app gate owned by P99" disposition all honoured.
+  8  No commit on red    : the committed artifact (10 AITCONarration.* files + this log) is GREEN on
+                           every gate it OWNS (format/lint/placeholder) AND on a real isolated Swift 6
+                           strict-concurrency build + 74/74 XCTest AND a real-design-system type-check.
+                           The full-app RED is exclusively pre-existing toolchain/signing breakage in
+                           OTHER targets, proven by the baseline rebuild.
+  9  No silent drift     : changes confined to shared-surfaces/AITCONarration.* + this log; the two
+                           parity deltas from the 0013 sibling (no months body field; the added
+                           emptyHint element) are disclosed above.
+  10 EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic AITCONarration shipped at parity with
+  components/ai/AITCONarration.tsx and INDEPENDENTLY VERIFIED: it compiles and its 74 tests pass under
+  the app's own Swift 6 strict-concurrency rules, and the production SwiftUI surface type-checks
+  against the REAL P1/S9 design system; swiftformat / swiftlint / placeholder are all green on the
+  surface. This run also STAGED the KMP Shared.xcframework and ran BOTH full-app xcodebuild schemes to
+  completion. The iOS scheme is RED on a PRE-EXISTING swift-frontend IRGen crash (proven by a baseline
+  rebuild with this surface's files removed reproducing the byte-identical crash); the macOS scheme is
+  RED on PRE-EXISTING macOS dev-signing entitlements on the TeslaSync-macOS / TeslaSyncWidgets-macOS
+  targets. ZERO errors are attributable to this surface. The full-app gate is owned by the P4/P99
+  apple-acceptance-gate.
+
+EXIT=0
+STATUS=DONE

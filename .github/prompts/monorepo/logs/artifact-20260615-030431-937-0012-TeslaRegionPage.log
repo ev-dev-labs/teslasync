@@ -1,0 +1,197 @@
+================================================================================
+p4-apple · P7 · page:admin/TeslaRegion — SwiftUI / HIG parity
+  web source : web/src/features/admin/pages/TeslaRegionPage.tsx  (route /tesla-region)
+  output     : apps/apple/Sources/Features/Admin/TeslaRegion*.swift
+               (the live Xcode project — like every sibling admin page, FleetAPIPage /
+                TeslaOrdersPage / AuditLogPage — hosts admin pages under
+                Sources/Features/Admin/; the prompt's nominal TeslaSync/Features/Admin/**
+                is the allowed-files alias, reconciled here exactly as the FleetAPIPage
+                predecessor recorded. project.yml globs `- path: Sources` compile it; the
+                generated TeslaSync.xcodeproj is git-ignored, rebuilt via xcodegen.)
+  toolchain  : Xcode 26.5 / Swift 6 (strict concurrency) / swiftlint 0.63.3 /
+               swiftformat 0.61.1 / xcodegen / pwsh 7. Xcode runner IS available
+               (gate is NOT BLOCKED). The KMP Shared.xcframework WAS built + staged here
+               (debug + release) via apps/shared/gradlew :core:assembleSharedXCFramework.
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI TeslaRegionPage at web parity. The web page
+(TeslaRegionPage.tsx) is a thin `PageContainer` wrapper — a page title + subtitle, with
+`usePageTitle(title)` — around the shared `<RegionSettings />` component
+(features/settings/components/RegionSettings.tsx). The native page reproduces that 1:1,
+mirroring the already-shipped sibling `TeslaOrdersPage` (the same "thin chrome page hosting
+a shared feature-view section in the Account side-nav group" pattern):
+
+  • TeslaRegionPage — a `ScrollView` column with the web `PageContainer` chrome (page title
+    + subtitle, leading-aligned, adaptive across regular-width macOS/iPad and compact iPhone)
+    above the embedded shared `RegionSettings` panel. `usePageTitle` → `.navigationTitle`.
+    No networking / business logic in the view (ADR-004), exactly like the web page which
+    has no state of its own.
+
+  • The embedded `RegionSettings` (pre-existing P4 feature view, TeslaSync/feature-views/
+    RegionSettings*.swift) owns ALL of the data + every load state through its `@Observable
+    RegionSettingsModel` (P1/S8): the globe header (title/subtitle), the "Synced …" timestamp
+    + Refresh button, the region-code / Fleet-API-URL two-cell grid (ViewThatFits reflow), and
+    the loading (skeleton) / empty (ContentUnavailableView) / error (retry) / data states plus
+    the stale/offline freshness axis. The page binds it via `RegionSettingsModel` and a default
+    `RegionSettingsSource` seed (production injects the shared-core source over web
+    `useTeslaUserRegion` + `useRefreshTeslaRegion`).
+
+Adaptive (ADR-002/006): single leading-aligned `ScrollView` column that fills the regular
+macOS/iPad canvas and the compact iPhone width; the embedded panel reflows its two info cells
+from two columns to one as width narrows. All page copy resolves from Localizable.xcstrings
+with the web key names verbatim (region.title → translation.region.title, region.subtitle →
+translation.region.subtitle); zero hardcoded literals. a11y: header combined into one element;
+the embedded panel carries per-cell VoiceOver labels + header trait. Dark mode + Dynamic Type +
+tokens inherited from the P2 token catalog + P3 components. Units: none on this surface.
+
+Files (new unless noted):
+  Sources/Features/Admin/TeslaRegionPage.swift              (view: PageContainer chrome + embedded RegionSettings + previews)
+  Sources/Features/Admin/TeslaRegionRouteRegistration.swift (.teslaRegion route registration + sample source seed)
+  Tests/Unit/Features/Admin/TeslaRegionRouteRegistrationTests.swift (registration + route-metadata + parser tests)
+  Sources/App/AppRoute.swift          (MOD: +.teslaRegion case / pathSegment "tesla-region" / icon "globe" / .account group)
+  Sources/TeslaSyncApp.swift          (MOD: wire TeslaRegionRouteRegistration into routeHosts)
+  Localization/Localizable.xcstrings  (MOD: +route.teslaRegion "Region & API"; the 2 parity keys
+                                        translation.region.title / translation.region.subtitle + the
+                                        embedded panel's region.* keys ALREADY existed in the catalog)
+  apps/parity/apple-ledger.json       (MOD: +2 rows page:admin/TeslaRegion 2/2, apple-macos + apple-ios)
+
+Navigation reconciliation: web /tesla-region is a top-level route in the web Integrations
+side-nav group (App.tsx L452, next to /tesla-orders). The native app folds it into the .account
+group alongside the sibling .teslaRegion → matches .teslaOrders' established mapping. The web nav
+label "Region & API" + the globe icon (Layout.tsx L376) map to route.teslaRegion + "globe".
+AppRouteParser.parse(path:) matches the kebab pathSegment directly (no alias needed). Reachable
+via the Account-group sidebar entry + any /tesla-region deep link, without displacing other pages.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+--------------------------------------------------------------------------------
+[x] string — region.title
+       binding: TeslaRegionPage.swift > TeslaRegionPage.header > TSPageTitle("translation.region.title")
+                + body `.navigationTitle(Text("translation.region.title"))` (web usePageTitle).
+       catalog: Localization/Localizable.xcstrings > "translation.region.title" = "Region & API".
+       also rendered from the bound @Observable RegionSettingsModel: RegionSettings.swift > header >
+                Text(RegionStrings.string("region.title","Region & API")) — the web RegionSettings <h2>.
+[x] string — region.subtitle
+       binding: TeslaRegionPage.swift > TeslaRegionPage.header > Text("translation.region.subtitle").
+       catalog: Localization/Localizable.xcstrings > "translation.region.subtitle" =
+                "Tesla account region and Fleet API endpoint".
+       also rendered from the bound @Observable RegionSettingsModel: RegionSettings.swift > header >
+                Text(RegionStrings.string("region.subtitle", …)) — the web RegionSettings <p>.
+--------------------------------------------------------------------------------
+PARITY_COVERED=2
+
+(Manifest record for page:admin/TeslaRegion declares no API data sources / no named panels /
+no charts / no maps — it renders from the page chrome + the embedded shared RegionSettings
+panel, which is itself a separately-owned parity unit. Every <GlassPanel>/region in the web
+source TeslaRegionPage.tsx — i.e. the single embedded <RegionSettings/> — is reproduced.)
+
+================================================================================
+GATE RESULTS
+================================================================================
+The KMP Shared.xcframework was BUILT + STAGED here (gradle :core:assembleSharedXCFramework,
+BUILD SUCCESSFUL, debug+release, ios-arm64 / ios-arm64-simulator / macos-arm64), so a REAL
+full xcodebuild was attempted (not deferred). All gates that evaluate THIS artifact are GREEN:
+
+[GREEN] PLACEHOLDER  pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+        -> PLACEHOLDER_ALLOWED=7  PLACEHOLDER_COUNT=0  EXIT=0
+        (zero placeholders / zero opt-outs in the three new files; no Coming-soon / No-data-only
+         bodies — the page renders the real PageContainer chrome + the fully-stateful embedded panel.)
+
+[GREEN] SWIFTFORMAT  swiftformat --lint (5 new/edited files vs apps/apple/.swiftformat)
+        -> "0/5 files require formatting"  EXIT=0
+
+[GREEN] SWIFTLINT    swiftlint lint --strict --config apps/apple/.swiftlint.yml (5 new/edited files)
+        -> "Found 0 violations, 0 serious in 5 files"  EXIT=0
+
+[GREEN] XCODEGEN     xcodegen generate -> project created; the new Sources/Features/Admin/* +
+        Tests/Unit/Features/Admin/* files are picked up via the `- path: Sources` /
+        `- path: Tests/Unit` globs (12 references across the iOS + macOS app/test targets).  EXIT=0
+
+[GREEN] TYPE-CHECK (isolated, macOS)  swiftc -typecheck -sdk macosx -target arm64-apple-macos15.0
+        -swift-version 6, of the 2 new sources + the embedded RegionSettings feature view (4 files)
+        + the App route trio + the full P2/P3 design-system (Sources/Components + Sources/Design +
+        Tokens.swift) — 50 files.  -> EXIT=0, zero diagnostics. (Only Components/DataDisplay/
+        UnitFormatters.swift is excluded — it binds the KMP-backed `Units` SI facade and is not
+        used by this surface; same single exception the FleetAPIPage predecessor recorded.)
+
+[GREEN] TYPE-CHECK (isolated, iOS)    swiftc -typecheck -sdk iphoneos -target arm64-apple-ios18.0
+        -swift-version 6, same 50-file set.  -> EXIT=0, zero diagnostics (adaptive view compiles on
+        both idioms — ADR-002/006).
+
+[GREEN] TYPE-CHECK (isolated, DEBUG previews)  swiftc -typecheck -D DEBUG (macOS) of the same set +
+        Sources/Theme.swift (teslaSyncTheme) — exercises the #Preview Content/Empty/Loading/Error
+        block.  -> EXIT=0, zero diagnostics.
+
+[GREEN] TYPE-CHECK (App route edits)  swiftc -typecheck of the 3 files I edited under Sources/App
+        (AppRoute.swift + AppRouteParser.swift + RouteHostRegistry.swift).  -> EXIT=0 (the +.teslaRegion
+        case keeps every `switch` exhaustive: pathSegment / systemImage / group).
+
+[GREEN] ROUTING HARNESS (compile + RUN)  swiftc -swift-version 6 (macOS) of the App route trio +
+        a Foundation/SwiftUI main that RUNS the new routing logic end-to-end.
+        -> "HARNESS_OK routes=50 teslaRegion=ok"  RUN_EXIT=0
+        Asserts: .teslaRegion pathSegment=="tesla-region", path=="/tesla-region", group==.account,
+        icon=="globe", membership in routes(in:.account), unique pathSegments across all 50 routes,
+        AppRouteParser.parse("/tesla-region" | "/tesla-region/" | teslasync://tesla-region)==.teslaRegion,
+        and an AppRouteHostRegistry register→view(for:)→registeredRoutes round-trip for .teslaRegion.
+        This RUNS the routing I added, not just type-checks it.
+
+[GREEN] LEDGER / CATALOG JSON  python json.load round-trips Localizable.xcstrings + apple-ledger.json
+        after the edits (valid JSON; +2 ledger rows; route.teslaRegion + the pre-existing region.* keys present).
+
+[RED — PRE-EXISTING, OUT-OF-SCOPE, NOT MY ARTIFACT]
+        Full xcodebuild -scheme TeslaSync-macOS -configuration Debug build (with the staged
+        Shared.xcframework) compiled the whole 5601-file app module and FAILED with EXACTLY ONE error:
+          Sources/Features/Driving/DriveScorePage.Panels.swift:25:70: error: cannot convert value of
+          type 'LocalizedStringKey' to expected argument type 'String.LocalizationValue'
+          (String(localized: model.overallTrend.labelKey))
+        This file is NOT in my diff (git status confirms my change set is the 7 files listed above;
+        DriveScorePage.Panels.swift is untouched), is a DIFFERENT page in the out-of-scope Driving
+        feature, and the defect is a self-contained pre-existing type error in this slot's snapshot.
+        ZERO of the build's errors are attributable to this artifact — the whole-module type-check
+        integrated my AppRoute / TeslaSyncApp / TeslaRegion* sources cleanly; the single failure is in
+        a sibling page I am explicitly forbidden to edit ("Out of Scope: Other pages"; predecessor
+        covenant "No predecessor bypass — did NOT edit other owners' files"). Per the repo rule
+        "Don't fix pre-existing issues unrelated to your task", it is left untouched. Treated as the
+        same class of non-greenable environmental condition the FleetAPIPage predecessor recorded for
+        the (then-unstaged) KMP framework — except here the framework WAS staged and the only blocker
+        is an unrelated pre-existing compile error. My artifact's correctness in the full app graph is
+        evidenced by the macOS + iOS + DEBUG isolated type-checks (50 files incl. every real dependency)
+        and the compile+RUN routing harness above.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : the full xcodebuild is reported RED above, explicitly, with its single
+                         pre-existing out-of-scope cause named (DriveScorePage.Panels.swift:25). It is
+                         NOT dressed up as passing. Every gate marked GREEN was run and its raw result
+                         pasted.
+ 2 No scope narrowing  : the web page's sole region (the embedded <RegionSettings/>) is reproduced in
+                         full with all of its states via the bound @Observable model; not a subset.
+                         Both parity strings implemented as page chrome AND from the bound model.
+ 3 No skip-and-assume  : web page + its embedded RegionSettings component + the two i18n keys read
+                         end-to-end; the usePageTitle + title/subtitle chrome reproduced from source.
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0; no Coming-soon / No-data-only bodies; the page renders
+                         real chrome + a fully-stateful embedded panel (loading/empty/error/data/stale/offline).
+ 5 No parity shortcuts : every visible string is a web key verbatim, catalog-validated; the embedded
+                         panel is the real shared surface, not a re-clone.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface / shared component / other owners' files. The
+                         pre-existing DriveScore error was left untouched precisely to honour this. Only
+                         added the .teslaRegion nav case + registration wiring + 1 nav string + 2 ledger rows.
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE gates (placeholder / swiftformat / swiftlint /
+                         xcodegen / macOS+iOS+DEBUG type-check / route type-check / compile+RUN harness /
+                         JSON validity). The only RED is the out-of-scope, pre-existing, not-mine DriveScore
+                         compile error, recorded above — the same deferral class the predecessor used.
+ 9 No silent drift     : changes confined to the 7 files under WHAT SHIPPED + this log. The output path is
+                         Sources/Features/Admin/ (not the prompt's nominal TeslaSync/Features/Admin/), the
+                         standing convention reconciled by every sibling admin page + the predecessor log.
+10 EXIT/STATUS below.
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

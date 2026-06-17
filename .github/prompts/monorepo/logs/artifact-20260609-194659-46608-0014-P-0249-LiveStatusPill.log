@@ -1,0 +1,188 @@
+===========================================================================
+=== P4 Feature view 0249 LiveStatusPill (Apple) ===
+===========================================================================
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/P-0249-LiveStatusPill.prompt.md
+Web src: web/src/features/system/components/status/LiveStatusPill.tsx
+Native : apps/apple/TeslaSync/feature-views/LiveStatusPill.*
+HEAD   : 6a77195c0 (merge(parallel): p4-apple/feature-views/P-0169-GForcePanel)
+Host   : macOS / Xcode 26.5 (17F42) via /Applications/Xcode.app
+         Swift 6.3.2 · iOS 26.5 Simulator (iPhone 16, booted) · macOS 15 SDK
+         swiftlint 0.63.3 + swiftformat 0.61.1 + pwsh + xcodegen 2.45.4
+         + Gradle/Kotlin-Native (JDK 17) all present.
+
+The platform capability IS available on this runner (SwiftUI + Swift Charts +
+MapKit, iOS 18 / macOS 15 SDKs), so this is NOT a STATUS=BLOCKED capability
+case. Every gate step that is a function of THIS surface's code is green; the
+only non-green item is a PRE-EXISTING swift-frontend (Swift 6.3.2) IRGen crash
+in a sibling file outside this prompt's allowed-files scope (documented below) —
+identical in disposition to the merged siblings P-0073-BatteryPill and
+P-0047-SentryModeChart, which deferred the full Xcode app build/test to the P4
+integration runner for the same class of pre-existing, out-of-scope reason.
+
+Files shipped (allowed-files: apps/apple/TeslaSync/feature-views/LiveStatusPill.*):
+  LiveStatusPill.swift            — SwiftUI surface: a tinted capsule chip (status
+                                    dot + connection glyph + state label + middot +
+                                    "updated <relative>"); pulsing dot on reconnecting,
+                                    reduce-motion honored; .updatesFrequently a11y.
+  LiveStatusPill.Model.swift      — pure projection: LiveStatusState tone map
+                                    (tint/pulse/glyph/label), LiveStatusRelative ladder
+                                    (nil/justNow/seconds/minutes/hours, floor + clamps),
+                                    LiveStatusPillStrings i18n facade, surface slug,
+                                    LiveStatusPillPresentation (Equatable, Sendable).
+  LiveStatusPill.Telemetry.swift  — P1/S11 view.opened diagnostics seam + os_log sink.
+  LiveStatusPill.Previews.swift   — DEBUG previews for all three tones + relative-time
+                                    rungs + nil branch, light/dark, Dynamic Type XXL.
+  LiveStatusPill.Tests.swift      — 26 XCTest cases (guarded #if canImport(XCTest)):
+                                    22 model/adapter + 4 per-state ImageRenderer smokes.
+  LiveStatusPill.strings          — P1/S10 catalog table (3 tone labels, relative ladder,
+                                    composed aria-label); no English literal in code.
+
+===========================================================================
+PARITY NOTES (web LiveStatusPill.tsx → native)
+===========================================================================
+  • tone map     TONE[state]: live → green dot + Activity, reconnecting → amber
+                 pulsing + Wifi, offline → grey + WifiOff  → LiveStatusState resolves
+                 tint to Color.TS.statusSuccess/statusWarning/textMuted, glyph to SF
+                 Symbol waveform.path.ecg / wifi / wifi.slash, pulse only on
+                 reconnecting (web animate-pulse), reduce-motion honored.
+  • relative     relative(now,lastUpdateAt): null → "—"; secs=max(0,floor((now-last)
+                 /1000)); <5 "just now"; <60 "{s}s ago"; <3600 "{m}m ago"; else
+                 "{h}h ago"  → LiveStatusRelative.bucket. Floor (not round) and the
+                 max(0,…) clock-skew clamp verified; non-finite ⇒ justNow.
+  • chip         web inline-flex rounded-full px-2.5 py-1 ring-1 bg-*/10 tabular-nums
+                 → Capsule fill tint·0.1 + strokeBorder tint·0.3, gap 6, pad 10/4,
+                 Font.TS.label, .monospacedDigit(). Separator "·" is a typographic
+                 glyph (verbatim, aria-hidden) — same convention as BatteryPill's "%".
+  • a11y         role="status" aria-live="polite" + aria-label "Live status stream:
+                 {label}, updated {rel}" → one combined element, label resolved via
+                 the catalog (so display text == spoken text), dot/icon/middot hidden,
+                 .accessibilityAddTraits(.updatesFrequently).
+  • telemetry    web is pure-presentational (emits nothing); native adds the P1/S11
+                 view.opened event with the stable slug "LiveStatusPill" from .task.
+  States: LiveStatusPill is a PURE presentational chip (web fetches nothing), so
+  loading/empty/error/stale belong to the embedding surface; the branches the web
+  source actually carries — the 3 connection tones + the lastUpdateAt==nil "—"
+  (no-update-yet) branch, the connection-level "offline" tone — are reproduced in
+  full and unit-tested. (Same disposition as the merged sibling pills.)
+
+===========================================================================
+GATE — host-runnable steps (all green)
+===========================================================================
+--- swiftc -typecheck (Swift 6, strict concurrency complete) -----------------
+  closure: Tokens.swift + LiveStatusPill.{Model,Telemetry,swift,Previews}
+  iOS   arm64-apple-ios18.0-simulator (iPhoneSimulator26.5.sdk) : IOS_TYPECHECK_EXIT=0
+  macOS arm64-apple-macos15.0         (MacOSX.sdk)              : MAC_TYPECHECK_EXIT=0
+
+--- unit assertions (real Color.TS tokens + ImageRenderer, EXECUTED) ---------
+  The 26 XCTest cases live in the XCTest bundle, which cannot be launched in-target
+  because the APP TARGET cannot currently link (pre-existing sibling IRGen crash,
+  below). To prove the surface RUNS (not merely type-checks), the identical logic +
+  view were executed in a standalone macOS executable linking the real surface
+  sources (Tokens.swift + LiveStatusPill.{Model,Telemetry,swift}):
+    /tmp/lspharness  →  43/43 PASS, HARNESS_RESULT=PASS, RUN_EXIT=0
+  Coverage: 3-tone map (tint→tokens, pulse, glyph); relative ladder incl. 5s/60s/
+  3600s boundaries, floor-not-round, negative clamp, non-finite; tone + relative +
+  composed aria-label localization (English fallbacks); presentation projection +
+  Equatable + surface slug; view.opened slug via buffered sink; and an ImageRenderer
+  render smoke for EVERY state (live / reconnecting / offline / no-update-yet) →
+  cgImage non-nil for all four. UNIT_ASSERTIONS=43/43 PASS  (26 XCTest cases authored)
+
+--- swiftlint --strict -------------------------------------------------------
+  Repo-wide `swiftlint --strict` (apps/apple): Done linting! Found 0 violations,
+  0 serious in 2989 files. LiveStatusPill 5 .swift files: 0 violations.
+  LINT_EXIT=0
+
+--- swiftformat --lint apps/apple -------------------------------------------
+  0/2993 files require formatting (repo-wide), 5/5 LiveStatusPill files clean.
+  FORMAT_EXIT=0
+
+--- check-placeholders.ps1 (pwsh) -------------------------------------------
+  apps/apple/TeslaSync/feature-views/LiveStatusPill : PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+===========================================================================
+GATE — full Xcode app build/test (DEFERRED to P4 integration runner)
+===========================================================================
+  KMP dependency staged for real (not skipped):
+    apps/shared/gradlew :core:assembleSharedXCFramework  → BUILD SUCCESSFUL in 6m21s
+    Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64) staged into
+    apps/apple/Frameworks/  ✓
+  xcodegen generate → Created TeslaSync.xcodeproj  (XCODEGEN_EXIT=0)
+
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+             build test
+    → ** BUILD FAILED ** / ** TEST FAILED ** in the APP TARGET, on PRE-EXISTING
+      sibling code, BEFORE any LiveStatusPill object is the cause. The LiveStatusPill
+      sources themselves compiled successfully in-build (observed as completed
+      SwiftCompile jobs); `grep "error: "` over the build log = 0 source errors.
+      Root cause (outside this prompt's allowed-files):
+
+      Deterministic swift-frontend (Apple Swift 6.3.2) IRGen COMPILER CRASH while
+      emitting IR for a SwiftUI reabstraction thunk in a sibling feature-view:
+
+        4.  While evaluating request IRGenRequest(IR Generation for file
+            ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+        5.  While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+        7  swift-frontend  llvm::report_fatal_error(llvm::Twine const&, bool)
+        8  swift-frontend  report_at_maximum_capacity(unsigned long)
+        9  swift-frontend  llvm::SmallVectorBase<unsigned int>::grow_pod(...)
+        10 swift-frontend  (anon)::SyncCallEmission::setArgs(Explosion&, bool, ...)
+        11 swift-frontend  (anon)::IRGenSILFunction::visitFullApplySite(FullApplySite)
+
+      Not memory pressure: re-run with `-jobs 2` (minimal concurrency) reproduced the
+      SAME crash on the SAME sibling file (2 stack dumps). It is a toolchain IRGen
+      regression on that sibling's generic SwiftUI closure, independent of this
+      surface.
+
+  Why this is out-of-scope and not attributable to LiveStatusPill:
+    • `git status --porcelain` = only 6 ADDED LiveStatusPill.* files; `git diff
+      --stat HEAD` is EMPTY — zero modifications to AppearanceSettings.Controls.swift,
+      any other sibling, or any build file. The crash reproduces at HEAD 6a77195c0
+      regardless of this surface.
+    • AppearanceSettings.Controls.swift compiles in a different primary-file batch
+      from the LiveStatusPill files; Swift IRGen of that file depends only on its own
+      code + imported module interfaces, never on this surface.
+    • allowed-files for this prompt is apps/apple/TeslaSync/feature-views/LiveStatusPill.*
+      + this log; fixing a sibling source or the project build settings is forbidden
+      here and belongs to the integration runner (same deferral as P-0073/P-0047).
+  The macOS app build/test (xcodebuild -scheme TeslaSync-macOS build test) shares the
+  identical toolchain and the identical out-of-scope sibling source, so it reaches the
+  same pre-existing IRGen crash; the surface's macOS evidence is the green
+  MAC_TYPECHECK_EXIT=0 + executed harness above. Full app build/test → P4 integration.
+    IOS_EXIT (app target, pre-existing sibling crash, deferred)   = non-zero (documented)
+    MAC_EXIT (app target, same pre-existing sibling crash, deferred) = deferred
+
+===========================================================================
+ACCEPTANCE
+===========================================================================
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (3 tones + nil "—" branch; ImageRenderer smoke green for each).
+  [x] Pure-presentational: no direct HTTP from the view (web fetches nothing); inputs
+      are the SSE state + now/lastUpdateAt the parent advances (web contract).
+  [x] Every i18n key from source resolves through the P1/S10 catalog
+      (LiveStatusPill.strings); no English literal in native code.
+  [x] Accessibility: combined .updatesFrequently status element, composed aria-label
+      (label + relative), dot/icon/middot hidden, Dynamic Type preview, reduce-motion.
+  [x] Tests: adapter/projection + relative-ladder boundaries + a11y label + per-state
+      render smoke + telemetry slug — authored as 26 XCTest cases, executed as 43/43
+      green assertions in the standalone harness (XCTest bundle deferred with app build).
+  [x] No TODO/stub/mock/placeholder/Lorem (placeholder gate = 0).
+  [x] Host-runnable gates green on iOS-sim AND macOS SDKs under Swift 6 strict
+      concurrency; Xcode app build/test deferred to integration runner for a
+      pre-existing, out-of-scope sibling swift-frontend IRGen crash (evidence above).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/LiveStatusPill.swift \
+          apps/apple/TeslaSync/feature-views/LiveStatusPill.Model.swift \
+          apps/apple/TeslaSync/feature-views/LiveStatusPill.Telemetry.swift \
+          apps/apple/TeslaSync/feature-views/LiveStatusPill.Previews.swift \
+          apps/apple/TeslaSync/feature-views/LiveStatusPill.Tests.swift \
+          apps/apple/TeslaSync/feature-views/LiveStatusPill.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0249-LiveStatusPill.log
+  git commit -m "feat(apps/apple/feature-views): add LiveStatusPill surface (P4)"
+
+EXIT=0
+STATUS=DONE

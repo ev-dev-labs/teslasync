@@ -1,0 +1,73 @@
+=== P4 Shared surface 0059 AIVoiceMode (Apple) ===
+date: 2026-06-11T00:31:35Z
+toolchain: Xcode 26.5 Build version 17F42  | swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+files (14):
+  - TeslaSync/shared-surfaces/AIVoiceMode.Adapter.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Voice.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.States.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Seams.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Model.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Projection.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Speech.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Views.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Chrome.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Previews.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.Tests.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.ModelTests.swift
+  - TeslaSync/shared-surfaces/AIVoiceMode.AdapterTests.swift
+i18n catalog: apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.strings
+
+--- NOTE: official gate is PowerShell; this macOS runner reproduces each step in bash ---
+
+=== STEP 1/6: swiftlint --strict (AIVoiceMode surface) ===
+Linting 'AIVoiceMode.ModelTests.swift' (13/14)
+Linting 'AIVoiceMode.AdapterTests.swift' (14/14)
+Done linting! Found 0 violations, 0 serious in 14 files.
+LINT_EXIT=0
+
+=== STEP 2/6: swiftformat --lint apps/apple ===
+SwiftFormat completed in 6.87s.
+0/3790 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+=== STEP 3/6: check-placeholders.ps1 (AIVoiceMode) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+=== STEP 4/6: AIVoiceMode unit tests (isolated SwiftPM, Swift 6 mode; no mic/synth/network) ===
+Test Suite 'All tests' passed at 2026-06-10 17:31:56.534.
+	 Executed 104 tests, with 0 failures (0 unexpected) in 0.017 (0.025) seconds
+TESTS_NOTE: adapter (request/SSE/reducer/chunker/composer/session/gate/action/output/a11y) + projection (gated/loading/error/ready/inputslot) + state-holder (wiring/telemetry/dictation/tts/send/draft/freshness)
+
+=== STEP 5/6: app-target compilation with AIVoiceMode included (both platforms) ===
+iOS  (TeslaSync, iPhone 16 sim):  app-target BUILD SUCCESSFUL (app target, iPhone 16 sim) ; AIVoiceMode errors=0
+macOS(TeslaSync-macOS):           AIVoiceMode files SwiftCompiled=9 ; AIVoiceMode errors=0
+  → the AIVoiceMode surface (incl. the macOS-specific Speech.swift AVCaptureDevice branch)
+    compiles clean under Swift 6 strict concurrency on iOS 18 + macOS 15.
+
+=== STEP 6/6: official gate (xcodebuild build test) — BLOCKED by pre-existing baseline ===
+iOS  'xcodebuild -scheme TeslaSync ... build test' : ** BUILD FAILED ** / ** TEST FAILED **
+macOS 'xcodebuild -scheme TeslaSync-macOS build test' : ** BUILD FAILED **
+Total errors in unmodified iOS gate run: 216 — ALL in sibling surfaces, 0 in AIVoiceMode.
+
+Pre-existing broken sibling surfaces (NOT in this prompt's allowed-files scope; verified via
+`git status`: the ONLY working-tree changes are the new AIVoiceMode.* files):
+  - RecentDrivesListWidget.* / RecentDrivesSection.* — duplicate type decls (ambiguous lookup)
+  - StateTimelineWidget.*    / StateTimeline.*        — duplicate type decls (ambiguous lookup)
+  - AISignalExplorerNlFilter.swift:142 — 'escaping closure captures non-escaping parameter'
+  - AIGeofenceAwareAutomationSuggestions.* — compile error (testability build)
+  - AIAutoNameUnnamedLocations.swift:123 — 'escaping closure captures non-escaping parameter'
+  - swift-frontend report_fatal_error (compiler crash) in a testability batch incl. core Sources/
+
+ALLOWED FILES for this prompt: apps/apple/TeslaSync/shared-surfaces/AIVoiceMode.* + this log.
+Delegation FORBIDDEN; the above sibling surfaces are owned by other P4 prompts and CANNOT be
+edited here. The runner HAS full SwiftUI/Swift Charts/MapKit capability (Xcode 26.5, Swift 6.3),
+and Shared.xcframework built successfully via Gradle — so the block is pre-existing sibling code,
+not a platform-capability gap. The AIVoiceMode surface itself is complete and green:
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  UNIT_TESTS=104 passed/0 failed
+  iOS app build=SUCCESSFUL(+AIVoiceMode)  macOS AIVoiceMode compile=clean
+
+EXIT=1
+STATUS=BLOCKED

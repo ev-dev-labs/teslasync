@@ -1,0 +1,242 @@
+================================================================================
+p4-apple · P7 · page:automations/AutomationsList — SwiftUI / HIG parity
+================================================================================
+Artifact : page:automations/AutomationsList  (web route /automations)
+Web src  : web/src/features/automations/pages/AutomationsListPage.tsx (+ AutomationCard.tsx)
+Targets  : apple-macos + apple-ios (adaptive, ADR-002/006)
+Prompt   : p4-apple/P7/page:automations/AutomationsList
+Runner   : macOS (Darwin 26), Xcode 26.5, Swift 6.3.2, swiftlint 0.x, swiftformat, pwsh 7.6
+PARITY_REQUIRED=33
+
+--------------------------------------------------------------------------------
+FILES (created unless noted)
+--------------------------------------------------------------------------------
+apps/apple/Sources/Features/Automations/AutomationsListModels.swift
+apps/apple/Sources/Features/Automations/AutomationsListPageModel.swift
+apps/apple/Sources/Features/Automations/AutomationsListPageModel.Sample.swift
+apps/apple/Sources/Features/Automations/AutomationsListPage.swift
+apps/apple/Sources/Features/Automations/AutomationsListPage.Sections.swift
+apps/apple/Sources/Features/Automations/AutomationsListPage.Card.swift
+apps/apple/Sources/Features/Automations/AutomationsListPage.Presets.swift
+apps/apple/Sources/Features/Automations/AutomationsListRouteRegistration.swift
+apps/apple/Tests/Unit/Features/Automations/AutomationsListPageModelTests.swift
+apps/apple/Tests/Unit/Features/Automations/AutomationsListModelsTests.swift
+apps/apple/Sources/TeslaSyncApp.swift                 (modified: registered .automations host)
+apps/apple/Localization/Localizable.xcstrings         (modified: +54 keys, additive)
+apps/parity/apple-ledger.json                         (modified: +2 rows, 33/33)
+.github/prompts/monorepo/logs/apple-page-automations-AutomationsListPage.log
+
+Surface line count: 1845 lines across the 8 Sources/ files (web page 430 + AutomationCard 285
+= 715 lines composed into a HIG-native decomposition — well above the >=70% completeness bar).
+
+--------------------------------------------------------------------------------
+RECORDED DEVIATIONS (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+1. Output path: the prompt's "Output" lists apps/apple/TeslaSync/Features/Automations/**, but
+   the established, building convention (the DONE sibling p4-apple/P7/AutomationActivityFeed and
+   every analytics/admin page) lives under apps/apple/Sources/Features/Automations/**, which
+   project.yml globs into the app target. Files are placed there so they compile + are enumerated.
+2. "Create" header action: the web navigates to the typed builder (/automations/new), a separate
+   out-of-scope parity unit. Exposed as an injected onCreate shell hook (default no-op), mirroring
+   the sibling FleetCompare's onNavigate seam — a real wired button to an out-of-scope destination.
+3. Preset gallery body (GlassPanel6): PresetGallery is its OWN parity unit
+   (page:automations/PresetGallery, api useAutomationPresets). This page owns the disclosure
+   CONTAINER + summary (all 5 required preset strings); the expanded body embeds the product's
+   FIXED built-in quick-start catalog so the panel is never blank (not per-user API data).
+4. AutomationCard / AutomationActivityFeed are separate parity units; this page COMPOSES them
+   inline (the web page renders them as children), reusing the sibling activity-feed row views.
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+[placeholder]  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Automations -Language swift
+               PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+
+[swiftformat]  swiftformat --lint Sources/Features/Automations Tests/Unit/Features/Automations
+               0 errors / 0 warnings  (FORMAT_EXIT=0)
+
+[swiftlint]    swiftlint lint --strict <10 surface+test files>
+               0 violations in all 10 files  (LINT_EXIT=0)
+               (note: tree-wide --strict also surfaces PRE-EXISTING violations in unrelated
+                widget-primitives/feature-views files — none are mine.)
+
+[typecheck]    swiftc -typecheck -swift-version 6 -strict-concurrency=complete, real SDKs:
+               macOS-15  (arm64-apple-macos15.0)          -> 0 errors / 0 warnings (surface)
+               iOS-18    (arm64-apple-ios18.0-simulator)  -> 0 errors / 0 warnings (surface)
+               (surface + its real P2 tokens / P3 components / App routing / sibling feed deps;
+                only the KMP-coupled Components/DataDisplay/UnitFormatters.swift — which this
+                surface does NOT use — is excluded as it needs the unstaged Shared.xcframework.)
+
+[harness]      Executable Swift 6 model harness (compiled + RUN against the real model files):
+               HARNESS_PASSED=26  HARNESS_FAILED=0  RUN_EXIT=0
+               covers: phase loading/ready/error, cards success/empty/noMatch, status+search
+               filters, filter-count, reset, stats precedence, pin sort + togglePin, toggle,
+               auto-disabled->reEnable, delete, import valid/typed/unreadable, activity gate +
+               firing, envelope parse.
+
+[xcodegen]     xcodegen generate -> all 10 files enumerated in TeslaSync.xcodeproj.
+
+[build/test]   xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS Simulator' build
+               BUILD_EXIT=65  -- RED, and RED for the SAME pre-existing, OUT-OF-SCOPE reason as
+               the baseline (a pre-change build of HEAD reproduces it) and the DONE sibling
+               AutomationActivityFeed: a Swift compiler IRGen crash
+                 "While evaluating request IRGenRequest(IR Generation for file
+                  .../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift)"
+                 "Please submit a bug report ... include the crash backtrace."
+               This file is OUTSIDE my allowed file set (forbidden to fix, covenant #7).
+               Zero errors reference any AutomationsList* file; whole-module Sema completed
+               (the crash is IRGen, post-type-check), so my files compiled in the full app
+               target. xcodebuild test cannot run because it must build the app first and hits
+               the same crash; the executed 26/26 model harness substitutes for test execution
+               (the identical disposition under which p4-apple/P7/AutomationActivityFeed,
+               admin/ApiPlayground, analytics/Statistics, etc. were accepted DONE — see
+               apps/macos-pending-verifications.md). TEST_EXIT=blocked(pre-existing-IRGen-crash).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=33
+================================================================================
+[x] panel  — Total
+       AutomationsListPage.Sections.swift -> AutomationsListStatsSection ->
+       AutomationStatTile(labelKey: "automations.stats.total", value: stats.total)
+[x] panel  — Active
+       AutomationsListPage.Sections.swift -> AutomationStatTile("automations.stats.active",
+       value: stats.active, tone: .success, systemImage: "power")
+[x] panel  — Disabled
+       AutomationsListPage.Sections.swift -> AutomationStatTile("automations.stats.disabled",
+       value: stats.disabled, systemImage: "pause.fill")
+[x] panel  — Auto-Disabled
+       AutomationsListPage.Sections.swift -> AutomationStatTile("automations.stats.autoDisabled",
+       value: stats.autoDisabled, tone: .danger, emphasized: stats.hasAutoDisabled)
+[x] panel  — GlassPanel5  (filters)
+       AutomationsListPage.Sections.swift -> AutomationsListFiltersPanel (TSGlassPanel:
+       TSSelect status filter + TSTextField search + count TSBadge)
+[x] panel  — GlassPanel6  (preset gallery)
+       AutomationsListPage.Presets.swift -> AutomationsListPresetsPanel (TSGlassPanel:
+       collapsible disclosure summary + built-in quick-start AutomationPresetTile grid)
+[x] panel  — GlassPanel7  (automation card list)
+       AutomationsListPage.Sections.swift -> AutomationsListCardsSection (TSStaggerContainer of
+       AutomationCardView; empty / no-match via TSGlassPanel + TSEmptyState)
+[x] state  — loading
+       AutomationsListPage.swift -> content `.loading` -> AutomationsListSkeleton; model.phase=.loading
+[x] state  — empty
+       AutomationsListPage.Sections.swift -> AutomationsListCardsSection `.empty` ->
+       TSEmptyState(title: "automations.empty", action "automations.empty.cta"); model.cardsState=.empty
+[x] state  — success
+       AutomationsListPage.Sections.swift -> AutomationsListCardsSection `.success` ->
+       cards from model.sortedItems; model.phase=.ready
+[x] string — automations.autoDisabledWarning
+       AutomationsListPage.Sections.swift -> AutomationsListWarningBanner.message (String(format:))
+[x] string — automations.create
+       AutomationsListPage.swift -> actions -> TSButton Label("automations.create", ...)
+[x] string — automations.empty
+       AutomationsListPage.Sections.swift -> AutomationsListCardsSection TSEmptyState(title:)
+[x] string — automations.empty.cta
+       AutomationsListPage.Sections.swift -> TSButton("automations.empty.cta")
+[x] string — automations.filterStatus
+       AutomationsListPage.Sections.swift -> TSSelect.accessibilityLabel("automations.filterStatus")
+[x] string — automations.import
+       AutomationsListPage.swift -> actions -> TSButton Label("automations.import", ...)
+[x] string — automations.importFailedWithReason
+       AutomationsListPageModel.swift -> importAlertMessage (String(localized:) + String(format:))
+[x] string — automations.importTypedEnvelopeRequired
+       AutomationsListModels.swift -> AutomationImportError.typedEnvelopeRequired.messageKey
+[x] string — automations.importUnknownError
+       AutomationsListModels.swift -> AutomationImportError.unreadable.messageKey
+[x] string — automations.noMatch
+       AutomationsListPage.Sections.swift -> AutomationsListCardsSection `.noMatch` TSEmptyState(title:)
+[x] string — automations.noMatch.cta
+       AutomationsListPage.Sections.swift -> TSButton("automations.noMatch.cta") { resetFilters() }
+[x] string — automations.presets.collapse
+       AutomationsListPage.Presets.swift -> summary expand/collapse Text (isExpanded ? collapse : expand)
+[x] string — automations.presets.expand
+       AutomationsListPage.Presets.swift -> summary expand/collapse Text (isExpanded ? collapse : expand)
+[x] string — automations.presets.hint
+       AutomationsListPage.Presets.swift -> summary Text("automations.presets.hint")
+[x] string — automations.presets.title
+       AutomationsListPage.Presets.swift -> summary Text("automations.presets.title")
+[x] string — automations.presets.toggleAria
+       AutomationsListPage.Presets.swift -> summary Button.accessibilityLabel("automations.presets.toggleAria")
+[x] string — automations.search
+       AutomationsListPage.Sections.swift -> TSTextField("automations.search", ...)
+[x] string — automations.stats.active
+       AutomationsListPage.Sections.swift -> AutomationStatTile(labelKey: "automations.stats.active")
+[x] string — automations.stats.autoDisabled
+       AutomationsListPage.Sections.swift -> AutomationStatTile(labelKey: "automations.stats.autoDisabled")
+[x] string — automations.stats.disabled
+       AutomationsListPage.Sections.swift -> AutomationStatTile(labelKey: "automations.stats.disabled")
+[x] string — automations.stats.total
+       AutomationsListPage.Sections.swift -> AutomationStatTile(labelKey: "automations.stats.total")
+[x] string — automations.subtitle
+       AutomationsListPage.swift -> titleBlock Text("automations.subtitle")
+[x] string — automations.title
+       AutomationsListPage.swift -> titleBlock TSPageTitle("automations.title")
+PARITY_COVERED=33
+
+(All 23 required keys added as PLAIN keys to Localizable.xcstrings with the web key names
+ verbatim — including the dotted automations.empty.cta / automations.noMatch.cta — plus the
+ supporting card/filter/status/common keys the composed AutomationCard + filters need. The
+ insertion is purely additive: git numstat +594/-0 on the catalog.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : BUILD_EXIT=65 is recorded verbatim with its real root cause (a
+                       pre-existing IRGen compiler crash on the out-of-scope sibling
+                       AppearanceSettings.Controls.swift, reproduced on baseline HEAD). The GREEN
+                       claim is scoped to my files + the in-scope gates, all shown with real output.
+ 2 No scope narrowing: 7 panels + 3 states + 23 strings = 33/33 implemented; the web warning
+                       banner, the embedded activity feed, the full AutomationCard (status badge,
+                       firing ring, vehicle row, run stats, auto-disabled reason, conflicts, pin,
+                       toggle, actions menu, delete confirm), and the import flow are all reproduced.
+ 3 No skip-and-assume: web source read end-to-end; computeStats precedence, getUIStatus, the
+                       filter+search+pin-sort memos, the auto_disabled toggle->reEnable rule, and
+                       the isAutomationImportEnvelope guard are all ported (+ unit-proven).
+ 4 No stubs as final : PLACEHOLDER_COUNT=0; every region renders distinctly; empty/no-match are
+                       full ContentUnavailableViews; the presets panel embeds a real built-in
+                       catalog (no "coming soon"); Duplicate/Export menu items match the web's
+                       own no-op-close handlers (parity, not a stub).
+ 5 No parity shortcuts: 3 states render distinctly and are state-machine tested; strings are the
+                       web keys from Localizable.xcstrings; SI not applicable (counts/durations).
+ 6 No delegation      : implemented here; no sub-agents.
+ 7 No predecessor bypass: no edits to the P4 shell beyond the single additive route registration
+                       in TeslaSyncApp.swift; no sibling surface/owner files touched; the
+                       pre-existing AppearanceSettings.Controls.swift crash is left untouched.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — placeholder(0), swiftformat(0),
+                       swiftlint --strict(0), iOS-18 + macOS-15 swiftc -typecheck(0/0), model
+                       harness(26/26). The only RED is the pre-existing out-of-scope IRGen crash.
+ 9 No silent drift    : changes confined to the files listed above; the 4 deviations are recorded.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI AutomationsListPage shipped at parity with the web source: an
+@Observable AutomationsListPageModel (ADR-004 — no networking in the view) over an injected
+AutomationsListDataSource whose method names mirror the 8 ported web hooks verbatim
+(useAutomations / useVehicles / usePinned / useAutomationHistory / useToggleAutomation /
+useReEnableAutomation / useDeleteAutomation / useTestRunAutomation). The page reproduces the
+web PageContainer chrome (title + subtitle + Import file-picker + Create), the four stat tiles,
+the filters panel, the auto-disabled warning banner, the collapsible preset gallery, the
+automation card list (with its no-data + no-match empty states), and the embedded execution
+activity feed — built on the P2 tokens + P3 shared components (TSGlassPanel / TSCard / TSButton /
+TSBadge / TSSelect / TSTextField / TSEmptyState / TSSkeleton / TSStaggerContainer / motion), no
+hand-rolled glass; adaptive macOS/iPad vs iPhone-compact; every visible string from
+Localizable.xcstrings with the web key names; VoiceOver labels/traits + Dynamic Type + the
+auto-disabled danger emphasis. Verified on BOTH idioms by real iOS-18 + macOS-15 Swift 6
+strict-concurrency type-checks (0/0 on the surface) and an executed 26/26 model harness. The full
+xcodebuild scheme is RED (BUILD_EXIT=65) ONLY due to the pre-existing, out-of-scope IRGen compiler
+crash on AppearanceSettings.Controls.swift (forbidden to commit-fix) — the identical disposition
+under which the sibling page p4-apple/P7/page:automations/AutomationActivityFeed was accepted DONE.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Automations apps/apple/Tests/Unit/Features/Automations \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-automations-AutomationsListPage.log
+  git commit -m "feat(apps/apple): AutomationsListPage at web parity (P7 automations)"
+
+EXIT=0
+STATUS=DONE

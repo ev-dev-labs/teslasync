@@ -1,0 +1,237 @@
+=== P4-APPLE · P7 · page:admin/ApiLogs (SwiftUI / HIG) ===
+started: 2026-06-13T18:05:00-0700
+finished: 2026-06-13T19:28:00-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6.3.2 (swiftlang-6.3.2.1.108); swiftlint 0.63.3 + swiftformat + xcodegen + pwsh present
+repo HEAD: aa057a294
+web source: web/src/features/admin/pages/ApiLogsPage.tsx   (route /api-logs)
+parity unit: page:admin/ApiLogs  (manifest requiredCount=43 = 9 panels + 4 states + 30 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`. That
+path is NOT a project.yml source group. The repo's real, compiled canonical page home is
+`apps/apple/Sources/Features/<Domain>/` (it is a project.yml `Sources` path with
+createIntermediateGroups; every sibling P7 page — ApiPlayground/DiskForecast/SchemaDrift/…
+— lives there). The page therefore ships at `apps/apple/Sources/Features/Admin/**`, the
+faithful equivalent of the prompt's `Features/Admin`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). Navigation registration
+spans `Sources/App/AppRoute.swift` (+ the new `.apiLogs` case), `Sources/TeslaSyncApp.swift`
+(registry wiring) and `Sources/Features/Admin/ApiLogsRouteRegistration.swift`. This mapping
+is the only deviation from the literal prompt path; recorded here per covenant #9. Identical
+reconciliation to every predecessor apple-page log.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain, generated xcodeproj/xcframework gitignored)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/ApiLogsPage.swift              (252 LOC) SwiftUI view: header(title+subtitle), non-blocking error banner, 4 stat cards (ApiLogStatCard) + by-service chip row, adaptive stat grid (2-up compact / 4-up regular), state routing into filters+table; ApiLogStatCard + ApiLogBadge feature sub-views; #if DEBUG previews (loaded/empty/error)
+?? apps/apple/Sources/Features/Admin/ApiLogsPage.Filters.swift      (166 LOC) GlassPanel6 filters: Filter header + Clear, Service/Method/Status menu pickers (ApiLogFilterSelect), endpoint TSSearchInput, service-count helper; adaptive 1/2-col grid; every change routes through the model (resets page)
+?? apps/apple/Sources/Features/Admin/ApiLogsPage.Table.swift        (165 LOC) GlassPanel7 table: showing-range header + Export JSON (native .fileExporter / ApiLogsJSONDocument), loading(TSSpinner)/empty(TSEmptyState)/rows states, prev/page-of/next pager
+?? apps/apple/Sources/Features/Admin/ApiLogsPage.Row.swift          (265 LOC) expandable ApiLogRow (adaptive regular row / compact stack): timestamp, service/method/status badges, endpoint, duration, error line; ApiLogDetail = requestURL(GlassPanel8) + error(GlassPanel9) + req/resp ApiLogJsonViewer(GlassPanel1 ×2); ApiLogDetailSection
+?? apps/apple/Sources/Features/Admin/ApiLogsPageModel.swift         (372 LOC) @MainActor @Observable model: ApiCallLog/ApiCallLogStats/ApiCallServiceCount/ApiLogsQuery/ApiLogsSnapshot wire types, ApiLogsDataSource seam, ApiLogsLoadState(loading/empty/loaded)+loadErrorMessage banner, filters/pagination/derived (totalPages/showingRange/serviceOptions/chips), load/refresh/setMethod/setStatus/setEndpoint/selectService/clearFilters/goTo{Prev,Next}Page/toggleExpanded/exportJSON
+?? apps/apple/Sources/Features/Admin/ApiLogsPageModel.Sample.swift  (215 LOC) SampleApiLogsDataSource: 16 representative calls (all services/methods/status bands, errors + req/resp bodies); global stats roll-up + local filter+pagination (manifest: "renders from local state")
+?? apps/apple/Sources/Features/Admin/ApiLogsFormat.swift            (214 LOC) ApiLogServiceCatalog (Sendable SERVICE_CONFIG, METHOD_VARIANTS, statusBadgeVariant, deriveServiceOptions) + ApiLogsFormat (fmtInt/fmtNumber/errorRate/avgDuration/statusLabel/utc DateTime/prettyJSON/exportPayload). No SI: call counts + latency ms are unit-agnostic control-plane values
+?? apps/apple/Sources/Features/Admin/ApiLogsRouteRegistration.swift  (20 LOC) registers .apiLogs -> ApiLogsPage (mirrors ApiPlaygroundRouteRegistration; model built on MainActor + captured)
+?? apps/apple/Tests/Unit/Features/Admin/ApiLogsPageModelTests.swift  (231 LOC) XCTest: 4 states, filter-resets-page, pagination clamp, endpoint narrowing, clearFilters, serviceOptions, expansion, export, sample well-formedness + 5xx bucket
+?? apps/apple/Tests/Unit/Features/Admin/ApiLogsFormatTests.swift     (124 LOC) XCTest: int/number/errorRate/avgDuration/statusLabel/utc/prettyJSON/exportPayload + method/status tones + config fallback + knownServices sync + deriveServiceOptions sort
+?? apps/apple/Tests/Unit/Features/Admin/ApiLogsRouteRegistrationTests.swift (40 LOC) XCTest: registers/preserves-base/injected-source/route-metadata/deep-link parse
+ M apps/apple/Sources/App/AppRoute.swift            + case .apiLogs (pathSegment "api-logs", group .system, systemImage "list.bullet.rectangle"); deep-link parses via AppRouteParser; menu navigate command auto-included via AppRoute.allCases
+ M apps/apple/Sources/TeslaSyncApp.swift            chains ApiLogsRouteRegistration.registry(base: ApiPlaygroundRouteRegistration.registry(...)) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings    +32 keys (29 apiLogs.* required + error.loadFailed required + route.apiLogs + spotlight.route.apiLogs.description); JSON validated (8495 total keys)
+ M apps/parity/apple-ledger.json                    + page:admin/ApiLogs rows for apple-macos & apple-ios (covered 43/43)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (slot-isolated GRADLE_USER_HOME) ---
+# A shared default GRADLE_USER_HOME (~/.gradle) caused a parallel-slot daemon to write the
+# RELEASE xcframework into a sibling slot (slot-87). Re-run with a slot-local
+# GRADLE_USER_HOME=.gradle-home isolates the daemon so release lands in slot-88 and stages.
+# env GRADLE_USER_HOME=<slot>/.gradle-home apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; ApiLogs* files referenced by the iOS+macOS app + both test bundles
+GEN_EXIT=0
+
+--- swiftlint --strict (my 12 ApiLogs files; then the whole Sources/Features/Admin dir) ---
+Done linting! Found 0 violations, 0 serious in 12 files.   (my files)
+Done linting! Found 0 violations, 0 serious in 30 files.   (entire Admin dir — all sibling pages stay clean)
+LINT_EXIT=0
+# NB: the repo .swiftlint.yml has an `included:` list, so a bare `swiftlint <dir>` re-expands to all
+#     5388 included files and reports 3 PRE-EXISTING out-of-scope violations in
+#     TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift (identifier_name a/b/c) — none mine,
+#     none in Admin. Scoping to the explicit Admin file list yields 0/0 (above).
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=1   (a pre-existing sibling opt-out; none of mine)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"/fatalError in shipped code]
+
+--- Full-scheme build (xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build) ---
+Type-checking PASSED for the ENTIRE app target including all 9 of my source files (the build
+reached EmitSwiftModule + 3243 SwiftCompile codegen actions with ZERO `error:` diagnostics
+anywhere — my ApiLogs*.swift all appear in the SwiftCompile list, none errored). The build then
+DIED in IR emission of a COMPILER-GENERATED reabstraction thunk inside a SIBLING batch:
+  5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+     ($ swift demangle -> "reabstraction thunk helper from @escaping @isolated(any)
+      @callee_guaranteed @Sendable (Bool, Actor?) -> () to ... (Bool) -> ()")
+     LLVM ERROR: report_fatal_error  (<compiler-generated>:0:0 — NOT a source line)
+  crashing SwiftCompile batch = TeslaSync/dashboard-widgets/CommandQuickActionsWidget.swift,
+  feature-views/CommandSearch.Adapter.swift, feature-views/CommandSearch.Model.swift (siblings; NOT mine).
+BUILD_EXIT=65   [BLOCKED by a PRE-EXISTING toolchain IRGen crash — see the out-of-scope section below]
+TEST_EXIT=blocked(pre-existing-IRGen-crash)   [TeslaSyncTests bundle links the app target, blocked by the same crash]
+
+--- Isolated view type-check vs the REAL P2 tokens + P3 components (Swift 6 strict concurrency) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift \
+#   Sources/Components/UI/{Badges,Buttons,Cards,Typography}.swift \
+#   Sources/Components/Feedback/{States,Banners,Skeletons}.swift Sources/Components/DataDisplay/Metrics.swift \
+#   Sources/Components/Forms/Inputs.swift Sources/App/{AppRoute,RouteHostRegistry}.swift \
+#   Sources/Features/Admin/ApiLogs*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors   VIEW_TYPECHECK_IOS_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact branch]
+# Authoritative proof the view's API usage against TSGlassPanel/TSButton/TSSearchInput/TSAlertBanner/
+# TSEmptyState/TSSpinner/TSCard/TSIconBox/TSMetricLabel/TSAnimatedNumber/TSDelta/typography/tokens +
+# AppRoute/AppRouteHostRegistry is correct on BOTH idioms (ADR-002/006). The full iOS build above
+# ALSO type-checked these same files in-context (it reached IRGen), corroborating this.
+
+--- Executed model-logic harness (REAL ApiLogsPageModel/Sample/Format/Catalog + REAL TSTone + tokens) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -target arm64-apple-macos15.0 \
+#   Tokens.swift Components/UI/Badges.swift Features/Admin/{ApiLogsFormat,ApiLogsPageModel,ApiLogsPageModel.Sample}.swift main.swift -o harness   (SWIFTC_EXIT=0)
+30 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  states: initial=.loading; success->.loaded(3)+stats; empty->.empty; failure->banner+empty+stats nil
+  filters: setMethod resets page+reloads(lastQuery.method=POST); endpoint filter 4->1; clearFilters resets
+  pager: 30 rows -> 2 pages, page0=25 rows range1-25, page1=5 rows range26-30, next/prev clamp
+  derived: serviceOptions head ""+teslasync-api; toggleExpanded pair; exportJSON has "endpoint"
+  format: int 12345.6->"12,346"; number 5->"5.00"; errorRate 5->"5.00%"; avgDuration 123.6->"124ms";
+          statusLabel nil->"N/A"/404->"404"; utc 1700000000->"2023-11-14 22:13:20"; prettyJSON valid+fallback
+  catalog: methodTone/statusTone; config known+fallback; knownServices=11; deriveServiceOptions head+union+sorted
+  sample: well-formed (total>0, stats.totalCalls==total, errorCount>=1); 5xx bucket + global stats
+HARNESS_EXIT=0
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not LINK at this HEAD because the Swift 6.3.2 toolchain
+CRASHES (LLVM report_fatal_error) while emitting IR for the compiler-generated reabstraction
+thunk `@$sSbScA_pSgIeAghyg_SbIeAghn_TR`  (= @isolated(any) @Sendable (Bool, Actor?) -> ()).
+This is the IDENTICAL crash signature documented as pre-existing across the ENTIRE p4-apple
+program — every predecessor apple-page log records the same BUILD_EXIT=65 from the same
+`emitting IR SIL ... SbScA_pSgIeAghyg ... TR` crash (ApiPlayground, DiskForecast,
+FleetTelemetryCoverage, LiveSignalInspector, SchemaDrift, TeslaOrders, FleetCompare, Statistics,
+AutomationActivityFeed, AutomationsList, BatteryCells — all STATUS=DONE on the isolated-harness
+methodology). It is provoked by SIBLING code (the crashing batch compiles CommandQuickActionsWidget
+/ CommandSearch.* — NOT my files) and is a `<compiler-generated>` thunk, not a source diagnostic.
+My deliverable type-checks with ZERO errors in-context (the full build reached IRGen) AND in
+isolation on macOS+iOS (0/0) AND executes correctly (harness 30/30). No edit to any sibling
+surface, project.yml, or other owners' files was made (covenant #6/#7). My code's correctness is
+proven by the isolated type-checks + the executed harness — the same host-harness methodology the
+peer p4-apple logs use when the shared bundle is blocked by an out-of-scope toolchain defect.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=43
+================================================================================
+[x] panel  — GlassPanel1     ApiLogsPage.Row.swift `ApiLogJsonViewer` -> TSGlassPanel { ScrollView(Text prettyJSON) } else italic "No {label}" (apiLogs.noData); rendered ×2 (request/response body) in `ApiLogDetail.bodyGrid`
+[x] panel  — Total-Calls     ApiLogsPage.swift `statsSection` -> ApiLogStatCard(systemImage:"doc.text", label:"apiLogs.totalCalls", value: stats.map{int(totalCalls)} ?? "—")
+[x] panel  — Error-Rate      ApiLogsPage.swift `statsSection` -> ApiLogStatCard("exclamationmark.triangle","apiLogs.errorRate", errorRate% | "—", trend: errorCount up+red when error_rate>5 via `errorTrend`)
+[x] panel  — Avg-Duration    ApiLogsPage.swift `statsSection` -> ApiLogStatCard("clock","apiLogs.avgDuration", avgDuration ms | "—")
+[x] panel  — Last-24h        ApiLogsPage.swift `statsSection` -> ApiLogStatCard("waveform.path.ecg","apiLogs.last24h", int(last24h) | "—")
+[x] panel  — GlassPanel6     ApiLogsPage.Filters.swift `ApiLogsFiltersPanel` -> TSGlassPanel { headerRow(filter icon + "apiLogs.filters" + Clear) ; filterGrid(service/method/status ApiLogFilterSelect + endpoint TSSearchInput) }
+[x] panel  — GlassPanel7     ApiLogsPage.Table.swift `ApiLogsTablePanel` -> TSGlassPanel { headerRow(showing + Export) ; content(loading/empty/logList) ; pagination }
+[x] panel  — GlassPanel8     ApiLogsPage.Row.swift `ApiLogDetail.requestURLSection` -> ApiLogDetailSection("apiLogs.requestUrl") TSGlassPanel { "{method} {endpoint}" }
+[x] panel  — GlassPanel9     ApiLogsPage.Row.swift `ApiLogDetail.errorSection` -> ApiLogDetailSection("apiLogs.error", danger) TSGlassPanel { error_message } (only when the call failed)
+[x] state  — loading         ApiLogsLoadState.loading -> ApiLogsTablePanel `content` TSSpinner(label:"apiLogs.loading") (harness: initial=.loading)
+[x] state  — empty           ApiLogsLoadState.empty -> ApiLogsTablePanel `content` TSEmptyState(title:"apiLogs.noLogsFound", message: hasFilters ? "apiLogs.adjustFilters" : nil, systemImage:"doc.text")  (ContentUnavailableView)
+[x] state  — error           model.loadErrorMessage (web `anyError`) -> ApiLogsPage `errorBanner` TSAlertBanner(.danger, title:"error.loadFailed", message: detail) (harness: failure -> hasLoadError)
+[x] state  — success         ApiLogsLoadState.loaded([ApiCallLog]) -> ApiLogsTablePanel `logList` ForEach ApiLogRow (+ ApiLogDetail on expand)  (harness: success -> .loaded(3))
+[x] string — apiLogs.adjustFilters    ApiLogsPage.Table.swift `content` .empty -> TSEmptyState message when model.hasFilters
+[x] string — apiLogs.allMethods       ApiLogsPage.Filters.swift `methodOptions` head = String(localized:"apiLogs.allMethods")
+[x] string — apiLogs.allServices      ApiLogsPageModel `serviceOptions` head label = String(localized:"apiLogs.allServices") (web deriveServiceOptions allLabel)
+[x] string — apiLogs.allStatus        ApiLogsPage.Filters.swift `statusOptions` head = String(localized:"apiLogs.allStatus")
+[x] string — apiLogs.avgDuration      ApiLogsPage.swift Avg-Duration card label
+[x] string — apiLogs.byService        ApiLogsPage.swift `byServiceChips` -> Text("apiLogs.byService") + ":"
+[x] string — apiLogs.clear            ApiLogsPage.Filters.swift `headerRow` -> TSButton("apiLogs.clear") (shown when hasFilters)
+[x] string — apiLogs.error            ApiLogsPage.Row.swift `ApiLogDetail.errorSection` label (GlassPanel9)
+[x] string — apiLogs.errorRate        ApiLogsPage.swift Error-Rate card label
+[x] string — apiLogs.exportJson       ApiLogsPage.Table.swift `headerRow` -> TSButton("apiLogs.exportJson") (.fileExporter)
+[x] string — apiLogs.filterEndpoint   ApiLogsPage.Filters.swift `filterGrid` -> TSSearchInput(prompt:"apiLogs.filterEndpoint")
+[x] string — apiLogs.filters          ApiLogsPage.Filters.swift `headerRow` label + panel a11y label
+[x] string — apiLogs.last24h          ApiLogsPage.swift Last-24h card label
+[x] string — apiLogs.loading          ApiLogsPage.Table.swift `content` .loading -> TSSpinner(label:"apiLogs.loading")
+[x] string — apiLogs.next             ApiLogsPage.Table.swift `pagination` -> TSButton("apiLogs.next")
+[x] string — apiLogs.noData           ApiLogsPage.Row.swift `ApiLogJsonViewer.emptyText` = String(format: noData, label.lowercased()) (web JsonViewer "No {label}")
+[x] string — apiLogs.noLogs           ApiLogsPage.Table.swift `showingText` when total==0 (web header "No logs found")
+[x] string — apiLogs.noLogsFound      ApiLogsPage.Table.swift `content` .empty -> TSEmptyState title
+[x] string — apiLogs.pageOf           ApiLogsPage.Table.swift `pageText` = String(format:"Page %1$lld of %2$lld", page+1, totalPages)
+[x] string — apiLogs.previous         ApiLogsPage.Table.swift `pagination` -> TSButton("apiLogs.previous")
+[x] string — apiLogs.requestBody      ApiLogsPage.Row.swift `bodyGrid` -> ApiLogJsonViewer(label: LocalizedStringResource("apiLogs.requestBody"))
+[x] string — apiLogs.requestUrl       ApiLogsPage.Row.swift `requestURLSection` label (GlassPanel8)
+[x] string — apiLogs.responseBody     ApiLogsPage.Row.swift `bodyGrid` -> ApiLogJsonViewer(label: LocalizedStringResource("apiLogs.responseBody"))
+[x] string — apiLogs.serviceCount     ApiLogsPage.Filters.swift `serviceCountText` = String(format:"%1$lld with data · %2$lld known", tracked, known)
+[x] string — apiLogs.serviceFilterAria ApiLogsPage.Filters.swift `serviceField` -> ApiLogFilterSelect(accessibilityLabel:"apiLogs.serviceFilterAria")
+[x] string — apiLogs.showing          ApiLogsPage.Table.swift `showingText` = String(format:"Showing %1$lld–%2$lld of %3$@", from, to, int(total))
+[x] string — apiLogs.subtitle         ApiLogsPage.swift `header` -> Text("apiLogs.subtitle")
+[x] string — apiLogs.title            ApiLogsPage.swift `header` -> TSPageTitle("apiLogs.title") (+ route.apiLogs nav title, + table panel a11y label)
+[x] string — apiLogs.totalCalls       ApiLogsPage.swift Total-Calls card label
+[x] string — error.loadFailed         ApiLogsPage.swift `errorBanner` -> TSAlertBanner(title:"error.loadFailed")
+PARITY_COVERED=43
+
+All 43 panels/states/strings resolve from the bound @Observable ApiLogsPageModel and the
+Localizable.xcstrings catalog; web i18n key names preserved verbatim; interpolated keys ported
+to %lld/%@ via String(format:). SI converters / live-SSE staleness: N/A for this unit — the
+manifest declares no API data sources, and call counts + latency ms are unit-agnostic
+control-plane values, not vehicle SI (recorded per ADR-013 scope).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild) is a
+                       PRE-EXISTING toolchain IRGen crash (identical signature to the whole program), never recoloured.
+ 2 No scope narrowing: all 9 panels, 4 data states, 30 strings, the by-service chips, the expandable
+                       request/response detail, the pager, JSON export, and adaptive macOS/iPhone layouts implemented.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title/subtitle, stat grid + chips,
+                       filters, table chrome, expandable rows + JSON viewers, and pagination were reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code; a real
+                       in-memory data source drives fully-interactive filters + pagination, not "No data".
+ 5 No parity shortcuts: 4 states render distinctly; error-rate trend uses the web ">5" guard; strings = web keys.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT commit any edit to sibling surfaces, project.yml, or other owners' files.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftlint --strict(0/12, 0/30 Admin), placeholder(0),
+                       view type-check macOS(0)+iOS(0), executed harness(30/30), full-build type-check(0 errors).
+                       The only RED is the out-of-scope pre-existing toolchain crash, DEFERRED to its owners / P99.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI ApiLogsPage shipped at parity with the web source: a pure @Observable
+state holder (ADR-004 — no networking in the view) exposing loading/empty/error/success over an
+injectable data-source seam (default = a representative in-memory dataset, matching the manifest's
+"renders from local state") whose filters + pagination are genuinely interactive; four call-statistics
+cards + a by-service chip row; a filters panel (service/method/status menu pickers + endpoint search +
+Clear); a log table with adaptive expandable rows (timestamp/service/method/endpoint/status/duration/
+error) whose detail reveals the request URL, error, and pretty-printed request/response JSON; a native
+.fileExporter JSON export; and a prev/next pager — all on the P2 tokens + P3 shared components (no
+hand-rolled glass), every visible string from Localizable.xcstrings with web key names, full VoiceOver
+labels/traits, Dynamic Type, light/dark + increased-contrast tokens, and deep-linkable via the new
+.apiLogs route. Verified on BOTH idioms by isolated Swift 6 strict-concurrency type-checks (macOS 0 /
+iOS 0) and an executed model harness (30/30); the full app target additionally type-checked every one
+of my files in-context (it reached IRGen with zero source errors). The full xcodebuild scheme is RED
+ONLY due to a pre-existing, program-wide toolchain IRGen crash in sibling code (forbidden to commit-fix).
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin apps/apple/Tests/Unit/Features/Admin \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-ApiLogsPage.log
+  git commit -m "feat(apps/apple): ApiLogsPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

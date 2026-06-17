@@ -1,0 +1,184 @@
+=== P4 Shared surface 0144 Toast (Apple) ===
+Date: 2026-06-11
+Host: Darwin arm64 (Atuls-Mac-Studio) — Apple Silicon
+Toolchain (capability check — ALL required capabilities PRESENT):
+  - Xcode 26.5 (Build 17F42)
+  - Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+  - SwiftUI / Swift Charts / MapKit: available (iOS 18 / macOS 15 SDKs)
+  - iPhone 16 simulator: present + booted
+  - swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.x
+  - KMP Shared.xcframework: built from apps/shared via Gradle (JDK 17) and staged
+    to apps/apple/Frameworks/Shared.xcframework (BUILD SUCCESSFUL).
+
+The surface's required platform capabilities are therefore AVAILABLE — this is NOT a
+capability-gap BLOCK. The umbrella build/test gate is blocked by PRE-EXISTING compile
+breakage in sibling surfaces + a macOS code-signing host limitation, both OUTSIDE this
+prompt's allowed files (apps/apple/TeslaSync/shared-surfaces/Toast.*). See analysis below.
+
+------------------------------------------------------------------------------------------
+DELIVERED FILES (allowed scope: apps/apple/TeslaSync/shared-surfaces/Toast.*)
+------------------------------------------------------------------------------------------
+  Toast.swift            — ToastStack shared surface (state machine: loading/empty/error/
+                           data + freshness chip); parity of web ToastProvider's region.
+  Toast.Adapter.swift    — pure core: ToastKind (web ToastType), ToastAction, ToastItem
+                           (web Toast), ToastQueue (web addToast slice(-4)+1 cap=5),
+                           ToastID (toast-N), ToastDuration (4000ms default), ToastMotion
+                           (useMotionPreference), ToastAccessibility (a11y label).
+  Toast.Model.swift      — ToastTelemetry (P1/S11 view.opened), ToastConnection,
+                           ToastLoadStatus, ToastUpdate, ToastResolved, ToastProjection,
+                           ToastModel (@MainActor @Observable; useToast push API +
+                           dismiss + performAction), ToastPresenting (useOptionalToast),
+                           ToastMutationReporter (useMutationToast), ToastStrings (P1/S10).
+  Toast.Seams.swift      — ToastSource (P1/S8), StaticToastSource, InMemoryToastSource.
+  Toast.Views.swift      — ToastCardView (single toast), ToastFreshnessChip.
+  Toast.States.swift     — ToastLoadingView / ToastEmptyView / ToastErrorView (leaf chrome).
+  Toast.Previews.swift   — 9 #Preview states (single/stacked/empty/loading/error/stale/
+                           offline/single card/severities).
+  Toast.strings          — P1/S10 i18n catalog (dismiss aria-label + severity prefixes +
+                           leaf chrome + freshness).
+  Toast.Tests.swift      — adapter/projection unit tests.
+  Toast.ModelTests.swift — state-holder + mutation-reporter unit tests.
+
+Data sources bound (per web source): useToast, useOptionalToast, useMutationToast,
+useMotionPreference — all reproduced via ToastModel / ToastPresenting /
+ToastMutationReporter / ToastMotion. No direct HTTP in the view.
+
+==========================================================================================
+GATE STEP RESULTS (commands run exactly as specified, on the full restored repo tree)
+==========================================================================================
+
+--- iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+** TEST FAILED ** / ** BUILD FAILED **
+The compile failed on PRE-EXISTING sibling surfaces (NOT Toast.*). Distinct errors:
+
+  TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping
+      closure captures non-escaping parameter 'content'
+  TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping
+      closure captures non-escaping parameter 'content'
+  TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping
+      closure captures non-escaping parameter 'content'
+  TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error:
+      escaping closure captures non-escaping parameter 'content'
+  (the AI* surface cluster shares one broken pattern — see ROOT CAUSE below)
+
+  Plus a load-induced FLAKE on the first cold run only (cleared on the warm retry):
+  TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler
+      is unable to type-check this expression in reasonable time
+
+  ZERO errors in any Toast.* file.
+IOS_EXIT=65
+
+--- macOS: xcodebuild -scheme TeslaSync-macOS build test ---
+** BUILD FAILED **
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing
+      with a development certificate. Enable development signing in the Signing &
+      Capabilities editor. (target 'TeslaSync-macOS')
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require
+      signing with a development certificate. (target 'TeslaSyncWidgets-macOS')
+
+  This is a HOST code-signing limitation (no development certificate / DEVELOPMENT_TEAM
+  on this runner) — exactly the class of "deferred artifact verification" that
+  apps/macos-pending-verifications.md says ADR-012's CI macos-latest matrix performs.
+  (The macOS target would additionally hit the same AI* cluster compile errors as iOS.)
+  ZERO errors in any Toast.* file.
+MAC_EXIT=65
+
+--- swiftlint --strict (apps/apple, all included paths) ---
+Done linting! Found 0 violations, 0 serious in 4363 files.
+LINT_EXIT=0
+
+--- swiftformat --lint apps/apple ---
+0/4661 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Toast (gate literal) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+  NOTE: the literal gate path ".../shared-surfaces/Toast" is a filename prefix, not a
+  directory, so the script's "nothing to scan is clean" guard returns 0 without scanning.
+  For an HONEST (non-vacuous) result the 10 Toast.* files were copied to an isolated
+  directory and re-scanned:
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  and a direct grep for TODO/FIXME/stub/mock/placeholder/Lorem/"not implemented"/unimpl
+  across Toast.* returned NONE.
+PLACEHOLDER_EXIT=0
+
+==========================================================================================
+ROOT CAUSE OF THE iOS/macOS COMPILE FAILURES (pre-existing, outside allowed files)
+==========================================================================================
+Shared component Sources/Components/UI/Cards.swift declares:
+    public struct TSGlassPanel<Content: View>: View {
+        private let content: () -> Content
+        public init(@ViewBuilder content: @escaping () -> Content) { ... }   // ESCAPING
+    }
+Multiple sibling AI* surfaces wrap it in a NON-escaping helper, e.g.:
+    private func glass(@ViewBuilder _ content: () -> some View) -> some View {
+        TSGlassPanel { content() }   // captures non-escaping `content` in escaping closure
+    }
+On Swift 6.3.2 this is a deterministic "escaping closure captures non-escaping parameter"
+error. The fix belongs in those sibling files (mark the helper param @escaping) or the
+shared component — BOTH outside this prompt's allowed files (Toast.*). The Toast surface
+deliberately does NOT use TSGlassPanel (it uses TSCard + token-driven backgrounds), so it
+is immune and compiles cleanly.
+
+==========================================================================================
+PROOF THE FAILURES ARE NOT CAUSED BY THIS SURFACE
+==========================================================================================
+1. git status --porcelain shows ONLY 10 additive, untracked Toast.* files. `git diff HEAD`
+   is EMPTY — zero modifications to any existing tracked file. New, collision-free files
+   cannot change the compilation of sibling files.
+2. Across every build run, ZERO errors were reported in any Toast.* file (iOS and macOS).
+3. The failing files (AIAutoNameUnnamedLocations, AISignalExplorerNlFilter,
+   AISuggestNewGeofences, AIGeofenceAwareAutomationSuggestions, RecentDrivesSection) are
+   pre-existing sibling surfaces never touched by this prompt.
+
+==========================================================================================
+ISOLATION VALIDATION OF THIS SURFACE (host-runnable, all GREEN)
+==========================================================================================
+Because the shared app target cannot link on this host (pre-existing sibling breakage),
+the Toast surface was validated in isolation:
+
+A. Pure logic + unit tests — standalone SwiftPM package (Adapter+Model+Seams + both test
+   files + a 1-line ToastStack.surfaceSlug shim), `swift test`:
+       Test Suite 'All tests' passed.  Executed 37 tests, with 0 failures.
+   (ToastKind, ToastAction, ToastItem, ToastID, ToastQueue, ToastDuration, ToastMotion,
+    ToastAccessibility, ToastProjection, ToastModel, ToastMutationReporter — every branch.)
+
+B. SwiftUI views — standalone SwiftUI package compiling the REAL Toast view files
+   (Toast.swift / .Views / .States / .Previews) against the REAL design tokens
+   (apps/design/generated/apple/Tokens.swift, verbatim) + signature-faithful stubs of the
+   four shared components used (TSCard / TSButton / TSEmptyState / TSSkeleton):
+       Build complete! (8.13s)   VIEW_HARNESS_BUILD_EXIT=0
+   Every token reference and component call site type-checks.
+
+C. swiftlint --strict + swiftformat --lint on the 10 Toast.* files: 0 violations, 0
+   reformats. check-placeholders (isolated): 0.
+
+States reproduced (no hidden surface): loading, empty, error (retry), data, stale, offline
+— plus the per-severity success/error/info/warning treatments and the navigation/callback
+action affordances. Accessibility: per-toast VoiceOver label (severity + title + message),
+role-equivalent assertive/polite mapping (web ariaRole), dismiss/action labels, Reduce
+Motion honoured. i18n: every string via the P1/S10 facade (Toast.strings). Telemetry:
+view.opened with slug "Toast" (P1/S11).
+
+==========================================================================================
+SUMMARY
+==========================================================================================
+This surface is COMPLETE and fully validated in isolation. The umbrella iOS/macOS
+build+test gate cannot reach EXIT=0 on this host due to factors entirely outside the
+prompt's allowed files:
+  - PRE-EXISTING deterministic compile errors in sibling AI* surfaces (shared TSGlassPanel
+    escaping-closure incompatibility) — must be fixed by their own prompts / a shared-
+    component change.
+  - macOS code-signing requires a development certificate not present on this runner
+    (deferred to ADR-012 CI per apps/macos-pending-verifications.md).
+  - A load-induced type-check-timeout flake in RecentDrivesSection.Previews.swift.
+
+Per the Honesty Covenant (no red-as-green): the umbrella gate did NOT pass on this host,
+so STATUS is reported as BLOCKED with the evidence above, NOT DONE. The surface's own
+host-runnable gates (compile, 37 unit tests, swiftlint --strict, swiftformat --lint,
+placeholder scan) are all GREEN.
+
+EXIT=65
+STATUS=BLOCKED

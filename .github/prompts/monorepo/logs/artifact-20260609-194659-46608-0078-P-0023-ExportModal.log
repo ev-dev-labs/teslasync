@@ -1,0 +1,107 @@
+=== P4 Modal / dialog 0023 ExportModal (Apple) ===
+Surface: apps/apple/TeslaSync/modals-dialogs/ExportModal.*
+Web spec: web/src/features/dashboard/components/ExportModal.tsx
+Runner: macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat (Homebrew), pwsh 7.x
+Allowed files: apps/apple/TeslaSync/modals-dialogs/ExportModal.*, this log
+
+-------------------------------------------------------------------------------
+DELIVERABLE — 12 files, faithful native port of ExportModal.tsx
+-------------------------------------------------------------------------------
+ExportModal.swift            main view: TSGlassPanel + header(title/close/freshness chip) + phase switch
+ExportModal.Adapter.swift    pure projection core (size badge, share link, mini-grid, phase resolution)
+ExportModal.JSON.swift       insertion-ordered JSON serializer (JS JSON.stringify parity) + base64url
+ExportModal.Models.swift     dashboard input + projection output value types
+ExportModal.Model.swift      @MainActor @Observable state holder (P1/S8): phase, commands, stale auto-refresh
+ExportModal.Seams.swift      telemetry (P1/S11), download/copy commands, source, i18n facade (P1/S10), date fmt
+ExportModal.States.swift     loading skeleton / empty / error+retry / freshness chip / connectivity banner
+ExportModal.Views.swift      ready content: summary, mini-grid, 3 actions, urlTooLong warning
+ExportModal.Previews.swift   one preview per state (ready / ready-too-long / empty / loading / error / stale / offline)
+ExportModal.strings          i18n catalog: 7 web keys + envelope/chrome keys
+ExportModal.Tests.swift      adapter/projection/JSON/base64/accessibility (pure XCTest)
+ExportModal.ModelTests.swift state-holder lifecycle/commands/transitions/freshness
+
+Web-source i18n keys reproduced (table "ExportModal"):
+  export.title, export.widgetCount, export.updated, export.downloadFile,
+  export.copyClipboard, export.copyShareUrl, export.urlTooLong
+States reproduced: loading, empty, ready (the web surface), error, + stale/offline freshness.
+
+-------------------------------------------------------------------------------
+GATE STEP RESULTS
+-------------------------------------------------------------------------------
+[swiftlint --strict]      LINT_EXIT=0     -> 0 violations, 0 serious in 11 files
+[swiftformat --lint]      FORMAT_EXIT=0   -> 0/11 files require formatting
+[check-placeholders.ps1]  PLACEHOLDER_EXIT=0 -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+                          (verified scanner actively reads the 12 files via temp-dir copy: COUNT=0)
+
+[Swift 6 compile — iOS Simulator 18 SDK, -strict-concurrency=complete]
+  swiftc -typecheck (tokens + real shared component closure TSGlassPanel/TSFadeIn/TSButton + my 9 src files)
+  IOS_TYPECHECK_EXIT=0   -> 0 errors
+
+[Swift 6 compile — macOS 15 SDK, -strict-concurrency=complete]
+  MAC_TYPECHECK_EXIT=0   -> 0 errors
+
+[Unit tests — Swift 6 language mode, executed on macOS host arm64e]
+  swift test (adapter projection + JSON/base64 vectors + size/share-URL gate + grid geometry
+              + phase resolution + model lifecycle/telemetry/commands/freshness + accessibility)
+  Executed 38 tests, with 0 failures (0 unexpected)
+  TESTS_EXIT=0
+
+[Full-scheme xcodebuild — iOS Simulator iPhone 16]   IOS_EXIT=65   *** BLOCKED — see analysis ***
+[Full-scheme xcodebuild — TeslaSync-macOS]           MAC_EXIT=65   *** BLOCKED — see analysis ***
+
+-------------------------------------------------------------------------------
+BLOCK ANALYSIS — full-scheme xcodebuild build test cannot reach EXIT=0 in this slot
+-------------------------------------------------------------------------------
+Root cause is PRE-EXISTING and OUTSIDE this prompt's allowed files. Two unrelated sibling
+surfaces declare DUPLICATE public types in the shared TeslaSync module:
+
+  public final class RecentDrivesModel
+    - TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+    - TeslaSync/feature-views/RecentDrivesSection.Model.swift:23
+  public struct RecentDrivesUpdate
+    - TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:137
+    - TeslaSync/feature-views/RecentDrivesSection.Seams.swift:90
+  public struct StateTimelineUpdate
+    - TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:61
+    - TeslaSync/feature-views/StateTimeline.Source.swift:44
+  (+ RecentDrivesModel/Update/LoadStatus/Connection, StateTimelineModel/Update/LoadStatus/Connection)
+
+Both dashboard-widgets/ and feature-views/ are in the BASE project.yml app + test targets, so the
+shared module has ambiguous top-level types => "is ambiguous for type lookup".
+
+EVIDENCE the block is pre-existing and NOT caused by this surface:
+  * BASELINE build (original project.yml, modals-dialogs NOT wired in): clean build
+      BASE_EXIT=65, 54 errors, ALL "RecentDrives*/StateTimeline* is ambiguous for type lookup".
+  * Build WITH ExportModal temporarily wired in (project.yml restored afterwards): the SAME 54
+      sibling errors and ZERO errors attributable to any ExportModal.* file.
+  * This surface uses the unique `ExportModal` type prefix, so it introduces no new collisions
+      (grep of Sources/dashboard-widgets/feature-views/misc-surfaces for `ExportModal` type decls = none).
+
+These sibling files are NOT in this prompt's allowed-files set; renaming them to resolve the
+collision is the responsibility of the integration / P4 acceptance phase (the same way this surface
+was renamed Export* -> ExportModal* to stay collision-free). The platform itself is fully available
+(Xcode 26.5, iOS 18 + macOS 15 SDKs, iPhone 16 simulator booted, KMP Shared.xcframework built OK via
+Gradle), so this is an environmental pre-existing-repo block, not a platform-capability gap and not a
+defect in this surface.
+
+VERIFICATION METHOD NOTE: to exercise the real toolchain, modals-dialogs/ExportModal* was temporarily
+added to the four targets in a throwaway project.yml (xcodegen generate + xcodebuild) and the manifest
+was reverted immediately; the working tree contains ONLY apps/apple/TeslaSync/modals-dialogs/ExportModal.*
+(git status verified). The generated .xcodeproj and staged Shared.xcframework are git-ignored and were
+removed.
+
+-------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+-------------------------------------------------------------------------------
+[x] Surface renders all states from the web source (loading/empty/ready/error + stale/offline freshness)
+[x] Hooks bind through shared P1/S8 state-holder seam (ExportModalSource); no direct HTTP in the view
+[x] Every i18n key from source has a matching key in the per-surface catalog (ExportModal.strings)
+[x] Accessibility labels on every interactive element (download / copy / copy-share / close); VoiceOver summaries
+[x] Tests: adapter unit + per-state resolution + accessibility label tests (38 tests, all green)
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0)
+[~] Full-scheme xcodebuild build test EXIT=0 — BLOCKED by pre-existing external sibling duplicate
+    symbols (RecentDrives*/StateTimeline*) outside allowed files; surface itself verified green
+    (lint=0, format=0, placeholder=0, iOS+macOS Swift6 compile=0, 38 unit tests pass).
+
+EXIT=1
+STATUS=BLOCKED

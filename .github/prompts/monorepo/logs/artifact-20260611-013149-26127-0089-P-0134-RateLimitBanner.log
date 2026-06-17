@@ -1,0 +1,162 @@
+=== P4 Shared surface 0134 RateLimitBanner (Apple) ===
+Date: 2026-06-11
+Host: Darwin (Apple Silicon) · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat (Homebrew)
+Web source (spec): web/src/components/feedback/RateLimitBanner.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.*
+Capability: SwiftUI / Swift Charts / MapKit available; iPhone 16 simulator (iOS) present; macOS 15 SDK present.
+
+------------------------------------------------------------------------------
+OUTCOME (read first)
+------------------------------------------------------------------------------
+The RateLimitBanner surface is COMPLETE and statically GREEN (swiftlint --strict,
+swiftformat --lint, placeholder gate all pass; 0 compile errors originate from any
+RateLimitBanner.* file across four full app builds).
+
+The two `xcodebuild ... build test` steps EXIT non-zero, but NOT because of this
+surface. They are blocked by PRE-EXISTING defects in the slot baseline (HEAD
+40012201f) that lie entirely OUTSIDE this prompt's allowed files
+(apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.*). Per the Honesty Covenant
+(rule 1 "no red-as-green", rule 8 "no commit on red [of my own work]") and the
+explicit allowed-files scope, I did NOT silently mark a red gate green and I did NOT
+commit fixes to out-of-scope sibling files. Terminal status is therefore BLOCKED
+with the evidence below.
+
+------------------------------------------------------------------------------
+GATE STEP RESULTS (official, unpatched — exact tree that is committed)
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test  -> IOS_EXIT=65
+xcodebuild -scheme TeslaSync-macOS build test                                                        -> MAC_EXIT=65
+swiftlint --strict                                                                                   -> LINT_EXIT=0   (0 violations / 4304 files)
+swiftformat --lint apps/apple                                                                        -> FORMAT_EXIT=0 (0/4602 require formatting, 2 skipped)
+check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/RateLimitBanner                    -> PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+
+Per the gate's combine rule ("EXIT=0 only when every step is 0"), EXIT is non-zero
+because IOS_EXIT and MAC_EXIT are 65.
+
+------------------------------------------------------------------------------
+WHY IOS_EXIT=65 — pre-existing baseline does not compile under Xcode 26.5 / Swift 6.3.2
+------------------------------------------------------------------------------
+git status proves the working tree contains ONLY the 11 new RateLimitBanner.* files
+(all untracked '??'); no sibling file is modified by this prompt. The errors below
+exist at HEAD and are reproduced by `xcodebuild` on the committed tree. ZERO of them
+are in a RateLimitBanner file:
+
+  ios build (committed tree) — 3 errors reported, distinct sibling files, 0 mine:
+    TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures non-escaping parameter 'content'
+    TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:            error: escaping closure captures non-escaping parameter 'content'
+    TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:              error: escaping closure captures non-escaping parameter 'content'
+    (ios.log: 3 'error:' lines, 0 matching RateLimitBanner)
+
+Three independent classes of pre-existing breakage were confirmed by progressively
+patching the baseline locally (temporary, reverted, NEVER committed) to see how deep
+it goes:
+
+  CLASS 1 — non-@escaping @ViewBuilder closure helpers (the `glass(...)`/`panel(...)`
+            /`section(...)` idiom passing a non-escaping `() -> some View` into an
+            escaping `TSGlassPanel { ... }`). ~41 tracked files match this exact
+            broken shape, e.g. AIGeofenceAwareAutomationSuggestions, AISignalExplorerNlFilter,
+            AISuggestNewGeofences, AIAutoNameUnnamedLocations, plus dozens of *.Chrome /
+            *.Previews helpers. (Fix would be a one-word `@escaping` per param — but in
+            sibling files, out of scope.)
+
+  CLASS 2 — SwiftUI type-check timeout, e.g.
+            TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is unable to type-check this expression in reasonable time
+            (git diff confirms this file was NOT touched by my patch — genuinely pre-existing.)
+
+  CLASS 3 — swift-frontend IRGen crash (llvm::report_fatal_error) while compiling a
+            sibling file:
+            While evaluating request IRGenRequest(IR Generation for file "TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+            swift-frontend ... llvm::report_fatal_error(llvm::Twine const&, bool) + 292
+            (a compiler crash on baseline code — not fixable from this surface).
+
+Because the app target never finishes linking, the XCTest bundle (which
+`@testable import TeslaSync`) cannot be produced, so the RateLimitBanner unit/UI
+tests cannot be executed in this environment. They are written, compile within the
+app module, and are listed below.
+
+------------------------------------------------------------------------------
+WHY MAC_EXIT=65 — pre-existing environment code-signing limitation
+------------------------------------------------------------------------------
+The macOS scheme fails before compilation on signing, not on this surface:
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+    TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+project.yml ships DEVELOPMENT_TEAM: "" + hardened-runtime entitlements; no signing
+identity is available on this runner. Environmental, pre-existing, 0 RateLimitBanner
+errors in mac.log.
+
+------------------------------------------------------------------------------
+PROOF THE SURFACE ITSELF IS COMPLETE AND GREEN
+------------------------------------------------------------------------------
+swiftlint --strict (whole tree, includes the 10 RateLimitBanner Swift files):
+    Done linting! Found 0 violations, 0 serious in 4304 files.            -> 0
+swiftlint --strict (the 10 RateLimitBanner Swift files in isolation):
+    Done linting! Found 0 violations, 0 serious in 10 files.              -> 0
+swiftformat --lint (the 10 RateLimitBanner Swift files):
+    0/10 files require formatting.                                        -> 0
+check-placeholders (-Path /tmp scan of all RateLimitBanner.* files, -Language swift):
+    PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0                            -> 0
+Compile coverage: across four full `xcodebuild` builds (committed tree; +CLASS-1 patch;
+    +preview-neutralise) the TeslaSync Swift module emitted with the RateLimitBanner
+    files included and produced ZERO errors from any RateLimitBanner.* file. Every
+    failure was in a sibling baseline file enumerated above.
+
+Shared.xcframework: built from apps/shared via Gradle (BUILD SUCCESSFUL, 8m22s) and
+staged to apps/apple/Frameworks/Shared.xcframework, so the KMP-core dependency is
+satisfied for the build.
+
+------------------------------------------------------------------------------
+SURFACE DELIVERABLE (parity with web RateLimitBanner.tsx)
+------------------------------------------------------------------------------
+Files (apps/apple/TeslaSync/shared-surfaces/):
+  RateLimitBanner.swift          (95)  — SwiftUI surface; phase switch + freshness chip; surfaceSlug
+  RateLimitBanner.Adapter.swift  (130) — pure core: RateLimitKind (icon/copy), RateLimitCountdown
+                                          (web ceil() remaining + tick + {{n}} interpolation), a11y
+  RateLimitBanner.Model.swift    (318) — @Observable state-holder, projection, telemetry seam (P1/S11),
+                                          i18n facade (P1/S10), connection axis
+  RateLimitBanner.Seams.swift    (310) — P1/S8 source protocol; NotificationCenter event source (web
+                                          document events); static + in-memory sources; ticker;
+                                          query-invalidation seam (web useQueryClient)
+  RateLimitBanner.States.swift   (106) — loading skeleton / empty / error leaf chrome
+  RateLimitBanner.Views.swift    (133) — active banner card + freshness chip (TSAlertBanner/TSButton)
+  RateLimitBanner.Previews.swift (83)  — 8 #Preview states (DEBUG)
+  RateLimitBanner.strings        (i18n catalog; web keys + leaf chrome)
+  RateLimitBanner.Tests.swift    (236) — adapter/projection/a11y unit tests
+  RateLimitBanner.ModelTests.swift (281) — state-holder + telemetry + retry/dismiss/invalidate tests
+  RateLimitBanner.SeamTests.swift  (163) — NotificationCenter source / static source / ticker /
+                                          invalidator tests
+
+States rendered (every one, no hidden surface): loading, empty (web `if (!state) return null`,
+  shown as a friendly card per P4 leaf contract), error (+retry), data (rate-limited / upstream-down
+  with kind icon + live "{{n}}s" copy + "Retry now" disabled while counting down + dismiss),
+  stale, offline (freshness chip + one-shot auto-refresh on stale transition).
+
+i18n keys from the web source (all present in RateLimitBanner.strings, P1/S10):
+  ratelimit.banner  = "Too many requests — pausing for {{n}}s"
+  upstream.banner   = "Tesla upstream unavailable — retry in {{n}}s"
+  ratelimit.retry   = "Retry now"
+  common.dismiss    = "Dismiss"
+  (+ leaf-chrome keys: loadingA11y, empty(+Message), errorTitle/errorRetry, ready, retryWaitA11y,
+   live/stale/offline(+A11y) — no English literals in Swift sources.)
+
+Data sources bound via shared P1/S8 state-holders (no direct HTTP in the view):
+  useTranslation  -> RateLimitBannerStrings facade (P1/S10)
+  useQueryClient  -> RateLimitBannerQueryInvalidator seam (invalidateAll on a ready retry)
+  (web document events -> NotificationCenterRateLimitBannerSource)
+
+Accessibility: VoiceOver labels on every interactive control (Retry now + hint, Dismiss, freshness
+  chip); banner label composed via RateLimitBannerAccessibility; Dynamic Type (Font.TS roles);
+  reduce-motion respected via shared TSFadeIn. Telemetry: view.opened emitted with slug
+  "RateLimitBanner" (P1/S11).
+
+------------------------------------------------------------------------------
+NEXT ACTION REQUIRED TO TURN THIS GREEN (outside this prompt's allowed files)
+------------------------------------------------------------------------------
+A separate change owning the sibling surfaces must (1) add `@escaping` to the
+`@ViewBuilder _ content: () -> some View` helper params (CLASS 1), (2) break up the
+RecentDrivesSection preview expression (CLASS 2), (3) work around the AppearanceSettings.Controls
+IRGen crash (CLASS 3), and the runner must provide a signing identity / set
+DEVELOPMENT_TEAM for the macOS targets. None of these are in
+apps/apple/TeslaSync/shared-surfaces/RateLimitBanner.*.
+
+EXIT=65
+STATUS=BLOCKED

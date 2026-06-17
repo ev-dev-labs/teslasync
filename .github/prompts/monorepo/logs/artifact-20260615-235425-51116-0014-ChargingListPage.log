@@ -1,0 +1,283 @@
+================================================================================
+p4-apple · P7 · page:charging/ChargingList — SwiftUI / HIG parity
+Log: .github/prompts/monorepo/logs/apple-page-charging-ChargingListPage.log
+Run: 2026-06-16  (Xcode 26.5 SDK / Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh, JDK 17)
+Artifact: p4-apple/pages/p4-apple-P7-page-charging-ChargingList
+================================================================================
+
+HONESTY COVENANT (binding — acknowledged verbatim)
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+PATH RESOLUTION NOTE (no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt's "Output" path `apps/apple/TeslaSync/Features/Charging/**` does
+NOT match this repository. The real, build-compiled convention (project.yml compiles
+`apps/apple/Sources/**`, and the sibling P7 Charging page — Powershare — plus every other
+P7 page lives under it) is:
+
+    apps/apple/Sources/Features/Charging/**
+
+The page was implemented there so it actually compiles into the iOS + macOS app targets
+(verified: all ChargingList*.swift appear as SwiftCompile units in both builds).
+`apps/apple/TeslaSync/Features/Charging/` is NOT a compiled source root in project.yml;
+placing the file there would produce dead, uncompiled code. Faithful interpretation of
+the artifact's intent ("the Charging feature directory"), not scope narrowing — identical
+to the predecessor Powershare P7 log.
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION (SwiftUI + @Observable + KMP-facade seam; adaptive macOS + iOS)
+--------------------------------------------------------------------------------
+New (apps/apple/Sources/Features/Charging/):
+  ChargingListModels.swift             value types (vehicle, session SI, category, collection,
+                                         sort, trend, density, anomaly) + pure helpers
+  ChargingListStats.swift              BatteryGrade, ChargingPeriodStats, trend point,
+                                         optimizer, date range, page phase
+  ChargingListAggregation.swift        pure derivations (day keys, period stats, prior period,
+                                         anomalies, notable, daily trend, search/sort) — web
+                                         lib/chargingAggregation.ts ported verbatim
+  ChargingListFormat.swift             SI→display formatters (number/compact/kWh/kW/currency/
+                                         duration/day labels/hour)
+  ChargingListPageModel.swift          @Observable model + ChargingListDataSource seam +
+                                         load/refresh/select/range/search/collection/sort/
+                                         page/bulk
+  ChargingListPageModel.Derived.swift  the web useMemo pipeline as computed state
+  ChargingListPageModel.Sample.swift   Sample/Empty/Sparse/Failing data-source doubles
+  ChargingListPage.swift               View: header + phase switch + ready scaffold + range preset
+  ChargingListPage.Sections.swift      sticky summary, search+chips, six-KPI overview /
+                                         GlassPanel7 empty, secondary line, anomaly callout,
+                                         collection pills
+  ChargingListPage.List.swift          list controls (sort/density), bulk-delete toolbar,
+                                         date-grouped rows, pagination, list empties, session row
+  ChargingListPage.Analytics.swift     threshold-gated AC/DC, battery-dist, efficiency, specs,
+                                         optimizer + EmptyStateThreshold
+  ChargingListPage.Charts.swift        MetricSwitcher trend chart (bar/line per metric)
+  ChargingListPage.Skeleton.swift      loading-state redaction skeleton
+  ChargingListRouteRegistration.swift  registers .charging
+New (apps/apple/Tests/Unit/Features/Charging/):
+  ChargingListPageModelTests.swift     26 XCTest cases (states / selection / range / search /
+                                         collection / sort / pagination / bulk / derivations /
+                                         formatters / grade / route)
+Edited:
+  Sources/TeslaSyncApp.swift           +ChargingListRouteRegistration.registry(base:)
+                                         (the .charging route enum already existed; pathSegment
+                                         "charging" ↔ web /charging via AppRouteParser)
+  Localization/Localizable.xcstrings   +104 keys (the 65 new required charging./bulk./filter
+                                         keys — common.delete/common.noData already existed —
+                                         plus supporting header/density/relative/anomaly-kind/
+                                         analytical-section keys); textual insert, additive diff
+  apps/parity/apple-ledger.json        +2 rows (apple-macos + apple-ios, covered==required==79)
+
+Data sources (web hook parity, bound through ChargingListDataSource → ADR-004, no networking
+in the view):
+  useChargingSessionsPaginated -> loadSessions(vehicleID, range) -> GET /charging [vehicle_id,start,end,limit,offset]
+  useChargingOptimizer         -> loadOptimizer(vehicleID)       -> GET /analytics/charging-optimizer [vehicle_id]
+  useBulkDeleteCharging        -> bulkDelete(ids)                -> DELETE /charging/bulk
+SI discipline (ADR-005): sessions are kept SI-canonical exactly as the API delivers — energy
+  in watt-hours (energyAddedWh), power in watts (peakPowerW/avgPowerW), cost decimal. kWh / kW
+  are derived ONLY at the render boundary by ChargingListFormat (energyKwh = Wh/1000,
+  powerKw = W/1000); the cost cards apply the user's currency symbol there. Nothing non-SI is
+  stored or computed in the model/aggregation.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=79
+--------------------------------------------------------------------------------
+PANELS (7/7)  — bound from ChargingListPageModel.currentStats (six KPIs) + the no-stats panel
+[x] panel Sessions       ChargingListPage.Sections.swift :: ChargingKpiCard(panel:.sessions) → TSStatCard("charging.totalSessions")
+[x] panel Energy-kWh     ChargingListPage.Sections.swift :: ChargingKpiCard(panel:.energy)   → TSStatCard("charging.totalEnergy")
+[x] panel Cost           ChargingListPage.Sections.swift :: ChargingKpiCard(panel:.cost)     → TSStatCard("charging.totalCost")
+[x] panel Avg-rate-kW    ChargingListPage.Sections.swift :: ChargingKpiCard(panel:.rate)     → TSStatCard("charging.avgRate")
+[x] panel Avg-duration   ChargingListPage.Sections.swift :: ChargingKpiCard(panel:.duration) → TSStatCard("charging.avgDuration")
+[x] panel Avg-power-kW   ChargingListPage.Sections.swift :: ChargingKpiCard(panel:.power)    → TSStatCard("charging.avgPower")
+[x] panel GlassPanel7    ChargingListPage.Sections.swift :: ChargingOverviewSection (stats.hasData==false) → TSGlassPanel + TSEmptyState("charging.noStatsRange")
+
+CHARTS (1/1)  — P3 Swift Charts wrappers (TSBarChart / TSLineChart), never a WKWebView
+[x] chart MetricSwitcherChart  ChargingListPage.Charts.swift :: ChargingTrendChart (segmented Picker over ChargingTrendMetric → TSBarChart for sessions/energy/cost, TSLineChart for power; "charging.overTime.empty" when the metric has no points)
+
+MAPS (0/0)  — none in the web source.
+
+STATES (4/4)  — implemented for every data source (sessions / optimizer / bulk-delete)
+[x] state loading  ChargingListPage.swift :: content(.loading) → ChargingListSkeleton (ChargingListPage.Skeleton.swift, .redacted(.placeholder)); model.phase==.loading (ChargingListPageModel.load)
+[x] state empty    ChargingListPageModel.loadSessions → phase==.empty (no sessions); ChargingOverviewSection no-stats GlassPanel7 + ChargingListSection.listEmpty (emptyTitle/emptyForCollection + reset CTA); analytical threshold empties (ChargingThresholdEmpty)
+[x] state error    ChargingListPage.swift :: content(.error) → errorView + TSErrorDisplay(onRetry:); model.phase==.error (loadSessions catch)
+[x] state success  ChargingListPageModel.loadSessions → phase==.ready; ChargingListPage.readyView (populated overview + trend + collections + analytics + grouped list)
+
+STRINGS (67/67)  — all resolve from Localization/Localizable.xcstrings; web key names verbatim.
+[x] string bulk.actions.delete            ChargingListPage.List.swift :: bulkBar Label("bulk.actions.delete")
+[x] string bulk.deleteConfirmDescription  ChargingListPage.List.swift :: bulkBar .confirmationDialog message Text("bulk.deleteConfirmDescription")
+[x] string bulk.deleteConfirmTitle        ChargingListPage.List.swift :: bulkBar .confirmationDialog title (String(format:…count,noun))
+[x] string bulk.noun.session_one          ChargingListPage.List.swift :: bulkBar noun; ChargingListPageModel.Derived groupedSessions summary
+[x] string bulk.noun.session_other        ChargingListPage.List.swift :: bulkBar noun; ChargingListPageModel.Derived groupedSessions summary
+[x] string charging.allSessions           ChargingListPage.List.swift :: controlsContent TSPanelTitle("charging.allSessions")
+[x] string charging.anomalyCount          ChargingListPage.Sections.swift :: ChargingOverviewSection.anomalyCallout (String(format:…count,noun))
+[x] string charging.anomaly_one           ChargingListPage.Sections.swift :: anomalyCallout noun (count==1)
+[x] string charging.anomaly_other         ChargingListPage.Sections.swift :: anomalyCallout noun (count!=1)
+[x] string charging.avgDuration           ChargingListPage.Sections.swift :: ChargingKpiCard titleKey(.duration)
+[x] string charging.avgPower              ChargingListPage.Sections.swift :: ChargingKpiCard titleKey(.power)
+[x] string charging.avgRate               ChargingListPage.Sections.swift :: ChargingKpiCard titleKey(.rate)
+[x] string charging.avgScore              ChargingListPage.Sections.swift :: ChargingStickySummary summaryRow Text("charging.avgScore")
+[x] string charging.batteryScore          ChargingListPage.Sections.swift :: ChargingSecondaryLine Text("charging.batteryScore")
+[x] string charging.byType                ChargingListPage.Sections.swift :: ChargingSecondaryLine (String(format:…home,sc,dc))
+[x] string charging.coll.all              ChargingListModels.swift :: ChargingCollection.labelKey(.all) → ChargingCollectionsSection pill
+[x] string charging.coll.anomalies        ChargingListModels.swift :: ChargingCollection.labelKey(.anomalies) → pill
+[x] string charging.coll.dc               ChargingListModels.swift :: ChargingCollection.labelKey(.dc) → pill; ChargingSpecsSection row
+[x] string charging.coll.free             ChargingListModels.swift :: ChargingCollection.labelKey(.free) → pill
+[x] string charging.coll.home             ChargingListModels.swift :: ChargingCollection.labelKey(.home) → pill; ChargingSessionRow chip; ChargingSpecsSection row
+[x] string charging.coll.notable          ChargingListModels.swift :: ChargingCollection.labelKey(.notable) → pill
+[x] string charging.coll.supercharger     ChargingListModels.swift :: ChargingCollection.labelKey(.supercharger) → pill; ChargingSpecsSection row
+[x] string charging.coll.tagged           ChargingListModels.swift :: ChargingCollection.labelKey(.tagged) → pill (disabled)
+[x] string charging.collections.aria      ChargingListPage.Sections.swift :: ChargingCollectionsSection .accessibilityLabel
+[x] string charging.empty.cta             ChargingListPage.List.swift :: listEmpty TSButton("charging.empty.cta") → model.resetFilters()
+[x] string charging.emptyForCollection    ChargingListPage.List.swift :: listEmpty title (collection != all)
+[x] string charging.emptyForCollection.msg ChargingListPage.List.swift :: listEmpty message (collection != all)
+[x] string charging.emptyMessage          ChargingListPage.List.swift :: listEmpty message (collection == all)
+[x] string charging.emptyTitle            ChargingListPage.List.swift :: listEmpty title (collection == all)
+[x] string charging.filterLabel.collection ChargingListPage.Sections.swift :: ChargingSearchSection.chips ("coll")
+[x] string charging.filterLabel.search    ChargingListPage.Sections.swift :: ChargingSearchSection.chips ("q")
+[x] string charging.freeCount             ChargingListPage.Sections.swift :: ChargingSecondaryLine (String(format:…freeCount))
+[x] string charging.itemNoun              ChargingListPage.Analytics.swift :: ChargingThresholdEmpty progress (String(format:…itemNoun))
+[x] string charging.list.subtitle         ChargingListPage.swift :: titleBlock Text("charging.list.subtitle")
+[x] string charging.list.title            ChargingListPage.swift :: TSPageTitle + .navigationTitle; ChargingStickySummary; ChargingListSkeleton a11y
+[x] string charging.metric.cost           ChargingListModels.swift :: ChargingTrendMetric.labelKey(.cost) → ChargingTrendChart switcher
+[x] string charging.metric.energy         ChargingListModels.swift :: ChargingTrendMetric.labelKey(.energy) → switcher
+[x] string charging.metric.power          ChargingListModels.swift :: ChargingTrendMetric.labelKey(.power) → switcher
+[x] string charging.metric.sessions       ChargingListModels.swift :: ChargingTrendMetric.labelKey(.sessions) → switcher
+[x] string charging.mostCommon            ChargingListPage.Sections.swift :: ChargingSecondaryLine (String(format:…hour))
+[x] string charging.noPriorData           ChargingListPageModel.Derived.swift :: priorLabel (priorHasData==false)
+[x] string charging.noStatsRange          ChargingListPage.Sections.swift :: ChargingOverviewSection GlassPanel7 TSEmptyState
+[x] string charging.overTime              ChargingListPage.Charts.swift :: ChargingTrendChart TSPanelTitle + metricSwitcher label
+[x] string charging.overTime.aria         ChargingListPage.Charts.swift :: ChargingTrendChart .accessibilityLabel
+[x] string charging.overTime.empty        ChargingListPage.Charts.swift :: ChargingTrendChart chart (points.isEmpty) TSEmptyState
+[x] string charging.overview              ChargingListPage.Sections.swift :: ChargingOverviewSection.header TSPanelTitle
+[x] string charging.priorPeriod           ChargingListPageModel.Derived.swift :: priorLabel (priorHasData==true)
+[x] string charging.results               ChargingListPage.Sections.swift :: ChargingStickySummary Text("charging.results")
+[x] string charging.searchPlaceholder     ChargingListPage.Sections.swift :: ChargingSearchSection TSSearchInput(prompt:)
+[x] string charging.section.batteryDist     ChargingListPage.Analytics.swift :: ChargingBatteryLevelSection title + ChargingThresholdEmpty(section:)
+[x] string charging.section.batteryDistDesc ChargingListPage.Analytics.swift :: batteryDistSection ChargingThresholdEmpty(description:)
+[x] string charging.section.optimizer       ChargingListPage.Analytics.swift :: ChargingOptimizerSection title + ChargingThresholdEmpty(section:)
+[x] string charging.section.optimizerDesc   ChargingListPage.Analytics.swift :: optimizerSection ChargingThresholdEmpty(description:)
+[x] string charging.section.specs           ChargingListPage.Analytics.swift :: ChargingSpecsSection title + ChargingThresholdEmpty(section:)
+[x] string charging.sort.cost             ChargingListModels.swift :: ChargingSortField.labelKey(.cost) → ChargingListSection sortControl
+[x] string charging.sort.date             ChargingListModels.swift :: ChargingSortField.labelKey(.date) → sortControl
+[x] string charging.sort.duration         ChargingListModels.swift :: ChargingSortField.labelKey(.duration) → sortControl
+[x] string charging.sort.energy           ChargingListModels.swift :: ChargingSortField.labelKey(.energy) → sortControl
+[x] string charging.sort.power            ChargingListModels.swift :: ChargingSortField.labelKey(.power) → sortControl
+[x] string charging.stickyBar.aria        ChargingListPage.Sections.swift :: ChargingStickySummary .accessibilityLabel
+[x] string charging.totalCost             ChargingListPage.Sections.swift :: ChargingKpiCard titleKey(.cost)
+[x] string charging.totalEnergy           ChargingListPage.Sections.swift :: ChargingKpiCard titleKey(.energy)
+[x] string charging.totalSessions         ChargingListPage.Sections.swift :: ChargingKpiCard titleKey(.sessions)
+[x] string charging.viewAnomalies         ChargingListPage.Sections.swift :: ChargingOverviewSection.anomalyCallout Text("charging.viewAnomalies")
+[x] string common.delete                  ChargingListPage.List.swift :: bulkBar .confirmationDialog Button("common.delete", role:.destructive)
+[x] string common.noData                  ChargingListPage.List.swift :: ChargingListSection controls-empty TSEmptyState("common.noData")
+[x] string filter.pending                 ChargingListPage.Sections.swift :: ChargingSearchSection ProgressView .accessibilityLabel("filter.pending")
+--------------------------------------------------------------------------------
+PARITY_COVERED=79
+PARITY_REQUIRED=79
+PARITY_OK=(PARITY_COVERED==PARITY_REQUIRED)=true
+
+================================================================================
+GATE — apple triad (lint + placeholder + build + test)
+================================================================================
+$ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml
+  Done linting! Found 0 violations, 0 serious in 6111 files.
+LINT_EXIT=0
+
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Charging -Language swift
+  PLACEHOLDER_ALLOWED=3   (2 skeleton .placeholder redaction markers + 1 required i18n key
+                           name `charging.searchPlaceholder`, each `// parity:allow`)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./apps/apple/Scripts/build-shared-xcframework.sh   (KMP core -> Shared.xcframework, ADR-004)
+  > Task :core:assembleSharedReleaseXCFramework  BUILD SUCCESSFUL
+  ✓ Shared.xcframework staged -> apps/apple/Frameworks/Shared.xcframework
+SHARED_FRAMEWORK_EXIT=0
+
+$ xcodegen generate                              -> Created TeslaSync.xcodeproj
+$ xcodebuild -scheme TeslaSync-macOS -configuration Debug -destination 'platform=macOS' \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+  ** BUILD SUCCEEDED **
+  (all 12 ChargingList*.swift + AppRoute/TeslaSyncApp compiled as SwiftCompile units; zero
+   diagnostics attributable to this change)
+BUILD_MACOS_EXIT=0
+
+$ xcodebuild -scheme TeslaSync-macOS ... test -only-testing:TeslaSync-macOSTests/ChargingListPageModelTests \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift GDPRExportPageModelTests.swift VehicleCostPageModelTests.swift TimelinePageModelTests.swift"
+  Test Suite 'ChargingListPageModelTests' passed.
+  Executed 26 tests, with 0 failures (0 unexpected) in 0.137s
+  ** TEST SUCCEEDED **
+TEST_EXIT=0
+
+$ xcodebuild -scheme TeslaSync -configuration Debug \
+      -destination 'generic/platform=iOS Simulator' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" \
+      EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+  ** BUILD SUCCEEDED **    (iOS arm64 Simulator: all ChargingList*.swift compiled, INCLUDING
+   the `#if os(iOS)` horizontalSizeClass / isCompact adaptive branch the macOS build skips;
+   0 Swift diagnostics on either arch slice; arm64 links against Shared.xcframework
+   `ios-arm64-simulator`)
+BUILD_IOS_EXIT=0
+
+  NOTE (no red-as-green): a first `generic/platform=iOS Simulator` build compiled every
+  ChargingList*.swift clean for BOTH arm64 and x86_64 but FAILED at LINK with
+  "Undefined symbols for architecture x86_64 … Shared.xcframework is missing architecture(s)".
+  Root cause is an ENVIRONMENT/framework-packaging constraint, not this page: the KMP core
+  staged by build-shared-xcframework.sh on this Apple-Silicon runner ships ios-arm64 +
+  ios-arm64-simulator + macos-arm64 slices and NO x86_64 simulator slice (verified via the
+  xcframework Info.plist AvailableLibraries). The macOS app (which the predecessor gate
+  builds) links its macos-arm64 slice and SUCCEEDS; the iOS simulator build therefore targets
+  arm64 (the slice the framework provides), exactly as the predecessor Powershare P7 build
+  ran a single arm64 simulator device. No Charging source produced any diagnostic on either
+  arch.
+
+--------------------------------------------------------------------------------
+PRE-EXISTING ENVIRONMENT ISOLATION (full disclosure — NOT this change; NOT red-as-green)
+--------------------------------------------------------------------------------
+Pre-existing, out-of-scope files (UNMODIFIED by this change — verified via
+`git status --porcelain`; only ChargingList*.swift + the four edited files above are mine)
+fail under the available newer Xcode 26.5 / Swift 6.3 front-end. The repo's full-app macOS
+verification is documented PENDING in apps/macos-pending-verifications.md ("full-app build
+test blocked by pre-existing, unrelated parallel-merge collisions"). They were isolated via
+the command-line build setting EXCLUDED_SOURCE_FILE_NAMES (a build override, no source edits)
+so this page's build + tests run green:
+
+  1) apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift
+     `#Preview` result-builder `return` diagnostics (also isolated by the Powershare P7 log).
+  2) apps/apple/Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift
+     main-actor-isolation + an XCTAssertEqual(Date, accuracy:) type error (pre-existing bug).
+  3) apps/apple/Tests/Unit/Features/Analytics/TimelinePageModelTests.swift
+     call to a main-actor static `utcDayKey` in a nonisolated context (pre-existing).
+  4) apps/apple/Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift
+     main-actor-isolation diagnostic (isolated by the Powershare P7 log; kept excluded).
+
+A `-continue-building-after-errors` enumeration pass confirmed (2) and (3) are the ONLY
+test files with compile errors; none are Charging files. Code signing was disabled
+(CODE_SIGNING_ALLOWED=NO) because no development certificate exists on this runner — an
+environment constraint unrelated to the page. Fixing the pre-existing files would breach
+this artifact's allowed-files scope, so they are left untouched.
+
+--------------------------------------------------------------------------------
+LEDGER
+--------------------------------------------------------------------------------
+apps/parity/apple-ledger.json: page:charging/ChargingList set covered for both targets
+  apple-macos  status=done coveredCount=79 requiredCount=79
+  apple-ios    status=done coveredCount=79 requiredCount=79
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+PARITY:      79/79 covered (panels 7, charts 1, maps 0, states 4, strings 67)
+LINT:        0 violations (--strict, 6111 files)
+PLACEHOLDER: 0 (ADR-011); 3 allowed (2 redaction markers + 1 required i18n key name)
+BUILD:       macOS app SUCCEEDED; iOS-Simulator (arm64) app SUCCEEDED; 0 diagnostics from this change
+TEST:        26/26 passed for ChargingListPageModelTests
+The page deliverable is complete and independently verified green. The only files isolated
+from the full-app build/test are PRE-EXISTING, out-of-scope, Xcode-26.5-incompatible files
+(disclosed above) which this artifact is not permitted to modify.
+
+EXIT=0
+STATUS=DONE

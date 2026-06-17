@@ -1,0 +1,225 @@
+================================================================================
+p4-apple · P7 · page:settings/TwoFactorAuth — SwiftUI / HIG
+Native SwiftUI parity of web TwoFactorAuthPage (route /account/2fa),
+adaptive macOS + iOS (ADR-002/006).
+================================================================================
+
+RUNNER
+  host            : macOS (Darwin, arm64)
+  Xcode           : 26.5 (17F42)  — Xcode runner AVAILABLE
+  swift           : 6.3.2
+  swiftlint       : 0.63.3 (--strict)
+  pwsh            : present (placeholder gate)
+  xcodegen        : present
+  KMP Shared.xcframework : built via Gradle (:core:assembleSharedXCFramework,
+                    BUILD SUCCESSFUL 7m51s) and staged into apps/apple/Frameworks/.
+
+PATH (binding, honest)
+  project.yml compiles BOTH `Sources/` and `TeslaSync/Features/` into the iOS +
+  macOS app targets (project.yml lines 53 / 114). The prompt's templated
+  Output/Allowed path `apps/apple/TeslaSync/Features/Settings/**` is therefore a
+  real, compiled source root (the sibling `TeslaSync/Features/*` already ships
+  180 .swift incl. RouteRegistrations), and the gate's placeholder + swiftlint
+  commands scan exactly that dir — so the page is implemented THERE, verbatim to
+  the prompt. Navigation registration touches Sources/App/AppRoute.swift,
+  Sources/App/AppRouteParser.swift, Sources/TeslaSyncApp.swift; strings live in
+  Localization/Localizable.xcstrings.
+
+COLLISION GUARD
+  TeslaSync/feature-views/TOTPEnrollmentSection.* already defines ~30 public
+  `TOTP*` types in the SAME module. Every new type here uses the `TwoFactor*`
+  prefix (verified collision-free) so there are zero duplicate-symbol clashes.
+
+SCOPE (honesty covenant: no scope-narrowing, no stubs as final, ADR-011)
+  web TwoFactorAuthPage.tsx wraps <TOTPEnrollmentSection/>. The thin page manifest
+  record lists only the 2 page strings, but a title-only screen would be a stub.
+  The FULL functional surface is reproduced natively (mirroring the sibling
+  ActiveSessions P7 precedent): loading; forward-auth-required ("open mode")
+  advisory; status panel (Active / Not-enrolled pill); activated body (last-used
+  + remaining backup codes + Regenerate + Disable); not-enrolled body (Enroll +
+  authenticator hint); enroll dialog (a REAL scannable CoreImage QR decoded from
+  the data-URI + manual base32 secret + CopyButton + sanitized 6-digit verify +
+  the four mapped TOTP_* verify errors); one-time backup-codes reveal (warning +
+  2-col grid + ShareLink .txt export + copy + done); typed-confirmation "DISABLE"
+  step-up; plus loading / open / error states for the status source.
+
+FILES (in scope)
+  A apps/apple/TeslaSync/Features/Settings/TwoFactorAuthPage.swift          (View: header + state router + panels + previews)
+  A apps/apple/TeslaSync/Features/Settings/TwoFactorAuthPageDialogs.swift   (enroll / backup-codes / disable sheets)
+  A apps/apple/TeslaSync/Features/Settings/TwoFactorAuthPageModel.swift     (@Observable model + value types + states)
+  A apps/apple/TeslaSync/Features/Settings/TwoFactorAuthSampleSource.swift  (sample seam + QR encode/decode)
+  A apps/apple/TeslaSync/Features/Settings/TwoFactorAuthRouteRegistration.swift
+  A apps/apple/Tests/Unit/Features/Settings/TwoFactorAuthPageModelTests.swift  (23 tests, 2 classes)
+  M apps/apple/Sources/App/AppRoute.swift          (+ .accountTwoFactor: case + pathSegment "account/2fa" + systemImage + group .account)
+  M apps/apple/Sources/App/AppRouteParser.swift    (+ "/account/2fa" alias)
+  M apps/apple/Sources/TeslaSyncApp.swift          (+ TwoFactorAuthRouteRegistration wiring)
+  M apps/apple/Localization/Localizable.xcstrings  (+ 48 keys incl the 2 PARITY keys; en)
+  M apps/parity/apple-ledger.json                  (+ apple-macos & apple-ios rows)
+
+ADAPTIVE / HIG / a11y / units
+  - macOS/iPad (regular): activated metrics + actions laid side-by-side; iPhone
+    (compact, horizontalSizeClass) stacks them. Driven by the @Observable model
+    (ADR-004) — no networking in the view body.
+  - Materials via TSGlassPanel; tokens-only color/typography (P2 — Color.TS /
+    Font.TS / TSSpacing / TSRadius). Dialogs are HIG sheets; destructive Disable
+    requires typing the "DISABLE" token (web requireTypedConfirmation).
+  - VoiceOver labels/traits on header + status panel + rows + dialogs; Dynamic
+    Type via teslaSyncTheme(); light/dark + increased-contrast through tokens;
+    ≥44pt targets (TSButton). lastUsed timestamps formatted at the display
+    boundary only (Date.formatted) — never stored non-SI.
+  - Every visible string via LocalizedStringKey / String(localized:) from
+    Localizable.xcstrings with web-aligned key names; zero hardcoded literals.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+--------------------------------------------------------------------------------
+[x] string — account.twoFactor.title
+      catalog : apps/apple/Localization/Localizable.xcstrings
+                (key present, en="Two-factor authentication")
+      binding : apps/apple/TeslaSync/Features/Settings/TwoFactorAuthPage.swift
+                symbol TwoFactorAuthPage.header → TSPageTitle("account.twoFactor.title")  (L70)
+[x] string — account.twoFactor.subtitle
+      catalog : apps/apple/Localization/Localizable.xcstrings
+                (key present, en="Add a second factor to your sign-in. Required for sensitive admin actions.")
+      binding : apps/apple/TeslaSync/Features/Settings/TwoFactorAuthPage.swift
+                symbol TwoFactorAuthPage.header → Text("account.twoFactor.subtitle")  (L71)
+--------------------------------------------------------------------------------
+PARITY_COVERED=2
+(PARITY_COVERED == PARITY_REQUIRED)
+
+================================================================================
+GATE
+================================================================================
+# placeholder scan (ADR-011)
+  pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Settings -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+# swiftlint --strict (explicit file paths — the repo .swiftlint.yml `included:`
+# list omits TeslaSync/Features, so a directory arg falls back to the included
+# tree; per-file invocation lints exactly this unit, the same way the sibling
+# ActiveSessions gate was run)
+  9 files: 5 Settings (Page / Dialogs / Model / SampleSource / RouteRegistration)
+           + Sources/App/AppRoute.swift + Sources/App/AppRouteParser.swift
+           + Sources/TeslaSyncApp.swift + Tests/.../TwoFactorAuthPageModelTests.swift
+  → Found 0 violations, 0 serious in 9 files.
+  LINT_EXIT=0
+
+# xcodebuild BUILD — iOS Simulator (iPhone 16, iOS 26.5)
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build CODE_SIGNING_ALLOWED=NO
+  → ** BUILD FAILED **
+  BUILD_EXIT(ios)=65        ← BLOCKED by a PRE-EXISTING break (see BLOCKER)
+
+# xcodebuild BUILD — macOS
+  xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build CODE_SIGNING_ALLOWED=NO
+  → ** BUILD FAILED ** (483 errors, all pre-existing; 0 in this unit)
+  BUILD_EXIT(macos)=65      ← BLOCKED, same pre-existing break
+
+# xcodebuild TEST — iOS Simulator (iPhone 16) -only-testing:.../TwoFactorAuthPageModelTests
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' test ...
+  → Testing cancelled because the build failed (the test bundle hosts the app
+    target, which does not compile — see BLOCKER).
+  TEST_EXIT=65              ← BLOCKED (transitive on the app-target compile)
+
+--------------------------------------------------------------------------------
+BLOCKER (pre-existing, reproduced at HEAD, OUT OF SCOPE — no red-as-green)
+--------------------------------------------------------------------------------
+  The TeslaSync iOS + macOS app target does NOT compile at the current repo HEAD,
+  independent of this unit. Confirmed root cause via the compiler's own candidate
+  notes:
+
+    apps/apple/TeslaSync/Features/System/StatusApiDocsPage.swift:399
+        enum TSSpacing { static let xs/sm/md/lg/xl/... }        ← DUPLICATE
+        (and a duplicate `enum TSRadius`)
+    apps/design/generated/apple/Tokens.swift:175
+        public enum TSSpacing { static let xs/sm/md/lg/... }    ← canonical (P2)
+
+  A second top-level `enum TSSpacing` / `enum TSRadius` declared inside
+  StatusApiDocsPage.swift collides with the generated design tokens, so EVERY
+  `TSSpacing.*` / `TSRadius.*` reference across the whole module is
+  "ambiguous use of 'sm' / 'md' / 'lg' / 'xs' …", which cascades into the
+  `#Preview` macro type-check ("ambiguous use of 'Preview'"). Errors are entirely
+  in pre-existing files (StatusApiDocsPage, WeekSelector, WeeklyDigest*,
+  *.Previews.swift, AIWatchFaceNLResponse*, …); ZERO are in this unit's files.
+
+  PROOF it is not mine: with this unit fully `git stash`-ed (push -u), a clean
+  regenerate + `xcodebuild -scheme TeslaSync ... build` at HEAD fails IDENTICALLY
+  — HEAD_BUILD_EXIT=65 with the same ambiguous-`TSSpacing` + ambiguous-`Preview`
+  errors. So the break exists at HEAD without my changes.
+
+  StatusApiDocsPage.swift lives under Features/System — another page, explicitly
+  OUT OF SCOPE for this prompt ("Out of Scope (reject): Other pages") and NOT in
+  the Allowed files. It is therefore deliberately NOT modified here.
+
+  ISOLATION PROOF (temporary, reverted, NOT committed): commenting out only the
+  two duplicate enums in StatusApiDocsPage.swift and rebuilding drops the iOS
+  app-target error count 248 → 49. The 49 that remain are a SEPARATE, also
+  pre-existing blocker — an SDK-level "ambiguous use of 'Preview'" (candidate note:
+  `UIKit.Preview … found this candidate in module 'UIKit'` vs SwiftUI.Preview) plus
+  "ambiguous use of 'accessibilityAddTraits'", in pre-existing files that import
+  BOTH UIKit and SwiftUI next to a `#Preview`. That is a toolchain/Xcode-26.5
+  condition, not user-fixable from this unit. So a fully green full-app build is
+  unreachable in this environment regardless of scope (two independent pre-existing
+  blockers). The StatusApiDocsPage edit was reverted via `git checkout` and is NOT
+  in the commit. Across ALL THREE failing builds (248 / 49 errors + the test run)
+  this unit's files produced ZERO errors — its own `#Preview` blocks are immune to
+  the UIKit/SwiftUI ambiguity because the view files import only SwiftUI.
+
+--------------------------------------------------------------------------------
+UNIT VERIFICATION (committed-tree-independent — proves THIS unit is correct
+despite the shared app-target block)
+--------------------------------------------------------------------------------
+  Isolated harness compiling THIS unit's real model + sample standalone under the
+  project's exact build settings (Swift 6 + complete concurrency):
+    swiftc -swift-version 6 -strict-concurrency=complete -target arm64-apple-macosx15.0 \
+      TwoFactorAuthPageModel.swift TwoFactorAuthSampleSource.swift main.swift -o harness
+    → COMPILE_EXIT=0
+    ./harness → 16 PASS / 0 FAIL   HARNESS_FAILURES=0
+      (load→not-enrolled; enroll opens dialog + real QR data-uri produced;
+       verify-code sanitize to 6 digits; verify→backup-codes + activated;
+       short-code→codeLength error; activated start (7 remaining);
+       requestDisable→disable dialog; confirmDisable→deactivated + dialog closed;
+       open-mode resolves; QR encode→decode round-trip; non-data-uri rejected;
+       disableConfirmationToken == "DISABLE")
+
+  The view files (TwoFactorAuthPage / …Dialogs) are swiftlint-clean and emit ZERO
+  diagnostics in the build attempts; their full type-check is gated ONLY by the
+  module-wide StatusApiDocsPage break above, which halts type-checking for ALL
+  files in the target (this unit included). The 23 XCTest cases in
+  TwoFactorAuthPageModelTests mirror the 16 harness checks plus the /account/2fa
+  route wiring (path / group / parser / registry / Explore + Navigate catalogs).
+
+  Navigation edits type-check standalone too:
+    swiftc -typecheck -swift-version 6 -target arm64-apple-macosx15.0 \
+      AppRoute.swift AppRouteParser.swift RouteHostRegistry.swift
+    → NAV_TYPECHECK_EXIT=0  (the new .accountTwoFactor case satisfies every
+      exhaustive switch — pathSegment "account/2fa", systemImage, group .account —
+      and the "/account/2fa" parser alias + registry compile clean)
+
+ACCEPTANCE
+  [x] Every web region reproduced (header + loading + open + error + status pill +
+      activated body + not-enrolled body + enroll / backup-codes / disable dialogs);
+      no stub, no title-only screen.
+  [x] Both PARITY items render from the @Observable model-bound header.
+  [x] loading / open / error / active / not-enrolled implemented for the status source.
+  [x] All strings from Localizable.xcstrings, web key names; zero hardcoded literals.
+  [x] Dark mode + Dynamic Type + a11y + display-boundary formatting; SwiftUI-native.
+  [x] placeholder + swiftlint green; isolated unit compile + test green (16/16);
+      PARITY_COVERED == PARITY_REQUIRED (2).
+  [BLOCKED] full-app xcodebuild build (iOS + macOS) + test — pre-existing
+      duplicate-`TSSpacing`/`TSRadius` break in StatusApiDocsPage.swift (other page,
+      out of scope); reproduced at HEAD with this unit stashed.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/TeslaSync/Features/Settings apps/apple/Tests/Unit/Features/Settings \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-settings-TwoFactorAuthPage.log
+
+EXIT=1
+STATUS=BLOCKED

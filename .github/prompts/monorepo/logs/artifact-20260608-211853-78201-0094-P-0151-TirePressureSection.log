@@ -1,0 +1,142 @@
+=== P4 Feature view 0151 TirePressureSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/TirePressureSection.*
+Web spec: web/src/features/driving/components/drive-detail/TirePressureSection.tsx
+Runner  : Darwin arm64 (Mac Studio), Xcode 26.5 (17F42), Swift 6.3.2,
+          swiftlint + swiftformat (homebrew), pwsh 7, xcodegen 2.45.4,
+          iOS 26.5 simulator (iPhone 16), macOS 15 SDK.
+Capability present: SwiftUI + Swift Charts + Observation + macOS15/iOS18 SDK. NOT a capability block.
+
+--------------------------------------------------------------------------------
+DELIVERABLE (9 files, all within the prompt's Allowed-files scope)
+--------------------------------------------------------------------------------
+  TirePressureSection.swift            root View (FadeIn + glass card + phase switch)
+  TirePressureSection.Adapter.swift    pure value types (unit, wheel, sample, range, point, projection)
+  TirePressureSection.Projector.swift  pure projector + phase + fmtNumber-parity format + a11y summary
+  TirePressureSection.Model.swift      P1/S8 source seam + @Observable model + P1/S11 telemetry + P1/S10 strings facade
+  TirePressureSection.Views.swift      header, freshness chip, banner, 4 per-wheel tiles, legend, loading/empty/error
+  TirePressureSection.Chart.swift      Swift Charts 4-line chart + selection tooltip
+  TirePressureSection.Previews.swift   content / content-psi / empty / loading / error / stale / offline
+  TirePressureSection.Tests.swift      projector + conversion + format + model + a11y unit tests
+  TirePressureSection.strings          P1/S10 catalog (web-parity keys + native envelope)
+
+Web parity reproduced VERBATIM:
+  - Data sources: useTranslation (P1/S10 facade), useUnits (pressure unit kPa/psi/bar via the snapshot).
+  - Pressure conversion convertTirePressureSectionFromSI = 1:1 port of convertPressureFromSI
+    (kPa identity, psi = kPa/6.894757, bar = kPa/100); SI floor is kPa (raw pascal field /1000 by the source).
+  - 4 per-wheel tiles ALWAYS render (web grid-cols-4); value = "min–max <unit>" over readings > 0, else "—".
+  - Chart line per wheel rendered only when that wheel has ANY non-null sample (web chartData.some(d=>d.tireFl!==null)) — includes zero.
+  - Content gate = stats.hasTirePressure ONLY (web tire section does NOT also gate on length>1).
+  - i18n keys: driveDetail.tirePressure, .tirePressure.aria, .frontLeft, .frontRight, .rearLeft, .rearRight, .noChartData
+    (+ short codes FL/FR/RL/RR, freshness/banner/loading/error envelope). No English literals in code.
+  - States: loading / empty / error(retry) / stale(chip+auto-refresh) / offline(cached chip) / content — every state renders.
+  - Accessibility: VoiceOver chart summary + per-tile labels; Dynamic Type via tokens; reduce-motion respected.
+  - Telemetry: view.opened emitted once with surface slug "TirePressureSection" (P1/S11).
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (my deliverable) — ALL PASS
+--------------------------------------------------------------------------------
+[1] swiftformat --lint (my 8 swift files)
+    -> SwiftFormat completed. 0/8 files require formatting.  FORMAT(my)=0  PASS
+
+[2] swiftformat --lint apps/apple (WHOLE tree, the gate's FORMAT step)
+    -> 0/2259 files require formatting, 2 files skipped.       FORMAT_EXIT=0  PASS
+
+[3] swiftlint --strict (my 8 swift files)
+    -> Done linting! Found 0 violations, 0 serious in 8 files. LINT(my)=0   PASS
+
+[4] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TirePressureSection
+    -> PLACEHOLDER_ALLOWED=0
+       PLACEHOLDER_COUNT=0
+       EXIT=0                                                  PLACEHOLDER_EXIT=0  PASS
+
+[5] Isolated swiftc -typecheck of the FULL surface against the REAL design system
+    (TirePressureSection.{swift,Adapter,Projector,Model,Views,Chart} + real Tokens.swift
+     + real Motion.swift/TSFadeIn + a minimal TSSkeleton shim; -target arm64-apple-macos15.0,
+     macOS 15 SDK, Swift Charts + SwiftUI + Observation + OSLog)
+    -> TYPECHECK_EXIT=0                                        PASS
+       Proves the View/Model/Chart/Views compile against the real tokens, TSFadeIn, and Swift Charts.
+
+[6] Standalone pure-logic harness (swiftc -O of Adapter.swift + Projector.swift + 41 assertions)
+    -> ALL PASSED (41/41): kPa/psi/bar conversion; present-wheel = non-null (incl. zero);
+       per-wheel range over >0 only; RR present-but-zero => line yes / tile "—"; content gate = hasTirePressure
+       (no length>1); fmtNumber 2dp + grouping + non-finite->0; range "240.00–246.00 kPa" en-dash + single unit;
+       phase resolution; a11y summary (present ranges, skip no-range, empty sentence, name-only fallback).
+       HARNESS_EXIT=0  PASS
+
+[7] Real-target compile signal (from the full xcodebuild runs below)
+    -> ZERO errors in any TirePressureSection.* file on BOTH iOS and macOS:
+         grep -cE "TirePressureSection.* error:" ios2.log = 0
+         grep -cE "TirePressure.* error:"        mac.log  = 0
+       My namespacing also REMOVED the ambiguity I had briefly introduced into the committed
+       TirePressureHistoryWidget / TirePressureVisualWidget (those are clean again post-rename).
+
+--------------------------------------------------------------------------------
+FULL GATE STEPS — BLOCKED by PRE-EXISTING / ENVIRONMENT issues outside Allowed-files scope
+--------------------------------------------------------------------------------
+[A] swiftlint --strict (WHOLE project, the gate's LINT step)
+    -> Found 1 violation, 1 serious in 2255 files.            LINT_EXIT=2  (BLOCKED, not mine)
+    The single violation is PRE-EXISTING and in another prompt's committed file:
+      TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+      error: Opening Brace Spacing Violation (opening_brace)
+    git porcelain confirms that file is committed + unmodified by me; my only additions are the
+    9 untracked TirePressureSection.* files. It is outside this prompt's Allowed files.
+
+[B] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> IOS_EXIT=65  (BLOCKED at app-target compile by PRE-EXISTING out-of-scope collisions; `test` never reached)
+    ZERO TirePressureSection errors. The error-bearing files are all committed widgets from OTHER prompts:
+        ChargeStatusLiveWidget(32)  ChargeStatusWidget(27)  SafetyFeaturesWidget(20)
+        SafetyHistoryWidget(17)     ChargeSessionChartWidget(15)  FleetStatsBarWidget(2)
+    Root cause = duplicate type-name declarations across parallel-merged widgets (each ≥2 committed declarers):
+        'ChargeSessionDTO'      declared in ChargeStatusLiveWidget.Model.swift + ChargeSessionChartWidget.Models.swift
+        'ChargeDistanceUnit'    declared in ChargeStatusLiveWidget.Model.swift + ChargeStatusWidget.Model.swift
+        'ChargeStatusUpdate'    declared in ChargeStatusLiveWidget.Model.swift + ChargeStatusWidget.Model.swift
+        'ChargeStatusProjection'declared in ChargeStatusLiveWidget.Adapter.swift + ChargeStatusWidget.Adapter.swift
+    These are committed (HEAD 11d3044ce) and NOT in this prompt's Allowed files; they break the shared
+    app target regardless of this surface. (Independent of TirePressure entirely.)
+
+[C] xcodebuild -scheme TeslaSync-macOS build test
+    -> MAC_EXIT=65  (BLOCKED at signing; ZERO TirePressureSection errors)
+    The macOS scheme fails on code-signing (no development certificate / DEVELOPMENT_TEAM="" on this runner):
+        error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+        error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    This is an environment/signing limitation of the runner, not a code defect and not this surface.
+
+--------------------------------------------------------------------------------
+NOTE ON THE NAMESPACING FIX (what I changed and why)
+--------------------------------------------------------------------------------
+First full build surfaced that my initially generic TirePressure* type names duplicated the committed
+TirePressureHistoryWidget's generic types (TirePressureUnit/Connection/LoadStatus/Update/Projection/
+Strings/Telemetry/Accessibility + InMemoryTirePressureSource/OSLogTirePressureTelemetry). I renamed ALL my
+types to the unique TirePressureSection* namespace (the same collision-avoidance convention the sibling
+TemperatureSection uses with TempSection*). Post-rename: my surface compiles with zero errors AND the two
+committed Tire widgets are unambiguous again. The public surface name `TirePressureSection`, the diagnostics
+slug "TirePressureSection", and the strings table "TirePressureSection" are unchanged.
+
+--------------------------------------------------------------------------------
+VERDICT (honest, per the Honesty Covenant — no red-as-green)
+--------------------------------------------------------------------------------
+The TirePressureSection surface is production-complete and verified at the source level: every
+surface-scoped gate passes (swiftformat, swiftlint, placeholder, isolated macOS-15 typecheck of the full
+surface, 41/41 pure-logic assertions) and it compiles with ZERO errors inside both the real iOS and macOS
+app targets. No stubs / placeholders / TODOs; all six states render; full i18n; VoiceOver + Dynamic Type +
+reduce-motion; view.opened telemetry.
+
+The prompt's composite gate cannot reach EXIT=0 in THIS snapshot solely because of factors OUTSIDE this
+prompt's Allowed-files scope:
+  - pre-existing duplicate-type compile collisions in committed Charge*/Safety*/FleetStatsBar widgets
+    (parallel-merge artifacts, ≥2 declarers each, in files I am not permitted to modify), and
+  - macOS code-signing requiring a development certificate not present on this runner,
+  - one pre-existing swiftlint brace violation in a committed sibling widget file.
+None of these originate from, or are fixable within, this surface's allowed files.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+TYPECHECK_EXIT=0
+HARNESS_EXIT=0
+TIREPRESSURE_OWN_ERRORS=0
+
+EXIT=1
+STATUS=BLOCKED

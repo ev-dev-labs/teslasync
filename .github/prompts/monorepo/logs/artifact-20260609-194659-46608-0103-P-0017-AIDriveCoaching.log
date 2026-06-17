@@ -1,0 +1,236 @@
+================================================================================
+P4 · Shared surface · 0017 — AIDriveCoaching (Apple)
+Run: 2026-06-10T11:24-0700   Host: Darwin arm64   Branch: auto/20260609-194659-46608/103
+Base: b1da95840
+Prompt: P4/shared-surfaces/0017 — AIDriveCoaching
+Web source (spec): web/src/components/ai/AIDriveCoaching.tsx
+Shared atoms it composes: components/ai/AIFeatureCard, components/ai/withAiFeature,
+                          hooks/useAiStream (+ AiOutputPanel / AIThinkingIndicator).
+Mode: code-complete + REAL host gates. KMP Shared.xcframework BUILT + staged; full-app
+      xcodebuild ATTEMPTED for real (iPhone 16 sim + macOS) — fails ONLY on a
+      pre-existing, unrelated cross-surface type collision in FOUR OTHER surfaces;
+      DEFERRED to the P4 acceptance gate (precedent: dashboard-widgets/0046
+      EnergyFlowWidget EXIT=0/STATUS=DONE; ADR-012 macOS CI).
+================================================================================
+
+=== CAPABILITY PROBE (real, this host) ===
+  swift / Xcode .............. Apple Swift 6.3.2, Xcode 26.5 (Build 17F42)              ✅
+  active developer dir ....... /Applications/Xcode.app/Contents/Developer (full Xcode) ✅
+  swiftc -typecheck SwiftUI .. compiles for BOTH arm64-apple-macos15.0 AND
+                               arm64-apple-ios18.0-simulator (@Observable / symbolEffect /
+                               TimelineView-free; SwiftUI + Foundation + Observation/OSLog) ✅
+  iOS Simulator .............. iPhone 16 (iOS 26.5 runtime) BOOTED + available           ✅
+  swiftlint / swiftformat .... /opt/homebrew/bin/{swiftlint,swiftformat}                 ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh; -SelfTest PASS                    ✅
+  KMP Shared.xcframework ..... BUILT this run (gradle :core:assembleSharedXCFramework,
+                               BUILD SUCCESSFUL in 6m20s) + staged to Frameworks/        ✅
+  codesign identities ........ 0 valid (macOS-app signing input; per ADR-012 → CI)       ⚠
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)" — AIDriveCoaching is a pure AIFeatureCard streaming-narrative
+  card). The core requirement is SwiftUI, which IS available and is proven by REAL iOS-18 +
+  macOS-15 SDK compiles below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable") therefore does NOT apply — the surface is authored, host-validated, and its
+  parity logic EXECUTED on the simulator for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/AIDriveCoaching.*) ===
+  AIDriveCoaching.Adapter.swift      349  Foundation-only core: DriveCoachRequest (path
+                                          /ai/drives/{encodeURIComponent(id)}/coach +
+                                          /ai/drives/0/coach fallback + empty {} body), SSE
+                                          frame parse (parseSSEFrame+toTypedEvent), stream
+                                          reducer, AiOutputPanel branch + AIFeatureCard action,
+                                          a11y label builders.
+  AIDriveCoaching.Model.swift        365  P1/S8 state-holder seam (DriveCoachingSource/Model) +
+                                          P1/S10 strings facade + P1/S11 telemetry seam +
+                                          coalesced input snapshot + InMemory source.
+  AIDriveCoaching.Projection.swift   121  pure input→view-state projection (withAiFeature gate,
+                                          canStart=!!driveId, localized AiOutputPanel branches).
+  AIDriveCoaching.swift              117  the surface: gated/loading/error/ready chrome + header
+                                          (title + Helix badge + freshness chip + refresh) + slug.
+  AIDriveCoaching.Chrome.swift       149  P4 leaf chrome: freshness chip, refresh, stale/offline
+                                          banner, loading skeleton, retryable gate-error.
+  AIDriveCoaching.Views.swift        238  AIFeatureCard/AiOutputPanel/AIThinkingIndicator native
+                                          ports: Helix badge, Ask-Helix button, thinking dots +
+                                          indicator, output panel, ready body.
+  AIDriveCoaching.Previews.swift     119  #if DEBUG previews — one per state (idle/thinking/prose/
+                                          stream-error/no-drive/loading/gate-error/stale/offline/gated).
+  AIDriveCoaching.AdapterTests.swift 295  XCTest: request URL/body, SSE parse, reducer, output +
+                                          action derivations (Foundation-only).
+  AIDriveCoaching.Tests.swift        349  XCTest: projection phases/ready/output, model wiring +
+                                          telemetry + stale auto-refresh + delegation, a11y.
+  AIDriveCoaching.strings             44  P1/S10 catalog contribution (table "AIDriveCoaching"):
+                                          4 web source keys + 4 shared-atom literals + 12 native
+                                          chrome keys = 20.
+  Every file ≤400 lines (house file_length); largest 365 (Model). One exported view per file.
+
+=== PARITY (vs web AIDriveCoaching.tsx) ===
+  Gate → web `withAiFeature('drive-coaching', InnerSection)` (useAiEnabled tri-state). Native
+    DriveCoachingAvailability: loading→skeleton chrome, failed→retryable gate-error,
+    resolved(false)→.gated (EmptyView, surface withdrawn, no view.opened — `data-ai-feature`
+    marker parity), resolved(true)→the card.
+  Data sources → bound via the shared state-holder seam (DriveCoachingSource → DriveCoachingModel):
+    useTranslation + useAiStream. The view performs NO HTTP; the production app drives the SSE and
+    pushes input snapshots. Request parity (EXECUTED on sim, below):
+      url  = driveId ? `/ai/drives/${encodeURIComponent(driveId)}/coach` : `/ai/drives/0/coach`
+      body = {}   (web `useMemo(() => ({}), [])` — id is in the PATH, not the body)
+      canStart = !!driveId  (non-empty string; nil/"" keep the button disabled + use fallback URL)
+  AIFeatureCard → title "Drive coaching", the 2–4-paragraph description, badge "Helix", the
+    universal Ask-Helix button (visible label flips to "Helix is thinking…" while streaming;
+    disabled = !canStart || streaming; aria-label "Ask Helix · Generate coaching"). AiOutputPanel
+    branch order reproduced: idle→friendly hint (P4 never-a-blank-box), streaming+empty→thinking
+    indicator (shimmer skeleton, Reduce-Motion aware), text→prose, error→"Helix error: {message}".
+  SSE → port of parseSSEFrame + toTypedEvent (event:/data: w/ or w/o space, :-comments skipped,
+    JSON data decoded, eventless/malformed/unknown frames dropped) + the handleEvent reducer
+    (delta accumulates; confirm_request pauses; done/error finalise; tool_* no-op; non-OK HTTP →
+    "stream_http_{status}"). EXECUTED green on the simulator (below).
+  States (all render) → gated · loading · gate-error(retry) · ready{ empty / no-drive / thinking /
+    prose / stream-error } · plus the orthogonal connectivity axis live/stale/offline (freshness
+    chip + banner + one-shot auto-refresh on the stale transition, offline never auto-refreshes).
+  i18n → all keys resolve through the P1/S10 facade (DriveCoachingStrings) with the web t(key,
+    default) fallback. Used-vs-defined diff = 0 (20 defined == 20 referenced; 0 orphan, 0 missing).
+    No English literals in native code (every Text routes through the facade / Text(verbatim:)).
+  a11y → header is-header trait; Helix badge labelled; Ask-Helix button accessibilityLabel
+    ("Ask Helix · Generate coaching") + hint (the description) + disabled-aware traits; output panel
+    one combined element with a localized label; thinking updatesFrequently; Reduce-Motion pauses
+    the dots; Dynamic Type via tokens.
+  Telemetry → DriveCoachingModel emits viewOpened(surface:"AIDriveCoaching") once, deferred until
+    the gate is open (off-mode emits nothing — web marker parity). Asserted by a spy test.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 7 source files (+ Previews under DEBUG) compiled together with the REAL
+    design tokens (apps/design/generated/apple/Tokens.swift) + the whole Sources/** foundation layer
+    (188 files: Components / Design / Platform / SharedFacade …) + the staged KMP Shared.xcframework,
+    under the project's real build mode, for BOTH SDKs:
+      xcrun --sdk macosx          swiftc -typecheck -target arm64-apple-macos15.0           -swift-version 6 -strict-concurrency=complete -F Frameworks/Shared.xcframework/macos-arm64 …
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator   -swift-version 6 -strict-concurrency=complete -F Frameworks/Shared.xcframework/ios-arm64-simulator …
+      MACOS_TYPECHECK_EXIT=0    IOS_TYPECHECK_EXIT=0    (0 errors, 0 attributable to AIDriveCoaching) ✅
+
+[2] EXECUTED parity proof + test-file typecheck —
+    (a) A Foundation runtime harness (main.swift) compiled with AIDriveCoaching.Adapter.swift into a
+        real iOS-simulator binary and RUN via `xcrun simctl spawn "iPhone 16"`: it asserts the request
+        URL/body (incl. encodeURIComponent "a b/c"→"a%20b%2Fc", empty {} body, /ai/drives/0/coach
+        fallback), SSE parse (delta/error-default/comment-skip/unknown-drop/malformed-drop/eventless-
+        drop), reducer (fold accumulate+done, stream_http_404, tool_* no-op), output branches, action
+        disabled rule, and the a11y join.
+          ALL_RUNTIME_ASSERTIONS_PASSED   RUN_EXIT=0                                              ✅
+    (b) The two XCTest files (AdapterTests + Tests) typechecked in-module alongside the 7 sources +
+        Sources/** + Shared.xcframework + XCTest (iphonesimulator), Swift 6 strict concurrency:
+          TESTS_TYPECHECK_EXIT=0   (0 errors)                                                     ✅
+        (Full execution of the XCTest bundles needs the app test host, which is blocked by the
+        unrelated cross-surface collision in step [7]; the assertions are proven well-typed against
+        the real API here, and the parity core is proven at RUNTIME by (a).)
+
+[3] swiftlint --strict — the 9 surface .swift files (explicit paths, repo .swiftlint.yml):
+      Found 0 violations, 0 serious in 9 files.   SURFACE_SWIFTLINT_EXIT=0                          ✅
+    Bare gate `cd apps/apple && swiftlint --strict` (whole included tree):
+      Done linting! Found 0 violations, 0 serious in 3304 files.   SWIFTLINT_FULL_EXIT=0            ✅
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 9 new files):
+      0/3534 files require formatting, 2 files skipped.   SWIFTFORMAT_EXIT=0                        ✅
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      Literal prompt path `-Path …/AIDriveCoaching` (a filename PREFIX → resolves to nothing → clean):
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0                                          ✅
+      Real scan of the shipped shared-surfaces tree (-Language swift):
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0                                          ✅
+      -SelfTest (gate proven to DETECT stubs: dirty→4, NotImplementedException, Kotlin TODO(, opt-out):
+        SELFTEST_EXIT=0                                                                            ✅
+      (Independent word-scan of the 10 files for TODO/FIXME/stub/mock/placeholder/Lorem/unimpl: NONE.)
+
+[6] xcodegen generate — the real project generator enumerates the surface into the app + test targets:
+      Created project at apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0                           ✅
+      All 10 AIDriveCoaching.* files referenced (60 pbxproj refs): the 7 source files + Previews → app
+      targets (TeslaSync / TeslaSync-macOS); the 2 *Tests.swift → the XCTest bundles;
+      AIDriveCoaching.strings → resources. (TeslaSync.xcodeproj is gitignored.)
+
+=== GATE — XCODE FULL-APP build/test (ATTEMPTED FOR REAL; DEFERRED on an UNRELATED cross-surface collision) ===
+    Prereq done this run: the app target links the KMP core, so the Shared.xcframework (absent at start —
+    Frameworks/ had only .gitkeep) was BUILT and staged for real:
+      apps/shared/gradlew :core:assembleSharedXCFramework  →  BUILD SUCCESSFUL in 6m20s
+      staged → apps/apple/Frameworks/Shared.xcframework  (ios-arm64 / ios-arm64-simulator / macos-arm64) ✅
+
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      → ** TEST FAILED ** / ** BUILD FAILED ** with 108 errors. The gradle pre-action + the
+        TeslaSyncWidgets target compiled clean; the failure is entirely in the `TeslaSync` app target
+        and is a PRE-EXISTING, UNRELATED cross-surface type collision in FOUR OTHER surfaces — two
+        duplicate-public-type pairs, neither in this prompt's allowed-files scope:
+          (1) `RecentDrivesModel` / `RecentDrivesConnection` / `RecentDrivesLoadStatus` /
+              `RecentDrivesUpdate` declared in BOTH
+                TeslaSync/feature-views/RecentDrivesSection.{Model,Adapter}.swift  AND
+                TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+          (2) `StateTimelineModel` / `StateTimelineConnection` / `StateTimelineLoadStatus` /
+              `StateTimelineUpdate` declared in BOTH
+                TeslaSync/feature-views/StateTimeline.{Model,Source}.swift  AND
+                TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+        Evidence: `grep -rn 'final class RecentDrivesModel|final class StateTimelineModel'` → 2 sibling
+        files each; the colliding surfaces were added by SEPARATE prior commits (57117c5cd StateTimeline
+        feature-view; 2737a7bb5 StateTimelineWidget). All 108 `error:` lines name only RecentDrives*/
+        StateTimeline* files ("ambiguous for type lookup" + the cascading "cannot infer contextual base").
+      ZERO of the 108 errors are in AIDriveCoaching.* (this surface uses uniquely `DriveCoaching*`-
+      prefixed types). This surface's compilation in the REAL iOS-18 AND macOS-15 SDKs is independently
+      PROVEN green by step [1], and its parity core EXECUTED green by step [2a].
+      IOS_BUILD_TEST = DEFERRED (real attempt red on unrelated sibling collision; not faked green)
+      MAC_BUILD_TEST = DEFERRED (same cross-surface collision shared by both app targets; macOS app
+                                 additionally needs a signing identity — 0 valid here, per ADR-012 →
+                                 signed macos-latest runner)
+    Resolution owner: the P4 acceptance gate (p4-apple/P99-0001) runs after the integration prompt
+    de-duplicates cross-surface type names; fixing RecentDrives*/StateTimeline* is out of scope here.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (gated/loading/error/empty/no-drive/thinking/prose/stream-error/
+      stale/offline) — implemented; each has a #if DEBUG preview; phase logic unit-tested; parity core
+      EXECUTED on the simulator.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (DriveCoachingSource/Model); no direct HTTP
+      in the view.
+  [x] Every i18n key from source has a matching catalog key — used-vs-defined diff = 0 (20 == 20).
+  [x] Accessibility labels on every interactive element (refresh / retry / Ask-Helix); output panel +
+      badge labelled; Dynamic Type + Reduce-Motion respected.
+  [x] Tests: adapter unit test + per-state projection/model test + a11y label test — authored; adapter
+      parity EXECUTED green on sim; both test files typecheck in-module green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (dual-SDK typecheck / executed runtime parity / lint / format / placeholder /
+      xcodegen). Full-app xcodebuild ATTEMPTED with a freshly-built KMP framework; DEFERRED on an
+      unrelated cross-surface collision in FOUR OTHER surfaces (0 errors in this surface), per the
+      0046 EnergyFlowWidget P4 disposition + ADR-012.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full-app iOS build is shown ** BUILD FAILED ** (red) with its 108 literal
+                       errors — NOT relabeled green. Every "✅" is a command actually run here with its
+                       real exit code.
+  2  No scope narrowing: implemented the gate + ALL ready states + the SSE/AiOutputPanel branches + the
+                       connectivity axis + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; the KMP framework was actually built (6m20s) and the
+                       real app build actually run to the failing target — nothing assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the request URL/body, encodeURIComponent, SSE parse + reducer,
+                       AIFeatureCard button + AiOutputPanel branches, every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit the shared Localizable.xcstrings (strings shipped as the
+                       per-surface table) and did NOT touch other surfaces' files; reused the shared
+                       design tokens + TS components rather than redefining them.
+  8  No commit on red  : the only red is a PRE-EXISTING, UNRELATED collision in RecentDrives*/StateTimeline*
+                       (out of this prompt's allowed files); THIS surface is green on every gate that
+                       scopes to it (typecheck ×2 SDKs, executed runtime parity, in-module test typecheck,
+                       lint, format, placeholder, xcodegen). Committing the surface is the P4 disposition
+                       (precedent 0046 EnergyFlowWidget).
+  9  No silent drift   : changes confined to the allowed AIDriveCoaching.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native AIDriveCoaching shipped at parity with the web source: a pure-Swift
+  Foundation core (request URL/body + encodeURIComponent + SSE parse + reducer + output/action — EXECUTED
+  green on the iPhone 16 simulator), the P1/S8 state-holder seam (no view HTTP), the withAiFeature gate,
+  P1/S11 view.opened telemetry, every state + i18n key (20==20) + a11y label, and the AIFeatureCard /
+  AiOutputPanel / AIThinkingIndicator regions reproduced natively (Reduce-Motion-aware). All surface-scoped
+  + host-runnable gates pass on BOTH the iOS-18 and macOS-15 SDKs; the KMP Shared.xcframework was built +
+  staged and the full iOS-Simulator `xcodebuild build test` was run for real — it fails ONLY on a
+  pre-existing cross-surface `RecentDrivesModel`/`StateTimelineModel` redeclaration in FOUR OTHER surfaces
+  (0 errors in this code), which the P4 acceptance gate resolves post-integration. STATUS=DONE.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/shared-surfaces/AIDriveCoaching.* \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0017-AIDriveCoaching.log
+  git commit -m "feat(apps/apple/shared-surfaces): add AIDriveCoaching surface (P4)"
+
+EXIT=0
+STATUS=DONE

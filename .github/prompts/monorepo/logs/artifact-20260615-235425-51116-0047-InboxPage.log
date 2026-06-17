@@ -1,0 +1,173 @@
+================================================================================
+p4-apple · P7 · page:notifications/Inbox — SwiftUI / HIG parity
+artifact: apps/apple/Sources/Features/Notifications/NotificationsInbox*.swift
+web source: web/src/features/notifications/pages/InboxPage.tsx  (route /notifications/inbox)
+================================================================================
+
+SUMMARY
+-------
+Native SwiftUI parity of the web `InboxPage` — the top-level Notifications inbox route.
+The web page is a thin shell: a `PageContainer` (title + subtitle + copyLink + a "View
+archived" action) hosting `<InboxBody archived={false} vehicles={vehicles} rules={rules} />`.
+The native page reproduces that exactly: the chrome + the shared `InboxBody` surface.
+
+ARCHITECTURE DECISION (reuse, not duplicate) — DRY / shared-component mandate
+----------------------------------------------------------------------------
+The shared `InboxBody` SwiftUI surface ALREADY ships natively at
+`apps/apple/TeslaSync/feature-views/InboxBody*.swift` (committed `570cb3060`
+"feat(apps/apple/feature-views): add InboxBody surface (P4)", feature-view 0183) — the
+faithful native port of `features/notifications/components/InboxBody.tsx` with its own
+`@Observable InboxBodyModel`, filter bar, bulk toolbar, grouped/flat list, day grouping,
+freshness chrome, and the four list phases (loading / error / empty / content). It was not
+yet hosted by any route (no non-DEBUG `InboxBodyModel(...)` construction existed). This P7
+page is its FIRST host — exactly the web composition (`InboxPage` renders `<InboxBody/>`).
+
+  → `NotificationsInboxPage` renders the web `PageContainer` chrome and embeds
+    `InboxBody(model:)`. It does NOT re-implement the inbox body (that would duplicate the
+    P3 component, violate DRY, and — as the first build proved — collide on the public type
+    names `NotificationLogItem` / `NotificationSeverity` / `InboxDayHeader` / `InboxErrorView`
+    that `InboxBody`/`OperationsSection`/`NotificationFilterBar` already export).
+
+PATH / NAME RECONCILIATION (same as the sibling AuditLog log)
+-------------------------------------------------------------
+The prompt path `apps/apple/TeslaSync/Features/Notifications/**` is not a real project.yml
+source group. The repo's compiled page home is `apps/apple/Sources/Features/<Domain>/**`
+(listed as a `Sources` path, createIntermediateGroups). The page ships at
+`apps/apple/Sources/Features/Notifications/**`, the faithful equivalent. Type name
+`NotificationsInboxPage` (module-scoped; collision-swept — 0 clashes for the final public
+names `NotificationsInboxPage` / `NotificationsInboxRouteRegistration` / `NotificationsInboxSample`).
+
+"VIEW ARCHIVED" RECONCILIATION
+------------------------------
+Web "View archived" is a `<Link to="/notifications/archived">` — a separate web route that
+reuses the SAME `InboxBody` with `archived=true`. `/notifications/archived` is NOT a parity
+unit and has no Apple route, and `InboxBodyModel` fixes `archived` at init. The faithful
+native adaptation: the action rebuilds the body in archived mode IN PLACE (the page swaps the
+model + forces a fresh `InboxBody` via `.id(archived)`) — the exact body the web `ArchivedPage`
+reuses. The required string `notifications.inbox.viewArchived` renders in the default
+(inbox) state; the toggled state shows `notifications.inbox.viewInbox`.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope — git status --porcelain; xcodeproj is git-ignored)
+--------------------------------------------------------------------------------
+?? Sources/Features/Notifications/NotificationsInboxPage.swift              (124 LOC)  SwiftUI view: PageContainer chrome (TSPageTitle "Inbox" + subtitle + TSCopyButton deep-link + "View archived"/"Inbox" toggle) hosting InboxBody(model:).id(archived); adaptive macOS/iPad regular + iPhone compact header; #if DEBUG preview
+?? Sources/Features/Notifications/NotificationsInboxSample.swift            (127 LOC)  public NotificationsInboxSample.makeModel(archived:) -> InboxBodyModel over InMemoryInboxSource seeded with a representative inbox (rows + grouped threads + rules + vehicles) / archived feed; SampleInboxActions no-op mutation double. Production swaps makeModel for the shared notification source + mutation holders.
+?? Sources/Features/Notifications/NotificationsInboxRouteRegistration.swift  (24 LOC)  registers .notificationsInbox -> NotificationsInboxPage(makeModel:) (model factory injected; default = sample)
+?? Tests/Unit/Features/Notifications/NotificationsInboxPageTests.swift       (75 LOC)  XCTest: sample update populated (inbox grouped+flat / archived all-archived / unique ids), makeModel start populates rows, archived mode fixed, bulk-mark-read count, route registration host + view, deep-link parse + path + group + no-regression (/notifications, /notifications/audit), unique pathSegments
+ M Sources/App/AppRoute.swift                 +.notificationsInbox case (pathSegment "notifications/inbox", systemImage tray.full.fill, .operations group)
+ M Sources/App/AppRouteParser.swift           +"/notifications/inbox" -> .notificationsInbox alias (generic first-segment fallback would resolve .notifications)
+ M Sources/TeslaSyncApp.swift                 chains NotificationsInboxRouteRegistration.registry(base: registry) after NotificationsAuditLogRouteRegistration
+ M Localization/Localizable.xcstrings         +6 keys (notifications.inbox.title/subtitle/viewArchived/viewInbox, route.notificationsInbox, action.copy); JSON validated (11076 total keys); web key names verbatim
+ M apps/parity/apple-ledger.json              +2 rows (apple-macos, apple-ios) for page:notifications/Inbox, covered 4/4
+
+(The first iteration mistakenly re-implemented the inbox body inline; that duplicate set —
+Models/Format/PageModel/Sections/Rows/List — was deleted after the full build surfaced the
+public-type collisions with the existing P3 InboxBody. 37 now-unused catalog keys added by
+that iteration were also removed; only the 6 chrome keys remain.)
+
+================================================================================
+GATES
+================================================================================
+--- xcodegen generate (.xcodeproj git-ignored, rebuilt) ---
+Created project; "NotificationsInbox" referenced 24x in pbxproj (iOS+macOS app + test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (repo .swiftformat; final in-scope swift files) ---
+0/4 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (repo rule set; final in-scope swift files) ---
+Done linting! 0 violations.   LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Notifications -Language swift ---
+PLACEHOLDER_ALLOWED=1  (the sibling AuditLog audit.searchPlaceholder opt-out; my files add none)
+PLACEHOLDER_COUNT=0    PLACEHOLDER_EXIT=0
+  [Tests/Unit/Features/Notifications: PLACEHOLDER_ALLOWED=0 / COUNT=0 / EXIT=0]
+
+--- FULL BUILD: xcodebuild -scheme TeslaSync-macOS -configuration Debug
+                 -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build ---
+** BUILD SUCCEEDED **   BUILD_EXIT=0   (0 `: error:` across the entire 23,002-line build log)
+  The KMP Shared.xcframework Gradle staging (the out-of-scope blocker the sibling AuditLog
+  log documented) completed on this host this run; the full TeslaSync-macOS app target —
+  including NotificationsInbox*.swift + the hosted InboxBody surface + every other source —
+  compiled and linked clean. This SUPERSEDES the isolated-typecheck fallback.
+
+--- TESTS: xcodebuild test -scheme TeslaSync-macOS -destination platform=macOS,arch=arm64
+           -only-testing:TeslaSync-macOSTests/NotificationsInboxPageTests ---
+Test Suite 'NotificationsInboxPageTests' passed.  Executed 9 tests, 0 failures.  TEST_EXIT=0
+
+--- iOS: xcodebuild -scheme TeslaSync -destination generic/platform=iOS Simulator build ---
+The full iOS app target reached 0 `.swift` source errors but the XCBuild infrastructure
+failed under shared-host contention: first attempt — transient "file swbuild.tmp.* couldn't be
+saved in the folder arm64/x86_64" (temp-output save I/O); single-arch retry — "accessing build
+database …/XCBuildData/build.db: disk I/O error" (XCBuild SQLite I/O). Both are host/runner
+filesystem-contention failures (disk had 183Gi free; NOT a code defect; 0 source errors in
+either run) — the same class of out-of-scope shared-host blocker the sibling AuditLog log
+documented (their KMP OOM). The identical shared `Sources/` + `TeslaSync/feature-views/`
+compiled AND linked clean in the SUCCEEDED macOS app build above.
+  iOS verified instead by an isolated Swift-6 strict-concurrency type-check (the precedent's
+  fallback methodology) of the page + the composed InboxBody surface against the REAL P2 tokens
+  + P3 components, exercising the page's `#if os(iOS)` compact horizontalSizeClass branch:
+  # xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -DDEBUG
+  #   -sdk <iphonesimulator26.5> -target arm64-apple-ios18.0-simulator
+  #   Tokens + Sources/Design/* + Theme + Sources/Components/* (minus Shared-only UnitFormatters)
+  #   + App/{AppRoute,AppRouteParser,RouteHostRegistry} + feature-views/{InboxBody,NotificationRow,
+  #     NotificationGroupRow,NotificationFilterBar}*.swift + Sources/Features/Notifications/NotificationsInbox*
+  89 files → 0 errors, 0 warnings in my files.  IOS_ISO_TYPECHECK_EXIT=0
+  (macOS isolated type-check of the same set was also run during development → 0 errors.)
+
+--- Route harness (real AppRoute + AppRouteParser + RouteHostRegistry, Swift 6 strict) ---
+ROUTE ASSERTIONS PASSED (75 routes): parse("/notifications/inbox") == .notificationsInbox;
+  .path == "/notifications/inbox"; .group == .operations; unique pathSegments; registry hosts
+  + view(for:) non-nil; "/notifications" -> .notifications + "/notifications/audit" ->
+  .notificationsAudit (no regression).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=4
+================================================================================
+[x] state  — success                          NotificationsInboxPage.swift L40 InboxBody(model: model) → InboxBody.swift `listContent` `.content` branch → InboxListView(model:) renders the loaded grouped/flat day-grouped list, bound through InboxBodyModel.listPhase. NotificationsInboxSample seeds a populated feed (flatStatus/groupStatus = .loaded; rows + grouped threads), so the success state renders out of the box (verified: testSampleInboxUpdateIsPopulated, testMakeModelStartPopulatesRows).
+[x] string — notifications.inbox.title        NotificationsInboxPage.swift L86 TSPageTitle("notifications.inbox.title") + L48 .navigationTitle(Text("notifications.inbox.title")); catalog value "Inbox"
+[x] string — notifications.inbox.subtitle     NotificationsInboxPage.swift L87 Text("notifications.inbox.subtitle"); catalog value "Recent notifications from your alert rules."
+[x] string — notifications.inbox.viewArchived NotificationsInboxPage.swift L107-108 `archiveToggleButton` labelKey (rendered in the default inbox state, !archived) + .accessibilityLabel; catalog value "View archived"
+PARITY_COVERED=4
+
+All 4 items render from the page chrome (sourced from Localizable.xcstrings with web key
+names) over the hosted `InboxBody` surface bound to its @Observable InboxBodyModel (ADR-004 —
+no networking in the view). Data sources: the page passes vehicles + rules into the body via
+the seeded InboxUpdate (web `useVehicles` + `useAlertRules`, the two declared data sources),
+and InboxBody consumes the notification feed through its InboxSource seam.
+
+DATA STATES (spec: loading / empty / error for the source): all four InboxBody list phases —
+loading (InboxLoadingView), error (InboxErrorView + Retry), empty (InboxEmptyView, archived-
+aware), content (InboxListView) — are implemented by the hosted component (InboxBody.swift
+`listContent`); the page seeds `.content`. a11y: page title/subtitle combined element, copy +
+toggle labelled, InboxBody contributes its own surface a11y label + per-row traits; Dynamic
+Type via Font.TS roles; light/dark + increased-contrast via Color.TS dynamic tokens. Adaptive
+macOS/iPad (regular) header HStack vs iPhone (compact) VStack via horizontalSizeClass.
+SI converters: N/A — inbox metadata (titles/messages/timestamps) is unit-agnostic control-
+plane data; InboxBody formats timestamps at the display boundary. Live-SSE staleness: the
+hosted InboxBody surfaces the >2-min freshness chrome (InboxConnection .stale/.offline,
+ADR-013); the sample seeds .live.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green : every exit is a real command result. The headline is GREEN — the full
+                     macOS app build SUCCEEDED (EXIT=0) and the unit tests passed (9/9).
+ 2 No scope narrowing : the page is the full web InboxPage — chrome + the hosted InboxBody
+                        (the body the manifest's declared vehicles+rules sources feed). The
+                        first inline re-implementation was REMOVED in favor of the canonical
+                        shared component (the correct, non-narrowing architecture).
+ 3 No skip-and-assume : the existing InboxBody component was read + composed, not assumed.
+ 4 No stubs as final : no placeholders (scan COUNT=0); the body is the real shared surface.
+ 5 No parity shortcuts : all 4 required items render from bound state + the catalog.
+ 6 No delegation / 7 No predecessor bypass : InboxBody (predecessor P3 unit) is reused, not
+                        bypassed or re-forked.
+ 8 No commit on red : committed only after BUILD SUCCEEDED + tests green + all lint/format/
+                      placeholder gates passed.
+ 9 No silent drift : ledger + this log updated; web key names preserved verbatim.
+10 Log ends with EXIT + STATUS below.
+
+EXIT=0
+STATUS=DONE

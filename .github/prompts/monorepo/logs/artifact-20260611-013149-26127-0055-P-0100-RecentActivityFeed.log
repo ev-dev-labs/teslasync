@@ -1,0 +1,186 @@
+=== P4 Shared surface 0100 RecentActivityFeed (Apple) ===
+date: 2026-06-11T09:58:00-07:00
+host: Darwin 25.5.0 arm64 (Atuls-Mac-Studio)
+web source: web/src/components/data-display/RecentActivityFeed.tsx
+native output: apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.*
+
+--- files shipped (11) ---
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Adapter.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Visuals.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Projection.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Model.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Views.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Previews.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.strings
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.AdapterTests.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.Tests.swift
+  apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.ViewTests.swift
+
+============================================================
+CAPABILITY PROBE (prompt: 'requires SwiftUI + Swift Charts + MapKit,
+iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable -> STATUS=BLOCKED with API evidence')
+============================================================
+$ xcode-select -p           -> /Applications/Xcode.app/Contents/Developer
+$ xcodebuild -version       -> Xcode 26.5 (Build 17F42)
+$ swift --version           -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+$ xcrun simctl list runtimes-> iOS 26.5 (com.apple.CoreSimulator.SimRuntime.iOS-26-5)
+$ xcrun simctl list devices -> iPhone 16 (booted)
+$ swiftlint / swiftformat   -> present (/opt/homebrew/bin)
+$ pwsh                      -> present (PowerShell 7.x)
+
+>> CONCLUSION: the SwiftUI / Swift Charts / MapKit + Xcode 26.5 + iOS-Simulator
+>> capability IS PRESENT on this runner (unlike earlier P4 runs that had only
+>> CommandLineTools). RecentActivityFeed is a Timeline/EmptyState surface and
+>> uses SwiftUI + Foundation only (no Charts, no MapKit -> 'none' per the prompt's
+>> charts/maps section), so all required frameworks are available.
+
+--- KMP Shared.xcframework (ADR-004 prerequisite for the app targets) ---
+$ apps/apple/Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework)
+  BUILD SUCCESSFUL — release Shared.xcframework assembled + staged to
+  apps/apple/Frameworks/Shared.xcframework {ios-arm64, ios-arm64-simulator, macos-arm64}.
+  (One daemon OOM under parallel-slot memory pressure; succeeded on a --no-daemon retry.)
+$ xcodegen generate -> Created apps/apple/TeslaSync.xcodeproj  (XCODEGEN_EXIT=0)
+
+============================================================
+GATE STEPS (as written in the prompt; Tee-Object -> tee)
+============================================================
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------
+  ** BUILD FAILED **  ** TEST FAILED **
+  IOS_EXIT=65
+  errors attributable to RecentActivityFeed.* (my surface) : 0
+  build is blocked by PRE-EXISTING, OUT-OF-SCOPE sibling-surface compile errors
+  in the same app module (NOT in this prompt's allowed file set, NOT introduced
+  by this surface, unmodified by me per `git status`). A systemic baseline bug
+  ("escaping closure captures non-escaping parameter 'content'") recurs across
+  several AI* sibling surfaces, e.g.:
+    TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22: error: escaping closure captures non-escaping parameter 'content'
+    TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures non-escaping parameter 'content'
+    TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141: error: escaping closure captures non-escaping parameter 'content'
+  The whole-app `build` is single-module, so any one sibling error fails the
+  build before `test` can run. Allowed files = RecentActivityFeed.* + this log,
+  so I cannot fix the siblings (Honesty Covenant #2 no scope-narrowing, #6 no
+  delegation, #7 no predecessor bypass — and the repo change policy).
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------
+  ** BUILD FAILED **  ** TEST FAILED **
+  MAC_EXIT=65
+  blocked by (a) code-signing — the runner has no Apple development certificate
+  and project.yml ships DEVELOPMENT_TEAM="" :
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  and (b) the same out-of-scope sibling compile errors. Re-running the macOS
+  build with CODE_SIGNING_ALLOWED=NO reaches compilation and confirms:
+    errors attributable to RecentActivityFeed.* : 0
+    fails on TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129 (out-of-scope sibling).
+
+$ swiftlint --strict        (run from apps/apple; whole-tree gate)
+------------------------------------------------------------
+  LINT_EXIT=0   (0 violations across apps/apple — this surface inclusive)
+
+$ swiftformat --lint apps/apple   (whole-tree gate)
+------------------------------------------------------------
+  FORMAT_EXIT=0 (0 files require formatting — this surface inclusive)
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed
+------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+============================================================
+SUPPLEMENTAL — surface-scoped verification of THIS surface against the REAL
+iOS 18 + macOS 15 SDKs (the intent of the blocked build/test steps, proven for
+RecentActivityFeed in isolation from the broken siblings)
+============================================================
+
+>> A. Compiles clean on BOTH target platforms (Swift 6, -strict-concurrency=complete):
+$ xcrun -sdk iphonesimulator swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+    -target arm64-apple-ios18.0-simulator  <6 runtime sources + token/component shim>
+  IOS_TYPECHECK_EXIT=0
+$ xcrun -sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+    -target arm64-apple-macos15.0          <6 runtime sources + token/component shim>
+  MAC_TYPECHECK_EXIT=0
+
+>> B. The surface module (incl. Previews + the #Preview macro) builds, and the
+>>    surface's OWN XCTest suite RUNS GREEN (module named TeslaSync so the tests'
+>>    `@testable import TeslaSync` resolves; P1/S9 tokens + shared components shimmed):
+$ swift build         -> Build complete!            (SWIFT_BUILD_EXIT=0)
+$ swift test          -> Executed 50 tests, with 0 failures (SWIFT_TEST_EXIT=0)
+     RAFVisualsTests (getActivityVisual: exact / prefix-walk / single-token / blank / fallback)
+     RAFLinkTests    (entityHref: every routed type, charge/export aliases, nil + percent-encoding)
+     RAFRelativeTimeTests (formatRelative: just-now / m / h / d buckets + absolute medium-date)
+     RAFPaletteTests (#rrggbb decode + malformed/absent guards)
+     RAFSubtitleTests (entity_type · entity_id — detail composition, all combos)
+     RAFProjectionTests (loading / error / empty(web default + override) / populated; link gating;
+                         maxEntries cap; stale + offline freshness)
+     RAFModelTests   (start idempotence; view.opened once on first content, never on loading/error;
+                      open() forwarding + no-op without host; one-shot stale auto-refresh; offline)
+     RAFViewTests    (per-state subview composition + a11y labels/hints + accent->muted fallback)
+     RAFMetaTests    (diagnostics slug == "RecentActivityFeed")
+
+>> C. In the whole-app iOS AND macOS builds, errors attributable to
+>>    RecentActivityFeed.* = 0 (verified by grep over both build logs). The only
+>>    failures are the out-of-scope siblings above.
+
+============================================================
+SURFACE COMPLETENESS (parity with web RecentActivityFeed.tsx — no stubs)
+============================================================
+  - Web render branches reproduced verbatim:
+      * entries.length === 0  -> EmptyState (history glyph + t('activity.myActivity.empty', …))
+      * populated             -> Timeline of rows (icon + accent, localized title, composed
+                                 subtitle `entity_type · entity_id — detail`, relative timestamp,
+                                 optional click-through == web <Link to={entityHref(...)}>)
+  - getActivityVisual + entityHref + formatRelative ported verbatim (Adapter/Visuals).
+  - P4 leaf states added (standalone surface): loading skeleton, QueryError-peer retry,
+    freshness chip for the stale / offline connectivity axis.
+  - P1/S8: binds RAFFeed state-holder + source seam; NO HTTP in the view.
+  - P1/S10: every string via the localization facade; web key activity.myActivity.empty +
+    all 30 action keys (lib/activityIcons.ts) + relative-time + chrome keys in the
+    RecentActivityFeed.strings table. No hardcoded English literals in code.
+  - P1/S11: view.opened emitted exactly once on first content (slug "RecentActivityFeed").
+  - Accessibility: each row is one VoiceOver element (title, subtitle, time) with a button
+    trait + open action when it links; Dynamic Type via Font.TS roles; reduce-motion honored
+    through TSFadeIn / TSSkeleton. Lucide icons mapped to SF Symbols.
+  - Naming: all support types namespaced RAF* (the sibling feature-views/RecentActivity
+    surface already occupies both RecentActivity* AND RecentActivityFeed*); the public View
+    stays `RecentActivityFeed`; the diagnostics slug + i18n table literal stay "RecentActivityFeed".
+
+============================================================
+SUMMARY
+============================================================
+  IOS_EXIT        = 65  BLOCKED — pre-existing OUT-OF-SCOPE sibling compile errors
+                        (AISignalExplorerNlFilter / AISuggestNewGeofences /
+                        AIGeofenceAwareAutomationSuggestions …); 0 errors in this surface.
+  MAC_EXIT        = 65  BLOCKED — macOS code-signing (no dev certificate) + the same
+                        out-of-scope sibling compile errors; 0 errors in this surface.
+  LINT_EXIT       = 0   (swiftlint --strict, whole apps/apple)
+  FORMAT_EXIT     = 0   (swiftformat --lint apps/apple)
+  PLACEHOLDER_EXIT= 0   (PLACEHOLDER_COUNT=0)
+  ---- surface-scoped (real iOS 18 + macOS 15 SDKs) ----
+  IOS_TYPECHECK   = 0   MAC_TYPECHECK = 0
+  SWIFT_BUILD     = 0   SWIFT_TEST = 0 (50 tests, 0 failures)
+  surface errors in whole-app iOS+macOS builds = 0
+
+  The RecentActivityFeed surface itself is COMPLETE and production-polished, and
+  passes every surface-scoped check on the real iOS 18 + macOS 15 SDKs (compiles
+  on both platforms, all 50 of its own tests run green, lint/format/placeholder
+  clean). It contributes ZERO errors to the whole-app build on either platform.
+
+  The two composite `xcodebuild ... build test` gate steps cannot reach 0 on this
+  runner because of conditions OUTSIDE this surface and OUTSIDE its allowed file
+  set (RecentActivityFeed.* + this log):
+    1. several AI* sibling shared-surfaces fail to compile with a systemic
+       "escaping closure captures non-escaping parameter 'content'" baseline bug;
+    2. the macOS app/widget targets require an Apple development signing
+       certificate that this runner does not have.
+  Both are repo-baseline / environment issues that affect every parallel P4
+  surface equally; fixing them would violate the allowed-files constraint and the
+  Honesty Covenant (#2 no scope-narrowing, #6 no delegation, #7 no predecessor
+  bypass). Reported honestly per Covenant #1 (no red-as-green).
+
+EXIT=1
+STATUS=BLOCKED

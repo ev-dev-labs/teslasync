@@ -1,0 +1,205 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The page wraps `PrivacySection`. Let me read that component and explore the Apple app structure in parallel.
+
+Xcode tooling is available, so I must build a real implementation. Let me explore the Apple app structure, existing Settings features, and a recently-built page to follow the established patterns.
+
+No Settings feature dir exists yet — I'll create it. Let me study the recently-built pages (QuietHours and BrowserNotifications deal with browser-local state like Privacy does) plus their route registration pattern.
+
+BrowserNotifications is the closest analog (browser-local state, toggles, local actions). Let me read its full implementation set.
+
+Excellent templates. Now let me examine the sections/components pattern, the data-source seam pattern, and the design system primitives (tokens + components) I'll reuse.
+
+Now let me understand the design-system primitives, string catalog conventions, and how the project includes files. Let me locate the component/token definitions and check the xcstrings format.
+
+Found the component library in `Sources/Components/`. The two parity keys (`account.privacy.title/subtitle`) don't exist yet — and I see `account.sessions.title/subtitle` (the sibling Account page) uses no `translation.` prefix. Let me confirm the namespace convention and inventory the component library.
+
+There's an existing sibling `Sources/Features/Settings/ActiveSessionsPage.swift` (the Account-category "Active Sessions" page). That's my closest precedent. Let me read it and understand the project source roots from `project.yml`.
+
+Both `Sources` and `TeslaSync/Features` are build roots (XcodeGen). The closest sibling is `ActiveSessionsPage` (same Account category). Let me read all three of its files — this is my primary template.
+
+Let me read these files individually since they're large.
+
+Now the route registration, and let me inventory the exact component APIs (Buttons, Cards, Badges, Typography, Toast) I'll reuse.
+
+Let me check whether an `accountPrivacy` route case exists and read the full TSButton/Card/Badge/Typography APIs.
+
+No `accountPrivacy` enum case exists, and `Sources/App/` is outside my allowed scope — so I'll follow the QuietHours/BrowserNotifications precedent (typed `NavigationDestination` link, no enum widening). Let me read the component APIs I need.
+
+Let me read Typography, Badges, the design tokens, and locate TSIconBox + the Toast surface API.
+
+Let me read the design tokens (Color.TS/Font.TS/TSSpacing/TSRadius + theme/glass modifiers) and the Toast surface API.
+
+Now let me check which of the strings I need already exist in the catalog, and read the theme modifier + how ToastHost is wired.
+
+Only the 2 parity keys are missing. Let me check the `storedCount` plural format, the theme/clipboard helpers, and whether the `.xcodeproj` exists (gate uses it).
+
+`xcodegen` is available (no `.xcodeproj` yet — must generate). Now let me understand the gate harness: the placeholder scanner, the ledger, the log location, and whether `pwsh` is available.
+
+`pwsh` and the placeholder scanner are present, and there's a sibling `ActiveSessionsPage.log`. Let me read the gate contract (README), the sibling log, the ledger row, and the placeholder scanner.
+
+The sibling log reveals the key reconciliation. Note: the prompt mandates `TeslaSync/Features/Settings/**`, and the **most recent** precedent (the Notifications pages at HEAD) all live under `TeslaSync/Features/<Category>/` — which `project.yml` compiles (line 53). I'll follow the prompt + recent convention. Let me inspect the placeholder scanner and the ledger row.
+
+Let me read the placeholder patterns (to avoid tripping the scanner) and the ledger structure for the Privacy row.
+
+No Privacy ledger rows yet. Let me view the ledger structure and the ActiveSessions row as a template.
+
+I have the full picture. Let me verify the theme/clipboard helpers and how the codebase handles pluralized count strings (for `recentPages.storedCount`).
+
+Let me check how the codebase keys a pluralized count entry (to use the right pattern for `storedCount`).
+
+Now I understand the plural pattern (`String.localizedStringWithFormat`). Let me check the web `ConfirmDialog` (to understand `silenceKey`) and whether a native confirm component exists to reuse.
+
+Now I understand `silenceKey` (auto-confirm when previously silenced; "Don't ask again" checkbox). Let me verify the silence string key exists, then I'll have everything to implement.
+
+I have everything needed. Let me record a plan and check the SwiftLint config to ensure my code passes `--strict`.
+
+I now have a complete understanding. Let me record a plan and todos, then implement.
+
+All references gathered. Let me write the seam layer first.
+
+Now the `@Observable` model:
+
+Now the sections (the card + the two regions), adaptive via a threaded `isCompact`:
+
+Now the main page view with the silence-aware confirmation dialog and copy-link affordance:
+
+Now the route registration (typed deep-link, no enum widening):
+
+Now let me add the 2 parity keys to the catalog. First, let me inspect the exact xcstrings format and key ordering to make a minimal, correct edit.
+
+File is in insertion-order (newest-first), Xcode style `"key" : {`. Let me confirm the exact `strings` opening bytes, then insert the two keys at the top.
+
+Format confirmed (` : ` separators). Let me insert the two parity keys at the top of `strings`, then validate the JSON.
+
+Let me harden two things before building: give `PrivacyRegion` an explicit `@ViewBuilder` init (matching the codebase convention rather than relying on synthesized init), and mark the preview helper `@MainActor`.
+
+Files written. Let me update progress, then generate the Xcode project.
+
+Project generated, but `Frameworks/` only has `.gitkeep` — the KMP `Shared.xcframework` isn't staged. Let me check how it's referenced and whether I can produce it.
+
+There's a hard `Shared.xcframework` dependency with a staging script. Let me examine it and whether the KMP/Gradle toolchain is available here.
+
+The app build requires building the KMP `Shared.xcframework` via Gradle. Let me check if that toolchain is viable here.
+
+Java 17 + gradlew are present. Building the KMP framework is the heavy prerequisite (~12 min in the sibling run). Let me kick it off in the background now, and meanwhile run the placeholder scan and SwiftLint (which don't need the framework).
+
+While Gradle runs, let me run the placeholder scan and SwiftLint on my new files.
+
+Placeholder scan clean (EXIT=0). Now SwiftLint `--strict`:
+
+SwiftLint scanned the whole tree (config `included:` took over) and found 4 serious violations. I need to isolate whether any are mine. Let me lint my files explicitly and capture the real violations.
+
+My 5 files: **0 violations, 0 serious**. The 4 whole-tree violations are pre-existing/out-of-scope (the sibling log documented the same dir-vs-files behavior). Let me capture those 4 to document honestly, then check Gradle progress.
+
+Confirmed: the 4 lint violations are pre-existing in other files (none in `Features/Settings`). My code is clean. Let me check Gradle progress.
+
+My files are lint-clean and placeholder-clean. Let me wait for the Gradle framework build (the heavy prerequisite for `xcodebuild`).
+
+Gradle is still assembling the Kotlin/Native toolchain. Let me wait more while it builds.
+
+Gradle **BUILD SUCCESSFUL** — the `Shared.xcframework` is built. Let me stage it and check available schemes/simulators before building.
+
+Schemes: `TeslaSync` (iOS) + `TeslaSync-macOS`. Framework staged. Let me run the iOS build (whole app target including my new page). This compiles the full app, so it'll take a while.
+
+The iOS build is running (full app compile + pre-build Gradle staging). Let me wait for it.
+
+Build failed — but the failures are in `widget-primitives/` and `Sources/Widgets/Shared/`, none of them my files. I need the actual error diagnostics to determine if this is pre-existing. DerivedData is now warm, so a re-run only recompiles failures. Let me capture the real errors.
+
+These errors (`ambiguous use of 'Preview'`, `ambiguous use of 'md'`, `ambiguous use of 'init'`) are systemic across hundreds of pre-existing files (Badges.swift, Buttons.swift, etc.) — classic **duplicate symbols in the module**. This isn't caused by my 5 files. Let me find the root cause — likely a doubly-included source path.
+
+Two leads: `enum TSSpacing` also appears in `StatusApiDocsPage.swift`, and the errors hit hundreds of pre-existing files. Let me inspect that file and confirm my changes are isolated.
+
+My changes are isolated (2 xcstrings keys + 5 new files); the `.xcodeproj` is generated/ignored. The errors are systemic and pre-existing-file-based. `StatusApiDocsPage` only *uses* tokens (no redefinition). The sibling built on Xcode 26.5/Swift 6.3.2 — let me check this environment's toolchain and get the actual "ambiguous" candidate notes.
+
+`WidgetEventFeed.swift` appears **6×** in the pbxproj, and `TeslaSync/widget-primitives` is listed **twice** in project.yml (lines 8 & 32). The toolchain is identical to the sibling's successful build. I need the definitive "candidate" notes to see what's doubly-defined. Let me capture full diagnostics with `note:` lines.
+
+The root cause is clear: `StatusApiDocsPage.swift` (lines 401-403) **redefines** `sm`/`md`/`lg` (colliding with `Tokens.swift` `TSSpacing`), and also defines a `Preview` that collides with `SwiftUI.Preview` — poisoning the whole module. This is a pre-existing file, not mine. Let me inspect it and its git state.
+
+The collision is from a committed, out-of-scope file (`StatusApiDocsPage.swift`) that redefines `TSSpacing`/`TSRadius`, making tokens ambiguous module-wide — which blocks **my** files too (they use `TSSpacing`/`TSRadius`). Let me check this file's git history to understand its provenance before deciding how to proceed.
+
+This is a pre-existing parallel-salvage defect: `StatusApiDocsPage.swift` (added by commit `9e5cba8b3`) is the **sole** file redefining the canonical design tokens, breaking the whole module — including my files, which use those tokens. Following the sibling's exact precedent (temporary neutralize → build → revert → don't commit out-of-scope), let me prove my page builds in the real app target. First, save the baseline and neutralize the collision.
+
+Collision neutralized (temporarily). Now let me run the full iOS build to prove my page compiles in the real app target.
+
+The fix exposed deeper pre-existing breakage: the parallel-salvaged tree has **multiple** duplicate-symbol collisions (`HeroStatus`, `TirePressureUnit`, `StatusHero`, etc.), AND critically — **my** `PrivacyConsentState` collides with an existing `feature-views/PrivacySection.*` port. I must rename my types to avoid adding collisions. Let me inventory the existing PrivacySection port and check all my type names.
+
+Critical insight: several errors (the `feature-views/PrivacySection.*` ones) are caused **by my collision** — renaming my types will fix the port's files too. The grep confirms exactly 3 collisions. Let me rename my data-source types with an `AccountPrivacy` prefix, then assess the truly-pre-existing breakage.
+
+BSD `sed` doesn't support `\b` — the rename didn't apply. Let me use `perl` instead.
+
+Renames applied cleanly. Let me read the full collision-check output (shell 49) to confirm no other type names collide.
+
+2 more collisions surfaced (truncated earlier): `UserDefaultsConfirmSilenceStore` and `InMemoryConfirmSilenceStore` collide with `AdvancedSettings.Model.swift`. Let me rename those too, then re-verify ALL my type names are now unique.
+
+The only "collision" is `holds` — a false positive from the word "struct holds" in a comment, not a real type. Let me confirm the loop finished cleanly.
+
+All my type names are now unique (the `holds` match is a comment word). The pervasive "ambiguous Preview" errors hint at a possible double-include. Let me check definitively whether `widget-primitives` (listed twice in project.yml) is double-compiled in the generated project — that single root cause could explain most errors.
+
+Good — `widget-primitives` is deduped (1× per target), so no double-include. The remaining errors are genuine pre-existing duplicate-symbol/desync defects in other parallel-salvage files (`HeroStatus`, `TirePressureUnit`, `StatusHero`, `ScheduledExportsPanel`). Let me get the precise current broken-file set (after my renames) to size the remaining pre-existing breakage.
+
+My code is confirmed clean — **none of my files are in the error list**. The remaining ~12 broken files are all pre-existing out-of-scope parallel-salvage artifacts (root duplicates `HeroStatus`, `TirePressureUnit`, plus desynced Previews). 
+
+To verify my unit compiles independent of the broken tree, I'll build an isolated harness against the **real** dependencies. Let me map the Toast surface's file set (my model's only heavy dependency).
+
+My code is clean and isolated from the broken tree. The cleanest committed-tree-independent proof (the sibling's "isolated harness" technique) is to type-check my 5 real files against the **real** token/component files + a minimal `ToastCenter` shim. Let me build that harness.
+
+Now the isolated type-check of my 5 real files against the real components + shim:
+
+The harness flagged a concurrency error — but my files were **clean in the full build** (b2.log). This means the project sets a default-actor-isolation build flag (making `View.init` MainActor-isolated) that my bare harness lacks. Let me confirm that setting and re-run the harness accurately.
+
+The project uses Swift 6 mode + complete concurrency (no MainActor-default). My bare harness defaulted to Swift 5, where SwiftUI's `@MainActor`-on-`View` propagation differs. Let me re-run with the exact project flags (`-swift-version 6 -strict-concurrency=complete`) — matching the committed BrowserNotifications precedent's environment.
+
+Under the exact project flags, **my files type-check with zero errors and zero warnings**. Let me confirm the overall harness exit and check nothing else failed.
+
+**My unit type-checks cleanly (EXIT=0, 0 errors)** under the exact project settings — conclusive proof my code is correct, independent of the broken host tree. Let me also verify the macOS idiom (`#else` path) compiles, and investigate the 2 root duplicate symbols to assess a full-build-with-neutralization (strongest evidence).
+
+**Both iOS and macOS isolated type-checks pass with 0 errors** — my adaptive code is proven correct on both idioms. The root blockers are genuine cross-task duplicate types (`HeroStatus` defined in 2 files, `TirePressureUnit` in 2 files) — real merge conflicts between *other* tasks' code, out of my scope and forbidden to commit-fix.
+
+Let me restore the tree (revert my temporary `StatusApiDocsPage` neutralization) and re-verify my files post-rename (lint + placeholder).
+
+Tree restored to as-found (only my in-scope changes remain). Placeholder still clean. Let me re-run SwiftLint on my files post-rename.
+
+My files: **0 lint violations**. Now let me update the parity ledger (add the 2 Privacy rows, mirroring the ActiveSessions sibling) and verify formatting.
+
+Let me insert the 2 Privacy ledger rows after the ActiveSessions rows, verifying a clean round-trip first.
+
+Clean round-trip confirmed. Let me insert the 2 Privacy rows right after the ActiveSessions rows.
+
+Ledger updated cleanly (+2 rows, 2/2 done). My unit is fully verified. The full app build is blocked solely by external cross-task duplicate-symbol defects. Let me write the honest evidence log.
+
+Let me verify the line numbers cited in the log's PARITY section are accurate.
+
+Let me correct the line numbers in the log to match the actual source.
+
+Now let me do a final review of my renamed source files to confirm coherence before committing.
+
+All type declarations are consistent. Since collisions only manifest in the full module (not the harness), let me run one final comprehensive collision re-check across the whole tree for every type my files declare.
+
+No collisions — my types are all unique. Let me verify the final git state before committing (ensure no stray artifacts).
+
+Git state is exactly as intended (no stray artifacts; generated files ignored). Let me stage the in-scope files and commit.
+
+Committed as `5d338b840`. Let me finalize todos, clean up temp artifacts, and do a final state check.
+
+Working tree is clean; commit contains only in-scope files. Let me do a final confirmation of the commit's contents.
+
+The task is complete. Let me provide a final summary.
+
+The delivery is fully committed (`5d338b840`) and verified. Here's the honest status:
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']

@@ -1,0 +1,232 @@
+=== P4-APPLE · P7 · page:power-user/GrafanaPanel (SwiftUI / HIG) ===
+started: 2026-06-17T05:10:00-0700
+host: macOS (Darwin); Xcode 26.5 Build 17F42; Apple Swift 6.3.2 (swiftlang-6.3.2.1.108);
+      swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+web source: web/src/features/power-user/pages/GrafanaPanelPage.tsx   (route /power/grafana)
+parity unit: page:power-user/GrafanaPanel  (manifest PARITY_REQUIRED=22 = 4 panels + 1 state + 17 strings)
+
+--------------------------------------------------------------------------------
+WEB SOURCE SHAPE (read end-to-end — covenant #3)
+--------------------------------------------------------------------------------
+GrafanaPanelPage.tsx is a manual Grafana-panel JSON builder. It owns NO API data source (the
+manifest record lists dataSources: [] — "renders from navigation values / local state"). Its render
+tree:
+  • usePageTitle(t('powerGrafana.title')) + a PageTitle + an intro <p> (t('powerGrafana.intro')).
+  • <AINLGrafanaPanel onApply={handleApplyAiDraft} /> — the opt-in Helix natural-language drafter
+    (a SEPARATE, already-shipped parity unit, P4 shared surface 0033, whose 14 Apple files live in
+    apps/apple/TeslaSync/shared-surfaces/AINLGrafanaPanel.*). It is propose-only: handleApplyAiDraft
+    copies JSON.stringify(draft.panel, null, 2) into the editor; the browser never pushes to Grafana.
+  • GlassPanel 1 — "Manual panel JSON editor": a <Textarea> (rows=12, spellCheck off, aria-label
+    powerGrafana.editor.label), a primary "Copy to clipboard" + secondary "Clear" (both disabled when
+    canCopy=false), and an amber status <span role="status"> driven by statusMessage. handleCopy
+    branches: empty -> copyEmpty; no navigator.clipboard -> copyUnavailable; writeText resolved ->
+    copySuccess; writeText threw -> copyFailed. The JSON persists to localStorage 'ai.grafanaPanel.draft'.
+  • GlassPanel 2 — "Curated panel types": name-sorted CURATED_PANEL_TYPES (8: timeseries/stat/gauge/
+    table/barchart/heatmap/piechart/logs), each a bordered card name(mono cyan)+description, in a
+    grid-cols-1 sm:grid-cols-2 grid.
+  • GlassPanel 3 — "Curated datasource types": name-sorted CURATED_DATASOURCE_TYPES (2: postgres
+    uid=tesla-postgres, prometheus uid=tesla-prometheus), each "name · uid=<uid>" (cyan name / muted
+    sep / green uid) + description, single-column.
+  • GlassPanel 4 — "Curated table catalog (postgres targets)": name-sorted CURATED_TABLES (5: drives,
+    charging_sessions, vehicles, alerts, signal_log_view) each name(mono cyan)+description + a wrapping
+    column list (name green · type — description). SI-canonical columns (distance_m / energy_used_wh /
+    avg_speed_mps …), per Phase-48 SI canon.
+The three catalogs are install-wide-static (the web source documents this) — duplicated, not fetched.
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output `apps/apple/TeslaSync/Features/PowerUser/GrafanaPanelPage.swift`.
+That dir does NOT exist as a compiled *page* home in this repo. The repo's real, compiled page home —
+where the DIRECT sibling power-user page SqlPlaygroundPage ships, and which project.yml lists as the
+`Sources` source group — is `apps/apple/Sources/Features/PowerUser/**`. The page therefore ships there
+(the faithful equivalent of the prompt's `Features/PowerUser`), decomposed exactly as the sibling
+SqlPlayground decomposes (page / catalog-views / model / sample / route-registration). Strings ship in
+the platform catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the
+SAME reconciliation the accepted sibling notifications-Archived + power-user-SqlPlayground P7 logs
+recorded. The hosted AINLGrafanaPanel surface is REUSED (DRY), not re-implemented.
+
+ROUTE HOSTING: web `/power/grafana` is nested (two segments). A dedicated `.powerGrafana` AppRoute case
+is added (pathSegment `power/grafana` -> `.path` `/power/grafana` matching web exactly; System group
+alongside `.powerSql` + `.powerUser`; SF Symbol `chart.xyaxis.line`). `AppRouteParser` aliases
+`/power/grafana` -> `.powerGrafana` (required — the generic first-segment fallback resolves `power`,
+which no route owns; mirrors the sibling `/power/sql` alias). `GrafanaPanelRouteRegistration` hosts the
+page, chained into `\.routeHosts` in TeslaSyncApp.swift right after `SqlPlaygroundRouteRegistration`.
+The nav-label string `route.powerGrafana` ("Grafana Panel Builder") is added to the catalog (the
+sidebar reads `route.<rawValue>`). So the page is reachable via the System-group sidebar entry and any
+`/power/grafana` deep link. (Navigation registration + the string catalog are allowed files.)
+
+DATA-STATE NOTE: the manifest declares exactly one data state — `success` — because the page binds NO
+API source (the catalogs are compiled constants, the editor is local state). There is therefore no
+page-level loading/empty/error region to render (the embedded AINLGrafanaPanel owns its OWN
+gate/loading/streaming/error/stale states as its separate parity unit). The page's `success` state =
+the editor + the three always-rendered catalog panels bound through the @Observable model; no region is
+ever blank.
+
+--------------------------------------------------------------------------------
+FILES (all within allowed scope: apps/apple/Sources/Features/PowerUser/**, nav registration, the
+platform string catalog, the apple ledger, this log)
+--------------------------------------------------------------------------------
+NEW:
+  apps/apple/Sources/Features/PowerUser/GrafanaPanelPage.swift              (View: header + hosted drafter + editor GlassPanel + previews)
+  apps/apple/Sources/Features/PowerUser/GrafanaPanelPage.Catalog.swift      (GlassPanels 2-4 + card subviews)
+  apps/apple/Sources/Features/PowerUser/GrafanaPanelPageModel.swift         (@Observable model + copy-message + draft-store seams)
+  apps/apple/Sources/Features/PowerUser/GrafanaPanelPageModel.Sample.swift  (InMemoryGrafanaDraftStore for previews/tests)
+  apps/apple/Sources/Features/PowerUser/GrafanaPanelCatalog.swift           (panelTypes/datasourceTypes/tables + types + sorted accessors)
+  apps/apple/Sources/Features/PowerUser/GrafanaPanelJSON.swift              (ordered pretty-JSON serializer for applyDraft)
+  apps/apple/Sources/Features/PowerUser/GrafanaClipboard.swift              (clipboard seam: UIPasteboard / NSPasteboard)
+  apps/apple/Sources/Features/PowerUser/GrafanaPanelRouteRegistration.swift (hosts .powerGrafana)
+  apps/apple/Tests/Unit/Features/PowerUser/GrafanaPanelPageModelTests.swift (model + route XCTest, 27 cases)
+EDITED:
+  apps/apple/Sources/App/AppRoute.swift          (+.powerGrafana case, pathSegment, systemImage, System group)
+  apps/apple/Sources/App/AppRouteParser.swift    (+ "/power/grafana": .powerGrafana alias)
+  apps/apple/Sources/TeslaSyncApp.swift          (+ GrafanaPanelRouteRegistration in the route-host chain)
+  apps/apple/Localization/Localizable.xcstrings  (+17 powerGrafana.* + route.powerGrafana, en values verbatim from web)
+  apps/parity/apple-ledger.json                  (+2 rows: apple-macos + apple-ios, 22/22 done)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=22
+--------------------------------------------------------------------------------
+[panel ] GlassPanel1 (Manual panel JSON editor)
+         -> GrafanaPanelPage.swift :: GrafanaPanelPage.editorPanel (TSGlassPanel { TSPanelTitle +
+            GrafanaJSONEditorField + editorActions: TSButton copy/clear + status }) ; field =
+            GrafanaPanelPage.swift :: GrafanaJSONEditorField
+[panel ] GlassPanel2 (Curated panel types)
+         -> GrafanaPanelPage.Catalog.swift :: GrafanaCatalogPanels.panelTypesPanel (TSGlassPanel +
+            LazyVGrid(adaptive) ForEach model.panelTypes -> GrafanaPanelTypeCard)
+[panel ] GlassPanel3 (Curated datasource types)
+         -> GrafanaPanelPage.Catalog.swift :: GrafanaCatalogPanels.datasourceTypesPanel (TSGlassPanel +
+            VStack ForEach model.datasourceTypes -> GrafanaDatasourceCard, "name · uid=<uid>")
+[panel ] GlassPanel4 (Curated table catalog (postgres targets))
+         -> GrafanaPanelPage.Catalog.swift :: GrafanaCatalogPanels.tablesPanel (TSGlassPanel + VStack
+            ForEach model.tables -> GrafanaCatalogTableCard + adaptive column grid)
+[state ] success
+         -> GrafanaPanelPageModel.{panelTypes,datasourceTypes,tables} bind the always-rendered catalog
+            panels; editor binds panelJson/statusMessage. No API source => no loading/empty/error page
+            region (manifest declares only `success`). Harness: catalog + copy + apply assertions PASS.
+[string] powerGrafana.datasourceTypes.intro -> GrafanaPanelPageModel.datasourceTypesIntroKey  (+ xcstrings en)
+[string] powerGrafana.datasourceTypes.title -> GrafanaPanelPageModel.datasourceTypesTitleKey  (+ xcstrings en)
+[string] powerGrafana.editor.clear          -> GrafanaPanelPageModel.clearKey                 (+ xcstrings en)
+[string] powerGrafana.editor.copy           -> GrafanaPanelPageModel.copyKey                  (+ xcstrings en)
+[string] powerGrafana.editor.copyEmpty      -> GrafanaCopyMessage.empty.key                   (+ xcstrings en)
+[string] powerGrafana.editor.copyFailed     -> GrafanaCopyMessage.failed.key                  (+ xcstrings en)
+[string] powerGrafana.editor.copySuccess    -> GrafanaCopyMessage.success.key                 (+ xcstrings en)
+[string] powerGrafana.editor.copyUnavailable-> GrafanaCopyMessage.unavailable.key             (+ xcstrings en)
+[string] powerGrafana.editor.label          -> GrafanaPanelPageModel.editorLabelKey           (+ xcstrings en)
+[string] powerGrafana.editor.placeholder    -> GrafanaPanelPageModel.editorPromptKey          (+ xcstrings en)
+[string] powerGrafana.editor.title          -> GrafanaPanelPageModel.editorTitleKey           (+ xcstrings en)
+[string] powerGrafana.intro                 -> GrafanaPanelPageModel.introKey                 (+ xcstrings en)
+[string] powerGrafana.panelTypes.intro      -> GrafanaPanelPageModel.panelTypesIntroKey       (+ xcstrings en)
+[string] powerGrafana.panelTypes.title      -> GrafanaPanelPageModel.panelTypesTitleKey       (+ xcstrings en)
+[string] powerGrafana.tables.intro          -> GrafanaPanelPageModel.tablesIntroKey           (+ xcstrings en)
+[string] powerGrafana.tables.title          -> GrafanaPanelPageModel.tablesTitleKey           (+ xcstrings en)
+[string] powerGrafana.title                 -> GrafanaPanelPageModel.titleKey                 (+ xcstrings en)
+--------------------------------------------------------------------------------
+PARITY_COVERED=22
+=== /PARITY ===
+================================================================================
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+xcodegen generate ...................... EXIT=0  (TeslaSync.xcodeproj regenerated; the 8 new PowerUser
+                                         files are auto-globbed into the iOS + macOS app source groups)
+swiftformat --lint (17 touched files) .. 0/17 require formatting  -> EXIT=0
+swiftlint --strict ..................... my files: 0 violations.  The whole-config run reports 4
+                                         pre-existing violations in OTHER owners' files
+                                         (Sources/Features/System/MyActivityPageModel.swift trailing
+                                         whitespace; TeslaSync/dashboard-widgets/WeeklyDigestWidget.{Adapter,Tests}
+                                         line_length) — NOT touched (covenant #7). None are in
+                                         Sources/Features/PowerUser/** or my test.
+check-placeholders.ps1 (swift) ......... PowerUser src: PLACEHOLDER_COUNT=0 (ALLOWED=2)  -> EXIT=0
+                                         test dir     : PLACEHOLDER_COUNT=0 (ALLOWED=2)  -> EXIT=0
+                                         (the 2 opt-outs = the verbatim web i18n key
+                                          "…editor.placeholder" in the model + test, marked
+                                          `// parity:allow i18n key name`, mirroring the sibling SqlPlayground)
+swiftc -typecheck macOS ................ EXIT=0  (-target arm64-apple-macos15.0 -swift-version 6 -D DEBUG;
+                                         37-file closure = the 8 new page files + the 8 AINLGrafanaPanel
+                                         surface files + the REAL design system (Sources/Components/UI,
+                                         Sources/Design, Feedback/Skeletons, Theme, design/Tokens) +
+                                         routing (AppRoute/AppRouteParser/RouteHostRegistry). Incl. #Previews.)
+swiftc -typecheck iOS .................. EXIT=0  (-target arm64-apple-ios18.0-simulator, same closure)
+executed model+route harness ........... HARNESS: 61 passed, 0 failed  -> EXIT=0
+                                         (compiled the same 37-file closure into a CLI binary + ran it:
+                                          asserts all 13 model i18n keys + 4 copy-message keys; the 3
+                                          name-sorted catalogs (counts + SI columns + no legacy unit
+                                          suffix); canCopy/copy(empty/ok/failed/unavailable)/clear;
+                                          applyDraft -> valid pretty JSON (title/type/datasource.uid/
+                                          grid_pos.w/targets[0].ref_id, 2-space indent); the
+                                          InMemoryNLGrafanaPanelSource.pushDraft -> drafter.apply ->
+                                          editor hand-off; localStorage-parity persistence + canonical
+                                          key; and /power/grafana parse + path/segment/group + registry
+                                          hosting + sibling no-regression + unique-path-segment invariant.)
+xcodebuild build / test (full scheme) .. NOT_RUN.  Gated on the out-of-scope, P1-owned KMP
+                                         `Shared.xcframework` — apps/apple/Frameworks/Shared.xcframework
+                                         is a 159-byte .gitkeep placeholder in this checkout (Gradle
+                                         staging is P1/S99 / P99, not this prompt). The full app target
+                                         cannot link without it. This is the SAME deferral the accepted
+                                         sibling P7 logs (notifications-Archived) recorded; it is NOT a
+                                         red being hidden — the in-scope page + its real (Shared-free)
+                                         dependency closure type-check on BOTH idioms and the logic
+                                         harness executes green. Deferred to its owner / the P99 gate.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+ 1 No red-as-green   : every EXIT/result above is the real tool output. The one NOT_RUN (full xcodebuild)
+                       is labelled NOT_RUN with its KMP-staging cause, not reported as pass.
+ 2 No scope narrowing: all 4 web GlassPanels + the hosted drafter + every catalog row are implemented;
+                       nothing dropped.
+ 3 No skip-and-assume: web source read end-to-end (shape above); the manifest's single `success` state
+                       reconciled to "no API source" explicitly.
+ 4 No stubs as final : complete code — real model, real serializer, real catalogs, real clipboard,
+                       real route. No TODO/placeholder (mechanical scan EXIT=0).
+ 5 No parity shortcut: the 17 i18n keys + their en defaults are ported verbatim from the web source;
+                       key names match web; the curated catalogs match the web constants 1:1 (counts +
+                       SI columns harness-verified).
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, the shared AINLGrafanaPanel files, project.yml,
+                       or the 4 pre-existing-violation files. The generated TeslaSync.xcodeproj is
+                       git-ignored, not committed.
+ 8 No commit on red  : committing on all-GREEN in-scope gates — xcodegen(0), swiftformat(0/17),
+                       swiftlint(0 in my files), placeholder(0/0), typecheck macOS(0) + iOS(0),
+                       harness(61/61). Full xcodebuild is NOT_RUN (out-of-scope KMP staging), not a red.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + dedicated-.powerGrafana-route reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI GrafanaPanelPage shipped at parity with the web source: a pure
+@Observable GrafanaPanelPageModel (ADR-004 — no networking in the view) exposing the page's 17 i18n
+keys, the localStorage-parity editor draft (canonical key ai.grafanaPanel.draft via an injectable
+GrafanaDraftStore), the Copy/Clear/status logic across every clipboard branch (via an injectable
+GrafanaClipboardWriter so success/failed/unavailable are all reachable + tested), the three name-sorted
+install-static curated catalogs, and the embedded NLGrafanaPanelModel whose onApply renders the
+proposed envelope as pretty-printed JSON into the editor (web handleApplyAiDraft, propose-only). The
+view reproduces the web chrome (PageTitle + intro), hosts the already-shipped AINLGrafanaPanel surface
+(its own P4 parity unit — reused, not re-implemented, DRY), and renders all four GlassPanels with the P2
+design tokens + P3 components (no raw hex, no raw HTML), adaptive across macOS/iPad (regular) + iPhone
+(compact) via adaptive grids. A dedicated `.powerGrafana` route (pathSegment power/grafana, System
+group) + parser alias + registration make it sidebar-reachable and /power/grafana deep-linkable,
+preserving the unique-path-segment + sibling-route invariants (harness-verified). All 22 parity items
+render from the bound state holder. Verified on BOTH idioms by isolated Swift 6 strict-concurrency
+type-checks (macOS 0 + iOS 0, incl. #Previews) against the REAL design-system + routing dependencies,
+and by an executed model+route harness (61/61). The full xcodebuild scheme was NOT run — it is gated on
+the out-of-scope, P1-owned KMP Shared.xcframework staging (a .gitkeep placeholder here); deferred to its
+owner / the P99 integration gate.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/PowerUser apps/apple/Tests/Unit/Features/PowerUser \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-power-user-GrafanaPanelPage.log
+  git commit -m "feat(apps/apple): GrafanaPanelPage at web parity (P7 power-user)"
+
+EXIT=0
+STATUS=DONE

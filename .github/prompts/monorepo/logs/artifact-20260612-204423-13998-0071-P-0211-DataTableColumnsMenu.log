@@ -1,0 +1,120 @@
+=== P4 Shared surface 0211 DataTableColumnsMenu (Apple) ===
+Web source: web/src/components/ui/DataTableColumnsMenu.tsx
+Native out: apps/apple/TeslaSync/shared-surfaces/DataTableColumnsMenu.*
+Date: 2026-06-13
+
+------------------------------------------------------------------
+RUNNER CAPABILITY - PRESENT (not a capability block)
+------------------------------------------------------------------
+macOS 26.5.1 | Xcode 26.5 (17F42) | Swift 6.3.2 | arm64
+swiftlint, swiftformat, pwsh 7, xcodegen, Java 17 (OpenJDK) - all present
+iOS Simulator "iPhone 16" present (booted) | Kotlin/Native konan 2.4.0 present
+SwiftUI + Swift Charts + MapKit available for iOS 18 / macOS 15. NOT BLOCKED on capability.
+
+------------------------------------------------------------------
+KMP shared core (required by both app targets)
+------------------------------------------------------------------
+gradlew :core:assembleSharedXCFramework  ->  BUILD SUCCESSFUL in 11m52s
+Shared.xcframework staged to apps/apple/Frameworks/Shared.xcframework  (release + debug)
+
+------------------------------------------------------------------
+SURFACE DELIVERABLE - 8 files, wired into the project
+------------------------------------------------------------------
+DataTableColumnsMenu.Adapter.swift       (slug, Column, Row, Layout metrics, pure Projector)
+DataTableColumnsMenu.Model.swift         (i18n facade P1/S10, telemetry P1/S11, @Observable Controller P1/S8)
+DataTableColumnsMenu.swift               (public view + .popover + default "Columns" trigger)
+DataTableColumnsMenu.Views.swift         (Panel, Header[heading+Show all], RowView, ToggleStyle, EmptyView)
+DataTableColumnsMenu.Previews.swift      (DEBUG: populated / required-pinned / last-visible / empty / interactive)
+DataTableColumnsMenu.strings             (P1/S10 catalog: menu/button/heading/showAll + native empty)
+DataTableColumnsMenu.Tests.swift         (controller + view-composition + strings)
+DataTableColumnsMenu.AdapterTests.swift  (pure Projector + value types + layout metrics)
+xcodegen generate -> TeslaSync.xcodeproj OK; 48 pbxproj refs to the surface (iOS + macOS app + test targets).
+Unique type prefix DataTableColumnsMenu* - 0 redeclaration vs singular sibling DataTableColumnMenu* (grep-verified).
+
+Parity note (mirrors accepted sibling 0210): the web source is a CONTROLLED, storage-agnostic
+PRESENTATIONAL primitive (props columns/visibleKeys/onChange; only data source is useTranslation;
+no fetch / React-Query / Promise). Real branches reproduced: closed(trigger) | open-with-columns
+| empty-columns(friendly empty body). loading/error/stale/offline do not exist in the source (nothing
+to fetch, fail, age, or disconnect) and were NOT fabricated. i18n keys all routed via the facade;
+a11y labels on every interactive element (trigger, Show all, each checkbox); view.opened telemetry once.
+
+------------------------------------------------------------------
+TRUSTWORTHY VERIFICATION OF THE SURFACE (isolated; independent of the shared build service)
+------------------------------------------------------------------
+[PASS] swiftc -typecheck -swift-version 6  Adapter.swift + Model.swift (Foundation core)            EXIT 0
+[PASS] swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator
+         Tokens.swift + TSMaterial.swift + Adapter + Model + swift + Views + Previews
+         (the surface's COMPLETE dependency surface: Foundation, SwiftUI, Color.TS, Font.TS,
+          TSRadius, TSMaterial, TSSpacing, tsGlassPanel)                                             EXIT 0
+[PASS] swiftlint --strict  (the 7 surface .swift files)            Found 0 violations, 0 serious
+[PASS] swiftformat --lint  (the 7 surface .swift files)           0/7 require formatting
+[PASS] check-placeholders.ps1 (all 8 surface files)               PLACEHOLDER_EXIT=0  (no TODO/stub/mock/placeholder/Lorem)
+
+------------------------------------------------------------------
+WHOLE-APP GATE - BLOCKED by the shared/contended build environment (NOT by this surface)
+------------------------------------------------------------------
+This machine is running 5+ parallel agents (slots 69/71/72/73/74), each building an
+identically-named "TeslaSync" project, through the single per-user Xcode XCBBuildService.
+
+iOS  (xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test):  IOS_EXIT=65 - UNTRUSTWORTHY / BLOCKED
+  Cause: the single shared XCBBuildService conflates the concurrent identically-named "TeslaSync"
+  builds. Proof: my invocation with an ISOLATED -derivedDataPath /tmp/dd-slot71-ios (+ isolated
+  CLANG_MODULE_CACHE_PATH + clonedSourcePackagesDir) compiled 0 slot-71 sources and 5255+ slot-72
+  sources; the first run logged 13885 slot-72 SwiftCompile lines; `ps` shows exactly 1 XCBBuildService
+  serving all slots. The exit code reflects the conflated aggregate, not slot-71's code. My own pbxproj
+  contains 0 absolute slot references (relative paths only) - the cross-slot bleed is build-service side.
+  Additionally DEVELOPMENT_TEAM="" + no development signing certificate is available in this headless
+  environment (see macOS signing errors below), which blocks the hosted `test` action.
+
+macOS (xcodebuild -scheme TeslaSync-macOS build):  MAC_EXIT=65 - surface COMPILES; failure is environmental
+  The macOS target name differs ("TeslaSync-macOS"), so it does NOT conflate (logs reference ONLY slot-71).
+  With CODE_SIGNING_ALLOWED=NO (no dev cert present), the whole-app compile ran un-conflated and:
+    * compiled THIS surface's app-target sources in the real module - observed in SwiftCompile context:
+        DataTableColumnsMenu.Adapter.swift, .Model.swift, .Views.swift, .swift, .Previews.swift
+    * progressed through 2374 macOS compile steps to the whole-app Swift module emit with 0 error: lines
+    * failed ONLY on a non-deterministic resource-kill of an UNRELATED pre-existing batch
+        (AnomalyInlineRow...AppearanceSettings - other surfaces' files) with NO source diagnostic,
+        under load average ~90 from the 5+ concurrent slot builds (swap thrashing).
+  => This surface compiles cleanly inside the real macOS app module; the build failure is concurrent-slot
+     resource saturation, reproducibly outside this surface's files.
+  (Without signing disabled, the canonical build also hits: "TeslaSync-macOS / TeslaSyncWidgets-macOS has
+   entitlements that require signing with a development certificate" - no cert in this environment.)
+
+swiftlint --strict (repo-wide, gate form):  LINT_EXIT=2
+  3 violations, ALL pre-existing in another surface's file, OUTSIDE this prompt's allowed scope:
+    TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52-54  identifier_name (a/b/c)
+  This surface's files: 0 violations.
+
+swiftformat --lint apps/apple (repo-wide, gate form):  FORMAT_EXIT=1
+  1 file, pre-existing in another surface, OUTSIDE this prompt's allowed scope:
+    TeslaSync/feature-views/RecentDrivesSection.Previews.swift  (redundantType)
+  This surface's files: 0 require formatting.
+
+check-placeholders (surface scope):  PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------
+The DataTableColumnsMenu surface is fully implemented (no stubs/skeletons), parity-faithful to the
+web source, and passes EVERY trustworthy, isolated verification: Swift 6 typecheck of its complete
+dependency surface for iOS, compilation inside the real macOS whole-app module, swiftlint --strict,
+swiftformat --lint, and the placeholder gate - all 0 on this surface's files.
+
+The canonical whole-app `xcodebuild build test` gate cannot be driven to a trustworthy EXIT=0 on this
+host because (1) the single per-user XCBBuildService conflates 5+ concurrent identically-named
+"TeslaSync" builds (iOS) - making both red and green results untrustworthy for this slot, (2) the
+machine is saturated (load avg ~90) by those concurrent builds, non-deterministically killing unrelated
+compile batches (macOS), and (3) no development signing certificate is available for the hosted test
+action. These are platform/infrastructure conditions external to this surface; the per-prompt CI model
+("On CI this runs on a macos-latest runner", one build per runner) is not satisfied by the shared local
+parallel-execution host. Per the Honesty Covenant (1: no red-as-green) the conflated/contended build
+results are reported as BLOCKED-with-evidence rather than claimed as a pass.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=1
+PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

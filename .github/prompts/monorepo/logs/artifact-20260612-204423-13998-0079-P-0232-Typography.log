@@ -1,0 +1,102 @@
+=== P4 Shared surface 0232 Typography (Apple) ===
+Surface: components/ui/Typography.tsx  →  apps/apple/TeslaSync/shared-surfaces/Typography.*
+Host: macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + pwsh present.
+Date: 2026-06-13
+
+--------------------------------------------------------------------------------
+ARTIFACT SUMMARY (10 Swift files + 1 strings table, all < 400-line SwiftLint budget)
+--------------------------------------------------------------------------------
+  Typography.Adapter.swift      235   surface slug, i18n seam, axis enums (Role/Size/Weight/Color/Transform/HeadingLevel)
+  Typography.Projection.swift   188   TypographyStyle + pure TypographyProjector (role table, granular path, variant-wins, level->role)
+  Typography.Model.swift        156   TypographyStrings (P1/S10), TypographyTelemetry + OSLog (P1/S11), TypographyModel @Observable (P1/S8)
+  Typography.Surface.swift      133   public surface (specimen gallery) + TypographyHeading + TypographyText
+  Typography.Components.swift   163   11 convenience exports (PageTitle..Code) = web 1:1 role helpers
+  Typography.Views.swift        166   style->token mapping (Font.TS/Color.TS), styled-text leaf, section, empty leaf
+  Typography.Specimens.swift    115   role/scale/weight/color specimen rows (the rendered surface)
+  Typography.Previews.swift      82   #Preview per real branch (surface, empty, levels, variants, metrics, granular)
+  Typography.Tests.swift        170   model + mappings + view-composition + strings tests
+  Typography.AdapterTests.swift 211   pure-core tests (sizes, weights, colors, heading maps, role styles, resolve, catalog, equality)
+  Typography.strings             --   native specimen-gallery + empty-leaf keys (web source is anonymous; no t() keys to mirror)
+  TOTAL Swift: 1619 lines.
+
+Parity notes:
+  * Reproduces the web typography token system (web/src/lib/tokens.ts): 13 composed roles, 8-step scale,
+    4 weights, 6 granular colors (+ role-internal danger), mono family, Heading levels page/section/panel/sub.
+  * Pure presentational primitive => NO loading/error/stale/offline (no fetch/clock/connectivity). Reproduces
+    only the source's REAL branches (every role, the Heading levels, variant-vs-granular, mono, + native
+    "never a blank box" empty leaf) — same approach as Accordion(0203)/StaggerItem(0194)/Delta(0081).
+  * No Tailwind ports: roles map to Font.TS/Color.TS/TSTypeMetrics design tokens (P1/S9). i18n via P1/S10
+    facade. view.opened (P1/S11) fired once per instance via injectable telemetry seam.
+  * a11y: Heading marked .isHeader + .accessibilityHeading(.h1..h4); Dynamic Type via Font.system(size:);
+    specimens combined into single VoiceOver elements; ErrorText marked static text.
+
+--------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (all GREEN)
+--------------------------------------------------------------------------------
+swiftformat --lint apps/apple/TeslaSync/shared-surfaces/Typography.*.swift
+  -> 0/10 files require formatting.                                            FORMAT_EXIT=0
+
+swiftlint --strict --config apps/apple/.swiftlint.yml  (10 Typography Swift files)
+  -> Done linting! Found 0 violations, 0 serious in 10 files.                  LINT_EXIT=0
+
+apps/tools/check-placeholders.ps1 -Language swift  (10 Typography Swift files)
+  -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0.                              PLACEHOLDER_EXIT=0
+
+Isolated Swift 6 strict-concurrency compile of ALL production sources + the design tokens
+(swiftc -swift-version 6 -enable-testing -emit-module -module-name TeslaSync
+  apps/design/generated/apple/Tokens.swift + the 8 non-test Typography sources)
+  -> module + library emitted, no diagnostics.                                ISOLATED_SWIFT6_BUILD_EXIT=0
+  (Test files type-check against this module via @testable; the only unresolved symbols are XCTest's
+   function-like C assertion macros, which raw swiftc cannot import — not a defect in the test code.
+   Font.Weight and AccessibilityHeadingLevel confirmed Equatable, so the XCTest assertions compile under
+   xcodebuild.)
+
+--------------------------------------------------------------------------------
+GATE STEPS REQUIRING THE FULL APP BUILD (BLOCKED — pre-existing toolchain crash, NOT this surface)
+--------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  Preconditions satisfied in this environment:
+    - xcodegen generate            -> TeslaSync.xcodeproj created, 72 Typography file refs.   OK
+    - Shared.xcframework (KMP/Gradle scheme pre-action, Kotlin/Native) -> BUILD SUCCESSFUL, staged.   OK
+    - iPhone 16 simulator present (booted).                                                   OK
+  Result: ** BUILD FAILED ** — swift-frontend ABORTED (report_fatal_error) during IRGen.
+
+  Crash (identical signature both runs):
+    4. While evaluating request IRGenRequest(IR Generation for file
+       ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+    5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+       = reabstraction thunk helper from @escaping @isolated(any) @callee_guaranteed @Sendable
+         (Bool, Actor?) -> () to ...(Bool) -> ()     [known Swift 6.x @MainActor-closure IRGen bug]
+
+  PROOF the crash is pre-existing and independent of the Typography surface:
+    - AppearanceSettings.Controls.swift is committed/pre-existing; `git status` shows it untouched.
+    - My change set is EXCLUSIVELY the 11 Typography.* files (all untracked/new).
+    - CONTROL BUILD: moved all Typography.* files OUT, `xcodegen generate`, rebuilt the SAME scheme:
+        ** BUILD FAILED ** at the EXACT same file + SIL function
+        (IR Generation for file ".../AppearanceSettings.Controls.swift",
+         "@$sSbScA_pSgIeAghyg_SbIeAghn_TR").                                   CONTROL_EXIT=65
+      => The failure occurs with AND without this surface; it is a toolchain (IRGen) crash on
+         pre-existing code in the shared app target, which no in-scope (Typography.*) edit can fix.
+
+  This is precisely the class of deferred artifact verification documented in
+  apps/macos-pending-verifications.md (full Xcode/KMP build deferred to the ADR-012 macos-latest CI
+  matrix while all host-runnable gates are green). The host-runnable gates above are all GREEN and the
+  surface compiles under Swift 6 strict concurrency in isolation.
+
+  IOS_EXIT=BLOCKED (pre-existing IRGen crash on AppearanceSettings.Controls.swift — proven via control build)
+  MAC_EXIT=BLOCKED (same app target / same toolchain / same pre-existing file)
+
+--------------------------------------------------------------------------------
+DECISION
+--------------------------------------------------------------------------------
+The Typography surface is complete and production-polished: full web parity (every role, the granular
+axes, the Heading levels, the empty leaf), shared P1/S8 state-holder binding, P1/S10 i18n, P1/S11
+view.opened telemetry, full a11y, and adapter + view + strings tests. Every gate this host can run is
+green (format 0, lint 0, placeholders 0, isolated Swift 6 build 0). The only non-green steps are the
+full-app xcodebuild build/test, which abort inside swift-frontend IRGen on a PRE-EXISTING, out-of-scope
+file (AppearanceSettings.Controls.swift) — proven by a control build that fails identically without any
+Typography file present. Honesty Covenant rule 1 (no red-as-green): the xcodebuild steps are reported
+BLOCKED, not DONE.
+
+EXIT=1
+STATUS=BLOCKED

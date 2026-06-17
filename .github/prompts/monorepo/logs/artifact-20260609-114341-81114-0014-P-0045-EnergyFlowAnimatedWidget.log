@@ -1,0 +1,117 @@
+=== P4 Dashboard widget 0045 EnergyFlowAnimatedWidget (Apple) ===
+Surface : apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.*
+Web spec: web/src/features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx
+Registry: energy-flow-animated · category=energy · default 2x4 · min 2x4 · max 3x40
+Runner  : macOS (Darwin), Xcode 26.5, Swift 6.3.2, swiftlint+swiftformat present,
+          iPhone 16 simulator available, JDK17+Gradle (KMP) present.
+          Platform IS capable (SwiftUI + Swift Charts + MapKit, iOS18/macOS15) — NOT a capability block.
+
+------------------------------------------------------------------------------
+A. SURFACE-SCOPED GATES (this deliverable) — ALL GREEN
+------------------------------------------------------------------------------
+A1 swiftformat --lint  (EnergyFlowAnimatedWidget.*.swift, 9 files)
+   -> 0/9 files require formatting                                  EXIT=0
+A2 swiftlint lint --strict  (EnergyFlowAnimatedWidget.*.swift, 9 files)
+   -> Found 0 violations, 0 serious in 9 files                      EXIT=0
+A3 check-placeholders.ps1 -Path .../EnergyFlowAnimatedWidget
+   -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                    EXIT=0
+A4 xcodegen generate
+   -> Created TeslaSync.xcodeproj; surface referenced (60 member refs across app+test targets)
+A5 KMP Shared.xcframework (scheme pre-action: build-shared-xcframework.sh)
+   -> BUILD SUCCESSFUL in 8m 57s; Shared.xcframework staged to apps/apple/Frameworks/
+A6 iOS app target compile (production code, *Tests.swift excluded from app target)
+   -> TeslaSync module emitted; 0 errors in any EnergyFlowAnimatedWidget source;
+      TeslaSync.app produced under /tmp/dd-ios/Build/Products/Debug-iphonesimulator/
+A7 Surface unit tests — Swift 6 strict-concurrency, run against the REAL surface code
+   (Models/Builder/Model/Palette/Diagram/CompactView/View) in an isolated SwiftPM
+   target (swift-tools 6.0, .macOS(.v15), strict concurrency complete; only the
+   inert TSSkeleton chrome was shimmed):
+   -> Test Suite 'All tests' passed. Executed 27 tests, with 0 failures (0 unexpected).
+        EnergyFlowAnimatedWidgetBuilderTests        11 passed
+        EnergyFlowAnimatedWidgetModelTests          10 passed
+        EnergyFlowAnimatedWidgetRegistryTests        2 passed
+        EnergyFlowAnimatedWidgetAccessibilityTests   4 passed
+      Covers: adapter (cached DTO -> projection: 3 always-present nodes, 3 arrows,
+      +-0.5 kW dead-band, compact fallback, stroke/visibility math), state holder
+      (loading/empty/error/content phases, P1/S11 view.opened once, refresh, compact
+      threshold), registry parity (id/category/size envelope + clamp), and the
+      VoiceOver accessibility summary.
+
+Parity confirmed vs web source: 3 always-present nodes battery(left)/drive(right,
+Drive|Regen|Idle)/charger(top); 3 arrows battery->drive (cyan, consuming),
+drive->battery (emerald, regen), charger->battery (amber, charging); ±0.5 kW
+dead-band; CompactView fallback; every state loading/empty/error/stale/offline/content
+rendered; bound through P1/S8 state holders (no HTTP in the view); P1/S10 i18n facade
+(no English literals — all 7 source keys + chrome keys in EnergyFlowAnimatedWidget.strings);
+P1/S11 view.opened telemetry with surface slug "EnergyFlowAnimatedWidget";
+accessibility (VoiceOver labels/value, Dynamic Type, Reduce-Motion-aware animation).
+
+------------------------------------------------------------------------------
+B. CANONICAL FULL-MONOREPO GATES — BLOCKED by PRE-EXISTING PREDECESSORS
+   (committed at slot HEAD, in files OUTSIDE this prompt's Allowed files;
+    reported per Honesty Covenant rules 1/7/8 — not masked, not bypassed)
+------------------------------------------------------------------------------
+B1 swiftformat --lint apps/apple
+   -> 0/2663 files require formatting                              FORMAT_EXIT=0
+B2 swiftlint --strict   (whole apps/apple tree)
+   -> Found 1 violation, 1 serious in 2659 files                  LINT_EXIT=2
+      PREDECESSOR (not this surface):
+        TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+        Opening Brace Spacing Violation (opening_brace)
+B3 xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   -> ** TEST FAILED **   (TeslaSyncTests bundle fails to COMPILE)  IOS_EXIT=65
+      Root cause: duplicate XCTestCase class names across UNRELATED committed sibling
+      widgets compiled into the one shared test bundle (invalid redeclaration):
+        SafetyFeaturesWidget.ModelTests.swift <-> SafetyHistoryWidget.ModelTests.swift
+          SafetyModelTests / SafetyRegistryTests / SafetyAccessibilityTests
+        ChargeStatusWidget.Tests.swift        <-> ChargeStatusLiveWidget.Tests.swift
+          ChargeStatus{Adapter,Phase,Model,Registry,Accessibility}Tests
+        DrivingCoachWidget.Tests.swift        <-> DrivingCoachSection.ModelTests.swift
+          DrivingCoachAccessibilityTests
+        MonthlyCostTable.Tests.swift          <-> MonthlyCostChart.Tests.swift
+          MonthlyCostAccessibilityTests
+      The EnergyFlowAnimatedWidget surface contributes ZERO errors. All colliding
+      files are committed predecessors outside the Allowed files
+      (apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.*).
+      VERIFIED (then reverted, to keep the commit in-scope): after temporarily
+      de-duplicating ONLY those predecessor class names, the bundle compiles and the
+      EnergyFlowAnimatedWidget tests run green in the xctest host. The surface tests
+      are independently proven via A7.
+B4 xcodebuild -scheme TeslaSync-macOS build test
+   -> ** BUILD FAILED **                                              MAC_EXIT=65
+      Runner-environment limit (NOT this surface): the macOS app targets require a
+      development signing certificate that is absent on this runner —
+        error: "TeslaSync-macOS" has entitlements that require signing with a
+               development certificate (hardened runtime; Signing & Capabilities).
+        error: "TeslaSyncWidgets-macOS" — same.
+      The build fails at code-signing before the test bundle is reached. (The macOS
+      test bundle also carries the identical predecessor *Tests.swift collisions of B3.)
+      Surface code is separately proven to compile for macOS via the A7 SwiftPM run
+      (target platform arm64-apple-macos, Swift 6 strict concurrency).
+
+------------------------------------------------------------------------------
+ASSESSMENT
+------------------------------------------------------------------------------
+The EnergyFlowAnimatedWidget surface is COMPLETE and fully verified (Section A):
+production code compiles (iOS + macOS) and links the KMP core, all 27 surface unit
+tests pass under Swift 6 strict concurrency, and swiftformat/swiftlint/placeholder
+are clean for the surface.
+
+The canonical full-monorepo gates (Section B) are RED for reasons OUTSIDE this
+surface and outside this prompt's Allowed files
+(= EnergyFlowAnimatedWidget.* + this log) and scope ("Delegation: FORBIDDEN"):
+  - iOS `build test`: the shared TeslaSyncTests bundle fails to COMPILE because of
+    pre-existing, committed PREDECESSOR duplicate test-class names across 4 unrelated
+    sibling widget/feature families (B3); the full `build test` also runs every other
+    surface's tests, so a green monorepo gate is not attainable from this surface's
+    allowed commit scope.
+  - whole-tree swiftlint --strict: 1 pre-existing PREDECESSOR violation (B2).
+  - macOS `build test`: blocked at code-signing by a missing development certificate
+    on this runner (B4) — a runner-environment limit.
+Per the Honesty Covenant (1 no red-as-green, 7 no predecessor bypass, 8 no commit on
+red, 9 no silent drift) these are reported with evidence rather than masked, and no
+out-of-scope sibling edits are committed. The surface itself (Section A) is complete,
+parity-correct, and fully green.
+
+EXIT=1
+STATUS=BLOCKED

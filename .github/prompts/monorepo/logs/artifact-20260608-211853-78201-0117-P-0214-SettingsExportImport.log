@@ -1,0 +1,137 @@
+=== P4 Feature view 0214 SettingsExportImport (Apple) ===
+host: macOS 26.5.1 | Xcode 26.5 | swift version 6.3.2
+date: 2026-06-09T10:38:20Z
+
+Artifact files (apps/apple/TeslaSync/feature-views/SettingsExportImport.*):
+       380  SettingsExportImport.Adapter.swift
+       325  SettingsExportImport.AdapterTests.swift
+       333  SettingsExportImport.Model.swift
+        87  SettingsExportImport.Previews.swift
+       396  SettingsExportImport.Projection.swift
+       112  SettingsExportImport.Seams.swift
+       248  SettingsExportImport.Sections.swift
+       206  SettingsExportImport.Sources.swift
+        82  SettingsExportImport.strings
+       207  SettingsExportImport.swift
+       306  SettingsExportImport.Tests.swift
+       254  SettingsExportImport.Views.swift
+
+================================================================
+[1] swiftc -typecheck — real iOS-18 + macOS-15 SDKs (Swift 6, surface + design-system deps)
+----------------------------------------------------------------
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+(empty output above each EXIT = 0 errors)
+
+================================================================
+[2] Isolated SwiftPM build + tests — Swift 6 strict concurrency (Adapter+Projection+Seams+Model+Sources / AdapterTests+Tests)
+----------------------------------------------------------------
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.007 (0.009) seconds
+	 Executed 25 tests, with 0 failures (0 unexpected) in 0.017 (0.020) seconds
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+	 Executed 51 tests, with 0 failures (0 unexpected) in 0.026 (0.032) seconds
+Test Suite 'All tests' passed at 2026-06-09 03:39:00.898.
+	 Executed 51 tests, with 0 failures (0 unexpected) in 0.026 (0.033) seconds
+
+================================================================
+[3] swiftlint --strict (surface, 11 swift files)
+----------------------------------------------------------------
+Linting 'SettingsExportImport.Views.swift' (11/11)
+Done linting! Found 0 violations, 0 serious in 11 files.
+
+================================================================
+[4] swiftformat --lint (surface, 11 swift files)
+----------------------------------------------------------------
+SwiftFormat completed in 3.74s.
+0/11 files require formatting.
+
+================================================================
+[5] check-placeholders.ps1 (surface .swift files)
+----------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+================================================================
+[6] xcodegen generate — file enumeration in TeslaSync.xcodeproj
+----------------------------------------------------------------
+XCODEGEN_EXIT=0
+surface files referenced in project.pbxproj:
+  SettingsExportImport.Adapter.swift
+  SettingsExportImport.AdapterTests.swift
+  SettingsExportImport.Model.swift
+  SettingsExportImport.Previews.swift
+  SettingsExportImport.Projection.swift
+  SettingsExportImport.Seams.swift
+  SettingsExportImport.Sections.swift
+  SettingsExportImport.Sources.swift
+  SettingsExportImport.strings
+  SettingsExportImport.swift
+  SettingsExportImport.Tests.swift
+  SettingsExportImport.Views.swift
+
+================================================================
+[7] KMP Shared.xcframework (ADR-004 prerequisite for full-app build)
+----------------------------------------------------------------
+BUILD SUCCESSFUL in 13m 7s
+✓ Shared.xcframework staged
+staged: apps/apple/Frameworks/Shared.xcframework
+
+================================================================
+[8] Full-app xcodebuild build test — iOS Simulator (iPhone 16)
+    cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+----------------------------------------------------------------
+** BUILD FAILED **
+XCODEBUILD_IOS_EXIT=65
+compile errors total .......... 452
+  in SettingsExportImport ..... 0   <-- this surface
+  anywhere in feature-views ... 0
+  all errors are in TeslaSync/dashboard-widgets/* (pre-existing, unrelated).
+root cause (pre-existing parallel-merge duplicate-type collisions in the shared app module):
+      24  'SafetyModel' is ambiguous for type lookup
+      24  'ChargeUnitPrefs' is ambiguous for type lookup
+      24  'ChargeStatusProjection' is ambiguous for type lookup
+      24  'ChargeStateDTO' is ambiguous for type lookup
+      24  'ChargeSessionDTO' is ambiguous for type lookup
+      12  'SafetyUpdate' / 'SafetyLoadStatus' / 'SafetyConnection' / 'FleetStatsBarModel' ambiguous
+     252  cascading 'cannot infer contextual base in reference to member ...'
+  e.g. ChargeSessionDTO is declared in BOTH:
+       TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift:126
+       TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Models.swift:22
+  -> owned by other P4 dashboard-widget prompts; out of this surface's allowed-files scope.
+
+================================================================
+[9] Full-app xcodebuild build test — macOS (TeslaSync-macOS)
+----------------------------------------------------------------
+** BUILD FAILED **
+XCODEBUILD_MAC_EXIT=65
+compile errors total .......... 4  (in SettingsExportImport: 0)
+blocker = macOS development-signing (no signing identity in this environment):
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    (build fails at the signing step before app sources compile — 0 source errors.)
+
+================================================================
+VERDICT
+----------------------------------------------------------------
+Surface gates (host-runnable) — ALL GREEN:
+  swiftc -typecheck iOS-18 ............. IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck macOS-15 .......... MAC_TYPECHECK_EXIT=0
+  isolated SwiftPM build + tests ...... 51/51 passed (Swift 6 strict concurrency)
+  swiftlint --strict .................. 0 violations / 0 opt-outs
+  swiftformat --lint ................. 0/11 require formatting
+  check-placeholders ................. PLACEHOLDER_COUNT=0
+  xcodegen generate .................. 12/12 files enumerated
+
+Full-app integration build (iOS build test = 65, macOS build test = 65) is RED, but
+0 of the 452 iOS errors and 0 of the 4 macOS errors are in this surface (or anywhere in
+feature-views). iOS is blocked by pre-existing duplicate-type collisions in
+TeslaSync/dashboard-widgets/* (owned by other prompts); macOS is blocked by
+development-signing. Both are the exact blockers recorded in apps/macos-pending-verifications.md
+and are deferred to the P4 acceptance gate (p4-apple/P99-0001) on a signed macos-latest runner.
+Per Honesty Covenant #1 (no red-as-green) the full-app step is reported RED, not masked.
+
+IOS_FULL_BUILD_EXIT=65
+MAC_FULL_BUILD_EXIT=65
+EXIT=65
+STATUS=BLOCKED

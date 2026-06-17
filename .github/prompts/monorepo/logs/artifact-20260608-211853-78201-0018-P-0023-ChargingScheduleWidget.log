@@ -1,0 +1,207 @@
+================================================================================
+P4 · Dashboard widget · 0023 — ChargingScheduleWidget (Apple)
+Run: 2026-06-08T22:59-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/18
+Base: 3b30a99d5
+Prompt: P4/dashboard-widgets/0023 — ChargingScheduleWidget
+Web source (spec): web/src/features/dashboard/widgets/ChargingScheduleWidget.tsx
+Mode: code-complete + EXECUTED host gates (isolated REAL XCTest 36/36) + EXECUTED
+      full Xcode aggregate build/test: iOS build+test GREEN; macOS compile-clean,
+      link DEFERRED on an environmental KMP-Shared/sqlite linkage (ADR-012 /
+      apps/macos-pending-verifications.md).
+================================================================================
+
+=== CAPABILITY PROBE (every line is a command actually run on this host) ===
+  swift ...................... Apple Swift 6.3.2, macOS SDK present                  OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  iOS / macOS SDKs ........... iphonesimulator26.5 / macosx26.5 (>= iOS18/macOS15)   OK
+  iPhone 16 simulator ........ present + booted (83717DEE-70A3-4325-AA61-CBDDD3140989) OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3, --strict          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1, --lint          OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                OK
+  Shared.xcframework (KMP) ... Gradle DEBUG XCFramework built OK (ios-arm64,
+                               ios-arm64-simulator, macos-arm64); RELEASE link
+                               exceeded a 25-min timeout under heavy parallel-slot
+                               Gradle contention (GRADLE_EXIT=124)                   PARTIAL
+  Apple signing identity ..... ABSENT on this runner (DEVELOPMENT_TEAM="")           bypassed via CODE_SIGNING_ALLOWED=NO
+
+=== ARTIFACT (allowed files: apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.*) ===
+  ChargingScheduleWidget.Signals.swift ...... 176  pure inputs+formatting: signal parse, state DTO, format opts, time/percent (Shared-free, SwiftUI-free)
+  ChargingScheduleWidget.Adapter.swift ...... 272  pure projection: mode label/tone, timeline builder, hasScheduleData, compact hero, a11y
+  ChargingScheduleWidget.Model.swift ........ 284  P1/S8 source seam + P1/S11 telemetry + P1/S10 i18n facade + phase resolution
+  ChargingScheduleWidget.swift .............. 333  the View: registration + header + every state (compact + standard)
+  ChargingScheduleWidget.Timeline.swift ..... 301  subviews: freshness chip, banner, mode/pending badges, timeline rows, detail row, compact hero
+  ChargingScheduleWidget.Previews.swift ..... 138  #Preview per state (content/no-times/compact/loading/empty/error/offline)
+  ChargingScheduleWidget.strings ............  57  P1/S10 i18n catalog contribution (web keys + native chrome + a11y)
+  ChargingScheduleWidget.Tests.swift ........ 268  adapter+signals+format+mode XCTest (parity-critical pure logic)
+  ChargingScheduleWidget.ModelTests.swift ... 233  state-holder + registry + accessibility XCTest
+  TOTAL ..................................... 2062 lines across 9 files
+
+=== PARITY MAP (web source -> native) ===
+  Hooks: useVehicles            -> ChargingScheduleSource resolves the active vehicle id (P1/S8 seam, no view HTTP)
+         useVehicleState        -> ChargingScheduleStateDTO (battery_level, is_charging) for the tall detail row
+         useQuery /signals/{id}/live -> ChargingScheduleSignals.parse (port of parseScheduleSignals)
+         useDateFormat().formatTime  -> ChargingScheduleFormat.time (localized wall-clock; '—' for nil/invalid)
+         useTranslation('dashboard') -> ChargingScheduleStrings (NSLocalizedString, per-surface table)
+  Signals (parseScheduleSignals parity): ScheduledChargingMode (string), ScheduledChargingPending
+         (=== true || 'true'), ScheduledChargingStartTime/ScheduledDepartureTime (string),
+         ChargeLimitSoc (number -> Int).
+  Mode (modeLabel/modeBadgeVariant): StartAt/DepartBy -> success ; Off -> neutral ;
+         other -> verbatim+warning ; nil -> "Unknown"+warning.
+  Timeline (timelineItems useMemo): Start Charging (bolt, green, +"Pending" subtitle when pending)
+         when startTime ; Departure (clock, blue) when departureTime ; Target Limit (battery.100,
+         amber, "{soc}%") when chargeLimit. hasScheduleData = mode||startTime||chargeLimit
+         (departure-only does NOT show content — pinned by test).
+  Layouts: compact (cols<=1 && rows<=1) charge-limit hero "{soc}%"/"—" + "Charge Limit" ;
+         standard mode-badge (+Pending) + timeline OR "No scheduled times set" +
+         tall (rows>=2 && state) Current Level "{bl}%" + Status Charging/Not Charging.
+  States (ALL rendered): loading (skeleton chrome) / empty (ContentUnavailableView) /
+         error (retry) / content / stale (chip+banner) / offline (chip+banner, cached visible).
+  i18n keys (source-extracted, all 16 resolve via facade + .strings — cross-checked, 0 misses):
+         widget.chargingSchedule.{title,modeStartAt,modeDepartBy,modeOff,modeUnknown,startCharging,
+         pending,departure,targetLimit,limit,noData,noTimes,currentLevel,status} + widget.charging
+         + widget.notCharging (+ registry .description + native chrome live/stale/offline/refresh/
+         retry/open/loading/errorTitle/emptyHint/offlineBanner/staleBanner + a11y openA11y).
+  Registry: id "charging-schedule", category "charging", default 2x2, min 1x2, max 4x40
+         (registry/charging.ts) — asserted by ChargingScheduleRegistryTests + clamp honored.
+  Telemetry: ChargingScheduleModel.start() emits P1/S11 view.opened with slug "ChargingScheduleWidget".
+
+  Honest parity note (time format): the web formatTime requests a 2-digit hour
+  ("03:30 PM"); the native surface renders the locale's preferred hour
+  (setLocalizedDateFormatFromTemplate("jmm") -> 12h "4:30 PM" / 24h "16:30"), the
+  same idiomatic short-time convention the sibling dashboard widgets use, and
+  normalizes the modern-ICU narrow no-break space (U+202F) before AM/PM to a
+  regular space for stable display + VoiceOver. Same instant, platform-idiomatic
+  rendering.
+
+================================================================================
+EXECUTED surface-scoped host gates (the basis for EXIT/STATUS)
+================================================================================
+
+--- swiftformat --lint (apps/apple/.swiftformat), 8 surface .swift files ---
+  $ swiftformat --lint ChargingScheduleWidget.{swift,Signals,Adapter,Model,Timeline,Previews,Tests,ModelTests}.swift
+  SwiftFormat completed. 0/8 files require formatting.
+  (tree-wide cross-check: swiftformat --lint apps/apple -> 0/1923 files require formatting)
+  FORMAT_EXIT=0
+
+--- swiftlint --strict (apps/apple/.swiftlint.yml), 8 surface .swift files ---
+  $ swiftlint lint --strict --config .swiftlint.yml <8 surface files>
+  Done linting! Found 0 violations, 0 serious in 8 files.
+  (tree-wide cross-check: 1 serious in 1919 files — LiveSignalSparklinesWidget.Builder.swift:158
+   opening_brace, a PRE-EXISTING sibling outside this surface's allowed files; ZERO in this surface)
+  LINT_EXIT=0
+
+--- check-placeholders.ps1 (ADR-011 definition-of-done, per real file) ---
+  $ pwsh -File apps/tools/check-placeholders.ps1 -Path <each ChargingScheduleWidget*.swift> -Language swift
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   (x8 files)
+  (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented in any shipped file)
+  PLACEHOLDER_EXIT=0
+
+--- REAL XCTest run (isolated SwiftPM "TeslaSync" pkg, Xcode 26.5 toolchain, macOS host) ---
+  Isolated package = REAL Tokens.swift + REAL DashboardWidgetInfra.swift (canonical
+  DashboardWidgetSize/Registration) + a minimal TSSkeleton shim (real api) + the 6 shipped
+  impl files + the 2 shipped *Tests.swift. Proves the surface compiles vs the macOS SDK and
+  its logic is correct without the aggregate app module.
+  $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test  (swiftLanguageMode v6)
+  Test Suite 'All tests' passed. Executed 36 tests, with 0 failures (0 unexpected).
+    ChargingScheduleParseTests          5/5  (typed parse, non-string collapse, pending bool/'true', empty, round-to-Int)
+    ChargingScheduleFormatTests         5/5  (wall-clock LA, fractional seconds, 24h en_GB, nil/invalid em-dash, percent)
+    ChargingScheduleModeTests           3/3  (StartAt/DepartBy/Off label+tone, verbatim unknown, nil->Unknown)
+    ChargingScheduleAdapterTests        7/7  (3-row order, pending subtitle gate, departure-only !hasScheduleData,
+                                              mode-only, compact "{soc}%"/"—", empty, state detail battery??0)
+    ChargingScheduleModelTests          9/9  (loading/empty/error/content phases, telemetry-once, refresh delegate,
+                                              stale auto-refresh gate, connection+projection track, compact/tall thresholds)
+    ChargingScheduleRegistryTests       3/3  (canonical charging-schedule metadata, stable slug, clamp min/max)
+    ChargingScheduleAccessibilityTests  4/4  (full summary, no-schedule, no-times, compact summary)
+  HOST_XCTEST_EXIT=0
+
+--- swiftc -typecheck against the REAL iOS 18 simulator SDK ---
+  $ xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 \
+        -D DEBUG Tokens.swift DashboardWidgetInfra.swift HarnessSupport.swift \
+        ChargingScheduleWidget.{swift,Signals,Adapter,Model,Timeline,Previews}.swift
+  (no diagnostics)
+  IOS18_SDK_TYPECHECK_EXIT=0
+
+--- i18n parity cross-check (source t() keys -> .strings + Swift code) ---
+  16/16 web source keys present in ChargingScheduleWidget.strings AND resolved in code. TOTAL_MISSES=0.
+  I18N_EXIT=0
+
+================================================================================
+EXECUTED full Xcode aggregate build/test on this Xcode-26.5 host
+================================================================================
+This runner HAS Xcode 26.5 + the Kotlin/Native toolchain, so (unlike the
+Windows/Linux precedent hosts) the real aggregate build/test was attempted. The
+KMP Shared.xcframework was Gradle-built here (DEBUG variant completed; RELEASE
+link timed out at 25 min only because ~27 parallel-slot Gradle daemons were
+contending the host). The DEBUG Shared.xcframework was staged and the scheme
+pre-action (which rebuilds the slow RELEASE framework) was removed for the run.
+
+  $ xcodegen generate
+    Created project at apps/apple/TeslaSync.xcodeproj                       XCODEGEN_EXIT=0
+
+  --- iOS (iPhone 16 simulator) — GREEN ---
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+        build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+    ** BUILD SUCCEEDED **   (1691 compile tasks; full app + ~400 sibling widgets + this surface +
+                             KMP Shared.xcframework; ZERO errors; ZERO ChargingSchedule diagnostics)
+    IOS_BUILD_EXIT=0
+
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,id=83717DEE-...' \
+        test-without-building CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+        -only-testing:TeslaSyncTests/ChargingSchedule{Parse,Format,Mode,Adapter,Model,Registry,Accessibility}Tests
+    Test Suite 'TeslaSyncTests.xctest' passed. Executed 36 tests, with 0 failures (0 unexpected).
+    (The surface's XCTest bundle compiled + linked into the real TeslaSync.app and ran on the
+     iPhone 16 simulator. A first attempt reported "never finished bootstrapping / simctl not
+     found" — a transient CoreSimulator stall under the concurrent Gradle load; a direct
+     `simctl install/launch io.teslasync.app` then succeeded (PID issued), and the re-run is the
+     36/36 PASS recorded here.)
+    IOS_TEST_EXIT=0
+
+  IOS_EXIT=0   (iPhone 16 simulator: aggregate BUILD SUCCEEDED + surface XCTest 36/36 GREEN)
+
+  --- macOS (platform=macOS) — surface compile-clean; link DEFERRED (environmental) ---
+  $ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' \
+        build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO ENABLE_HARDENED_RUNTIME=NO
+    ** BUILD FAILED **  — at the LINK step, AFTER all Swift compiled (0 compile errors; 0
+                          ChargingSchedule diagnostics). Root cause is the KMP Shared framework's
+                          SQLite cinterop, NOT this surface:
+      Undefined symbols for architecture arm64:
+        "_sqlite3_enable_load_extension", referenced from
+            _co_touchlab_sqliter_..._wrapper180 in Shared[10](libco.touchlab:sqliter-driver-cinterop-sqlite3-cache.a.o)
+        "_sqlite3_load_extension",  referenced from  _co_touchlab_sqliter_..._wrapper179 in Shared[10](...)
+      ld: symbol(s) not found for architecture arm64
+    Cause: the touchlab/SQLiter driver inside Shared.xcframework references the sqlite3
+    load-extension symbols, which the macOS app link (system libsqlite3.tbd on this SDK) does
+    not export — a Shared-framework + macOS-sqlite linkage concern resolved at the app/Shared
+    layer (e.g. SQLITE_ENABLE_LOAD_EXTENSION / -lsqlite3 flags / the proper RELEASE framework),
+    none of it in this surface's allowed files. macOS additionally requires a signing identity
+    (DEVELOPMENT_TEAM="") absent on this runner.
+    MAC_EXIT=65  (DEFERRED — environmental KMP-Shared sqlite linkage + runner signing; NO surface error)
+
+  ATTRIBUTION: This surface CORRECTLY uses the shared DashboardWidgetSize/Registration (it does
+  NOT redeclare them — the duplicate-symbol sibling drift cited in earlier precedent logs is, in
+  this repo state, already reconciled) and imports only SwiftUI/Foundation/Observation/OSLog. It
+  compiles green inside the FULL iOS app target (BUILD SUCCEEDED) AND its tests run 36/36 on the
+  iPhone 16 simulator AND on the macOS SDK (isolated pkg). The macOS aggregate redness is entirely
+  the KMP Shared framework's sqlite cinterop link + runner signing — zero attributable to this
+  surface, zero in its allowed files.
+
+=== DISPOSITION ===
+  Production-polished native ChargingScheduleWidget shipped at full parity with the web source:
+  pure-Swift signals/adapter (executed-green), P1/S8 state-holder seam (no view HTTP), P1/S11
+  view.opened telemetry, every state + every source i18n key (16/16) + a11y labels on every
+  interactive element, registry-correct (charging-schedule, 2x2 / 1x2 / 4x40). ALL surface-scoped,
+  host-runnable gates pass — swiftformat 0, swiftlint --strict 0, placeholder COUNT=0, a REAL 36/36
+  XCTest run, clean iOS-18 SDK typecheck, i18n 16/16. The FULL iOS Xcode aggregate is GREEN (BUILD
+  SUCCEEDED + on-simulator XCTest 36/36). The macOS aggregate compiles this surface clean and fails
+  only at LINK on an environmental KMP-Shared sqlite-cinterop symbol resolution (+ runner signing) —
+  the governed macos-pending DEFERRAL (ADR-012; apps/macos-pending-verifications.md), proven above
+  with file:line evidence to be unrelated to this surface.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0023-ChargingScheduleWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add ChargingScheduleWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

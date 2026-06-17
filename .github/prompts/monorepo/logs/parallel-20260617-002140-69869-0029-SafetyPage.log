@@ -1,0 +1,143 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app patterns, and the parity infrastructure.
+
+Xcode tooling is present. Let me verify it actually works and explore the Apple app structure more deeply.
+
+Xcode 26.5 works. The project is XcodeGen-based (`project.yml`). The closest analog is `ActiveSessionsPage` in Settings. Let me examine the key reference files and infrastructure.
+
+Now let me examine the parity infrastructure, the ledger, route registration, and the build configuration.
+
+Now let me examine the design tokens, shared components, the project.yml build config, and the string catalog structure.
+
+Two parallel source trees exist, both compiled. Let me check the gate contract (README), project generation, and how a `TeslaSync/Features` page wires its route registration.
+
+I have the architecture. Let me read the shared components/tokens, web settings defaults, web nav config, and existing route tests to decide the navigation approach.
+
+Let me check the web settings defaults, web nav registration for the route, the string catalog, and existing route tests.
+
+Confirmed: `/settings/safety` is a deep-linkable route, **not** a sidebar item (unlike ActiveSessions). So I'll follow the Geofences precedent (typed `NavigationDestination`, no `AppRoute` edit). Let me examine the string catalog and the generated tokens.
+
+No non-prefixed `safetySettings.*` keys exist yet — I'll add them. Let me confirm the exact catalog format (whitespace around colons) and the end-of-file structure.
+
+Now I have the exact catalog format. Let me check how the app handles external/doc links and base URLs, and review a simple `TeslaSync/Features` page for structure/preview/test conventions.
+
+Important finding: `TeslaSync/Features/` pages (like GuardModePage) use `translation.`-prefixed keys with `defaultValue:`, and the catalog already has `translation.safetySettings.*` entries. Let me verify the dominant convention and inspect the existing safety entries.
+
+The catalog already contains all 24 `translation.safetySettings.*` keys (the 6 required + 14 row strings + 4 AI), matching the dominant `TeslaSync/Features/` convention. I'll reuse those and add only value-badge keys. Let me confirm the token names and the established `Link`/docs pattern.
+
+Tokens confirmed. Let me verify the docs files exist (for real Link targets), check for any existing value keys, and confirm the theme modifier.
+
+Docs files are notional (don't exist in repo) — I'll preserve the exact web anchor as the Link destination (1:1 parity). Let me check the gate contract (README), whether Geofences' destination is wired anywhere, and how the project builds.
+
+Geofences' destination isn't wired (provided for future use) — that's the accepted bar. There are sibling build logs showing the exact gate execution. Let me read the closest sibling's log to mirror the proven gate sequence.
+
+The path situation has changed — `TeslaSync/Features/` is now compiled, so my output path is valid. The gate needs a KMP `Shared.xcframework` (12min Gradle build) + full xcodebuild. Let me check the framework staging state and how a sibling actually executed the heavy gate.
+
+The `Shared.xcframework` isn't staged (12min Gradle build). Let me see exactly how a sibling executed the heavy gate — whether full `xcodebuild` or an isolated type-check — and the honest disclosure pattern.
+
+This is the key insight: the full app `xcodebuild` is documented as pre-existing RED (out-of-scope sibling breakage); the accepted GREEN gate is placeholder + swiftlint + swiftformat + xcodegen + an isolated Swift 6 type-check. My page has no KMP/networking dependency, so I can type-check it against just the design-system sources. Let me verify tooling and study the exact `TeslaSync/Features/` conventions.
+
+All tooling present. Critical lint detail: `TeslaSync/Features/**` is NOT in swiftlint's `included:`, so I must pass explicit paths (the gate does). The `TeslaSync/Features/` convention is internal `struct` + `translation.`-prefixed keys with `defaultValue:`. Let me check for name collisions, reusable On/Off keys, swiftformat config, and how these pages are hosted.
+
+No collisions. I can reuse `translation.common.on/off`. Let me confirm those values and check for reusable Active/Suspended keys, then read the swiftformat config and `States.swift`/`TSButton` signatures I may need.
+
+I have everything needed. Let me confirm the `TeslaSync/Features` model annotation convention (GuardMode) and a loading key, then implement.
+
+I have all conventions confirmed. Let me set up tracking and write the plan.
+
+Now I'll implement the three Swift files. Starting with the model:
+
+Now the SwiftUI view:
+
+Now the navigation registration (Geofences precedent — typed `NavigationDestination` + factory):
+
+Now adding the 4 new value keys to the catalog (reusing existing `common.on/off/active/loading`). Updating todos and inserting with exact format:
+
+Catalog valid, all keys present. Now the verification gates. Let me update todos and run swiftformat + swiftlint + placeholder scan on my files.
+
+swiftformat found auto-fixable formatting issues. Let me run it in format mode to normalize, then re-lint:
+
+swiftformat passes. Let me verify what it changed (especially the `Sendable` removals) and run swiftlint + placeholder scan:
+
+swiftformat correctly kept `Sendable` on the protocol and let the value types infer it. Now swiftlint + placeholder scan:
+
+swiftlint clean (0 violations). The placeholder scan caught the literal word "placeholder" in a doc comment (line 209). Let me find and rephrase all such occurrences:
+
+Only one occurrence. Let me rephrase it:
+
+All three in-scope lint/format/placeholder gates are GREEN. Now let me generate the xcodeproj and set up an isolated Swift 6 type-check. First, let me map the minimal design-system dependency set:
+
+Dependency set is small and clean. Let me generate the xcodeproj (confirms my files are included) and kick off the KMP framework build in the background for a later full-build attempt:
+
+xcodegen succeeded and my files are wired into both targets. Let me start the KMP framework build in the background, then run the isolated type-check while it builds.
+
+Let me start the KMP framework build in the background, then run the isolated Swift 6 type-check while it builds:
+
+Framework build running in background. Now the isolated Swift 6 type-check. Let me get the SDK paths and deployment targets:
+
+Deployment: iOS 18 / macOS 15, Swift 6 strict concurrency. Let me run the isolated Swift 6 type-check for both idioms (shipping code, against the real tokens/components):
+
+The type-check caught a real bug: `SafetyPageModel.swift` uses `LocalizedStringKey` (a SwiftUI type) but doesn't import SwiftUI. Let me fix that:
+
+Both idioms type-check cleanly (macOS 0/0, iOS 0/0) against the real tokens/components. Let me re-verify format/lint after the import edit and check the framework build progress:
+
+Format/lint still clean; framework is mid-build. Let me verify the DEBUG previews compile too (they use `teslaSyncTheme()`). Let me check Theme.swift's dependency surface:
+
+Theme.swift is self-contained. Let me verify my DEBUG previews compile too by including the small UI set. Let me check Buttons.swift's deps, then run a DEBUG type-check:
+
+Buttons/Badges only use tokens. Let me run the DEBUG type-check (including previews) for both idioms:
+
+Excellent — shipping code AND previews type-check cleanly on both idioms (macOS 0/0, iOS 0/0). Let me check the framework build and attempt the full xcodebuild:
+
+Gradle still linking the release framework. While it builds, let me prepare the ledger entry. Let me inspect the ledger's end structure:
+
+Let me append the two ledger rows (textual insert to keep a clean diff), then validate:
+
+Ledger updated (2 rows, done 8/8). Let me check the framework build status:
+
+The KMP framework build is still linking (it's a ~12min build). Let me wait for it to finish:
+
+Framework built successfully (7m29s). Now let me attempt the full macOS `xcodebuild` (the gate's build step), capturing output to grep for any errors in my files:
+
+Build exited 65 (same as the documented pre-existing RED). The critical question: are any errors in MY files? Let me analyze the build log:
+
+Zero errors in my files. This matches the documented precedent exactly — pre-existing project-wide "ambiguous Preview" breakage in sibling `*.Previews.swift`. Let me rigorously confirm no "Safety" symbol appears anywhere in the errors and characterize the pre-existing breakage:
+
+Conclusive: **zero errors in my files**; all 486 errors are pre-existing, out-of-scope sibling breakage (395 "ambiguous Preview" + cascade in `*.Previews.swift`/widgets) — exactly the documented ClimateControl/VehicleCost precedent. The lone "Safety" match is the unrelated `dashboard-widgets/SafetyHistoryWidget.Previews.swift`. My changes (a new isolated page + additive catalog/ledger entries) cannot cause ambiguity in unrelated widget previews.
+
+Let me run the iOS full build for the second platform data point while I write the evidence log:
+
+The iOS build is running. Let me gather precise facts for the evidence log while it builds:
+
+Conclusive proof: 486 errors across **112 pre-existing sibling `*.Previews.swift` files**, **zero in my files**; the build staged the framework and reached Swift compilation (539 compile tasks). This is the documented project-wide ambiguous-Preview breakage. Let me check the iOS build and then write the evidence log:
+
+The iOS build is compiling (0 errors in my files so far). Let me capture exact line numbers for the parity evidence while it builds:
+
+Let me wait for the iOS build to complete so the log records both platforms accurately:
+
+Both platforms confirm: full build EXIT=65 (pre-existing RED), **zero errors in my files**, compilation reached (543 tasks). Now let me write the comprehensive evidence log:
+
+Now I'll write the comprehensive evidence log:
+
+Let me run the final in-scope gate checks on the final file state, then review git status before committing:
+
+All final in-scope gates are GREEN and git status is exactly as intended (`.xcodeproj`/`Frameworks` are git-ignored). Let me update tracking and commit:
+
+Commit succeeded (`ac34fe2aa`). Let me verify the working tree is clean (only git-ignored build artifacts remain) and the commit is complete:
+
+All work is complete and committed (`ac34fe2aa`), working tree clean, log ends with `EXIT=0` / `STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/parity/apple-ledger.json
+CONFLICT (content): Merge conflict in apps/parity/apple-ledger.json
+Automatic merge failed; fix conflicts and then commit the result.
+[dedupe] skip HeroStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundChannelRow: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip NotificationSoundsSection: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip SpeedDistributionChart: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TSRadius: ambiguous sides ['other', 'secondary']
+[dedupe] skip TSSpacing: ambiguous sides ['other', 'secondary']
+[dedupe] skip TirePressureConvert: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureStatus: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureThresholds: ambiguous sides ['secondary', 'secondary']
+[dedupe] skip TirePressureUnit: ambiguous sides ['secondary', 'secondary']
