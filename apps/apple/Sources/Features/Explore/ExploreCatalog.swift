@@ -125,7 +125,7 @@ public enum ExploreCatalog {
             (2, false)
         case .vehicles, .charging, .chargingHeatmap, .powershare, .trips, .driving, .efficiency,
              .vehicleSystems, .maps, .batteryHealth, .batteryCells, .batteryDegradation, .energy,
-             .energyFlow, .energyProducts, .sleepEfficiency, .vampireDrain, .projectedRange:
+             .energyFlow, .energyProducts, .sleepEfficiency, .vampireDrain, .projectedRange, .climate:
             (1, false)
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags,
              .dlqInspector, .fleetAPI, .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users,
