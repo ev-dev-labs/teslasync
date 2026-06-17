@@ -1,6 +1,314 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.ADAS Features" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ADAS Features"
+          }
+        }
+      }
+    },
+    "translation.ADAS features, safety score, and driving stats" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ADAS features, safety score, and driving stats"
+          }
+        }
+      }
+    },
+    "translation.Adaptive cruise headway setting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptive cruise headway setting"
+          }
+        }
+      }
+    },
+    "translation.Alerts for blind-spot hazards" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alerts for blind-spot hazards"
+          }
+        }
+      }
+    },
+    "translation.Alerts when exceeding speed limit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alerts when exceeding speed limit"
+          }
+        }
+      }
+    },
+    "translation.Auto Emergency Braking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto Emergency Braking"
+          }
+        }
+      }
+    },
+    "translation.Automatic collision mitigation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic collision mitigation"
+          }
+        }
+      }
+    },
+    "translation.Blind Spot Camera" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blind Spot Camera"
+          }
+        }
+      }
+    },
+    "translation.Blind Spot Collision Warning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blind Spot Collision Warning"
+          }
+        }
+      }
+    },
+    "translation.Camera view when signaling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera view when signaling"
+          }
+        }
+      }
+    },
+    "translation.Cruise Follow Distance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cruise Follow Distance"
+          }
+        }
+      }
+    },
+    "translation.Emergency Lane Departure Avoidance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Emergency Lane Departure Avoidance"
+          }
+        }
+      }
+    },
+    "translation.Forward Collision Warning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forward Collision Warning"
+          }
+        }
+      }
+    },
+    "translation.Lane Departure Avoidance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lane Departure Avoidance"
+          }
+        }
+      }
+    },
+    "translation.No history records found." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No history records found."
+          }
+        }
+      }
+    },
+    "translation.No safety data available for this vehicle." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No safety data available for this vehicle."
+          }
+        }
+      }
+    },
+    "translation.No safety state history to chart yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No safety state history to chart yet."
+          }
+        }
+      }
+    },
+    "translation.Pin to Drive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pin to Drive"
+          }
+        }
+      }
+    },
+    "translation.Prevents unintentional lane changes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prevents unintentional lane changes"
+          }
+        }
+      }
+    },
+    "translation.Requires PIN before driving" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requires PIN before driving"
+          }
+        }
+      }
+    },
+    "translation.Safety Score" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safety Score"
+          }
+        }
+      }
+    },
+    "translation.Safety Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safety Settings"
+          }
+        }
+      }
+    },
+    "translation.Safety Settings History" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safety Settings History"
+          }
+        }
+      }
+    },
+    "translation.Safety States Over Time" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safety States Over Time"
+          }
+        }
+      }
+    },
+    "translation.Speed Limit Warning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed Limit Warning"
+          }
+        }
+      }
+    },
+    "translation.Steers back on unintentional departure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steers back on unintentional departure"
+          }
+        }
+      }
+    },
+    "translation.Total Features" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Features"
+          }
+        }
+      }
+    },
+    "translation.Warns of potential frontal collisions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warns of potential frontal collisions"
+          }
+        }
+      }
+    },
     "translation.Media Player" : {
       "extractionState" : "manual",
       "localizations" : {
