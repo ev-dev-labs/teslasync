@@ -1,6 +1,226 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "diagnostic.checkCount" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld checks"
+          }
+        }
+      }
+    },
+    "diagnostic.copyReport" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy report"
+          }
+        }
+      }
+    },
+    "diagnostic.copyReportSuccess" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostic report copied to clipboard"
+          }
+        }
+      }
+    },
+    "diagnostic.downloadReport" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download .txt"
+          }
+        }
+      }
+    },
+    "diagnostic.duration" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lldms"
+          }
+        }
+      }
+    },
+    "diagnostic.errorBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The diagnostic endpoint returned an error. Check API logs and try again."
+          }
+        }
+      }
+    },
+    "diagnostic.errorTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostic failed to run"
+          }
+        }
+      }
+    },
+    "diagnostic.filename" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "teslasync-diagnostic-%@.txt"
+          }
+        }
+      }
+    },
+    "diagnostic.lastRun" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last run: %@"
+          }
+        }
+      }
+    },
+    "diagnostic.noReport" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No diagnostic has been run in this session yet. Click \"Run diagnostic\" to probe every dependency."
+          }
+        }
+      }
+    },
+    "diagnostic.remediationLabel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remediation"
+          }
+        }
+      }
+    },
+    "diagnostic.rerun" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Re-run diagnostic"
+          }
+        }
+      }
+    },
+    "diagnostic.run" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Run diagnostic"
+          }
+        }
+      }
+    },
+    "diagnostic.running" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Running diagnostic\u2026"
+          }
+        }
+      }
+    },
+    "diagnostic.subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Run an aggregated self-test against the database, MQTT broker, Redis, Tesla API, and resilience monitors."
+          }
+        }
+      }
+    },
+    "diagnostic.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System diagnostic"
+          }
+        }
+      }
+    },
+    "diagnostic.status.ok" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "diagnostic.status.warn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WARN"
+          }
+        }
+      }
+    },
+    "diagnostic.status.fail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FAIL"
+          }
+        }
+      }
+    },
+    "diagnostic.overall.ok" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All systems operational"
+          }
+        }
+      }
+    },
+    "diagnostic.overall.degraded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Degraded performance"
+          }
+        }
+      }
+    },
+    "diagnostic.overall.down" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System unavailable"
+          }
+        }
+      }
+    },
     "notFound.body" : {
       "extractionState" : "manual",
       "localizations" : {
