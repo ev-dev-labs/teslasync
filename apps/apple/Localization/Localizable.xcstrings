@@ -1,6 +1,160 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "docs.statusApi.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status API"
+          }
+        }
+      }
+    },
+    "docs.statusApi.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stable contract for external integrations"
+          }
+        }
+      }
+    },
+    "docs.statusApi.overview.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overview"
+          }
+        }
+      }
+    },
+    "docs.statusApi.overview.paragraph1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All endpoints are mounted under /api/v1/status and inherit the same authentication as the rest of the API. If you proxy this with ForwardAuth (Authelia, Authentik, Tinyauth, etc.), the proxy handles auth \u2014 otherwise pass an API key in the standard Authorization: Bearer \u2026 header."
+          }
+        }
+      }
+    },
+    "docs.statusApi.overview.paragraph2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Designed for: Grafana (JSON datasource), Uptime Kuma (HTTP(s) JSON Query monitor), Home Assistant (REST sensor), Healthchecks.io (synthetic monitor), or any other system that consumes JSON over HTTP."
+          }
+        }
+      }
+    },
+    "docs.statusApi.overview.paragraph3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shape is additive-only \u2014 new fields may appear, but existing field types and names won't change without a major version bump."
+          }
+        }
+      }
+    },
+    "docs.statusApi.footer.note" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Need an additional endpoint or field? Open an issue on the project repo \u2014 the API surface is intentionally small, but additive changes are welcome."
+          }
+        }
+      }
+    },
+    "docs.statusApi.endpoints.status.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overall snapshot \u2014 answers 'is it healthy right now?' in a single round-trip. Includes counts, version, resources, maintenance, and a list of active incidents."
+          }
+        }
+      }
+    },
+    "docs.statusApi.endpoints.components.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per-component health array \u2014 useful for surfacing individual subsystem status (database, mqtt, tesla, telemetry, etc.) in your own dashboard."
+          }
+        }
+      }
+    },
+    "docs.statusApi.endpoints.resources.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Runtime resources only (goroutines, uptime, Go version). Light enough to poll at high frequency."
+          }
+        }
+      }
+    },
+    "docs.statusApi.endpoints.uptime.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uptime percentage over the requested window. Until per-component heartbeat history is wired, the percentage is derived from the current snapshot \u2014 the historical_source field signals which is in play."
+          }
+        }
+      }
+    },
+    "docs.statusApi.endpoints.incidents.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active incidents list. Pass active=1 to filter to incidents whose resolved_at is NULL."
+          }
+        }
+      }
+    },
+    "docs.statusApi.endpoints.live.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server-Sent Events stream. Pushes a status event with the full snapshot every 30 seconds. Heartbeat events emitted every 25s so reverse proxies don't garbage-collect the connection mid-flight. Browsers consume this via EventSource(). For curl: -N --no-buffer."
+          }
+        }
+      }
+    },
+    "docs.statusApi.endpoints.exampleResponse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Example response"
+          }
+        }
+      }
+    },
     "search.title" : {
       "extractionState" : "manual",
       "localizations" : {
