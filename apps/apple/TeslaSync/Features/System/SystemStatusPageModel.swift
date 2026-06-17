@@ -36,7 +36,7 @@ final class SystemStatusPageModel {
         maintenance?.mode == "maintenance"
     }
 
-    var overallStatus: HeroStatus {
+    var overallStatus: SystemHeroStatus {
         if maintenance?.mode == "maintenance" { return .maintenance }
         guard let health else { return .unknown }
 

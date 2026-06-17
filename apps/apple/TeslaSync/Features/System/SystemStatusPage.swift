@@ -4,7 +4,7 @@ import SwiftUI
 /// System Status page - operator-grade health dashboard
 /// Parity: web/src/features/system/pages/SystemStatusPage.tsx
 struct SystemStatusPage: View {
-    @State private var model = SystemStatusPageModel()
+    @State fileprivate var model = SystemStatusPageModel()
 
     var body: some View {
         ScrollView {
