@@ -8,7 +8,7 @@ import Observation
 
 // MARK: - Data Models
 
-struct ChargingSession: Identifiable {
+struct DataRepairPageModelChargingSession: Identifiable {
     let id: Int
     let vehicleId: Int
     let startTs: String
@@ -32,7 +32,7 @@ struct Drive: Identifiable {
 }
 
 struct StaleData {
-    var staleCharging: [ChargingSession]
+    var staleCharging: [DataRepairPageModelChargingSession]
     var staleDrives: [Drive]
 }
 
@@ -66,7 +66,7 @@ final class DataRepairPageModel {
         }
     }
 
-    var staleCharging: [ChargingSession] {
+    var staleCharging: [DataRepairPageModelChargingSession] {
         switch state {
         case .success(let data):
             return data.staleCharging
@@ -99,7 +99,7 @@ final class DataRepairPageModel {
     }
 
     func updateChargingSession(
-        _ session: ChargingSession,
+        _ session: DataRepairPageModelChargingSession,
         data: [String: Any]
     ) async -> Result<Void, Error> {
         // Integration point: PUT /data-repair/charging/{id} via KMP core

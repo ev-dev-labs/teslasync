@@ -71,7 +71,7 @@ struct TabButton: View {
     }
 }
 
-struct ChargingSessionRow: View {
+struct DataRepairPageViewsChargingSessionRow: View {
     let session: ChargingSession
     let isExpanded: Bool
     let onTap: () -> Void
