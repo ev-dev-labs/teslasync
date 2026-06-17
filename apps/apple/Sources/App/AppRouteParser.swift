@@ -14,6 +14,7 @@ public enum AppRouteParser {
         "/climate-control": .climate,
         "/performance": .driving,
         "/drive-score": .driving,
+        "/driving-dynamics": .driving,
         "/route-efficiency": .driving,
         "/statistics": .analytics,
         "/analytics/tco": .tco,
