@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.safetySettings.value.suspended" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suspended"
+          }
+        }
+      }
+    },
+    "translation.safetySettings.value.digestInstant" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instant"
+          }
+        }
+      }
+    },
+    "translation.safetySettings.value.digestHourly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hourly"
+          }
+        }
+      }
+    },
+    "translation.safetySettings.value.digestDaily" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily"
+          }
+        }
+      }
+    },
     "account.privacy.title" : {
       "extractionState" : "manual",
       "localizations" : {

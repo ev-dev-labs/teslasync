@@ -2102,6 +2102,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:settings/Privacy",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-PrivacyPage.log"
+    },
+    {
+      "unitId": "page:settings/Safety",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 8,
+      "requiredCount": 8,
+      "promptId": "p4-apple/P7/page:settings/Safety",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-SafetyPage.log"
+    },
+    {
+      "unitId": "page:settings/Safety",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 8,
+      "requiredCount": 8,
+      "promptId": "p4-apple/P7/page:settings/Safety",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-SafetyPage.log"
     }
   ]
 }
