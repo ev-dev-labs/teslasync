@@ -1870,6 +1870,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicle-systems-GuardModePage.log"
     },
     {
+      "unitId": "page:trips/TripDetail",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 21,
+      "requiredCount": 21,
+      "promptId": "p4-apple/P7/page:trips/TripDetail",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-trips-TripDetailPage.log"
+    },
+    {
+      "unitId": "page:trips/TripDetail",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 21,
+      "requiredCount": 21,
+      "promptId": "p4-apple/P7/page:trips/TripDetail",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-trips-TripDetailPage.log"
+    },
+    {
       "unitId": "page:trips/TripReplay",
       "platform": "apple-macos",
       "status": "done",
