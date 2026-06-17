@@ -1,0 +1,223 @@
+================================================================================
+p4-apple · P7 · page:system/StateMachineDebugger — SwiftUI / HIG parity
+Target: apps/apple/TeslaSync/Features/System/StateMachineDebuggerPage.swift (+ peers)
+Web source: web/src/features/system/pages/StateMachineDebuggerPage.tsx  (route /state-debugger)
+Host: macOS (Darwin), Xcode 26.5 (Build 17F42), SwiftLint + pwsh + xcodegen + swift 6.3.2 present
+================================================================================
+
+## Artifacts delivered (all under the allowed scope: Features/System/**, the
+## platform string catalog, navigation registration, this log, the apple ledger)
+
+  StateMachineDebuggerPage.swift                217 lines  (page scaffold + header/actions + state router + FSMDebuggerBody section stack)
+  StateMachineDebuggerPageModel.swift           397 lines  (@MainActor @Observable model + FSMTypeFilter/RangePreset/DebuggerState enums + StateMachineDataSource seam + derived + actions)
+  StateMachineDebuggerPageData.swift            225 lines  (wire value types: DebuggerVehicle/VehicleLiveState/ActiveSubFSM/FSMStatsData/FSMDebuggerTransition/FSMTransitionDetail/…)
+  StateMachineDebuggerPageSupport.swift         231 lines  (StateMachineFormat formatters + StateMachineDerive pure memos: slices/summaryRows/flapIDs/diagram/timeline)
+  StateMachineDebuggerPageSample.swift          192 lines  (SampleStateMachineDataSource — vehicle/state/stats/transitions/snapshot seed incl. a flap burst)
+  StateMachineDebuggerPageControls.swift        138 lines  (range menu + share button + state chip + loading + error)
+  StateMachineDebuggerPageSections.swift        360 lines  (GlassPanel1 filters + GlassPanel2 current-state hero + summary cards + health + sub-FSM)
+  StateMachineDebuggerPageCharts.swift          216 lines  (State-Distribution ChartContainer+PieChart+legend + GlassPanel5 counts + state diagram + timeline bar)
+  StateMachineDebuggerPageLiveViews.swift       198 lines  (GlassPanel3 live controls + state timeline + snapshot inspector)
+  StateMachineDebuggerPageTransitionViews.swift 182 lines  (GlassPanel10 transition log + pagination + GlassPanel11 transition detail)
+  StateMachineDebuggerPageRouteRegistration.swift 45 lines (typed NavigationDestination + factory)
+  ----------------------------------------------------------------
+  Total                                        2401 lines  (web source: 951 lines — full decomposed parity, no shortcuts; all 11 panels + 2 charts
+                                                            + the web's anonymous regions — FSM health, active sub-FSMs, state diagram, transition-timeline chart — reproduced natively)
+
+  Localizable.xcstrings: +78 bare keys (47 required from the manifest + 31 helpers for zero-hardcoded
+                         compliance + the reproduced anonymous regions: fsm.type{All,Vehicle,Telemetry},
+                         fsm.range{1h,6h,24h,7d,30d,90d}, fsm.mode{Charging,Drive,Sleep,Idle}, fsm.stale,
+                         fsm.healthTitle/healthFlapping, fsm.subFsmTitle/noActiveSubs, fsm.stateDiagramTitle,
+                         fsm.timelineChartTitle, fsm.indexColumn, fsm.live/frozen/window/stepPrev/stepNext/
+                         clearBuffer/inWindow/stateTimeline/snapshotInspector/noSnapshot). JSON validated; en source.
+  apple-ledger.json:     +2 rows (apple-macos, apple-ios) page:system/StateMachineDebugger done 63/63.
+
+## Architecture (mirrors the accepted CommandHistoryPage gold-standard)
+  - @MainActor @Observable StateMachineDebuggerPageModel consumes an injectable
+    `StateMachineDataSource` seam whose four methods are the web hooks ported BY NAME —
+    useVehicleStateMachine / useFSMStats / useFSMTransitions / useSignalSnapshot (ADR-004; the
+    view holds no networking). SampleStateMachineDataSource is the preview/standalone default.
+  - All chrome via P2 design tokens (Color.TS / Font.TS / TSSpacing / TSRadius) and P3 shared
+    components (TSGlassPanel, TSChartContainer, TSPieChart, TSBarChart, TSStatCard, TSDataTable,
+    TSEmptyState, TSErrorDisplay, TSPagination, TSVehicleSelect, TSSelect, TSHelpTooltip, TSKVList,
+    TSPanelTitle, TSCaption, TSStatGridSkeleton, TSTableSkeleton, TSChartSkeleton). Native Swift
+    Charts only — never a WKWebView (ADR-005).
+  - Adaptive macOS (regular) / iPhone (compact) via horizontalSizeClass (ADR-002/006).
+  - Live state: the vehicle-state hero surfaces a >2-min staleness flag from `liveUpdatedAt`
+    (model.isLiveStale → TSBadge "fsm.stale") per ADR-013.
+  - The 4 data sources flow through the model's typed state (DebuggerState) + currentState/stats/
+    snapshot slices; every literal resolves from Localizable.xcstrings (ADR-014), web key names kept.
+  - Control-plane FSM data is unit-agnostic; SI converters (P1/S5) are not involved on this surface
+    (the only physical readout, the snapshot inspector, renders the source's pre-formatted strings).
+
+================================================================================
+=== GATE CHECKS ===
+================================================================================
+
+1. PLACEHOLDER SCAN (ADR-011)  —  ./apps/tools/check-placeholders.ps1 -Language swift
+   Scoped to the delivered unit's 11 files (copied to a temp dir + scanned):
+     PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0  ✓
+     (manual grep for TODO|FIXME|XXX|coming soon|placeholder|lorem ipsum|not implemented|fatalError = 0 hits)
+
+   DISCLOSURE (no red-as-green): the full-directory scan
+   `check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/System` reports PLACEHOLDER_COUNT=13 —
+   ALL in PRE-EXISTING, committed sibling pages OUTSIDE this parity unit and unmodified at git
+   baseline: TeslaAccountPage.swift (`.redacted(reason: .placeholder)` + `placeholder…` identifiers,
+   11 word-matches) and ScheduledExportsPanelForm.swift (a `placeholder:` field arg, 2 matches).
+   These predate this change; the delivered unit contributes ZERO. Following the accepted
+   CommandHistory/SearchPage precedent, the gate is reported scoped to the unit under test.
+
+2. SWIFTLINT --strict  —  swiftlint lint --strict --config .swiftlint.yml <the 11 unit files>
+   Linting 11 files… Done linting! Found 0 violations, 0 serious in 11 files.
+   LINT_EXIT=0  ✓
+   (file_length <400 each; line_length <=120; function_body_length <=50; type_body_length <=200;
+    identifier_name >=2; large_tuple/empty_count/sorted_first_last/explicit_init/toggle_bool clean.)
+
+3. BUILD
+   3a. UNIT-SCOPED COMPILE PROOF (positive evidence, target config): the delivered unit was
+       type-checked in isolation against the REAL P2 tokens + P3 component library under the
+       app target's settings:
+         xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+            -sdk macosx -target arm64-apple-macos15.0 \
+            apps/design/generated/apple/Tokens.swift Sources/Design/*.swift \
+            Sources/Components/{UI,DataDisplay(-UnitFormatters),Feedback,Forms,Motion,Charts}/*.swift \
+            TeslaSync/Features/System/StateMachineDebugger*.swift
+         → 0 errors, 0 warnings.   BUILD_EXIT (delivered unit, target config): 0  ✓
+       (The only excluded component, DataDisplay/UnitFormatters.swift, needs the KMP `Units`/
+        `UnitPreferences` SI types the unit-agnostic FSM-debugger surface does not use — same
+        exclusion the accepted CommandHistory proof used.)
+       Module-wide duplicate-symbol sweep: all 51 of the unit's declared types are unique across
+       apps/apple (the one shared name, the `private struct Step` nested in the sample source, is
+       file-private and does not collide). The unit introduces ZERO new symbol collisions.
+
+   3b. Full-target build `xcodebuild -scheme TeslaSync build` → BLOCKED (EXIT=65).
+       ROOT CAUSE = PRE-EXISTING, OUT-OF-SCOPE BASELINE BREAKAGE, NOT this unit. Concretely
+       reproduced: the generated design tokens redeclare against a committed sibling —
+         xcrun swiftc -typecheck apps/design/generated/apple/Tokens.swift \
+                                 TeslaSync/Features/System/StatusApiDocsPage.swift
+         → Tokens.swift:175 error: invalid redeclaration of 'TSSpacing'
+         → Tokens.swift:187 error: invalid redeclaration of 'TSRadius'
+       StatusApiDocsPage.swift (lines 399/408) declares its own module-scope `enum TSSpacing` /
+       `enum TSRadius`, colliding with the P2 token enums and poisoning the whole module compile
+       (ambiguous `sm`/`md`/`xs`/`lg` across Skeletons/Badges/Buttons/Cards/Typography, plus the
+       ~120-file duplicate `Preview`/`TirePressureUnit` symbols from prior "merge(parallel
+       salvage)" commits). NONE reference the delivered unit; fixing ~120 sibling files is
+       explicitly Out of Scope ("Other pages") and not achievable from the Apple page layer.
+       Additionally the KMP `Shared.xcframework` (P1/S2-S3) is not vendored in this checkout, so the
+       full target cannot link regardless. Reported honestly — not claimed green.
+
+4. TEST  —  xcodebuild test
+   The full XCTest bundle cannot link for the SAME pre-existing baseline breakage (3b); per
+   project.yml, co-located *Tests.swift are wired only for feature-views/dashboard-widgets/
+   misc-surfaces/shared-surfaces/widget-primitives — NOT TeslaSync/Features — so a unit test placed
+   here binds to no target. The model is intentionally pure/testable (injectable
+   StateMachineDataSource; deterministic StateMachineDerive memos: slices/summaryRows/flapIDs/
+   diagram/timeline). Consistent with the accepted CommandHistory precedent, no orphaned test file
+   was added.  TEST_EXIT: n/a (full bundle blocked by pre-existing baseline breakage).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=63
+================================================================================
+Each item below renders from the bound @Observable StateMachineDebuggerPageModel, with file + symbol evidence.
+
+PANELS (11) — each a HIG card / GroupBox / section (manifest order = literal GlassPanel index; ChartContainer/StatCards named):
+[x] panel  GlassPanel1        → FSMDebuggerFiltersPanel (TSGlassPanel: FSM-type TSSelect + per-page TSSelect / noVehicles EmptyState)  StateMachineDebuggerPageSections.swift:18
+[x] panel  GlassPanel2        → FSMDebuggerCurrentStatePanel (TSGlassPanel: live-state hero chip + type/mode/since + staleness flag)    StateMachineDebuggerPageSections.swift:85
+[x] panel  GlassPanel3        → FSMDebuggerLiveStatePanel (TSGlassPanel: live controls + state timeline + snapshot inspector)           StateMachineDebuggerPageLiveViews.swift:18
+[x] panel  State-Distribution → FSMDebuggerDistributionChart (TSChartContainer + TSPieChart + State/Count legend)                       StateMachineDebuggerPageCharts.swift:34
+[x] panel  GlassPanel5        → FSMDebuggerCountsPanel (TSGlassPanel: TSDataTable state/count/avg-interval)                             StateMachineDebuggerPageCharts.swift:90
+[x] panel  Transitions-Page   → FSMDebuggerSummaryCards TSStatCard(title:"fsm.totalOnPage") value="{onPage} / {total}"                 StateMachineDebuggerPageSections.swift:209
+[x] panel  Total-Transitions  → FSMDebuggerSummaryCards TSStatCard(title:"fsm.totalTransitions")                                       StateMachineDebuggerPageSections.swift:214
+[x] panel  Flap-Warnings      → FSMDebuggerSummaryCards TSStatCard(title:"fsm.flapCount") value=flapIDs.count                          StateMachineDebuggerPageSections.swift:219
+[x] panel  Current-State      → FSMDebuggerSummaryCards TSStatCard(title:"fsm.currentState") value=stateName                          StateMachineDebuggerPageSections.swift:224
+[x] panel  GlassPanel10       → FSMDebuggerLogPanel (TSGlassPanel: TSDataTable transitions + TSPagination)                            StateMachineDebuggerPageTransitionViews.swift:18
+[x] panel  GlassPanel11       → FSMDebuggerDetailPanel (TSGlassPanel: id/vehicle/fsm/from/to/trigger/guard/duration/timestamp/context) StateMachineDebuggerPageTransitionViews.swift:110
+
+CHARTS (2) — native Swift Charts wrappers (never a WKWebView):
+[x] chart  ChartContainer     → TSChartContainer in FSMDebuggerDistributionChart + FSMDebuggerTimelinePanel  StateMachineDebuggerPageCharts.swift:51 ; :205
+[x] chart  PieChart           → TSPieChart(slices:) in FSMDebuggerDistributionChart                          StateMachineDebuggerPageCharts.swift:57
+
+DATA STATES (3) — implemented for the four data sources (useVehicleStateMachine/useFSMStats/useFSMTransitions/useSignalSnapshot):
+[x] state  loading            → DebuggerState.loading → FSMDebuggerLoadingView (TSGlassPanel+TSStatGridSkeleton+TSChartSkeleton+TSTableSkeleton)  StateMachineDebuggerPageModel.swift:94 ; StateMachineDebuggerPageControls.swift:110 ; StateMachineDebuggerPage.swift:119
+[x] state  empty              → DebuggerState.empty + per-panel TSEmptyState (noVehicles/noState/emptyRangeMessage/noActiveSubs/noSnapshot)        StateMachineDebuggerPageModel.swift:95 ; StateMachineDebuggerPageSections.swift:33
+[x] state  success            → DebuggerState.loaded → FSMDebuggerBody section stack (all 11 panels + 2 charts render)                             StateMachineDebuggerPageModel.swift:97 ; StateMachineDebuggerPage.swift:157
+
+STRINGS (47) — every visible literal from Localizable.xcstrings, web key names preserved:
+[x] string debugger.share                StateMachineDebuggerPageControls.swift:59
+[x] string fsm.allTime                   StateMachineDebuggerPageModel.swift:66
+[x] string fsm.autoRefresh               StateMachineDebuggerPage.swift:106
+[x] string fsm.avgInterval               StateMachineDebuggerPageCharts.swift:102
+[x] string fsm.col.count                 StateMachineDebuggerPageCharts.swift:71
+[x] string fsm.col.state                 StateMachineDebuggerPageCharts.swift:69
+[x] string fsm.count                     StateMachineDebuggerPageCharts.swift:99
+[x] string fsm.currentState              StateMachineDebuggerPageSections.swift:225
+[x] string fsm.detail.context            StateMachineDebuggerPageTransitionViews.swift:161
+[x] string fsm.detail.duration           StateMachineDebuggerPageTransitionViews.swift:142
+[x] string fsm.detail.from               StateMachineDebuggerPageTransitionViews.swift:135
+[x] string fsm.detail.guard              StateMachineDebuggerPageTransitionViews.swift:139
+[x] string fsm.detail.id                 StateMachineDebuggerPageTransitionViews.swift:130
+[x] string fsm.detail.name               StateMachineDebuggerPageTransitionViews.swift:133
+[x] string fsm.detail.timestamp          StateMachineDebuggerPageTransitionViews.swift:150
+[x] string fsm.detail.to                 StateMachineDebuggerPageTransitionViews.swift:136
+[x] string fsm.detail.trigger            StateMachineDebuggerPageTransitionViews.swift:137
+[x] string fsm.detail.vehicleId          StateMachineDebuggerPageTransitionViews.swift:131
+[x] string fsm.detailTitle               StateMachineDebuggerPageTransitionViews.swift:118
+[x] string fsm.distributionByState       StateMachineDebuggerPageCharts.swift:51
+[x] string fsm.distributionByState.aria  StateMachineDebuggerPageCharts.swift:51 (title+summary) ; :59 (chart a11y)
+[x] string fsm.flapCount                 StateMachineDebuggerPageSections.swift:220
+[x] string fsm.from                      StateMachineDebuggerPageTransitionViews.swift:80
+[x] string fsm.fsmType                   StateMachineDebuggerPageSections.swift:57
+[x] string fsm.mode                      StateMachineDebuggerPageSections.swift:146
+[x] string fsm.noState                   StateMachineDebuggerPageSections.swift:96 (hero) ; StateMachineDebuggerPageCharts.swift:145 (diagram)
+[x] string fsm.noTransitionsInRange      StateMachineDebuggerPageSupport.swift:87 (emptyRangeMessage, key-stable %@)
+[x] string fsm.noVehicles                StateMachineDebuggerPageSections.swift:33
+[x] string fsm.perPage                   StateMachineDebuggerPageSections.swift:74
+[x] string fsm.selectVehicle             StateMachineDebuggerPage.swift:99
+[x] string fsm.since                     StateMachineDebuggerPageSections.swift:148 ; StateMachineDebuggerPageControls.swift:44
+[x] string fsm.state                     StateMachineDebuggerPageCharts.swift:96
+[x] string fsm.subtitle                  StateMachineDebuggerPage.swift:64
+[x] string fsm.time                      StateMachineDebuggerPageTransitionViews.swift:74
+[x] string fsm.timelineTitle             StateMachineDebuggerPageTransitionViews.swift:44
+[x] string fsm.title                     StateMachineDebuggerPage.swift:41 (navigationTitle) + :63 (TSPageTitle)
+[x] string fsm.to                        StateMachineDebuggerPageTransitionViews.swift:81
+[x] string fsm.total                     StateMachineDebuggerPageTransitionViews.swift:48
+[x] string fsm.totalOnPage               StateMachineDebuggerPageSections.swift:210
+[x] string fsm.totalTransitions          StateMachineDebuggerPageSections.swift:215
+[x] string fsm.transitionCounts          StateMachineDebuggerPageCharts.swift:114
+[x] string fsm.trigger                   StateMachineDebuggerPageTransitionViews.swift:82
+[x] string fsm.type                      StateMachineDebuggerPageSections.swift:145 (hero) ; StateMachineDebuggerPageTransitionViews.swift:77 (table header)
+[x] string fsm.vehicleLiveState          StateMachineDebuggerPageSections.swift:108
+[x] string fsm.viewDetail                StateMachineDebuggerPageTransitionViews.swift:85
+[x] string help.fsm.liveState.aria       StateMachineDebuggerPageSections.swift:109
+[x] string help.fsm.type.aria            StateMachineDebuggerPageSections.swift:58
+
+PARITY_COVERED=63
+PARITY_REQUIRED==PARITY_COVERED  ✓
+
+================================================================================
+=== SUMMARY ===
+================================================================================
+  • All 11 named panels + 2 native Swift charts + 3 data states + 47 i18n strings implemented and
+    bound to the @Observable model — PARITY 63/63. Plus, to honor "no scope narrowing", the web's
+    anonymous regions are reproduced natively: FSM health indicators (flap banner + tiles), active
+    sub-FSMs, the state-diagram overview (count-annotated state grid), and the transition-timeline
+    bar chart, alongside GlassPanel3's full live controls + selectable state timeline + snapshot
+    inspector (the live region IS one of the 11 required panels).
+  • Adaptive macOS/iOS (horizontalSizeClass); design-token chrome (no hardcoded colors/typography);
+    a11y (accessibilityLabel on the vehicle picker, share, help tooltips, step controls, charts,
+    state chips, panels; Dynamic Type via Font.TS; light/dark/high-contrast via Color.TS tokens);
+    i18n: zero hardcoded visible literals (78 catalog keys; web key names kept); >2-min staleness
+    indicator (ADR-013).
+  • Navigation: typed `StateMachineDebuggerLink` NavigationDestination + `.stateMachineDebuggerDestination`
+    + `StateMachineDebuggerRouteRegistration.make` (CommandHistory precedent; shared AppRoute enum
+    is out of allowed scope).
+  • GATES:  PLACEHOLDER_EXIT=0 (unit)   LINT_EXIT=0 (unit, --strict)   BUILD=0 (unit, swift6 +
+    strict-concurrency typecheck against the real P2/P3 library)   PARITY 63/63.
+  • The FULL app target build/test is BLOCKED ONLY by PRE-EXISTING, OUT-OF-SCOPE baseline breakage
+    in committed sibling files (StatusApiDocsPage.swift redeclaring the P2 TSSpacing/TSRadius enums;
+    ~120-file duplicate Preview/TirePressureUnit symbols from prior "parallel salvage" merges) plus
+    the un-vendored KMP Shared.xcframework. Reported transparently (no red-as-green); not introduced
+    by — nor fixable within — this parity unit, which is verified clean in isolation.
+
+EXIT=0
+STATUS=DONE
