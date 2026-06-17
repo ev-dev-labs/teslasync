@@ -26,6 +26,7 @@ public enum AppRouteParser {
         "/notifications/webhooks": .notificationsWebhooks,
         "/automations/list": .automationsList,
         "/signals": .telemetry,
+        "/signal-gaps": .telemetry,
         "/devtools": .admin,
         "/admin/telemetry/coverage": .fleetTelemetryCoverage,
         "/admin/gdpr-exports": .gdprExport,

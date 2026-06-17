@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "signalGap.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signal Gap Detector"
+          }
+        }
+      }
+    },
+    "signalGap.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identify signals that have stopped arriving or have gaps"
+          }
+        }
+      }
+    },
+    "signalGap.noVehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a vehicle to begin"
+          }
+        }
+      }
+    },
+    "signalGap.noVehicleDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a vehicle from the picker above to inspect its signal freshness."
+          }
+        }
+      }
+    },
     "At-a-glance health for your TeslaSync instance" : {
       "extractionState" : "manual",
       "localizations" : {

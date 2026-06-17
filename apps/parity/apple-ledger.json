@@ -1650,6 +1650,24 @@
       "requiredCount": 23,
       "promptId": "p4-apple/P7/page:telemetry/SignalDiff",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-SignalDiffPage.log"
+    },
+    {
+      "unitId": "page:telemetry/SignalGapDetector",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 5,
+      "requiredCount": 5,
+      "promptId": "p4-apple/P7/page:telemetry/SignalGapDetector",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-SignalGapDetectorPage.log"
+    },
+    {
+      "unitId": "page:telemetry/SignalGapDetector",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 5,
+      "requiredCount": 5,
+      "promptId": "p4-apple/P7/page:telemetry/SignalGapDetector",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-SignalGapDetectorPage.log"
     }
   ]
 }

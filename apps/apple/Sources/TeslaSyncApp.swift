@@ -174,6 +174,7 @@ struct TeslaSyncApp: App {
         registry = TeslaFeatureFlagsRouteRegistration.registry(base: registry)
         registry = BackupRestoreRouteRegistration.registry(base: registry)
         registry = AnomalyDashboardRouteRegistration.registry(base: registry)
+        registry = SignalGapDetectorRouteRegistration.registry(base: registry)
         registry = NavigationRouteRegistration.registry(base: registry)
         registry = ExploreRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
         registry = ExportsRouteRegistration.registry(base: registry)
