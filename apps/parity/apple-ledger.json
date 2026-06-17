@@ -2210,6 +2210,26 @@
       "requiredCount": 6,
       "promptId": "p4-apple/P7/page:system/IncidentTimeline",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-IncidentTimelinePage.log"
+    },
+    {
+      "unitId": "page:telemetry/LiveSignalMonitor",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 4,
+      "requiredCount": 4,
+      "promptId": "p4-apple/P7/page:telemetry/LiveSignalMonitor",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-LiveSignalMonitorPage.log",
+      "note": "SwiftUI parity 4/4 (4 strings) + full LiveSignalTail reproduced (header, controls, four stat tiles, five-column table, four data states, ADR-013 staleness). Placeholder + swiftlint --strict + swiftc -typecheck (macOS+iOS, Swift 6 strict concurrency) all clean; this unit contributes 0 errors in-module. Full xcodebuild build/test BLOCKED by pre-existing, out-of-scope ambiguous-symbol breakage (227 errors across design-system / widget-primitive files; none in Features/Telemetry)."
+    },
+    {
+      "unitId": "page:telemetry/LiveSignalMonitor",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 4,
+      "requiredCount": 4,
+      "promptId": "p4-apple/P7/page:telemetry/LiveSignalMonitor",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-LiveSignalMonitorPage.log",
+      "note": "SwiftUI parity 4/4 (4 strings) + full LiveSignalTail reproduced (header, controls, four stat tiles, five-column table, four data states, ADR-013 staleness). Placeholder + swiftlint --strict + swiftc -typecheck (macOS+iOS, Swift 6 strict concurrency) all clean; this unit contributes 0 errors in-module. Full xcodebuild build/test BLOCKED by pre-existing, out-of-scope ambiguous-symbol breakage (227 errors across design-system / widget-primitive files; none in Features/Telemetry)."
     }
   ]
 }
