@@ -94,7 +94,7 @@ struct LightboxLoadingSkeleton: View {
             .onAppear { pulsing = !reduceMotion }
             .accessibilityElement()
             .accessibilityLabel(Text(verbatim: LightboxStrings.loading))
-            .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityAddTraits([.updatesFrequently])
     }
 }
 

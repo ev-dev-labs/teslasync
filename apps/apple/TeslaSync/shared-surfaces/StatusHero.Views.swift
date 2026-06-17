@@ -98,7 +98,7 @@ struct StatusHeroTextBlock: View {
         .frame(maxWidth: .infinity, alignment: frameAlignment)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: projection.accessibilityLabel))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 
     /// The sub-line row — the web `{subline}` plus the nested `{live && …}` chip. The chip is the shared

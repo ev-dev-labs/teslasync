@@ -90,7 +90,7 @@ public struct StatusBar: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: model.presentation.accessibilityLabel))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 
     /// 28pt by default, 24pt in the dense icon-only variant — web `h-7` / `h-6`.

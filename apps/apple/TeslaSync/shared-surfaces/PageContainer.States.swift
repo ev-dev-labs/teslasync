@@ -26,7 +26,7 @@ struct PageContainerLoadingView: View {
         .padding(.vertical, TSSpacing.x4xl)
         .accessibilityElement()
         .accessibilityLabel(Text(verbatim: PageContainerStrings.string("page.loadingA11y", "Loading")))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 }
 

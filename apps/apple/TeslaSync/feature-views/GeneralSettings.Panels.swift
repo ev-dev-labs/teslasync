@@ -39,7 +39,7 @@ struct SettingsLoadingChrome: View {
         }
         .accessibilityElement()
         .accessibilityLabel(GeneralSettingsStrings.text("state.loadingA11y", "Loading settings"))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 }
 

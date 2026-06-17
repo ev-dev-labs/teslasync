@@ -117,7 +117,7 @@ public struct ReloadPromptBanner: View {
         .accessibilityLabel(Text(verbatim: ReloadPromptAccessibility.bannerLabel(
             title: titleText, status: statusText
         )))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 
     private var laterButton: some View {

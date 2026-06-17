@@ -136,7 +136,7 @@ struct VehiclePaintStatusRow: View {
             Text(verbatim: currentPaintName)
                 .font(Font.TS.caption)
                 .foregroundStyle(Color.TS.textSecondary)
-                .accessibilityAddTraits(.updatesFrequently)
+                .accessibilityAddTraits([.updatesFrequently])
             if showsReset {
                 VehiclePaintResetButton(label: resetLabel, action: onReset)
             }

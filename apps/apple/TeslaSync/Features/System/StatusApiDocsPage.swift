@@ -331,10 +331,7 @@ public struct StatusApiDocsPage: View {
     }
 
     private func endpointDescription(_ endpoint: EndpointDefinition) -> some View {
-        Text(String(
-            localized: LocalizedStringKey(endpoint.descriptionKey),
-            defaultValue: String.LocalizationValue(endpoint.descriptionDefault)
-        ))
+        Text(LocalizedStringKey(endpoint.descriptionKey), defaultValue: String.LocalizationValue(endpoint.descriptionDefault))
         .font(.TS.bodySm)
         .foregroundStyle(Color.TS.textSecondary)
         .fixedSize(horizontal: false, vertical: true)

@@ -247,6 +247,6 @@ extension CommandQuickActionsWidget {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: CommandQuickActionsAccessibility.outcomeAnnouncement(outcome)))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 }

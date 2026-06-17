@@ -56,7 +56,7 @@ struct AppearanceServerSkeleton: View {
         }
         .accessibilityElement()
         .accessibilityLabel(AppearanceSettingsStrings.text("state.loadingA11y", "Loading display preferences"))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 }
 

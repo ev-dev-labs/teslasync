@@ -233,7 +233,7 @@ struct PlaybackControlsToastView: View {
             )
             .shadow(color: Color.black.opacity(0.2), radius: 6, y: 2)
             .accessibilityLabel(Text(verbatim: toast.label))
-            .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityAddTraits([.updatesFrequently])
     }
 }
 

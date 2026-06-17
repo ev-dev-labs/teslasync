@@ -49,6 +49,4 @@ extension TeslaAccountPage {
 // MARK: - TSSpacing extension
 
 /// Extended spacing tokens used by TeslaAccountPage.
-extension TSSpacing {
-    static let x2xl: CGFloat = 24
-}
+/// Note: x2xl removed - already exists in canonical TSSpacing

@@ -23,7 +23,6 @@ public struct APIKeysPage: View {
     }
 
     public var body: some View {
-        @Bindable var model = model
         ScrollView {
             VStack(alignment: .leading, spacing: TSSpacing.x2xl) {
                 header

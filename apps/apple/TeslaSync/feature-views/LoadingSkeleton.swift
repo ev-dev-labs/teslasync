@@ -67,7 +67,7 @@ public struct LoadingSkeleton: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: accessibilityLabel))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
         .task { LoadingSkeletonSurface.reportOpen(to: telemetry) }
     }
 

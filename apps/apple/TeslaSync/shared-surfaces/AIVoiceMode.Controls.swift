@@ -35,7 +35,7 @@ struct VoiceModeTranscriptBox: View {
             )
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: transcript.accessibilityLabel))
-            .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityAddTraits([.updatesFrequently])
     }
 }
 
@@ -152,7 +152,7 @@ struct VoiceModeInputSlot: View {
                     .font(Font.TS.caption)
                     .foregroundStyle(Color.TS.statusDanger)
                     .accessibilityLabel(Text(verbatim: sttError))
-                    .accessibilityAddTraits(.updatesFrequently)
+                    .accessibilityAddTraits([.updatesFrequently])
             }
             if let unsupportedHint = ready.unsupportedHint {
                 Text(verbatim: unsupportedHint)

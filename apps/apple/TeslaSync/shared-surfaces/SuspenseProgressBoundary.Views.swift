@@ -50,7 +50,7 @@ public struct SuspenseProgressTopBar: View {
         .frame(height: 2)
         .allowsHitTesting(false)
         .accessibilityElement()
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
         .accessibilityLabel(Text(LocalizedStringKey(SuspenseProgressBoundaryMeta.loadingLabelKey)))
         .accessibilityValue(Text(verbatim: "\(controller.valueNow)%"))
         .accessibilityHidden(!controller.isActive)

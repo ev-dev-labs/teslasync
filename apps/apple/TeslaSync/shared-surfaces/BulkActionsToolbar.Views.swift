@@ -45,7 +45,7 @@ struct BulkActionsSelectionSummary: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: resolved.selectionSummary))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 }
 

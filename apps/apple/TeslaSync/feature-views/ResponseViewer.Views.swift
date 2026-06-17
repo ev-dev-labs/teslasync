@@ -166,7 +166,7 @@ struct ResponseLoadingView: View {
             .accessibilityLabel(Text(verbatim: ResponseViewerStrings.string(
                 "responseViewer.loadingA11y", "Loading response"
             )))
-            .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityAddTraits([.updatesFrequently])
     }
 }
 

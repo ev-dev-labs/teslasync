@@ -24,7 +24,7 @@ extension View {
     func pageSkeletonRegion(_ region: PageSkeletonRegion, label: String) -> some View {
         accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: label))
-            .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityAddTraits([.updatesFrequently])
             .accessibilityIdentifier(region.accessibilityIdentifier)
     }
 }

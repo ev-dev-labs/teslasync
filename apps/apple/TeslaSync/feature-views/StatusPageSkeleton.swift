@@ -50,7 +50,7 @@ public struct StatusPageSkeleton: View {
         .frame(maxWidth: .infinity, alignment: .center)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: accessibilityLabel))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
         .task { StatusPageSkeletonSurface.reportOpen(to: telemetry) }
     }
 

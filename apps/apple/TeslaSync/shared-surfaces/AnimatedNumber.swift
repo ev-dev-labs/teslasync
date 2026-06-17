@@ -71,7 +71,7 @@ public struct AnimatedNumber: View {
         ))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: model.settledText))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
         .onAppear { model.start() }
         .onChange(of: input) { _, newInput in model.sync(newInput) }
     }

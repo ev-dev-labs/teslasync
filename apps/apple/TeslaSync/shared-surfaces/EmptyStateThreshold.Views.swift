@@ -104,7 +104,7 @@ struct EmptyStateThresholdCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
         .accessibilityLabel(Text(verbatim: accessibilityText))
     }
 

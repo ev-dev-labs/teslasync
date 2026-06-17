@@ -66,7 +66,7 @@ public struct Spinner: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: model.accessibilityLabel))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
         .onAppear {
             if bindsReduceMotion {
                 model.update(reduceMotion: reduceMotion)

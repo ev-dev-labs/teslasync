@@ -133,7 +133,7 @@ struct LightboxZoomControls: View {
                 .foregroundStyle(Color.TS.textSecondary)
                 .frame(minWidth: 56)
                 .accessibilityLabel(Text(verbatim: LightboxStrings.zoomPercent(projection.zoomPercent)))
-                .accessibilityAddTraits(.updatesFrequently)
+                .accessibilityAddTraits([.updatesFrequently])
 
             LightboxIconButton(
                 systemName: "plus",

@@ -74,7 +74,7 @@ public struct LiveStatusPill: View {
         .fixedSize()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: presentation.accessibilityLabel))
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
         .onAppear {
             // web `animate-pulse` — only the reconnecting tone pulses, and only
             // when Reduce Motion is off.

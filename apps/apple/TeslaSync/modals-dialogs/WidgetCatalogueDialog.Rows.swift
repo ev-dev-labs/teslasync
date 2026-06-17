@@ -30,7 +30,7 @@ struct WidgetCatalogueSearchHeader: View {
                 Text(verbatim: model.resultCountText)
                     .font(Font.TS.caption)
                     .foregroundStyle(Color.TS.textMuted)
-                    .accessibilityAddTraits(.updatesFrequently)
+                    .accessibilityAddTraits([.updatesFrequently])
             }
         }
         .padding(.horizontal, TSSpacing.lg)

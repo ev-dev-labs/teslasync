@@ -50,7 +50,7 @@ struct LiveIndicatorDot: View {
             .help(Text(verbatim: resolved.label))
             .accessibilityElement()
             .accessibilityLabel(Text(verbatim: resolved.accessibilityLabel))
-            .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityAddTraits([.updatesFrequently])
     }
 }
 
@@ -85,7 +85,7 @@ struct LiveIndicatorChip: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: resolved.accessibilityLabel))
         .liveIndicatorAccessibilityValue(resolved.accessibilityValue)
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityAddTraits([.updatesFrequently])
     }
 }
 
