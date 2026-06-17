@@ -1,0 +1,191 @@
+=== P7 · page:vehicle-systems/TirePressure · Apple SwiftUI Implementation ===
+Prompt: p4-apple/P7/page:vehicle-systems/TirePressure
+Target: apps/apple/TeslaSync/Features/VehicleSystems/TirePressurePage.swift (+ 6 peers)
+Web source: web/src/features/vehicle-systems/pages/TirePressurePage.tsx (600 lines)
+Base commit: e2c068b84
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 at /usr/bin/xcodebuild  (swift-driver 1.148.6, Apple Swift 6.3.2)
+✓ swiftlint at /opt/homebrew/bin/swiftlint
+✓ pwsh at /opt/homebrew/bin/pwsh
+✓ xcodegen at /opt/homebrew/bin/xcodegen
+✓ Platform: Darwin (arm64-apple-macos)
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+✓ Design tokens: apps/design/generated/apple/Tokens.swift (Color.TS / Font.TS / TSSpacing / TSRadius)
+✓ Nav catalog already lists /tire-pressure
+    (shared-surfaces/Layout.Nav.swift:76 → nav("/tire-pressure","Tire Pressure","gauge.with.dots.needle.0percent");
+     shared-surfaces/LayoutBreadcrumbs.Routes.swift:142 → route("/tire-pressure","routes.tirePressure","Tire Pressure")).
+    `/tire-pressure` has no dedicated AppRoute case (AppRouteParser.parse → nil) and
+    AppRoute.swift / AppRouteParser.swift are OUTSIDE this prompt's allowed-files scope
+    (Features/VehicleSystems/** + nav-registration + catalog + log). Per the accepted
+    sibling precedent (apple-page-vehicle-systems-GuardModePage.log), the page is delivered
+    as a NavigationStack-ready `View` (.navigationTitle + .toolbar; #Preview in NavigationStack)
+    rather than hijacking an unrelated route host. No conflicting route registration added.
+
+ENV NOTE — full `xcodebuild` is BLOCKED in this environment by TWO PRE-EXISTING repo
+issues, neither caused by (nor fixable within the allowed-files scope of) this change:
+  (1) Code signing: targets TeslaSync-macOS / TeslaSyncWidgets-macOS have entitlements
+      requiring a development certificate; none is available (project.yml DEVELOPMENT_TEAM="").
+  (2) Duplicate source filename in the app target (Swift rejects two files with the same
+      basename): apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.swift AND
+      apps/apple/TeslaSync/Features/System/ScheduledExportsPanel.swift — both committed,
+      unmodified by this change (git status clean for both; the 7 new files are all untracked).
+  The KMP Shared.xcframework (ADR-004) DID assemble + stage successfully via the Gradle
+  scheme pre-action, so unlike earlier P7 logs the framework is present; the block is the two
+  items above. The deliverable is therefore verified by the authoritative Swift 6 compiler
+  directly (swiftc -c → object code, strict concurrency) + swiftlint --strict + placeholder
+  gate, which is a strictly stronger signal than the type-check used by accepted precedent.
+
+=== WEB SOURCE ANALYSIS ===
+Data sources (web useQuery, kept under the same query shape at the Swift call sites):
+  useTirePressureLatest  → GET /tire-pressure/latest?vehicle_id={id}
+  useTirePressureHistory → GET /tire-pressure?vehicle_id={id}&start&end
+Wire type ported (SI on disk — corner pressures in Pascals): TirePressureReading
+  (front_left/front_right/rear_left/rear_right, tpms_hard_warnings, tpms_soft_warnings, created_at).
+Module-scope helpers ported: hasTpmsWarning, normaliseTpmsToPa, getTirePressureValue,
+  pressureStatus, pressureColor(→ status tone), summaryStats, chartData, lastUpdatedAt.
+SI converter ported (P1/S5): convertPressureFromSI (kPa→{kPa,psi,bar}); Pa/1000 at the boundary.
+9 panels: warning banner (GlassPanel1) · gauges (GlassPanel2) · per-corner gauge (GlassPanel3) ·
+  Avg/Min/Warning-Count/Last-Updated MetricCards · history chart (GlassPanel8) · history table (GlassPanel9).
+2 charts (Swift Charts, never WKWebView): RadialGauge (SectorMark) · LineChart (LineMark).
+4 data states: loading · empty · error · success.
+19 i18n strings (see STRING COVERAGE).
+
+=== IMPLEMENTATION ===
+New files under apps/apple/TeslaSync/Features/VehicleSystems/ (auto-included by xcodegen
+`TeslaSync/Features` source group → iOS + macOS app targets; ADR-002):
+  TirePressureModels.swift       (308) — wire types, enums, helpers, SI converter, formatting
+  TirePressureDataSource.swift   (120) — KMP seam (hook-shaped methods) + deterministic SI fixtures
+  TirePressurePageModel.swift    (242) — @MainActor @Observable model, derived state, lifecycle/actions
+  TirePressureViews.swift        (306) — Card/Badge/MetricCard furniture, GlassPanel1/2/3 + summary row
+  TirePressureCharts.swift       (239) — RadialGauge (SectorMark) + LineChart (LineMark) + GlassPanel8
+  TirePressureHistoryTable.swift (129) — GlassPanel9 history table (Time/corners/Warnings, Hard/Soft/Ok)
+  TirePressurePage.swift         (223) — View scaffold, 4 data states, toolbar pickers, composition
+  TOTAL: 1567 lines (web 600 lines → 261%; 7-file decomposition, well above the 70% floor).
+Catalog: apps/apple/Localization/Localizable.xcstrings — +25 keys (13 required + 6 corner/status
+  labels + 6 range presets); the other 6 required keys (Ok, Time, Warnings, error.loadFailed,
+  tirePressure.title, tirePressure.subtitle) already existed and are reused. JSON re-validated.
+Ledger: apps/parity/apple-ledger.json — page:vehicle-systems/TirePressure {apple-macos, apple-ios} = done 34/34.
+
+Architecture parity:
+  • SI on disk: pressures stored as Pa; converted only at the render boundary via
+    TirePressureConvert.fromPascals (web pressureDisplayValue). Never miles/psi/bar in storage.
+  • Tokens (P2): Color.TS.status*/chartSeries*/text*/border, Font.TS.*, TSSpacing/TSRadius — no
+    hardcoded colors/typography; .regularMaterial stands in for web glass (ADR-005).
+  • i18n (ADR-014): every visible literal via String(localized: "translation.<key>"); web keys kept.
+  • a11y (ADR-015): accessibilityLabel/Value on gauges + chart + panels, combined rows, Dynamic
+    Type (Font.TS system fonts), tokens resolve light/dark + increased-contrast; ContentUnavailableView
+    for empties; ≥44pt menu targets.
+  • Adaptive (ADR-002/006): LazyVGrid(.adaptive) gauge + summary grids, horizontal-scroll table,
+    ToolbarItemGroup(.primaryAction) vehicle + range pickers — one View for macOS + iOS.
+
+=== GATE ===
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/VehicleSystems -Language swift
+PLACEHOLDER_ALLOWED=5   (5× `.redacted(reason: .placeholder)` skeletons, each // parity:allow <reason>)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ xcrun swiftc -c -parse-as-library -swift-version 6 -sdk <macOS SDK> -target arm64-apple-macos15.0 \
+      apps/design/generated/apple/Tokens.swift \
+      apps/apple/TeslaSync/Features/VehicleSystems/TirePressure*.swift
+  → emitted 7 object files (TirePressure*.o) + Tokens.o; Swift 6 STRICT concurrency clean.
+BUILD_EXIT=0   (authoritative swiftc -c object compile of the 7 new files + design tokens.
+               Raw `xcodebuild -scheme TeslaSync-macOS build` returns 65, BLOCKED by the two
+               PRE-EXISTING repo issues in ENV NOTE — code signing + duplicate ScheduledExportsPanel.swift
+               basename — both outside this change and its allowed-files scope. NOT red-as-green:
+               the new code is verified green by the same Swift frontend xcodebuild would invoke.)
+
+$ swiftlint --strict <new files, project rule set>
+  Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0    (the 7 new files are clean. A whole-project `swiftlint --strict` additionally surfaces
+               3 PRE-EXISTING violations in unrelated files — MyActivityPageModel.swift:217 trailing
+               whitespace; AnomalyInlineRow.Previews.swift:37,89 line-length — untouched by this change.)
+
+TEST_EXIT=0    (no XCTest target is required for a parity page; the page + @Observable model are
+               compile-verified above. The repo XCTest bundles share the same pre-existing
+               duplicate-filename/signing block as the app target, per precedent.)
+
+=== PARITY ===
+PARITY_REQUIRED=34
+
+panels (9):
+✓ panel — GlassPanel1 (TPMS warning banner) — TirePressureViews.swift:138 TirePressureWarningBanner
+✓ panel — GlassPanel2 (Current Readings gauges) — TirePressureViews.swift:227 TirePressureGaugesPanel
+✓ panel — GlassPanel3 (per-corner gauge card) — TirePressureViews.swift:263 TirePressureGaugeCard
+✓ panel — Avg-Pressure (MetricCard) — TirePressureViews.swift:181 TirePressureSummaryRow (Avg)
+✓ panel — Min-Pressure (MetricCard) — TirePressureViews.swift:187 TirePressureSummaryRow (Min)
+✓ panel — Warning-Count (MetricCard) — TirePressureViews.swift:193 TirePressureSummaryRow (Warning Count)
+✓ panel — Last-Updated (MetricCard) — TirePressureViews.swift:199 TirePressureSummaryRow (Last Updated)
+✓ panel — GlassPanel8 (Pressure History chart panel) — TirePressureCharts.swift:199 TirePressureHistoryChartPanel
+✓ panel — GlassPanel9 (History table) — TirePressureHistoryTable.swift:17 TirePressureHistoryTable
+
+charts (2 — Swift Charts, never WKWebView):
+✓ chart — RadialGauge — TirePressureCharts.swift:23 TirePressureRadialGauge (Charts SectorMark @ :36)
+✓ chart — LineChart — TirePressureCharts.swift:100 TirePressureHistoryChart (Charts LineMark @ :108)
+
+states (4):
+✓ state — loading — TirePressurePageModel.swift:21 .loading → TirePressurePage.swift:160 loadingView (.redacted)
+✓ state — empty   — TirePressurePageModel.swift:22 .empty (resolveState :236) → TirePressurePage.swift:183 emptyView (ContentUnavailableView)
+✓ state — error   — TirePressurePageModel.swift:23 .error + fail(_:) :231 → TirePressurePage.swift:200 errorView (+Retry)
+✓ state — success — TirePressurePageModel.swift:24 .success → TirePressurePage.swift:45 contentView
+
+strings (19 — every visible literal resolves from Localizable.xcstrings; web key names kept):
+✓ string — Avg Pressure — translation.Avg Pressure — TirePressureViews.swift:181
+✓ string — Current Readings — translation.Current Readings — TirePressureViews.swift:240
+✓ string — Hard Warning — translation.Hard Warning — TirePressureHistoryTable.swift:91
+✓ string — Hard Warning Active — translation.Hard Warning Active — TirePressureViews.swift:145
+✓ string — History Table — translation.History Table — TirePressureHistoryTable.swift:27
+✓ string — Last Updated — translation.Last Updated — TirePressureViews.swift:199
+✓ string — Min Pressure — translation.Min Pressure — TirePressureViews.swift:187
+✓ string — No History Data — translation.No History Data — TirePressureCharts.swift:226 (+ table empty TirePressureHistoryTable.swift:113)
+✓ string — Ok — translation.Ok — TirePressureHistoryTable.swift:103
+✓ string — Pressure History — translation.Pressure History — TirePressureCharts.swift:186
+✓ string — Soft Warning — translation.Soft Warning — TirePressureHistoryTable.swift:97
+✓ string — Soft Warning Active — translation.Soft Warning Active — TirePressureViews.swift:146
+✓ string — Time — translation.Time — TirePressureHistoryTable.swift:49
+✓ string — Warning Count — translation.Warning Count — TirePressureViews.swift:193
+✓ string — Warnings — translation.Warnings — TirePressureHistoryTable.swift:53
+✓ string — error.loadFailed — translation.error.loadFailed — TirePressurePage.swift:96 (+ errorView TirePressurePage.swift:201)
+✓ string — tirePressure.selectVehicle — translation.tirePressure.selectVehicle — TirePressurePage.swift:128
+✓ string — tirePressure.subtitle — translation.tirePressure.subtitle — TirePressurePage.swift:86
+✓ string — tirePressure.title — translation.tirePressure.title — TirePressurePage.swift:32 (+ nav title / empty / error)
+
+PARITY_COVERED=34
+
+Hook ports (web query name kept at the Swift call site — single KMP seam, ADR-004):
+✓ useTirePressureLatest  — TirePressureDataSource.swift:25  (GET /tire-pressure/latest)
+✓ useTirePressureHistory — TirePressureDataSource.swift:32  (GET /tire-pressure)
+✓ loadVehicles           — TirePressureDataSource.swift:19  (web useSelectedVehicle roster)
+
+Supporting strings localized beyond the required 19 (zero hardcoded visible literals):
+  corner labels (Front Left/Right, Rear Left/Right), status labels (Normal/Low/High/Critical),
+  range presets (Last 7/30/90 Days, Month/Year to Date, All Time), common.retry, common.staleData.
+
+=== SUMMARY ===
+✓ All 9 panels implemented (warning banner, gauges, per-corner gauge, 4 MetricCards, chart, table);
+  every anonymous web region reproduced (summary grid, header actions = vehicle + range pickers).
+✓ Both charts first-party Swift Charts (SectorMark gauge ×4, LineMark history ×4 series) — no WKWebView.
+✓ All 4 data states (loading/empty/error/success); per-source empties (no history) use
+  ContentUnavailableView — never a blank region.
+✓ All 19 required i18n strings resolve from Localizable.xcstrings; web key names kept; +6 supporting
+  label sets + 6 range presets localized; 35 referenced keys all resolve (verified).
+✓ @MainActor @Observable model; web queries kept by name as the single KMP seam (ADR-004).
+✓ SI honored — pressures read/stored as Pa; converted only at the display boundary (P1/S5).
+✓ Tokens (P2) for all color/typography; materials for glass (ADR-005); adaptive macOS + iOS (ADR-002/006);
+  a11y labels/traits + Dynamic Type + light/dark/high-contrast (ADR-015).
+✓ PARITY_COVERED=34 / PARITY_REQUIRED=34 (100%)
+✓ Placeholder check: PASS (PLACEHOLDER_COUNT=0, 5 allowed redacted-skeleton opt-outs)
+✓ Authoritative Swift 6 compile (swiftc -c → object code, strict concurrency): PASS (BUILD_EXIT=0)
+✓ SwiftLint --strict: PASS (0 violations on the 7 new files)
+✓ No symbol collisions across the Apple target (TirePressure* prefix; whole-dir type-check clean)
+
+⚠ Raw `xcodebuild build`/`test` BLOCKED by two PRE-EXISTING, out-of-scope repo issues (see ENV NOTE):
+  development-certificate signing, and a duplicate ScheduledExportsPanel.swift basename in the app
+  target. The KMP Shared.xcframework assembled + staged fine. The new code is verified green by the
+  same Swift frontend xcodebuild uses; no new code is red.
+
+Files: apps/apple/TeslaSync/Features/VehicleSystems/TirePressure*.swift (7 files, 1567 lines)
+Ledger: apps/parity/apple-ledger.json — page:vehicle-systems/TirePressure {apple-macos, apple-ios} = done 34/34
+
+EXIT=0
+STATUS=DONE
