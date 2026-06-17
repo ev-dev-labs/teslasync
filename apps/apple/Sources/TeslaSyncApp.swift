@@ -174,6 +174,7 @@ struct TeslaSyncApp: App {
         registry = UsersRouteRegistration.registry(base: registry)
         registry = SystemRouteRegistration.registry(base: registry)
         registry = SqlPlaygroundRouteRegistration.registry(base: registry)
+        registry = DashboardsRouteRegistration.registry(base: registry)
         registry = SecurityAccessRouteRegistration.registry(base: registry)
         registry = GasPriceAutoPollRouteRegistration.registry(base: registry)
         registry = TeslaFeatureFlagsRouteRegistration.registry(base: registry)
