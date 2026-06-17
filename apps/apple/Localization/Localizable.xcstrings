@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.notifications.browser.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browser notifications"
+          }
+        }
+      }
+    },
+    "translation.notifications.browser.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Native browser push notifications when alerts fire."
+          }
+        }
+      }
+    },
     "notifications.channels.title" : {
       "extractionState" : "manual",
       "localizations" : {

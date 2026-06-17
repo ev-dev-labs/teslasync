@@ -1994,6 +1994,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:notifications/Channels",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-notifications-ChannelsPage.log"
+    },
+    {
+      "unitId": "page:notifications/BrowserNotifications",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:notifications/BrowserNotifications",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-notifications-BrowserNotificationsPage.log"
+    },
+    {
+      "unitId": "page:notifications/BrowserNotifications",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:notifications/BrowserNotifications",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-notifications-BrowserNotificationsPage.log"
     }
   ]
 }
