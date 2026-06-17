@@ -1,0 +1,220 @@
+=== P4-APPLE P7 · page:system/DataExport — SwiftUI / HIG ===
+Artifact: apps/apple/TeslaSync/Features/System/DataExportPage.swift (+ 11 co-located files)
+PARITY_REQUIRED=75
+Start: 2026-06-17T06:28:11-07:00
+
+=== INVESTIGATION ===
+
+Web source: web/src/features/system/pages/DataExportPage.tsx (1268 lines)
+Route: /data-export
+
+The web page lets a user export vehicle data. Sections (top → bottom):
+  1. StatsRow              — 4 MetricCards: Total Exports / Total Size / Most Exported (By Count) / Last Export
+  2. AccountExportPanel    — GDPR "Download my data" (useCreateAccountExport → POST /export/jobs/account)
+  3. ExportWizard          — "New Export": type grid, format, optional column picker
+                             (useExportColumns → GET /exports/columns?type=), vehicle, date range, submit
+  4. FormatInfoCards       — CSV preview + JSON preview cards
+  5. DataOverviewCard      — drives / charging-sessions record counts
+  6. ExportHistoryTable    — jobs table (loading / empty / error / populated) + active badge + refresh
+  7. ScheduledExportsPanel — recurring exports (wrapped in <RequiresAuth>)
+
+Data sources (manifest):
+  - useCreateAccountExport → POST /export/jobs/account
+  - useExportColumns       → GET  /exports/columns [type]
+  (the page additionally reads useExportJobs GET /export/jobs, useVehicles GET /vehicles,
+   and the submit mutation POST /export/jobs — all bound through the model seam)
+
+Panel→parity mapping (12 manifest panels):
+  GlassPanel1  = AccountExportPanel (Download my data)
+  GlassPanel2  = ExportWizard (New Export)
+  GlassPanel3  = FormatInfoCards CSV preview
+  GlassPanel4  = FormatInfoCards JSON preview
+  Total-Exports / Total-Size / Most-Exported / Last-Export = the 4 StatsRow metric cards
+  GlassPanel9  = DataOverviewCard
+  GlassPanel10 = ExportHistoryTable
+  GlassPanel11 = ExportTypeSelector (the data-type card grid inside the wizard)
+  GlassPanel12 = ScheduledExportsPanel
+
+Apple target dir: apps/apple/TeslaSync/Features/System/ — follows the co-located
+neighbour style (DataRepairPage/HelpPage/RoadmapPage/ScheduledExportsPanel): SwiftUI
++ @Observable model + injected data-source seam, native materials (ADR-005),
+ContentUnavailableView / .redacted skeletons, String(localized:) with the web key
+names. A sibling `ScheduledExportsPanel` already exists in this dir and is reused.
+
+Toolchain: Xcode 26.5, swiftlint 0.63.3, xcodegen present, pwsh present.
+KMP Shared.xcframework is ABSENT (requires the Kotlin/Native + Gradle toolchain,
+staged only on macos-latest CI per apps/macos-pending-verifications.md). The full
+`xcodebuild build test` is therefore deferred to CI exactly as for every sibling
+P4-apple page; host-runnable build proxy is `swiftc -typecheck` against the real
+macOS-15 + iOS-18-simulator SDKs under Swift 6 strict concurrency.
+
+=== IMPLEMENTATION ===
+
+Created (12 files, all < 400 lines for the swiftlint file_length rule):
+  DataExportModels.swift           — DataExportType/Format/JobStatus/Tone enums, wire structs, payloads
+  DataExportFormatters.swift       — DataExportDisplay: formatBytes/fmtInt/formatRelative/
+                                     formatDurationMsLong/dateTime/daysAgo (ported from web lib)
+  DataExportDataSource.swift       — DataExportDataSource protocol (loadJobs/loadVehicles/
+                                     useExportColumns/submitExport/useCreateAccountExport) + Sample seed
+  DataExportPageModel.swift        — @MainActor @Observable model: state machine + intents + derived stats
+  DataExportStyle.swift            — dataExportPanel() material modifier, DataExportChip, DataExportMetricCard
+  DataExportWizardComponents.swift — DataExportTypeSelector (GlassPanel11), FormatSelector, PresetSelector
+  DataExportColumnPicker.swift     — web ColumnPickerSection selection semantics (required/select-all/clear)
+  DataExportWizardView.swift       — the 4-step New Export wizard (GlassPanel2)
+  DataExportPageViews.swift        — AccountPanel(GP1), FormatCards(GP3/GP4), OverviewCard(GP9)
+  DataExportHistoryView.swift      — ExportHistory(GP10): loading/empty/error/success + adaptive job rows
+  DataExportPage.swift             — page scaffold: header, statsRow, sections, feedback alert
+  DataExportPreviewSources.swift   — DEBUG empty/failing data sources for previews
+
+Updated:
+  apps/apple/Localization/Localizable.xcstrings — added 93 keys (4 of the 59 required
+    already existed: Duration/Status/Time/Vehicle); UTF-8 verified (½, em-dash intact)
+  apps/parity/apple-ledger.json — added page:system/DataExport rows (apple-macos + apple-ios)
+
+Design notes:
+  - @Observable DataExportPageModel drives every region; no networking in the views (ADR-004).
+  - 4 data states surfaced via DataExportState (loading/empty/error/success); the panels render
+    and switch state in place rather than gating the surface (web-faithful).
+  - Adaptive macOS + iOS via ViewThatFits / LazyVGrid(.adaptive) — one view layer (ADR-002/006).
+  - Materials (.regularMaterial / .quaternary) instead of hand-rolled glass (ADR-005).
+  - HIG-native: ContentUnavailableView (empty/error), .redacted(.placeholder) skeletons,
+    RelativeDateTimeFormatter for "Last Export", segmented Picker for format, DatePicker for ranges.
+  - Control-plane values only (bytes/counts/timestamps) → no SI conversion applies (ADR-005).
+  - a11y: labels/values/traits on every panel, chip, card and job row; Dynamic Type via system fonts.
+  - i18n: every visible string via String(localized:) with the web key names (ADR-014).
+
+=== PARITY ===
+
+PARITY_REQUIRED=75
+
+Panel coverage (12/12):
+✓ [panel] GlassPanel1   — DataExportPageViews.swift  · DataExportAccountPanel (Download my data)
+✓ [panel] GlassPanel2   — DataExportWizardView.swift · DataExportWizardView (New Export)
+✓ [panel] GlassPanel3   — DataExportPageViews.swift  · DataExportFormatCards.csvCard / DataExportPreviewCard
+✓ [panel] GlassPanel4   — DataExportPageViews.swift  · DataExportFormatCards.jsonCard
+✓ [panel] Total-Exports — DataExportPage.swift:statsRow · DataExportMetricCard (Total Exports)
+✓ [panel] Total-Size    — DataExportPage.swift:statsRow · DataExportMetricCard (Total Size)
+✓ [panel] Most-Exported — DataExportPage.swift:statsRow · DataExportMetricCard (Most Exported / By Count)
+✓ [panel] Last-Export   — DataExportPage.swift:statsRow · DataExportMetricCard (Last Export)
+✓ [panel] GlassPanel9   — DataExportPageViews.swift  · DataExportOverviewCard (Data Overview)
+✓ [panel] GlassPanel10  — DataExportHistoryView.swift · DataExportHistoryView (Export History)
+✓ [panel] GlassPanel11  — DataExportWizardComponents.swift · DataExportTypeSelector (type card grid)
+✓ [panel] GlassPanel12  — DataExportPage.swift:scheduledSection · ScheduledExportsPanel()
+
+Data state coverage (4/4) — DataExportPageModel.DataExportState + DataExportHistoryView.bodyRegion:
+✓ [state] loading — DataExportHistoryView.loadingRegion (5 .redacted rows) + DataExportPage.statsRow
+                    redaction + DataExportOverviewCard loading skeleton
+✓ [state] empty   — DataExportHistoryView.emptyRegion (ContentUnavailableView "No Exports Yet")
+✓ [state] error   — DataExportHistoryView.errorRegion (ContentUnavailableView + Retry → model.refresh)
+✓ [state] success — DataExportHistoryView.jobsRegion (DataExportJobRow list); model load() maps
+                    empty→.empty, populated→.success, throw→.error
+
+String coverage (59/59) — all resolve from Localizable.xcstrings, web key names, referenced via String(localized:):
+✓ [string] All Vehicles                         — DataExportWizardView.vehiclePicker
+✓ [string] By Count                             — DataExportPage.statsRow (Most Exported subtitle)
+✓ [string] Download                             — DataExportHistoryView.actions
+✓ [string] Duration                             — DataExportHistoryView.detailItems (pre-existing key)
+✓ [string] End                                  — DataExportWizardView.endField
+✓ [string] Export Failed                        — DataExportPageModel.DataExportFeedback.exportFailed
+✓ [string] Export Failed Msg                    — DataExportPageModel.DataExportFeedback.exportFailed
+✓ [string] Export Started                       — DataExportPageModel.DataExportFeedback.exportStarted
+✓ [string] Export Started Msg                   — DataExportPageModel.DataExportFeedback.exportStarted
+✓ [string] Format                               — DataExportWizardComponents.DataExportFormatSelector + history
+✓ [string] Last Export                          — DataExportPage.statsRow
+✓ [string] Most Exported                        — DataExportPage.statsRow
+✓ [string] Records                              — DataExportHistoryView.detailItems
+✓ [string] Size                                 — DataExportHistoryView.detailItems
+✓ [string] Start                                — DataExportWizardView.startField
+✓ [string] Start Export                         — DataExportWizardView.submitButton
+✓ [string] Status                               — DataExportHistoryView.badgesAccessibility (pre-existing key)
+✓ [string] Time                                 — DataExportHistoryView.detailItems (pre-existing key)
+✓ [string] Total Exports                        — DataExportPage.statsRow
+✓ [string] Total Size                           — DataExportPage.statsRow
+✓ [string] Type                                 — DataExportHistoryView.badgesAccessibility
+✓ [string] Vehicle                              — DataExportWizardView.vehiclePicker (pre-existing key)
+✓ [string] dataExport.account.allVehicles       — DataExportPageViews.DataExportAccountPanel.vehiclePicker
+✓ [string] dataExport.account.endDate           — DataExportPageViews.DataExportAccountPanel.endField
+✓ [string] dataExport.account.start             — DataExportPageViews.DataExportAccountPanel.startButton
+✓ [string] dataExport.account.startDate         — DataExportPageViews.DataExportAccountPanel.startField
+✓ [string] dataExport.account.subtitle          — DataExportPageViews.DataExportAccountPanel.headerRow
+✓ [string] dataExport.account.title             — DataExportPageViews.DataExportAccountPanel.headerRow
+✓ [string] dataExport.account.vehicle           — DataExportPageViews.DataExportAccountPanel.vehiclePicker
+✓ [string] dataExport.account.warning           — DataExportPageViews.DataExportAccountPanel.warning
+✓ [string] dataExport.active                    — DataExportHistoryView.header (active badge)
+✓ [string] dataExport.allVehicles               — DataExportWizardView.vehiclePicker (a11y)
+✓ [string] dataExport.chargingSessions          — DataExportPageViews.DataExportOverviewCard.chargeRow
+✓ [string] dataExport.columns.alwaysIncluded    — DataExportColumnPicker.row (Required chip)
+✓ [string] dataExport.columns.clear             — DataExportColumnPicker.actions
+✓ [string] dataExport.columns.helperText        — DataExportColumnPicker.helperText
+✓ [string] dataExport.columns.selectAll         — DataExportColumnPicker.actions
+✓ [string] dataExport.columns.title             — DataExportColumnPicker.grid + DataExportWizardView.columnsStep
+✓ [string] dataExport.csvDesc                    — DataExportPageViews.DataExportFormatCards.csvCard
+✓ [string] dataExport.csvPreview                 — DataExportPageViews.DataExportFormatCards.csvCard
+✓ [string] dataExport.customRange                — DataExportWizardView.dateRange
+✓ [string] dataExport.dataOverview               — DataExportPageViews.DataExportOverviewCard
+✓ [string] dataExport.drives                     — DataExportPageViews.DataExportOverviewCard.driveRow
+✓ [string] dataExport.exportHistory              — DataExportHistoryView.header
+✓ [string] dataExport.jsonDesc                   — DataExportPageViews.DataExportFormatCards.jsonCard
+✓ [string] dataExport.jsonPreview                — DataExportPageViews.DataExportFormatCards.jsonCard
+✓ [string] dataExport.noExports                  — DataExportHistoryView.emptyRegion
+✓ [string] dataExport.noExportsMessage           — DataExportHistoryView.emptyRegion
+✓ [string] dataExport.noJobs                     — DataExportHistoryView.jobsRegion (defensive)
+✓ [string] dataExport.refresh                    — DataExportHistoryView.header + DataExportPage.refreshButton
+✓ [string] dataExport.scheduled.feature          — DataExportPage.scheduledSection (a11y label)
+✓ [string] dataExport.subtitle                   — DataExportPage.titleBlock
+✓ [string] dataExport.title                      — DataExportPage.titleBlock + navigationTitle
+✓ [string] dataExport.unavailable                — DataExportPageViews.DataExportOverviewCard.content
+✓ [string] dataExport.wizard.step1               — DataExportWizardView.body + DataExportTypeSelector (a11y)
+✓ [string] dataExport.wizard.step2               — DataExportWizardView.body
+✓ [string] dataExport.wizard.step3               — DataExportWizardView.body
+✓ [string] dataExport.wizard.step4               — DataExportWizardView.body
+✓ [string] dataExport.wizardTitle                — DataExportWizardView.header
+
+PARITY_COVERED=75
+
+Verification of string coverage (scripted): all 59 manifest strings are referenced via
+String(localized:"<key>") across the 12 DataExport*.swift files, and all 59 keys resolve
+from apps/apple/Localization/Localizable.xcstrings (93 keys added this run; 4 pre-existed).
+
+=== GATES ===
+
+PLACEHOLDER_EXIT=0   (artifact-scoped: the 12 DataExport*.swift files → PLACEHOLDER_COUNT=0,
+                      PLACEHOLDER_ALLOWED=4 — the 4 `.redacted(.placeholder)` skeletons carry
+                      `// parity:allow SwiftUI redaction skeleton` markers per the scanner contract)
+                     NOTE: the raw dir-wide scan `check-placeholders.ps1 -Path
+                      apps/apple/TeslaSync/Features/System` returns PLACEHOLDER_COUNT=13 / EXIT=1,
+                      but ALL 13 are PRE-EXISTING false-positives in OTHER surfaces committed by
+                      parallel-salvage merges — TeslaAccountPage.swift (11: `.redacted(.placeholder)`,
+                      the `placeholderAvatar` view + its uses, and doc comments) and
+                      ScheduledExportsPanelForm.swift (2: the `…namePlaceholder` localization key).
+                      ZERO are in this artifact. They are out of scope for this prompt
+                      ("Out of Scope: Other pages") and are not modified here.
+
+LINT_EXIT=0          (swiftlint --strict apps/apple/TeslaSync/Features/System, from repo root →
+                      "Found 0 violations, 0 serious in 34 files" — 22 existing + 12 new.
+                      Also verified 0 violations in the 12 new files under the stricter
+                      apps/apple/.swiftlint.yml project config.)
+
+BUILD_EXIT=0         (host-runnable proxy — full `xcodebuild build` deferred to macos-latest CI:
+                      KMP Shared.xcframework is not staged in this env + 0 codesigning identities
+                      + pre-existing cross-surface collisions, per apps/macos-pending-verifications.md.
+                      Proxy evidence:
+                        • xcodegen generate → EXIT=0; all 12 DataExport files enumerated (72 pbxproj refs)
+                        • swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+                          -target arm64-apple-macos15.0  -sdk <MacOSX>      → 0 errors
+                        • swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+                          -target arm64-apple-ios18.0-simulator -sdk <iPhoneSimulator> → 0 errors
+                      (compiled against real SwiftUI/Foundation with a 1-line stub for the
+                      same-module `ScheduledExportsPanel`, which already builds in the app target.)
+
+TEST_EXIT=N/A        (no XCUnit tests authored for this page this run; full `xcodebuild test`
+                      deferred to macos-latest CI alongside BUILD, per the P4-apple gate contract.)
+
+PARITY_COVERED=75 == PARITY_REQUIRED=75
+
+The DataExport artifact passes every host-runnable, artifact-scoped gate. The only non-green
+items are environmental/CI-deferred (full xcodebuild build+test) and pre-existing other-surface
+placeholder false-positives — neither attributable to this artifact, both disclosed above.
+
+EXIT=0
+STATUS=DONE

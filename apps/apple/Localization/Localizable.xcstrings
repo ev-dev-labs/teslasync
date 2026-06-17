@@ -1,6 +1,1029 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "All Vehicles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Vehicles"
+          }
+        }
+      }
+    },
+    "By Count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "By Count"
+          }
+        }
+      }
+    },
+    "Download" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download"
+          }
+        }
+      }
+    },
+    "End" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End"
+          }
+        }
+      }
+    },
+    "Export Failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export Failed"
+          }
+        }
+      }
+    },
+    "Export Failed Msg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We couldn't start your export. Please try again."
+          }
+        }
+      }
+    },
+    "Export Started" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export Started"
+          }
+        }
+      }
+    },
+    "Export Started Msg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your export has been queued and will be ready shortly."
+          }
+        }
+      }
+    },
+    "Format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Format"
+          }
+        }
+      }
+    },
+    "Last Export" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last Export"
+          }
+        }
+      }
+    },
+    "Most Exported" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Most Exported"
+          }
+        }
+      }
+    },
+    "Records" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records"
+          }
+        }
+      }
+    },
+    "Size" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Size"
+          }
+        }
+      }
+    },
+    "Start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start"
+          }
+        }
+      }
+    },
+    "Start Export" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start Export"
+          }
+        }
+      }
+    },
+    "Total Exports" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Exports"
+          }
+        }
+      }
+    },
+    "Total Size" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Size"
+          }
+        }
+      }
+    },
+    "Type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "dataExport.a11y.deselected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not selected"
+          }
+        }
+      }
+    },
+    "dataExport.a11y.selected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected"
+          }
+        }
+      }
+    },
+    "dataExport.account.allVehicles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All vehicles"
+          }
+        }
+      }
+    },
+    "dataExport.account.endDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End date (optional)"
+          }
+        }
+      }
+    },
+    "dataExport.account.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to queue account export"
+          }
+        }
+      }
+    },
+    "dataExport.account.failedMsg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We couldn't queue your account export. Please try again."
+          }
+        }
+      }
+    },
+    "dataExport.account.queued" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account export queued"
+          }
+        }
+      }
+    },
+    "dataExport.account.queuedMsg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Track progress in the export history below."
+          }
+        }
+      }
+    },
+    "dataExport.account.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start full export"
+          }
+        }
+      }
+    },
+    "dataExport.account.startDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start date (optional)"
+          }
+        }
+      }
+    },
+    "dataExport.account.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get a single ZIP containing every table we store for you \u2014 drives, charging, signal history, alerts, settings, and a manifest. Use this for backup, migration, or your personal records."
+          }
+        }
+      }
+    },
+    "dataExport.account.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download my data"
+          }
+        }
+      }
+    },
+    "dataExport.account.vehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle"
+          }
+        }
+      }
+    },
+    "dataExport.account.warning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts."
+          }
+        }
+      }
+    },
+    "dataExport.active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active"
+          }
+        }
+      }
+    },
+    "dataExport.allVehicles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Vehicles"
+          }
+        }
+      }
+    },
+    "dataExport.chargingSessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charging Sessions"
+          }
+        }
+      }
+    },
+    "dataExport.columns.alwaysIncluded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Required"
+          }
+        }
+      }
+    },
+    "dataExport.columns.clear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        }
+      }
+    },
+    "dataExport.columns.helperText" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select which columns to include in the export. Required columns cannot be removed."
+          }
+        }
+      }
+    },
+    "dataExport.columns.selectAll" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select all"
+          }
+        }
+      }
+    },
+    "dataExport.columns.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STEP 2\u00bd \u2014 Columns"
+          }
+        }
+      }
+    },
+    "dataExport.csvDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comma-separated values, compatible with Excel and Google Sheets"
+          }
+        }
+      }
+    },
+    "dataExport.csvPreview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CSV Preview"
+          }
+        }
+      }
+    },
+    "dataExport.customRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom Range"
+          }
+        }
+      }
+    },
+    "dataExport.dataOverview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data Overview"
+          }
+        }
+      }
+    },
+    "dataExport.dismiss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "dataExport.drives" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drives"
+          }
+        }
+      }
+    },
+    "dataExport.exportHistory" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export History"
+          }
+        }
+      }
+    },
+    "dataExport.formats.csv" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CSV"
+          }
+        }
+      }
+    },
+    "dataExport.formats.json" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JSON"
+          }
+        }
+      }
+    },
+    "dataExport.jsonDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Structured JSON format for programmatic access"
+          }
+        }
+      }
+    },
+    "dataExport.jsonPreview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JSON Preview"
+          }
+        }
+      }
+    },
+    "dataExport.loadFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load exports"
+          }
+        }
+      }
+    },
+    "dataExport.noExports" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Exports Yet"
+          }
+        }
+      }
+    },
+    "dataExport.noExportsMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create your first export above to get started."
+          }
+        }
+      }
+    },
+    "dataExport.noJobs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No export jobs"
+          }
+        }
+      }
+    },
+    "dataExport.presets.allTime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Time"
+          }
+        }
+      }
+    },
+    "dataExport.presets.last30" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 30 Days"
+          }
+        }
+      }
+    },
+    "dataExport.presets.last7" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 7 Days"
+          }
+        }
+      }
+    },
+    "dataExport.presets.last90" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 90 Days"
+          }
+        }
+      }
+    },
+    "dataExport.presets.lastYear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last Year"
+          }
+        }
+      }
+    },
+    "dataExport.refresh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh"
+          }
+        }
+      }
+    },
+    "dataExport.relative.justNow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "just now"
+          }
+        }
+      }
+    },
+    "dataExport.retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.feature" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scheduled exports"
+          }
+        }
+      }
+    },
+    "dataExport.status.expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expired"
+          }
+        }
+      }
+    },
+    "dataExport.status.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed"
+          }
+        }
+      }
+    },
+    "dataExport.status.processing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Processing"
+          }
+        }
+      }
+    },
+    "dataExport.status.queued" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Queued"
+          }
+        }
+      }
+    },
+    "dataExport.status.ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready"
+          }
+        }
+      }
+    },
+    "dataExport.status.unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        }
+      }
+    },
+    "dataExport.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export vehicle data in CSV or JSON format"
+          }
+        }
+      }
+    },
+    "dataExport.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data Export"
+          }
+        }
+      }
+    },
+    "dataExport.types.analytics" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analytics"
+          }
+        }
+      }
+    },
+    "dataExport.types.analyticsDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export analytics and aggregated statistics"
+          }
+        }
+      }
+    },
+    "dataExport.types.charging" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charging"
+          }
+        }
+      }
+    },
+    "dataExport.types.chargingDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export charging sessions and energy data"
+          }
+        }
+      }
+    },
+    "dataExport.types.drives" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drives"
+          }
+        }
+      }
+    },
+    "dataExport.types.drivesDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export drive sessions, routes, and efficiency data"
+          }
+        }
+      }
+    },
+    "dataExport.types.energy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy"
+          }
+        }
+      }
+    },
+    "dataExport.types.energyDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export energy consumption and efficiency data"
+          }
+        }
+      }
+    },
+    "dataExport.types.fullBackup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full Backup"
+          }
+        }
+      }
+    },
+    "dataExport.types.fullBackupDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete database backup of all vehicle data"
+          }
+        }
+      }
+    },
+    "dataExport.types.maintenance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenance"
+          }
+        }
+      }
+    },
+    "dataExport.types.maintenanceDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export maintenance and service records"
+          }
+        }
+      }
+    },
+    "dataExport.types.trips" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trips"
+          }
+        }
+      }
+    },
+    "dataExport.types.tripsDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export trip summaries with SI aggregate columns"
+          }
+        }
+      }
+    },
+    "dataExport.unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
+          }
+        }
+      }
+    },
+    "dataExport.vehicleFallback" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle (id)"
+          }
+        }
+      }
+    },
+    "dataExport.wizard.step1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STEP 1 \u2014 Select Data Type"
+          }
+        }
+      }
+    },
+    "dataExport.wizard.step2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STEP 2 \u2014 Choose Format"
+          }
+        }
+      }
+    },
+    "dataExport.wizard.step3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STEP 3 \u2014 Select Vehicle"
+          }
+        }
+      }
+    },
+    "dataExport.wizard.step4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STEP 4 \u2014 Date Range"
+          }
+        }
+      }
+    },
+    "dataExport.wizardTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Export"
+          }
+        }
+      }
+    },
     "commandHistory.backToCommands" : {
       "extractionState" : "manual",
       "localizations" : {
