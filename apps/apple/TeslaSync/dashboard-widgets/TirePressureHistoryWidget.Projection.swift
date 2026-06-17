@@ -18,7 +18,7 @@ import Foundation
 /// The pressure display unit, mirroring the web `PressureUnitPref`
 /// (`'kPa' | 'psi' | 'bar'`). The raw value is the label appended after a space,
 /// exactly as the web concatenates `${value} ${pressureUnit}`.
-public enum TirePressureUnit: String, Sendable, CaseIterable, Equatable {
+public enum TirePressureWidgetUnit: String, Sendable, CaseIterable, Equatable {
     case kpa = "kPa"
     case psi
     case bar

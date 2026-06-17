@@ -142,7 +142,7 @@ struct ActionItem {
 
 import SwiftUI
 
-enum HeroStatus: String {
+enum SystemHeroStatus: String {
     case healthy = "Healthy"
     case degraded = "Degraded"
     case unhealthy = "Unhealthy"

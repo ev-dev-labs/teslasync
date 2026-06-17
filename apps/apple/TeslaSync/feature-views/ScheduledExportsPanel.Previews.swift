@@ -84,7 +84,7 @@
     #Preview("Create form") {
         let model = scheduledExportsModel(ScheduledExportsPreviewData.update())
         model.startCreate()
-        return ScrollView { ScheduledExportsPanel(model: model).padding() }
+        ScrollView { ScheduledExportsPanel(model: model).padding() }
     }
 
     #Preview("Empty") {
