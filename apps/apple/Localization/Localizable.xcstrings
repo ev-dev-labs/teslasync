@@ -1,6 +1,303 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "nav.vehicles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fleet"
+          }
+        }
+      }
+    },
+    "vehicles.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View, manage, and sync your Tesla vehicles"
+          }
+        }
+      }
+    },
+    "vehicles.totalVehicles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Vehicles"
+          }
+        }
+      }
+    },
+    "vehicles.avgBattery" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg Battery"
+          }
+        }
+      }
+    },
+    "vehicles.totalRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Range"
+          }
+        }
+      }
+    },
+    "vehicles.chargingOnline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charging / Online"
+          }
+        }
+      }
+    },
+    "vehicles.batteryStatus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fleet Battery Status"
+          }
+        }
+      }
+    },
+    "vehicles.avgLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "avg"
+          }
+        }
+      }
+    },
+    "vehicles.allVehicles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Vehicles"
+          }
+        }
+      }
+    },
+    "vehicles.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No vehicles yet"
+          }
+        }
+      }
+    },
+    "vehicles.emptyMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis."
+          }
+        }
+      }
+    },
+    "vehicles.loadError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to load vehicles."
+          }
+        }
+      }
+    },
+    "vehicles.syncButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync from Tesla"
+          }
+        }
+      }
+    },
+    "vehicles.syncSuccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicles synced successfully."
+          }
+        }
+      }
+    },
+    "vehicles.syncError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync failed. Please try again."
+          }
+        }
+      }
+    },
+    "vehicles.syncToast" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicles synced successfully"
+          }
+        }
+      }
+    },
+    "vehicles.syncFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to sync vehicles"
+          }
+        }
+      }
+    },
+    "vehicles.deleteSuccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle removed"
+          }
+        }
+      }
+    },
+    "vehicles.deleteFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to remove vehicle"
+          }
+        }
+      }
+    },
+    "vehicles.removeTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Vehicle"
+          }
+        }
+      }
+    },
+    "vehicles.removeMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to remove \"%@\"? This will delete all associated data including drives, charges, and state history."
+          }
+        }
+      }
+    },
+    "vehicles.compareButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare vehicles"
+          }
+        }
+      }
+    },
+    "vehicles.open" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open vehicle"
+          }
+        }
+      }
+    },
+    "vehicles.locked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locked"
+          }
+        }
+      }
+    },
+    "vehicles.sentry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sentry Mode"
+          }
+        }
+      }
+    },
+    "pin.pin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pin"
+          }
+        }
+      }
+    },
+    "pin.unpin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unpin"
+          }
+        }
+      }
+    },
     "translation.ADAS Features" : {
       "extractionState" : "manual",
       "localizations" : {

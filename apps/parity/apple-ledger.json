@@ -2396,6 +2396,24 @@
       "requiredCount": 79,
       "promptId": "p4-apple/P7/page:vehicle-systems/SafetySettings",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicle-systems-SafetySettingsPage.log"
+    },
+    {
+      "unitId": "page:vehicles/VehicleList",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 37,
+      "requiredCount": 37,
+      "promptId": "p4-apple/P7/page:vehicles/VehicleList",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicles-VehicleListPage.log"
+    },
+    {
+      "unitId": "page:vehicles/VehicleList",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 37,
+      "requiredCount": 37,
+      "promptId": "p4-apple/P7/page:vehicles/VehicleList",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicles-VehicleListPage.log"
     }
   ]
 }

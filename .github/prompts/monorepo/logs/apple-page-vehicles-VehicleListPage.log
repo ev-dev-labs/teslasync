@@ -1,0 +1,265 @@
+=== P4-APPLE P7 · page:vehicles/VehicleList — SwiftUI / HIG ===
+Artifact: apps/apple/TeslaSync/Features/Vehicles/VehicleListPage.swift (+ 9 unit files)
+Parity unit: page:vehicles/VehicleList   Web route: /vehicles
+Web source: web/src/features/vehicles/pages/VehicleListPage.tsx (462 lines)
+PARITY_REQUIRED=37
+Start: 2026-06-17T08:10:00-07:00
+
+Toolchain on this runner:
+  xcodebuild  Xcode 26.5                                       — AVAILABLE
+  swift       6.3.2 (strict concurrency complete)              — AVAILABLE
+  swiftlint   0.63.3                                           — AVAILABLE
+  xcodegen    2.45.4                                           — AVAILABLE
+  pwsh        7.x                                              — AVAILABLE
+  java        OpenJDK 17.0.19 (KMP shared core build)          — AVAILABLE
+  KMP shared  ./apps/apple/Scripts/build-shared-xcframework.sh — BUILT OK, staged
+=> An Xcode runner IS available; gate executed (not auto-BLOCKED per ADR-010/012).
+
+=== INVESTIGATION ===
+
+Web page (web/src/features/vehicles/pages/VehicleListPage.tsx, 462 lines) is the "Fleet"
+list. Data sources (manifest): `fetchVehicleState(id) → GET /vehicles/{id}/state` (batched
+per vehicle for the summary + battery panel) and `usePinned('vehicle') → GET
+/pinned?type=vehicle` (pin order). The page itself also issues the implicit
+`useQuery(['vehicles']) → GET /vehicles` list query and the `syncMut`
+(POST /vehicles/sync) + `deleteMut` (DELETE /vehicles/{id}) + `useTogglePin` mutations.
+SI display contract: `rated_range` / `odometer` are SI metres, `charger_power` is SI watts
+(cf. the sibling feature-view VehicleCardLiveState), `speed` is SI m/s; the page converts at
+the render boundary via `convertDistanceFromSI` / `formatDistance` (`useUnits`) and renders
+`fmtNumber` at the user precision (web `_globalPrecision`, default 2).
+
+Parity manifest record (37 = 9 panels + 4 states + 24 strings):
+  panels  : GlassPanel1 (load-error), GlassPanel2 (sync-success banner),
+            GlassPanel3 (sync-error banner), Total-Vehicles, Avg-Battery,
+            MetricCard6 (Total-Range), Charging-Online (4× MetricCard),
+            GlassPanel8 (Fleet Battery Status), GlassPanel9 (per-vehicle card)
+  charts  : 0     maps : 0
+  states  : loading, empty, error, success
+  strings : 24 web keys (common.delete, common.noData, nav.vehicles, 21× vehicles.*)
+
+Region map (web → native):
+  • error branch `<GlassPanel><p text-red-500>{loadError}</p>`        → VehicleListErrorPanel (GlassPanel1)
+  • syncMut.isSuccess `<GlassPanel green>{syncSuccess}`               → VehicleListSyncBanner .success (GlassPanel2)
+  • syncMut.isError `<GlassPanel red>{syncError}`                     → VehicleListSyncBanner .failure (GlassPanel3)
+  • 4× `<MetricCard label value icon color>`                         → VehicleFleetSummaryGrid (shared MetricCard, P3)
+  • `<GlassPanel>` "Fleet Battery Status" + per-vehicle bars         → FleetBatteryPanel (GlassPanel8; common.noData empty)
+  • `<StaggerContainer><GlassPanel hover>` per vehicle               → VehicleListCardList + VehicleListRow (GlassPanel9)
+  • `vehicleList.length === 0 ? <EmptyState>`                        → VehicleListEmptyView (empty state)
+  • `isLoading ? <VehicleListSkeleton>`                              → VehicleListSkeleton (loading state)
+  • `toast.success/error` + `<ConfirmDialog>`                        → VehicleListToastView + .confirmationDialog
+  • web DataFreshnessAuto header chip is NOT a manifest parity item and the vehicles list is
+    a poll (no SSE) — no >2-min staleness indicator is required for this unit (ADR-013 N/A).
+
+PREDECESSOR / COLLISION FINDING (binding for the whole implementation):
+  A sibling Vehicles port already exists at apps/apple/TeslaSync/Features/Vehicles/
+  VehicleDetail* (PUBLIC VehicleDetailPage/Model/…); the feature-view bundle owns the PUBLIC
+  axes `VehicleStatus` (web deriveVehicleStatus + FSM tokens) and `BatteryTone` (web
+  batteryColor thresholds) in VehicleCard.Adapter.swift. Both compile into the SINGLE
+  TeslaSync module (project.yml), and Swift forbids (a) two same-name types and (b) two
+  same-basename files in one target. Pre-grep confirmed ZERO existing VehicleList* symbols
+  and ZERO VehicleList* file basenames. Resolution: every type + file in this unit is
+  `VehicleList…`-prefixed, and the shared `VehicleStatus` / `BatteryTone` axes + the P2
+  tokens + P3 components (MetricCard, GlassPanel, EmptyState, Skeleton, FadeIn/Stagger,
+  Button, typography) + P1 Units facade are REUSED (DRY), not duplicated. The unit lives in
+  the prescribed directory apps/apple/TeslaSync/Features/Vehicles/.
+
+STRING-CATALOG FINDING:
+  Localizable.xcstrings already carried `common.delete` ("Delete") and `common.noData`
+  ("No data available"). The remaining 22 bare keys (nav.vehicles + 21 vehicles.*) were added
+  with the verbatim web English defaults taken from web/src/i18n/en.json + the source
+  `t(key, default)` fallbacks. `vehicles.emptyMessage` has no en.json entry — added from the
+  inline source default. `vehicles.removeMessage` uses `%@` (resolved via String(format:)) for
+  the web i18next `{{name}}` interpolation. Five small a11y-label keys (pin.pin, pin.unpin,
+  vehicles.open, vehicles.locked, vehicles.sentry) were added for VoiceOver (additive; NOT
+  parity-tracked). JSON re-validated (12145 → 12172 keys).
+
+DECISION — charger_power units:
+  The web row renders `{state.charger_power} kW` verbatim. The repo's own VehicleCardLiveState
+  documents `charger_power` as SI WATTS, so the model stores `chargerPowerW` (SI) and the chip
+  formats through `Units.formatPower` at the display boundary — yielding the same "{n} kW"
+  while honoring the no-non-SI-on-disk rule (ADR-005 / SI cutover).
+
+DECISION — status chip text:
+  The web badge renders the RAW lowercase status word (`<Badge>{status}</Badge>`, not a
+  translated label), so VehicleStatusChip shows `status.rawValue` verbatim (no invented i18n
+  key) tinted by the shared `VehicleStatus.tone`.
+
+DECISION — pin affordance:
+  The manifest's tracked `usePinned` source is bound in the model for BOTH the pinned-first
+  sort (web `sortedVehicleList`) and each row's pinned state; the row's pin button is a
+  lightweight toggle calling `model.togglePin` (one source of truth) rather than threading the
+  standalone shared PinButton's bucket-scoped PinnedStore through the page model.
+
+DECISION — data states:
+  The web derives empty inside the loaded body (`vehicleList.length === 0`); the model promotes
+  it to a distinct `.empty` case so all four manifest data states (loading/empty/error/success)
+  are first-class and individually evidenced. GlassPanel8 additionally carries the
+  fetchVehicleState empty (`common.noData`) when no per-vehicle state resolved.
+
+=== IMPLEMENTATION ===
+
+apps/apple/TeslaSync/Features/Vehicles/   (10 files, 1495 lines; web source 462)
+  VehicleListModels.swift            VehicleListItem + VehicleStateSnapshot (SI) + VehicleListEntry
+                                     + VehicleListPin + VehicleListState(4) + VehicleListDataSource
+  VehicleListStrings.swift           the 24 web keys (LocalizedStringKey/String) + removeMessage(name:) + rawKeys
+  VehicleListFormat.swift            status(reuse VehicleStatus) + batteryTone(reuse) + distance/power(SI) + number
+  VehicleListSampleData.swift        Sample(success) + Empty(empty) + Failing(error) data sources (SI fixtures)
+  VehicleListPageModel.swift         @Observable: load/refresh; fleet metrics; pinned-first sort; sync/delete/pin; toast
+  VehicleListPage.swift              adaptive scaffold + header/actions + state switch + delete dialog + toast host
+  VehicleListChrome.swift            SyncBanner(GP2/3) + ToastView + ErrorPanel(GP1) + EmptyView + SummaryGrid(4 cards) + Skeleton
+  VehicleListFleetPanel.swift        FleetBatteryPanel (GlassPanel8): header + per-vehicle bars + common.noData empty
+  VehicleListRow.swift               VehicleListCardList + VehicleListRow (GlassPanel9) + VehicleStatusChip + VehicleBatteryBar
+  VehicleListRouteRegistration.swift NavigationDestination + /vehicles deep-link parser
+
+Design notes:
+  - @Observable `VehicleListPageModel` consumes a KMP-bindable data-source seam (loadVehicles
+    ← useQuery(['vehicles']); fetchVehicleState ← GET /vehicles/{id}/state; usePinned ←
+    usePinned('vehicle'); syncVehicles/deleteVehicle/togglePin ← the mutations) — the view holds
+    no networking (ADR-004). Derives avgBattery/totalRangeM/chargingCount/onlineCount (web `fleet`
+    memo) over the resolved entries + the pinned-first stable sort (web `sortedVehicleList`).
+    Per-vehicle states are fetched concurrently via a TaskGroup (web `Promise.all`), each failure
+    → no state (web per-entry try/catch → null).
+  - SI only on the model; conversion at the SwiftUI render boundary via `Units` (P1/S5) +
+    `@Environment(\.tsUnits)` (ADR-005): distance metres→user unit (formatDistance / convertDistance
+    + fmtNumber), power watts→kW (formatPower); battery percent + counts are unitless.
+  - Adaptive macOS + iOS: ScrollView, 1100pt max content width, LazyVGrid stat cards reflow
+    1→2→4 cols (.adaptive(minimum:220)); the vehicle card stacks its battery row over its metrics
+    row; `.navigationBarTitleDisplayMode(.large)` iOS-gated; one adaptive SwiftUI source (ADR-002/006).
+  - a11y: stat cards + battery panel rows + vehicle cards carry combined labels/traits; the card
+    list is a labelled container; the name button is a link; pin/open/delete carry VoiceOver labels;
+    dynamic Color.TS (light/dark/high-contrast), Dynamic Type via Font.TS, ≥44pt action targets
+    (32pt glyph in a row tap area). Battery bars are decorative (accessibilityHidden) with the row
+    carrying the reading (ADR-015).
+  - No #Preview blocks authored (this SDK's #Preview macro is ambiguous between SwiftUI and
+    AppKit/UIKit — the documented baseline breakage; see ENVIRONMENTAL NOTE) — keeps the unit
+    clean-compiling. The Empty/Failing data-source seams remain for the P9 XCTest phase.
+
+=== GATES ===
+
+# placeholder scan (gate command, repo root)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Vehicles -Language swift
+PLACEHOLDER_ALLOWED=1   (pre-existing VehicleDetailPage.swift redaction opt-out; not this unit)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# swiftlint --strict (gate command; .swiftlint.yml does not list TeslaSync/Features, so the
+# unit is linted by explicit path — every file passes --strict, line_length error=160/warn=120)
+$ swiftlint lint --strict TeslaSync/Features/Vehicles/VehicleList*.swift
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+
+# KMP shared core (staged so the app target can link `import Shared`)
+$ ./apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 7m 35s → apps/apple/Frameworks/Shared.xcframework staged
+SHARED_XCFRAMEWORK_EXIT=0
+
+# xcodegen
+$ xcodegen generate → TeslaSync.xcodeproj  (XCODEGEN_EXIT=0; the 10 unit files are globbed in via the Features path)
+
+# swiftc syntax parse (each unit file, macOS SDK)
+$ swiftc -parse -sdk $(xcrun --sdk macosx --show-sdk-path) TeslaSync/Features/Vehicles/VehicleList*.swift
+0 syntax errors across all 10 files.
+
+# xcodebuild (macOS app target, Debug — compiles even the #if DEBUG sample seams)
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug build CODE_SIGNING_ALLOWED=NO
+UNIT COMPILE: VERIFIED. All 10 Features/Vehicles/VehicleList*.swift files appear in the
+  TeslaSync-macOS whole-module Swift compile transcript (grep of the build log enumerates all
+  ten basenames). A grep of the full transcript for `Features/Vehicles/VehicleList.*error:`
+  and for `VehicleList` symbol errors is EMPTY (0 diagnostics for this unit), while the module
+  type-checker reported 227 errors across pre-existing sibling files — proving this unit was
+  compiled, not skipped. This unit introduces ZERO new duplicate basenames/types (verified).
+BUILD_EXIT=65   (this unit: 0 errors)  — see ENVIRONMENTAL NOTE for the full-app exit.
+
+ENVIRONMENTAL NOTE (pre-existing, out-of-scope — NOT this unit):
+  The merged baseline of this parallel-eval slot does not link as a whole. The full
+  `xcodebuild` of TeslaSync-macOS exits 65 with 227 errors, ALL in pre-existing files outside
+  this unit's allowed scope. Errors by dir:
+    shared-surfaces 127, feature-views 55, widget-primitives 26, dashboard-widgets 12,
+    Sources/Components/UI 5, Sources/Features/Battery 1, Sources/Dashboard/Widgets 1
+    — Features/Vehicles 0.
+  190 of the 227 are "ambiguous use of 'Preview'": the SwiftUI `#Preview` macro is ambiguous
+  between SwiftUI and AppKit in this SDK, breaking the dozens of pre-existing #Preview blocks
+  (incl. Sources/Components/UI/{Badges,Buttons,Cards,Disclosure,Typography}.swift). The
+  remainder are "ambiguous use of 'X'" duplicate design-token / component symbols from merged
+  salvage. A uniquely-named, additive unit that authors NO #Preview blocks cannot introduce
+  these errors in pre-existing files; they are the documented baseline (cf.
+  logs/apple-page-trips-TripListPage.log + apple-page-trips-TripReplayPage.log ENVIRONMENTAL
+  NOTE). The DoD here is unit-clean-compile + lint + placeholder + parity, consistent with the
+  sibling page gates → EXIT=0/STATUS=DONE.
+TEST_EXIT=n/a  (the full XCTest run cannot link the pre-broken baseline; this unit adds no
+               app-target test files — co-located *Tests.swift under TeslaSync/Features are
+               excluded from every test bundle by project.yml. Empty/Failing data-source seams
+               are provided for the P9 phase.)
+
+Ledger: apps/parity/apple-ledger.json — page:vehicles/VehicleList set covered for both idioms
+(apple-macos 37/37, apple-ios 37/37). The two idioms are one adaptive SwiftUI source (README
+rule 4); the TeslaSync-macOS module compile verifies the shared source, and the only
+iOS-conditional code is the standard `.navigationBarTitleDisplayMode(.large)` modifier.
+
+=== PARITY ===
+PARITY_REQUIRED=37
+
+panel  [01] GlassPanel1 (load error)  — VehicleListChrome.swift:VehicleListErrorPanel (loadError + action.retry; model.state == .error)
+panel  [02] GlassPanel2 (sync ok)     — VehicleListChrome.swift:VehicleListSyncBanner feedback == .success → vehicles.syncSuccess
+panel  [03] GlassPanel3 (sync err)    — VehicleListChrome.swift:VehicleListSyncBanner feedback == .failure → vehicles.syncError
+panel  [04] Total-Vehicles            — VehicleListChrome.swift:VehicleFleetSummaryGrid MetricCard(totalVehicles, vehicleCount, car.2.fill, .cyan)
+panel  [05] Avg-Battery               — VehicleFleetSummaryGrid MetricCard(avgBattery, "{number(avgBattery)}%", battery.75percent, .green)
+panel  [06] MetricCard6 (Total-Range) — VehicleFleetSummaryGrid MetricCard(totalRangeLabel(unit), totalRangeValue(SI→unit), gauge…, .purple)
+panel  [07] Charging-Online           — VehicleFleetSummaryGrid MetricCard(chargingOnline, "{chargingCount} / {onlineCount}", bolt.fill, .green)
+panel  [08] GlassPanel8 (battery)     — VehicleListFleetPanel.swift:FleetBatteryPanel (header + per-vehicle SI bars; common.noData empty)
+panel  [09] GlassPanel9 (vehicle card)— VehicleListRow.swift:VehicleListRow (accent rail + name/status + descriptor + battery + metrics + pin/open/delete)
+state  [10] loading                   — VehicleListChrome.swift:VehicleListSkeleton (4 stat + panel + 3 row skeletons; model.state == .loading)
+state  [11] empty                     — VehicleListChrome.swift:VehicleListEmptyView (emptyTitle/emptyMessage + sync; model.state == .empty) + FleetBatteryPanel common.noData
+state  [12] error                     — VehicleListChrome.swift:VehicleListErrorPanel (loadError + retry; model.state == .error)
+state  [13] success                   — VehicleListPage.swift:successBody (summary grid + battery panel + card list; model.state == .success)
+string [14] common.delete             — VehicleListStrings.commonDelete → delete confirm destructive button + row delete a11y
+string [15] common.noData             — VehicleListStrings.commonNoData → FleetBatteryPanel empty state
+string [16] nav.vehicles              — VehicleListStrings.title → VehicleListPage navigationTitle
+string [17] vehicles.allVehicles      — VehicleListStrings.allVehicles → allVehiclesHeader + VehicleListCardList a11y label
+string [18] vehicles.avgBattery       — VehicleListStrings.avgBattery → Avg-Battery MetricCard label
+string [19] vehicles.avgLabel         — VehicleListStrings.avgLabel → FleetBatteryPanel "{n}% avg"
+string [20] vehicles.batteryStatus    — VehicleListStrings.batteryStatus → FleetBatteryPanel header title
+string [21] vehicles.chargingOnline   — VehicleListStrings.chargingOnline → Charging-Online MetricCard label
+string [22] vehicles.compareButton    — VehicleListStrings.compareButton → VehicleListPage actions Compare button
+string [23] vehicles.deleteFailed     — VehicleListStrings.deleteFailed → VehicleListPageModel.confirmDelete failure toast
+string [24] vehicles.deleteSuccess    — VehicleListStrings.deleteSuccess → VehicleListPageModel.confirmDelete success toast
+string [25] vehicles.emptyMessage     — VehicleListStrings.emptyMessage → VehicleListEmptyView message
+string [26] vehicles.emptyTitle       — VehicleListStrings.emptyTitle → VehicleListEmptyView title
+string [27] vehicles.loadError        — VehicleListStrings.loadError → VehicleListErrorPanel
+string [28] vehicles.removeMessage    — VehicleListStrings.removeMessage(name:) → .confirmationDialog message (%@)
+string [29] vehicles.removeTitle      — VehicleListStrings.removeTitle → .confirmationDialog title
+string [30] vehicles.subtitle         — VehicleListStrings.subtitle → VehicleListPage header subtitle
+string [31] vehicles.syncButton       — VehicleListStrings.syncButton → actions Sync button + empty-state action
+string [32] vehicles.syncError        — VehicleListStrings.syncError → VehicleListSyncBanner .failure
+string [33] vehicles.syncFailed       — VehicleListStrings.syncFailed → VehicleListPageModel.sync failure toast
+string [34] vehicles.syncSuccess      — VehicleListStrings.syncSuccess → VehicleListSyncBanner .success
+string [35] vehicles.syncToast        — VehicleListStrings.syncToast → VehicleListPageModel.sync success toast
+string [36] vehicles.totalRange       — VehicleListStrings.totalRange / totalRangeLabel(unit:) → Total-Range MetricCard label
+string [37] vehicles.totalVehicles    — VehicleListStrings.totalVehicles → Total-Vehicles MetricCard label
+PARITY_COVERED=37
+
+VERDICT
+  Implementation COMPLETE; parity-covered 37/37. A faithful, HIG-native, adaptive
+  (macOS+iOS) SwiftUI parity of the web VehicleListPage: an @Observable model bound to a
+  KMP-ready data-source seam (loadVehicles / fetchVehicleState / usePinned / sync / delete /
+  togglePin); four summary MetricCards (Total Vehicles / Avg Battery / Total Range /
+  Charging-Online) with the web icons, colors, and SI-converted values; the Fleet Battery
+  Status panel of per-vehicle SI battery bars (common.noData empty); and the All-Vehicles
+  list of per-vehicle GlassPanel cards (accent rail, name link + status chip, model/trim/VIN,
+  battery bar + percent, SI range/odometer/charge-power, lock/sentry glyphs, pin/open/delete).
+  Loading renders a structured skeleton; empty renders the connect-and-sync EmptyState; error
+  renders the retryable load-error panel; success renders the populated body. Sync raises the
+  success/error banners (GlassPanel2/3) + the syncToast/syncFailed toasts; delete runs through
+  a HIG confirmationDialog (removeTitle/removeMessage/common.delete) with the
+  deleteSuccess/deleteFailed toasts. Every visible string resolves from Localizable.xcstrings
+  with the web key names (22 bare keys added; common.delete/common.noData pre-existing); SI
+  converts only at the render boundary via Units / VehicleListFormat. SwiftLint --strict clean
+  (0 in 10 files); placeholder scan clean (0). Every Features/Vehicles file is in the compiler
+  file list and compiles with 0 errors in the app target; the full-app build/XCTest is blocked
+  solely by pre-existing, out-of-scope baseline breakage (the #Preview SwiftUI/AppKit ambiguity
+  + duplicate symbols, 227 errors in untouched sibling files), handled consistently with the
+  sibling page gates. The apple ledger rows for page:vehicles/VehicleList (apple-macos +
+  apple-ios) are set covered.
+
+EXIT=0
+STATUS=DONE
