@@ -50,7 +50,7 @@ struct TabButton: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                 Text(title)
-                if count != 0 {  // swiftlint:disable:this empty_count
+                if count != 0 { // swiftlint:disable:this empty_count
                     Text("\(count)")
                         .font(.caption)
                         .padding(.horizontal, 6)
@@ -145,20 +145,20 @@ struct ChargingEditForm: View {
         GroupBox {
             VStack(spacing: 16) {
                 #if os(iOS)
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    formFields
-                }
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        formFields
+                    }
                 #else
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ],
-                    spacing: 12
-                ) {
-                    formFields
-                }
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ],
+                        spacing: 12
+                    ) {
+                        formFields
+                    }
                 #endif
 
                 HStack(spacing: 12) {
@@ -201,41 +201,41 @@ struct ChargingEditForm: View {
         LabeledContent(String(localized: "Energy Added (kWh)")) {
             TextField("0", text: $energyAdded)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.decimalPad)
-                #endif
+            #endif
         }
 
         LabeledContent(String(localized: "End Battery %")) {
             TextField("0", text: $endBattery)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.numberPad)
-                #endif
+            #endif
         }
 
         LabeledContent(String(localized: "Charger Power (kW)")) {
             TextField("0", text: $peakPower)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.decimalPad)
-                #endif
+            #endif
         }
 
         LabeledContent(String(localized: "Duration (min)")) {
             TextField("0", text: $duration)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.numberPad)
-                #endif
+            #endif
         }
 
         LabeledContent(String(localized: "Cost ($)")) {
             TextField("0", text: $cost)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.decimalPad)
-                #endif
+            #endif
         }
     }
 }
@@ -308,20 +308,20 @@ struct DriveEditForm: View {
         GroupBox {
             VStack(spacing: 16) {
                 #if os(iOS)
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    formFields
-                }
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        formFields
+                    }
                 #else
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ],
-                    spacing: 12
-                ) {
-                    formFields
-                }
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ],
+                        spacing: 12
+                    ) {
+                        formFields
+                    }
                 #endif
 
                 HStack(spacing: 12) {
@@ -364,33 +364,33 @@ struct DriveEditForm: View {
         LabeledContent(String(localized: "Distance (m)")) {
             TextField("0", text: $distance)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.decimalPad)
-                #endif
+            #endif
         }
 
         LabeledContent(String(localized: "Duration (s)")) {
             TextField("0", text: $duration)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.numberPad)
-                #endif
+            #endif
         }
 
         LabeledContent(String(localized: "End Battery %")) {
             TextField("0", text: $endBattery)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.numberPad)
-                #endif
+            #endif
         }
 
         LabeledContent(String(localized: "Max Speed (m/s)")) {
             TextField("0", text: $maxSpeed)
                 .textFieldStyle(.roundedBorder)
-                #if os(iOS)
+            #if os(iOS)
                 .keyboardType(.decimalPad)
-                #endif
+            #endif
         }
     }
 }

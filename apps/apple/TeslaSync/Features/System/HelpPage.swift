@@ -196,7 +196,6 @@ public struct HelpPage: View {
     }
 
     /// The content of a link card (GroupBox with icon, title, description).
-    @ViewBuilder
     private func linkCardContent(for link: HelpLink) -> some View {
         GroupBox {
             HStack(alignment: .top, spacing: TSSpacing.md) {

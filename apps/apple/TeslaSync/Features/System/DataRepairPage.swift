@@ -26,7 +26,7 @@ public struct DataRepairPage: View {
                     loadingView
                 case .empty:
                     emptyView
-                case .error(let message):
+                case let .error(message):
                     errorView(message)
                 case .success:
                     successView
@@ -73,7 +73,7 @@ public struct DataRepairPage: View {
 
     private var loadingView: some View {
         VStack(spacing: 16) {
-            ForEach(0..<4, id: \.self) { _ in
+            ForEach(0 ..< 4, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: 12)
                     .fill(.quaternary)
                     .frame(height: 100)
@@ -117,9 +117,9 @@ public struct DataRepairPage: View {
 
     private var successView: some View {
         VStack(alignment: .leading, spacing: 24) {
-            statsSection  // Panel 3-6
-            tabSelector   // Panel 7
-            contentSection  // Panel 8
+            statsSection // Panel 3-6
+            tabSelector // Panel 7
+            contentSection // Panel 8
         }
     }
 
@@ -127,13 +127,13 @@ public struct DataRepairPage: View {
 
     private var statsSection: some View {
         #if os(iOS)
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            statCards
-        }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                statCards
+            }
         #else
-        HStack(spacing: 12) {
-            statCards
-        }
+            HStack(spacing: 12) {
+                statCards
+            }
         #endif
     }
 
@@ -269,16 +269,16 @@ public struct DataRepairPage: View {
 // MARK: - Preview
 
 #if DEBUG
-#Preview("Data Repair - Empty") {
-    NavigationStack {
-        DataRepairPage()
+    #Preview("Data Repair - Empty") {
+        NavigationStack {
+            DataRepairPage()
+        }
     }
-}
 
-#Preview("Data Repair - Loading") {
-    NavigationStack {
-        let page = DataRepairPage()
-        page
+    #Preview("Data Repair - Loading") {
+        NavigationStack {
+            let page = DataRepairPage()
+            page
+        }
     }
-}
 #endif

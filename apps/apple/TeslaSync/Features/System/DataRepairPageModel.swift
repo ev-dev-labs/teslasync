@@ -3,8 +3,8 @@
 //  TeslaSync — P4 feature view · P7 · DataRepairPage (Apple) — View Model
 //
 
-import SwiftUI
 import Observation
+import SwiftUI
 
 // MARK: - Data Models
 
@@ -56,31 +56,31 @@ final class DataRepairPageModel {
     var selectedTab: DataRepairTab = .charging
     var expandedId: Int?
 
-    // Computed properties
+    /// Computed properties
     var totalStale: Int {
         switch state {
-        case .success(let data):
-            return data.staleCharging.count + data.staleDrives.count
+        case let .success(data):
+            data.staleCharging.count + data.staleDrives.count
         default:
-            return 0
+            0
         }
     }
 
     var staleCharging: [DataRepairPageModelChargingSession] {
         switch state {
-        case .success(let data):
-            return data.staleCharging
+        case let .success(data):
+            data.staleCharging
         default:
-            return []
+            []
         }
     }
 
     var staleDrives: [Drive] {
         switch state {
-        case .success(let data):
-            return data.staleDrives
+        case let .success(data):
+            data.staleDrives
         default:
-            return []
+            []
         }
     }
 
@@ -99,39 +99,39 @@ final class DataRepairPageModel {
     }
 
     func updateChargingSession(
-        _ session: DataRepairPageModelChargingSession,
-        data: [String: Any]
+        _: DataRepairPageModelChargingSession,
+        data _: [String: Any]
     ) async -> Result<Void, Error> {
         // Integration point: PUT /data-repair/charging/{id} via KMP core
         try? await Task.sleep(for: .milliseconds(200))
         return .success(())
     }
 
-    func closeChargingSession(_ sessionId: Int) async -> Result<Void, Error> {
+    func closeChargingSession(_: Int) async -> Result<Void, Error> {
         // Integration point: POST /data-repair/charging/{id}/close via KMP core
         try? await Task.sleep(for: .milliseconds(200))
         return .success(())
     }
 
-    func discardChargingSession(_ sessionId: Int) async -> Result<Void, Error> {
+    func discardChargingSession(_: Int) async -> Result<Void, Error> {
         // Integration point: DELETE /data-repair/charging/{id} via KMP core
         try? await Task.sleep(for: .milliseconds(200))
         return .success(())
     }
 
-    func updateDrive(_ drive: Drive, data: [String: Any]) async -> Result<Void, Error> {
+    func updateDrive(_: Drive, data _: [String: Any]) async -> Result<Void, Error> {
         // Integration point: PUT /data-repair/drives/{id} via KMP core
         try? await Task.sleep(for: .milliseconds(200))
         return .success(())
     }
 
-    func closeDrive(_ driveId: Int) async -> Result<Void, Error> {
+    func closeDrive(_: Int) async -> Result<Void, Error> {
         // Integration point: POST /data-repair/drives/{id}/close via KMP core
         try? await Task.sleep(for: .milliseconds(200))
         return .success(())
     }
 
-    func discardDrive(_ driveId: Int) async -> Result<Void, Error> {
+    func discardDrive(_: Int) async -> Result<Void, Error> {
         // Integration point: DELETE /data-repair/drives/{id} via KMP core
         try? await Task.sleep(for: .milliseconds(200))
         return .success(())
