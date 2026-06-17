@@ -1,6 +1,259 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "route.drivetrainHealth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drivetrain Health"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.frontMotor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Front Motor"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.rearMotor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rear Motor"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.inverter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inverter"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.battery" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.alert.criticalMsg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One or more drivetrain components are operating at critically high temperatures. Immediate attention is recommended."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.alert.warningMsg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drivetrain temperatures are above normal operating range. Monitor closely and consider reducing load."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.health.good" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GOOD"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.health.warning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WARNING"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.health.critical" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CRITICAL"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.statorTempHistory.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Front, rear-left and rear-right motor stator temperature history line chart"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.torqueHistory.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motor inverter torque output history area chart"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tempHistory.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outside temperature trend line chart per recent drive"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.powerOutput.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per-drive peak and regen motor power output history area chart"
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.criticalStop" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temperatures are critically high. Consider pulling over safely and letting the vehicle cool down."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.serviceUrgent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schedule an urgent service appointment. Critical temperatures may indicate a coolant system issue."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.reduceLoad" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reduce driving intensity and avoid hard acceleration to allow components to cool."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.checkCoolant" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schedule a service appointment to inspect the coolant system and fluid levels."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.avoidSupercharging" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avoid Supercharging while temperatures are elevated. Use Level 2 charging instead."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.regularService" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep up with regular service intervals for optimal drivetrain health and longevity."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.gentleAccel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gentle acceleration helps maintain lower motor temperatures and extends component life."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.precondition" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precondition the battery in cold weather for better thermal performance and driving efficiency."
+          }
+        }
+      }
+    },
+    "translation.drivetrain.tips.monitorTemps" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monitor drivetrain temperatures after spirited driving sessions or long highway stretches."
+          }
+        }
+      }
+    },
     "translation.dynamics.autopilotNoData" : {
       "extractionState" : "manual",
       "localizations" : {
