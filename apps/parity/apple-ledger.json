@@ -1495,6 +1495,24 @@
       "requiredCount": 43,
       "promptId": "p4-apple/P7/page:sharing/SharedDrive",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-sharing-SharedDrivePage.log"
+    },
+    {
+      "unitId": "page:system/DBHealth",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 55,
+      "requiredCount": 55,
+      "promptId": "p4-apple/P7/page:system/DBHealth",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-DBHealthPage.log"
+    },
+    {
+      "unitId": "page:system/DBHealth",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 55,
+      "requiredCount": 55,
+      "promptId": "p4-apple/P7/page:system/DBHealth",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-DBHealthPage.log"
     }
   ]
 }

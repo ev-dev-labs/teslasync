@@ -1,6 +1,98 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.dbHealth.chartTitle.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Top fifteen database table sizes horizontal bar chart"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top fifteen database table sizes horizontal bar chart"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Top fifteen database table sizes horizontal bar chart"
+          }
+        }
+      }
+    },
+    "translation.dbHealth.noMigrationData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Migration data unavailable"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Migration data unavailable"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Migration data unavailable"
+          }
+        }
+      }
+    },
+    "translation.dbHealth.noPoolData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Connection pool data unavailable"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connection pool data unavailable"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Connection pool data unavailable"
+          }
+        }
+      }
+    },
+    "route.dbHealth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "DB Health"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DB Health"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "DB Health"
+          }
+        }
+      }
+    },
     "share.avgSpeed" : {
       "extractionState" : "manual",
       "localizations" : {
