@@ -8376,6 +8376,149 @@
         }
       }
     },
+    "powerDashboards.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dashboard Composer"
+          }
+        }
+      }
+    },
+    "powerDashboards.intro" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compose a Grafana dashboard JSON envelope by picking panels from the curated catalog below and placing them on the 24-column grid. The browser does not push the dashboard to Grafana; copy your JSON into your existing Grafana dashboard editor."
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual dashboard JSON editor"
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dashboard JSON editor"
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{\n  \"title\": \"Fleet overview\",\n  \"slots\": [\n    {\n      \"panel_name\": \"drives_per_day_timeseries\",\n      \"grid_pos\": { \"x\": 0, \"y\": 0, \"w\": 24, \"h\": 8 }\n    }\n  ]\n}"
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.copy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy to clipboard"
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.clear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.copyEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type or paste a dashboard JSON envelope above before copying."
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.copyUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C."
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.copySuccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied. Paste the JSON into your Grafana dashboard editor (Dashboard settings → JSON Model)."
+          }
+        }
+      }
+    },
+    "powerDashboards.editor.copyFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C."
+          }
+        }
+      }
+    },
+    "powerDashboards.panels.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Curated panel catalog"
+          }
+        }
+      }
+    },
+    "powerDashboards.panels.intro" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once."
+          }
+        }
+      }
+    },
     "powerSql.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8493,6 +8636,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "These tables are the only tables the curated catalog exposes. The Helix natural-language drafter refuses any query referencing tables outside this list."
+          }
+        }
+      }
+    },
+    "route.powerDashboards" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dashboard Composer"
           }
         }
       }
