@@ -1477,6 +1477,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:settings/ActiveSessions",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-ActiveSessionsPage.log"
+    },
+    {
+      "unitId": "page:sharing/SharedDrive",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 43,
+      "requiredCount": 43,
+      "promptId": "p4-apple/P7/page:sharing/SharedDrive",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-sharing-SharedDrivePage.log"
+    },
+    {
+      "unitId": "page:sharing/SharedDrive",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 43,
+      "requiredCount": 43,
+      "promptId": "p4-apple/P7/page:sharing/SharedDrive",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-sharing-SharedDrivePage.log"
     }
   ]
 }
