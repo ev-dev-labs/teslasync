@@ -2286,6 +2286,24 @@
       "promptId": "p4-apple/P7/page:telemetry/SignalLogViewer",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-SignalLogViewerPage.log",
       "note": "SwiftUI parity at 17/17 (1 panel GlassPanel1, 4 data states, 12 strings). Reuses the shared SignalQueryControls surface (multi-select + results table + adapters) + P2 tokens; @Observable model over a KMP-ready data-source seam; Units-free (history is typed + display-ready). Placeholder + swiftlint --strict + swiftc -typecheck (macOS+iOS, Swift 6 complete concurrency) all clean; the page's 6 files contribute 0 errors in-module. Full xcodebuild blocked by pre-existing, out-of-scope duplicate enum TSSpacing in StatusApiDocsPage.swift (ambiguous design tokens module-wide, same breakage as SharingTripsPage) + #Preview ambiguity + duplicate rounded(toPlaces:) + unbuilt Shared.xcframework (none originating in Features/Telemetry)."
+    },
+    {
+      "unitId": "page:trips/TripList",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 34,
+      "requiredCount": 34,
+      "promptId": "p4-apple/P7/page:trips/TripList",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-trips-TripListPage.log"
+    },
+    {
+      "unitId": "page:trips/TripList",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 34,
+      "requiredCount": 34,
+      "promptId": "p4-apple/P7/page:trips/TripList",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-trips-TripListPage.log"
     }
   ]
 }
