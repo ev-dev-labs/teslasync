@@ -2084,6 +2084,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:notifications/QuietHours",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-notifications-QuietHoursPage.log"
+    },
+    {
+      "unitId": "page:settings/Privacy",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:settings/Privacy",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-PrivacyPage.log"
+    },
+    {
+      "unitId": "page:settings/Privacy",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:settings/Privacy",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-PrivacyPage.log"
     }
   ]
 }

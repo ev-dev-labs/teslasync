@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "account.privacy.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy"
+          }
+        }
+      }
+    },
+    "account.privacy.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage browser-local data: recently viewed pages and cookies / analytics consent."
+          }
+        }
+      }
+    },
     "editConflict.resource.settings" : {
       "extractionState" : "manual",
       "localizations" : {
