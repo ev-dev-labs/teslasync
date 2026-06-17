@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "help.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help"
+          }
+        }
+      }
+    },
+    "help.intro" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation."
+          }
+        }
+      }
+    },
+    "help.baseline.links.docsStatusApi.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Documentation"
+          }
+        }
+      }
+    },
+    "help.baseline.links.docsStatusApi.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browse the public API documentation including endpoints, schemas, and example requests."
+          }
+        }
+      }
+    },
+    "help.baseline.links.onboarding.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onboarding"
+          }
+        }
+      }
+    },
+    "help.baseline.links.onboarding.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Walk through the first-time setup wizard to connect a Tesla account and configure live telemetry."
+          }
+        }
+      }
+    },
+    "help.baseline.links.systemStatus.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System status"
+          }
+        }
+      }
+    },
+    "help.baseline.links.systemStatus.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inspect the live health of every backend service: database, MQTT, Redis, and the Tesla API."
+          }
+        }
+      }
+    },
+    "help.baseline.links.search.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search"
+          }
+        }
+      }
+    },
+    "help.baseline.links.search.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Find drives, charging sessions, alerts, and other records using typed filters."
+          }
+        }
+      }
+    },
+    "help.baseline.links.chatbot.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chatbot"
+          }
+        }
+      }
+    },
+    "help.baseline.links.chatbot.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Talk to the in-app assistant. Available in deterministic mode or LLM mode when Helix is enabled."
+          }
+        }
+      }
+    },
     "activity.myActivity.disabled.description" : {
       "extractionState" : "manual",
       "localizations" : {

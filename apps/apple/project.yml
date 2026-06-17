@@ -50,6 +50,10 @@ targets:
         excludes:
           - "**/*Tests.swift"
           - "*Tests.swift"
+      - path: TeslaSync/Features
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: TeslaSync/misc-surfaces
         excludes:
           - "**/*Tests.swift"
@@ -104,6 +108,10 @@ targets:
           - "**/*Tests.swift"
           - "*Tests.swift"
       - path: TeslaSync/feature-views
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
+      - path: TeslaSync/Features
         excludes:
           - "**/*Tests.swift"
           - "*Tests.swift"
