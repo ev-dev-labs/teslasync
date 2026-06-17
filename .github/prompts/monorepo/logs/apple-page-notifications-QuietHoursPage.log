@@ -1,0 +1,314 @@
+=== P4-APPLE · P7 · page:notifications/QuietHours (SwiftUI / HIG) ===
+started: 2026-06-17T05:00:58-0700
+host: macOS 26.5.1 (Darwin); Xcode 26.5 Build 17F42; Swift 6.3.2 (swiftlang-6.3.2.1.108);
+      swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+web source: web/src/features/notifications/pages/QuietHoursPage.tsx   (route /notifications/quiet-hours)
+parity unit: page:notifications/QuietHours  (manifest PARITY_REQUIRED=2)
+
+--------------------------------------------------------------------------------
+WEB SOURCE SHAPE (read end-to-end — covenant #3)
+--------------------------------------------------------------------------------
+QuietHoursPage.tsx (48 LOC) is a thin wrapper: `usePageTitle('Quiet hours')` + a
+`<PageContainer title subtitle copyLink>` whose children are `<AIQuietHoursSuggestion/>` (the Helix
+"suggest a window" advisor) above `<QuietHoursPanel/>` (the server-backed quiet-hours / DnD schedule
+editor). The page owns ONE piece of local state — `pendingSeed` (a `QuietHoursWindowInput | null`):
+  - `handleApplyDraft(patch)` is passed to the advisor as `onApplyDraft` → sets `pendingSeed`.
+  - `<QuietHoursPanel seedDraft={pendingSeed} onSeedConsumed={handleSeedConsumed}/>` consumes it once
+    per identity change (a `useEffect` copies it into the panel's `draft` form, opening the add/edit
+    form pre-filled), then fires `onSeedConsumed` → clears `pendingSeed` back to null.
+This is the propose-only contract (page comment + ADR-015 §I8): the advisor only PRE-FILLS the panel
+form; the panel's own Save button stays the sole write path.
+
+The manifest record (apps/parity/parity-manifest.json id=page:notifications/QuietHours) extracts exactly
+the page-level surface: NO dataSources, NO named panels, NO charts, NO maps, and the two i18n strings
+`notifications.quietHours.subtitle` / `notifications.quietHours.title` (requiredCount=2). The advisor
+body and the schedule-editor body are the *separately-shipped* parity units, already DONE in this repo:
+  - shared-surfaces/AIQuietHoursSuggestion.*  (the SwiftUI parity of components/ai/AIQuietHoursSuggestion)
+  - feature-views/QuietHoursPanel.*           (the SwiftUI parity of features/settings/components/QuietHoursPanel)
+Faithful, non-narrowing parity (covenant #2/#5) therefore = reproduce the PageContainer chrome (title +
+subtitle + copyLink) AND host BOTH real child surfaces AND wire the seed hand-off between them (DRY — no
+re-implementation), driven by the page model. This is the identical structure the sibling
+page:notifications/Channels (P7) used to host its NotificationChannelsView — followed verbatim here.
+
+--------------------------------------------------------------------------------
+FILES (allowed scope: apps/apple/TeslaSync/Features/Notifications/**, navigation
+registration, the platform string catalog, this log)
+--------------------------------------------------------------------------------
+  NEW  apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.swift               (90 LOC)
+         SwiftUI view: header(TSPageTitle title + subtitle Text + CopyLinkButton = web PageContainer
+         copyLink) + AIQuietHoursSuggestion(model: advisor) + QuietHoursPanel(model: panel); #if DEBUG
+         previews (Loaded/Empty/Error). P2 tokens + P3 components only; no hand-rolled glass; adaptive
+         macOS/iPad+iPhone (ADR-002/006).
+  NEW  apps/apple/TeslaSync/Features/Notifications/QuietHoursPageModel.swift          (125 LOC)
+         @MainActor @Observable model: titleKey/subtitleKey (web i18n keys, LocalizedStringKey) + the two
+         child @Observable models (QuietHoursSuggestionModel advisor + QuietHoursModel panel) built over
+         injectable seams + shareURL (web copyLink, canonical route path) + load()/refresh() (no
+         networking — ADR-004). The advisor's onApply (web onApplyDraft) is wired AT CONSTRUCTION to
+         `panel.seed(from:)`. Also adds the `QuietHoursModel.seed(from:)` extension = the native parity of
+         the panel's web `seedDraft` effect (set draft + clear validation + recomputePhase, mirroring the
+         shipped startCreate() open-form sequence).
+  NEW  apps/apple/TeslaSync/Features/Notifications/QuietHoursRouteRegistration.swift  (48 LOC)
+         QuietHoursLink NavigationDestination + .quietHoursDestination() modifier + QuietHoursRouteRegistration
+         .make() factory (mirrors the sibling ChannelsRouteRegistration / AlertRulesRouteRegistration in the
+         same directory).
+  EDIT apps/apple/Localization/Localizable.xcstrings   (+2 keys: notifications.quietHours.title /
+         notifications.quietHours.subtitle = web key names + web English defaults verbatim; JSON
+         validated, 11817 total keys; the existing notifications.channels.* + translation.* untouched)
+  EDIT apps/parity/apple-ledger.json                   (+2 rows: apple-macos, apple-ios; covered 2/2)
+
+  3 unit files, 263 LOC (web source = 48 LOC; native SwiftUI parity is larger — the real PageContainer
+  chrome + the @Observable page model + the two child seams + the seed hand-off + the route registration,
+  no skeletons/stubs).
+
+--------------------------------------------------------------------------------
+SEED HAND-OFF (web pendingSeed / seedDraft / onSeedConsumed — covenant #2/#5)
+--------------------------------------------------------------------------------
+The web page threads `pendingSeed` from the advisor's `onApplyDraft` into the panel's `seedDraft`, then
+clears it via `onSeedConsumed`. In SwiftUI both children bind to long-lived @Observable models held by
+the page model, so the React state round-trip collapses into a direct callback: the advisor model's
+`onApply: (QuietHoursWindowPatch) -> Void` (its built-in propose-only hand-off, web `onApplyDraft`) is
+wired to `panel.seed(from:)`. `seed(from:)` reproduces the web panel's `seedDraft` useEffect — it opens
+the panel's add/edit form pre-filled from the proposed window (enabled/start/end/timezone/weekdays/bypass)
+and calls `recomputePhase()` so an open draft suppresses the empty state exactly as the web
+`windows.length === 0 && !draft` ladder does. No `onSeedConsumed` bookkeeping is needed because the
+callback fires once per "Apply to form" tap and mutates the shared model directly (no stale-seed re-apply
+is possible). `seed(from:)` lives in this unit's allowed file and touches only same-module members of the
+shipped QuietHoursModel (draft / validationError are `public internal(set)`; recomputePhase() is internal)
+— the panel surface files are NOT edited (covenant #7).
+
+--------------------------------------------------------------------------------
+ROUTE HOSTING (navigation registration — an allowed file per the prompt)
+--------------------------------------------------------------------------------
+The value-less AppRoute enum's `.notifications` host is owned by the alerts inbox, and
+/notifications/quiet-hours is a sibling alerts surface. Mirroring the sibling ChannelsRouteRegistration
+(same directory, same pattern), the native shell models it as a typed NavigationDestination: a host stack
+adopts `.quietHoursDestination()` and pushes a `QuietHoursLink` to open it. No AppRoute enum widening is
+needed — AppRouteParser already resolves /notifications/quiet-hours to `.notifications` via its generic
+first-segment fallback (verified: the parser's explicit map has /notifications/{rules,audit,webhooks,
+archived,inbox} and falls back on first segment "notifications" -> AppRoute.notifications for the rest,
+exactly as the sibling Channels registration recorded). The copy-link share URL uses the canonical web
+path "/notifications/quiet-hours" (a constant, not user-facing prose). Changes therefore stay entirely
+within the allowed feature dir + catalog + ledger + this log (no Sources/App or TeslaSyncApp edit).
+
+--------------------------------------------------------------------------------
+ARCHITECTURE (ADR-002/004/005/006/013/014/015)
+--------------------------------------------------------------------------------
+  - QuietHoursPage (SwiftUI View) + @Observable QuietHoursPageModel. No business logic in the view body;
+    the model owns the two web i18n keys + the two child @Observable models + the share URL + the seed wire.
+  - Panels: the web page has NO panels of its own (manifest declares none) — it is PageContainer chrome
+    around the advisor + the schedule editor. Reproduced faithfully: header (title + subtitle + copyLink) +
+    BOTH hosted real surfaces. AIQuietHoursSuggestion renders the Helix invite/streaming/proposal/stream-
+    error/gate states; QuietHoursPanel renders the windows list, the add/edit form, the per-row toggle/
+    delete, and the save/delete toast — reused, not re-implemented (DRY).
+  - Charts/maps: none (web source has none) — N/A.
+  - 3 data states: the page's own surface has NO API data source (manifest declares none — it renders from
+    navigation/local state); each hosted surface owns + renders loading / empty / error (+ the orthogonal
+    stale/offline connectivity axis) for its own sources — its own parity unit, reused not re-implemented.
+    The page's three previews (Loaded / Empty / Error) drive the panel's content / empty / failed phases
+    through the in-memory source; the advisor renders its resting invite card under the AI-on gate.
+  - Live data / staleness: handled inside the hosted surfaces (their .stale/.offline freshness chip +
+    banner + guarded one-shot auto-refresh, ADR-013).
+  - i18n: the two visible page strings resolve from Localizable.xcstrings by the web key names
+    (notifications.quietHours.title / .subtitle) via the model's LocalizedStringKey; English fallbacks =
+    the web t(key, default) second argument verbatim (ADR-014). Zero hardcoded user-facing literals in the
+    page; the hosted surfaces resolve their own keys through their P1/S10 facades.
+  - Units: the seed/window scalars (HH:MM local times, IANA timezone, weekday bitmask, bypass severities)
+    are wall-clock schedule metadata, not SI physical quantities — no SI converter boundary is exercised on
+    this surface (consistent with the shipped QuietHoursPanel unit).
+  - a11y: header accessibilityElement(.contain); CopyLinkButton + both hosted surfaces carry their own
+    labels/traits/VoiceOver summaries; Dynamic Type via Font.TS roles + .teslaSyncTheme(); light/dark +
+    high-contrast via the Color.TS dynamic tokens; >=44pt controls from the shared TSButton (ADR-015).
+    SwiftUI-native only — no WKWebView, no web cloning.
+  - Adaptive: ScrollView + a centered max-width 1024 column (web PageContainer) that is regular on
+    macOS/iPad and compact on iPhone; the hosted surfaces reflow their own content (ADR-002/006).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=2
+--------------------------------------------------------------------------------
+[x] string — notifications.quietHours.subtitle
+       evidence: QuietHoursPage.swift `header` -> Text(model.subtitleKey) where
+                 QuietHoursPageModel.subtitleKey = LocalizedStringKey("notifications.quietHours.subtitle");
+                 Localizable.xcstrings key "notifications.quietHours.subtitle" = "Suppress non-critical
+                 notifications during a configurable window." (web default verbatim).
+[x] string — notifications.quietHours.title
+       evidence: QuietHoursPage.swift `header` -> TSPageTitle(model.titleKey) where
+                 QuietHoursPageModel.titleKey = LocalizedStringKey("notifications.quietHours.title");
+                 Localizable.xcstrings key "notifications.quietHours.title" = "Quiet hours"
+                 (web default verbatim).
+PARITY_COVERED=2
+PARITY_REQUIRED=2   (PARITY_COVERED == PARITY_REQUIRED ✓)
+
+Both parity strings render from the bound @Observable QuietHoursPageModel (titleKey / subtitleKey) and
+the Localizable.xcstrings catalog; web key names preserved verbatim.
+
+FAITHFUL CHROME + HOSTED BODIES (spec "reproduce every region"; covenant #2/#5 — no scope narrowing):
+[x] PageContainer copyLink       -> QuietHoursPage.swift CopyLinkButton(url: { shareURL }) where
+                                    shareURL = model.shareURL = "/notifications/quiet-hours" (shared P4
+                                    surface CopyLinkButton, the SwiftUI parity of web CopyLinkButton).
+[x] <AIQuietHoursSuggestion/>    -> QuietHoursPage.swift AIQuietHoursSuggestion(model: model.advisor) —
+                                    the already-shipped shared surface hosted via the page model's
+                                    QuietHoursSuggestionModel. Renders every web Helix state (gate /
+                                    invite / streaming / proposal / stream-error / stale / offline).
+[x] <QuietHoursPanel/>           -> QuietHoursPage.swift QuietHoursPanel(model: model.panel) — the
+                                    already-shipped feature view hosted via the page model's
+                                    QuietHoursModel. Renders loading / empty / error / content + the
+                                    add/edit form + per-row toggle/delete + the save/delete toast.
+[x] seedDraft / onSeedConsumed   -> advisor.onApply (web onApplyDraft) wired to panel.seed(from:) at
+                                    construction; seed(from:) = web seedDraft effect (pre-fill the form).
+
+================================================================================
+GATES  (all real command results — covenant #1)
+================================================================================
+--- swiftformat --lint (my 3 files, repo .swiftformat) ---
+0/3 files require formatting.
+FORMAT_EXIT=0
+(one trailingCommas diff on QuietHoursPageModel.swift's single-element sample-items array was found on the
+ first pass and FIXED by `swiftformat` per the repo --commas inline rule; re-lint = 0/3.)
+
+--- swiftlint --strict (my 3 files explicit, repo rule set, --no-cache) ---
+Linting 'QuietHoursPage.swift' (1/3) … 'QuietHoursRouteRegistration.swift' (3/3)
+Done linting! Found 0 violations, 0 serious in 3 files.
+LINT_EXIT=0
+(The repo .swiftlint.yml `included:` list does NOT contain TeslaSync/Features, so the gate's dir-path
+ invocation `swiftlint --strict TeslaSync/Features/Notifications` expands to the whole 6378-file project
+ and reports 4 PRE-EXISTING, OUT-OF-SCOPE violations — Sources/Features/System/MyActivityPageModel.swift:217
+ trailing_whitespace; TeslaSync/dashboard-widgets/WeeklyDigestWidget.{Adapter:317,Adapter:356,Tests:37}
+ line_length — 0 of them in this unit, the identical pre-existing set the sibling ChannelsPage log recorded.
+ Forbidden to commit-fix (covenant #6/#7). The authoritative in-scope result is the explicit-file run above:
+ 0 violations in my 3 files.)
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Notifications -Language swift ---
+PLACEHOLDER_ALLOWED=1   (the pre-existing sibling AlertRulesPage.swift `.redacted(.placeholder)` loading
+                         shimmer carries a `// parity:allow` — NOT one of my files; grep over my 3 files for
+                         TODO/FIXME/placeholder/Lorem/fatalError/stub/notImplemented = 0)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt from project.yml) ---
+Created project at apps/apple/TeslaSync.xcodeproj
+GEN_EXIT=0
+(each of the 3 new files referenced 6× in the pbxproj = iOS app + macOS app + both iOS/macOS test bundles,
+ since TeslaSync/Features is a shared project.yml source group; `git check-ignore TeslaSync.xcodeproj`
+ confirms the generated project is ignored and will NOT be committed.)
+
+--- Isolated Swift-6 strict-concurrency type-check of the unit against the REAL closure ---
+Set = the 3 unit files + the real P2 tokens (../design/generated/apple/*.swift) + Sources/Theme.swift +
+  Sources/Design/{TSDesign,TSMaterial}.swift + the P3 component library (Sources/Components/{UI,Motion,
+  Feedback,Forms,DataDisplay,Charts,Maps}, excl. the Shared-coupled UnitFormatters.swift which this page
+  does not use) + the FULL hosted advisor stack (TeslaSync/shared-surfaces/AIQuietHoursSuggestion.*) + the
+  FULL hosted panel stack (TeslaSync/feature-views/QuietHoursPanel.*) + the CopyLinkButton surface
+  (TeslaSync/shared-surfaces/CopyLinkButton.*) — 69 files, -DDEBUG so the previews + in-memory sources
+  compile too. (None of the closure imports the KMP `Shared` module — verified — so it type-checks without
+  the absent Shared.xcframework.)
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -DDEBUG -sdk <SDK> -target <T> <files>
+macOS  (arm64-apple-macos15.0)            -> 0 errors   MACOS_TYPECHECK_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors   IOS_TYPECHECK_EXIT=0
+# Authoritative proof on BOTH idioms that QuietHoursPage / QuietHoursPageModel (incl. the seed extension) /
+# QuietHoursRouteRegistration bind correctly to the ACTUAL TSPageTitle / Font.TS / Color.TS / TSSpacing /
+# CopyLinkButton / AIQuietHoursSuggestion / QuietHoursSuggestionModel / QuietHoursSuggestionInputSnapshot /
+# InMemoryQuietHoursSuggestionSource / QuietHoursWindowPatch / QuietHoursPanel / QuietHoursModel (draft /
+# validationError / recomputePhase) / QuietHoursDraft / QuietHoursUpdate / QuietHoursWindowItem /
+# QuietHoursWeekdays / InMemoryQuietHoursSource / OSLogQuietHoursWriter symbols (ADR-002/006).
+
+--- Full-scheme build / test (xcodebuild -scheme TeslaSync[-macOS] build|test) ---
+BUILD_EXIT=NOT_RUN   TEST_EXIT=NOT_RUN  (deliberately not executed — see blocker below; NOT recoloured green)
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE FULL-BUILD BLOCKER (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target cannot link in this environment without the KMP shared core:
+  - apps/apple/Frameworks/ contains only `.gitkeep` (verified) — the `Shared.xcframework` the Apple targets
+    consume (ADR-004) is absent. The TeslaSync / TeslaSync-macOS schemes run a MANDATORY pre-action
+    (Scripts/build-shared-xcframework.sh) that stages it via the P1-owned Kotlin/Native Gradle build
+    (`:core:assembleSharedXCFramework`, "Requires the Kotlin/Native Apple toolchain") — NOT in this
+    artifact's allowed files. The sibling page:notifications/{Channels,Webhooks,AlertRules} P7 logs recorded
+    this staging step OOM-killing the shared host under parallel-slot contention; I am running in a parallel
+    slot (slot-24), so triggering it would be irresponsible on a shared runner.
+  - The same sibling logs recorded that even with the framework present, the full build is independently RED
+    from PRE-EXISTING out-of-scope duplicate-declaration ambiguity across the parallel-generated bulk
+    surfaces, with 0 errors in the unit under test. That breakage is out-of-scope and forbidden to commit-fix.
+I therefore did NOT trigger the Kotlin/Native Gradle staging or the full xcodebuild. The unit is proven
+correct instead by the isolated Swift-6 strict-concurrency type-checks (macOS 0 + iOS 0, incl. previews) —
+the same host-isolated methodology the peer p4-apple notifications logs use when the shared bundle / bulk
+breakage blocks the full app target. No out-of-scope file was edited; the full build+test is DEFERRED to
+its owner / the P99 integration gate on a provisioned Xcode+KMP runner.
+
+================================================================================
+ACCEPTANCE
+================================================================================
+  [x] Every named panel (none in the web source) + every web region (PageContainer title + subtitle +
+      copyLink chrome AND the hosted real AIQuietHoursSuggestion AND the hosted real QuietHoursPanel AND the
+      seed hand-off between them) reproduced — no scope narrowing.
+  [x] Both parity strings (2) render from the bound @Observable QuietHoursPageModel (titleKey/subtitleKey).
+  [x] loading / empty / error implemented for the hosted sources by AIQuietHoursSuggestion + QuietHoursPanel
+      (+ stale/offline); the page's own surface declares no API data source. Previews drive Loaded/Empty/Error.
+  [x] All visible strings sourced from Localizable.xcstrings; web key names kept verbatim; zero hardcoded
+      literals; English fallbacks = web defaults; +2 catalog keys added.
+  [x] Dark mode + Dynamic Type + a11y honored; SI units N/A (schedule metadata, no physical quantities);
+      SwiftUI-native only.
+  [x] swiftformat(0) + swiftlint --strict(0 in unit) + placeholder(0) + xcodegen(0) GREEN; the unit's 3
+      files type-check clean on macOS(0) + iOS(0) incl. previews; PARITY_COVERED==PARITY_REQUIRED (2).
+  [~] BUILD + TEST: NOT_RUN — gated on the out-of-scope, P1-owned KMP Shared.xcframework staging (absent +
+      OOM-risk on this shared parallel runner) and the pre-existing out-of-scope bulk breakage; reported
+      honestly, never coloured green (covenant #1), consistent with the sibling p4-apple notifications logs.
+  [x] apple ledger rows for page:notifications/QuietHours (apple-macos + apple-ios) set covered 2/2.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The full xcodebuild is recorded as
+                       BUILD_EXIT=NOT_RUN / TEST_EXIT=NOT_RUN (deliberately not executed — out-of-scope KMP
+                       staging + shared-host safety), never coloured green. The isolated type-checks really
+                       ran and really returned 0/0 on macOS + iOS.
+ 2 No scope narrowing: the 2 manifest strings AND the full faithful page (PageContainer title+subtitle+
+                       copyLink chrome + the hosted real AIQuietHoursSuggestion + the hosted real
+                       QuietHoursPanel + the propose-only seed hand-off between them).
+ 3 No skip-and-assume: the web page was read end-to-end; title/subtitle/copyLink + the advisor + the panel +
+                       the pendingSeed/seedDraft/onSeedConsumed plumbing were all reproduced.
+ 4 No stubs as final : no TODO/stub/Lorem/fatalError in my 3 files (PLACEHOLDER_COUNT=0). Complete code.
+ 5 No parity shortcuts: strings = web keys verbatim; both bodies are the real shipped surfaces (not
+                       placeholders), bound through @Observable models; route is a typed NavigationDestination
+                       + factory; the seed hand-off is wired, not faked.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, the shared AIQuietHoursSuggestion / QuietHoursPanel
+                       / CopyLinkButton components, project.yml, Sources/App, or other owners' files. The
+                       seed(from:) extension is a same-module extension in MY file touching only the shipped
+                       model's internal-settable members. The generated TeslaSync.xcodeproj is git-ignored,
+                       not committed. The KMP staging blocker is left to its owner / the P99 gate.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/3), swiftlint --strict(0/3),
+                       placeholder(0), xcodegen(0), isolated type-check macOS(0) + iOS(0). The full
+                       xcodebuild is NOT_RUN (out-of-scope KMP staging), not a red I am hiding.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       The no-enum-widening route reconciliation is recorded under ROUTE HOSTING.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI QuietHoursPage shipped at parity with the web source: a pure @Observable
+QuietHoursPageModel (ADR-004 — no networking in the view) exposing the two web i18n keys the page renders,
+the copy-link share URL (web copyLink), and the two already-shipped child surfaces' @Observable models built
+over injectable seams (production binds the shared KMP useQuietHours + useAiEnabled/draft-stream bindings
+through the seams). The page reproduces the web chrome (PageContainer title + subtitle + copyLink) and hosts
+BOTH the AIQuietHoursSuggestion advisor and the QuietHoursPanel schedule editor — reused, not re-implemented
+(DRY) — and wires the propose-only seed hand-off (advisor.onApply -> panel.seed(from:), the native parity of
+web onApplyDraft/seedDraft) so "Apply to form" pre-fills the panel's add/edit form. A typed QuietHoursLink
+NavigationDestination + QuietHoursRouteRegistration.make() factory make it reachable + deep-linkable
+(/notifications/quiet-hours already resolves through the AppRouteParser first-segment fallback), without
+widening the AppRoute enum. Verified on BOTH idioms by isolated Swift-6 strict-concurrency type-checks
+(macOS 0 + iOS 0, incl. previews) + swiftformat(0) + swiftlint --strict(0) + placeholder(0) + xcodegen(0).
+The full xcodebuild scheme was NOT run — it is gated on the out-of-scope, P1-owned KMP Shared.xcframework
+Gradle staging (absent + OOM-risk on this shared parallel host, per the sibling logs) and the pre-existing
+out-of-scope bulk-surface breakage; deferred to its owner / the P99 integration gate.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/TeslaSync/Features/Notifications apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-notifications-QuietHoursPage.log
+  git commit -m "feat(apps/apple): QuietHoursPage at web parity (P7 notifications)"
+
+EXIT=0
+STATUS=DONE

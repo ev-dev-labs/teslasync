@@ -2012,6 +2012,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:notifications/BrowserNotifications",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-notifications-BrowserNotificationsPage.log"
+    },
+    {
+      "unitId": "page:notifications/QuietHours",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:notifications/QuietHours",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-notifications-QuietHoursPage.log"
+    },
+    {
+      "unitId": "page:notifications/QuietHours",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:notifications/QuietHours",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-notifications-QuietHoursPage.log"
     }
   ]
 }

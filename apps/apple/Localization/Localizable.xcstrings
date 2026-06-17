@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "notifications.quietHours.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet hours"
+          }
+        }
+      }
+    },
+    "notifications.quietHours.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suppress non-critical notifications during a configurable window."
+          }
+        }
+      }
+    },
     "translation.notifications.browser.title" : {
       "extractionState" : "manual",
       "localizations" : {
