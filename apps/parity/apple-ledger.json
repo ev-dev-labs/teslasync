@@ -1688,6 +1688,24 @@
       "promptId": "p4-apple/P7/page:telemetry/SignalsWorkspace",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-SignalsWorkspacePage.log",
       "note": "SwiftUI parity at 58/58 (11 panels, 4 data states, 43 strings). Placeholder + swiftc -typecheck (macOS+iOS, Swift 6 strict concurrency) + swiftlint --strict all clean; the page's files contribute 0 errors when compiled in-module. Full xcodebuild blocked by pre-existing, out-of-scope duplicate ScheduledExportsPanel.swift filename plus ~698 ambiguous-symbol errors across design-system/generated files (none in Features/Telemetry)."
+    },
+    {
+      "unitId": "page:vehicle-systems/GuardMode",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 54,
+      "requiredCount": 54,
+      "promptId": "p4-apple/P7/page:vehicle-systems/GuardMode",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicle-systems-GuardModePage.log"
+    },
+    {
+      "unitId": "page:vehicle-systems/GuardMode",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 54,
+      "requiredCount": 54,
+      "promptId": "p4-apple/P7/page:vehicle-systems/GuardMode",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicle-systems-GuardModePage.log"
     }
   ]
 }

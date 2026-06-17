@@ -1,6 +1,144 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.common.staleData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Data may be out of date"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data may be out of date"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Data may be out of date"
+          }
+        }
+      }
+    },
+    "translation.guard.acknowledgedBy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acknowledged by"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acknowledged by"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acknowledged by"
+          }
+        }
+      }
+    },
+    "translation.guard.panicConfirmMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "This will immediately flash lights, honk horn, lock doors, enable sentry mode, and send alerts to all notification channels."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This will immediately flash lights, honk horn, lock doors, enable sentry mode, and send alerts to all notification channels."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "This will immediately flash lights, honk horn, lock doors, enable sentry mode, and send alerts to all notification channels."
+          }
+        }
+      }
+    },
+    "translation.guard.sensitivityHigh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "High \u2014 Any movement"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High \u2014 Any movement"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "High \u2014 Any movement"
+          }
+        }
+      }
+    },
+    "translation.guard.sensitivityLow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Low \u2014 Movement > 1km"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Low \u2014 Movement > 1km"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Low \u2014 Movement > 1km"
+          }
+        }
+      }
+    },
+    "translation.guard.sensitivityMedium" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Medium \u2014 Movement > 200m"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medium \u2014 Movement > 200m"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Medium \u2014 Movement > 200m"
+          }
+        }
+      }
+    },
     "translation.Per Page" : {
       "extractionState" : "manual",
       "localizations" : {
