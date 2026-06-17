@@ -102,6 +102,7 @@ struct TeslaSyncApp: App {
             onOpenNotifications: { selection = .notifications }
         )
         registry = ActiveSessionsRouteRegistration.registry(base: registry)
+        registry = SettingsPageRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
         registry = ApiPlaygroundRouteRegistration.registry(base: registry)
         registry = DiskForecastRouteRegistration.registry(base: registry)
         registry = FleetTelemetryCoverageRouteRegistration.registry(base: registry)

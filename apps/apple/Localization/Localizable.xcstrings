@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "editConflict.resource.settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your settings"
+          }
+        }
+      }
+    },
+    "route.settingsPage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        }
+      }
+    },
+    "settings.checklist.settings.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer."
+          }
+        }
+      }
+    },
+    "settings.checklist.settings.restart" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart Checklist"
+          }
+        }
+      }
+    },
+    "settings.checklist.settings.restarted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup checklist restarted — re-add the widget from the dashboard customizer if needed."
+          }
+        }
+      }
+    },
+    "settings.checklist.settings.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup Checklist"
+          }
+        }
+      }
+    },
+    "settings.export.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export drives, charging, analytics, or full backup as CSV/JSON"
+          }
+        }
+      }
+    },
+    "settings.export.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data Export"
+          }
+        }
+      }
+    },
+    "settings.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure TeslaSync preferences and Tesla account connection"
+          }
+        }
+      }
+    },
+    "settings.tour.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Re-run the guided walkthrough of TeslaSync features"
+          }
+        }
+      }
+    },
+    "settings.tour.restart" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Tour Launcher"
+          }
+        }
+      }
+    },
+    "settings.tour.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onboarding Tour"
+          }
+        }
+      }
+    },
     "notifications.quietHours.title" : {
       "extractionState" : "manual",
       "localizations" : {

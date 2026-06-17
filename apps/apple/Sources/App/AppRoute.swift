@@ -39,8 +39,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
          powerDashboards, system, dbHealth
     case backupRestore
     case securityAccess
-    case settings, accountSessions, onboarding, teslaOrders, gasPrice, teslaFeatures, teslaRegion, explore, search,
-         sharing, watch
+    case settings, settingsPage, accountSessions, onboarding, teslaOrders, gasPrice, teslaFeatures, teslaRegion,
+         explore, search, sharing, watch
 
     public var id: String {
         rawValue
@@ -102,6 +102,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .notificationsWebhooks: "notifications/webhooks"
         case .notificationsArchived: "notifications/archived"
         case .accountSessions: "account/sessions"
+        case .settingsPage: "settings/overview"
         case .dbHealth: "db-health"
         default: rawValue
         }
@@ -196,6 +197,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .backupRestore: "externaldrive.fill.badge.timemachine"
         case .securityAccess: "shield.lefthalf.filled"
         case .settings: "gearshape.fill"
+        case .settingsPage: "slider.horizontal.3"
         case .accountSessions: "laptopcomputer"
         case .onboarding: "sparkles"
         case .explore: "safari.fill"
@@ -225,7 +227,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,
              .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .powerSql, .system, .dbHealth,
              .backupRestore, .ingestXRay, .feedbackQueue, .securityAccess, .powerDashboards: .system
-        case .settings, .accountSessions, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures, .teslaRegion: .account
+        case .settings, .settingsPage, .accountSessions, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures,
+             .teslaRegion: .account
         }
     }
 
