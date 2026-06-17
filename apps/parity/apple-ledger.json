@@ -1706,6 +1706,24 @@
       "requiredCount": 54,
       "promptId": "p4-apple/P7/page:vehicle-systems/GuardMode",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicle-systems-GuardModePage.log"
+    },
+    {
+      "unitId": "page:trips/TripReplay",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 42,
+      "requiredCount": 42,
+      "promptId": "p4-apple/P7/page:trips/TripReplay",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-trips-TripReplayPage.log"
+    },
+    {
+      "unitId": "page:trips/TripReplay",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 42,
+      "requiredCount": 42,
+      "promptId": "p4-apple/P7/page:trips/TripReplay",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-trips-TripReplayPage.log"
     }
   ]
 }
