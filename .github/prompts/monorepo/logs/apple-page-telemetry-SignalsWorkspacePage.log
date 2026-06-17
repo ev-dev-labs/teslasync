@@ -1,0 +1,194 @@
+=== P4-APPLE · P7 · page:telemetry/SignalsWorkspace · Apple SwiftUI Implementation ===
+Target: apps/apple/TeslaSync/Features/Telemetry/SignalsWorkspacePage.swift (+ split)
+Web source: web/src/features/telemetry/pages/SignalsWorkspacePage.tsx (~694 lines)
+Web route: /signals  →  AppRouteParser maps to AppRoute.telemetry
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 (Build 17F42) at /usr/bin/xcodebuild
+✓ swift 6.3.2 ; swiftlint ; xcodegen ; pwsh all present
+✓ Platform: Darwin (arm64)
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+→ Xcode runner IS available ⇒ gate is NOT auto-BLOCKED on tooling.
+
+=== WEB SOURCE ANALYSIS ===
+A thin orchestrator over four data hooks + three mutually-exclusive modes
+(historical / live / compare). Data sources (ported names kept at Swift call sites):
+  - useSignals          → GET /signals/{vehicleId}/available
+  - usePinned           → GET /pinned{buildQuery(type, context)}
+  - useSignalDiffServer → GET /signals/{vehicleId}/diff [at_a, at_b, signals]
+  - useTogglePin        → POST /pinned · GET /pinned{query} · DELETE /pinned/{id}
+Charts: 0 (manifest) · Maps: 0 (manifest).
+PARITY_REQUIRED = 11 panels + 4 data states + 43 strings = 58.
+
+=== IMPLEMENTATION (files created — proper decomposition, each ≤400 lines) ===
+apps/apple/TeslaSync/Features/Telemetry/
+  SignalsWorkspaceTypes.swift            (133)  Sendable value types
+  SignalsWorkspaceStrings.swift          (170)  WSText — 43 localized strings
+  SignalsWorkspacePageModel.swift        (355)  @MainActor @Observable model (state + intent)
+  SignalsWorkspacePageModel+Data.swift   (198)  catalog grouping, stats, SSE loop, KMP binding points
+  SignalsWorkspacePageViews.swift        (393)  panels 1–9 + 4 reusable data-state views
+  SignalsWorkspacePageContent.swift      (228)  panel 10 (compare diff table + bulk + pinned)
+  SignalsWorkspacePageLive.swift         (293)  panel 11 content (stats, history, live tail, footer)
+  SignalsWorkspacePage.swift             (233)  main View, adaptive macOS+iOS, lifecycle, previews
+  SignalsWorkspaceRouteRegistration.swift (23)  registers page on .telemetry (the /signals route)
+Navigation registration wired in apps/apple/Sources/TeslaSyncApp.swift
+  (registry = SignalsWorkspaceRouteRegistration.registry(base: registry)).
+Localization: 28 missing translation.* keys added to Localizable.xcstrings
+  (15 of the 43 already existed from the sibling SignalDiff work).
+
+Model isolation: @MainActor @Observable (matches LiveSignalInspectorPageModel);
+all four data sources surface an explicit WorkspaceDataPhase so loading/empty/
+error/success render for every source. Live SSE modelled via a lifecycle-bound
+Task with rate accounting, rolling buffer and >2 min staleness (ADR-013).
+Units formatted at the display boundary; nothing non-SI stored/computed.
+Type names prefixed (Workspace*) to avoid module-wide symbol collisions.
+
+=== PARITY ===
+PARITY_REQUIRED=58
+Each item below carries binding evidence (file + symbol).
+
+— Panels (11) —
+[x] panel  Selected             → SignalsWorkspacePageViews.swift : HeadlineStrip (WorkspaceStatCard, WSText.selected)
+[x] panel  Mode                 → SignalsWorkspacePageViews.swift : HeadlineStrip (WSText.mode, model.modeLabel)
+[x] panel  Live-rate            → SignalsWorkspacePageViews.swift : HeadlineStrip (WSText.liveRate, model.liveRateText)
+[x] panel  Pinned-signals       → SignalsWorkspacePageViews.swift : HeadlineStrip (WSText.pinned, model.pinnedCount)
+[x] panel  GlassPanel5          → SignalsWorkspacePageViews.swift : WorkspaceToolbar (Time Range/Per Page/Run/Live/Compare/help)
+[x] panel  Changed-signals      → SignalsWorkspacePageViews.swift : CompareStatsStrip (WSText.totalChanged)
+[x] panel  Visible-after-filter → SignalsWorkspacePageViews.swift : CompareStatsStrip (WSText.visibleAfterFilter)
+[x] panel  Pinned               → SignalsWorkspacePageViews.swift : CompareStatsStrip (WSText.pinnedCount)
+[x] panel  Window-span          → SignalsWorkspacePageViews.swift : CompareStatsStrip (WSText.windowSpan, model.windowSpanText)
+[x] panel  GlassPanel10         → SignalsWorkspacePageContent.swift : CompareDiffPanel (diff list + bulk toolbar + pinned footer)
+[x] panel  GlassPanel11         → SignalsWorkspacePageViews.swift : SignalCatalogSection  +  SignalsWorkspacePageLive.swift : HistoricalLiveSection
+
+— Data states (4) — implemented for every source via WorkspaceDataPhase
+[x] state  loading  → SignalsWorkspacePageViews.swift : WorkspaceStateLoading (redacted + ProgressView); .loading in SignalCatalogSection.catalogBody, CompareDiffPanel.diffBody, HistoricalLiveSection.historicalContent, LiveTailView.liveBody
+[x] state  empty    → SignalsWorkspacePageViews.swift : WorkspaceStateEmpty (ContentUnavailableView); .empty in every source switch above
+[x] state  error    → SignalsWorkspacePageViews.swift : WorkspaceStateError (message + Retry); .error in every source switch above (retryCatalog/retryDiff/retryHistory/startLive)
+[x] state  success  → SignalCatalogSection.catalogTree, CompareDiffPanel.diffList, HistoryTableView, LiveTailView.liveRows (.success render paths)
+
+— Strings (43) — all resolve from Localizable.xcstrings; web key names preserved behind translation.*
+[x] string Per Page                         → WSText.perPage              (translation.Per Page)
+[x] string Time Range                       → WSText.timeRange            (translation.Time Range)
+[x] string error.loadFailed                 → WSText.loadFailed           (translation.error.loadFailed)
+[x] string help.signal.live.aria            → WSText.liveHelpAria         (translation.help.signal.live.aria)
+[x] string liveMonitor.connected            → WSText.liveConnected        (translation.liveMonitor.connected)
+[x] string liveMonitor.disconnected         → WSText.liveDisconnected     (translation.liveMonitor.disconnected)
+[x] string liveMonitor.title                → WSText.liveTailTitle        (translation.liveMonitor.title)
+[x] string signalDiff.bulk.addAlert         → WSText.bulkAddAlert         (translation.signalDiff.bulk.addAlert)
+[x] string signalDiff.bulk.csv              → WSText.bulkCsv              (translation.signalDiff.bulk.csv)
+[x] string signalDiff.bulk.pin              → WSText.bulkPin              (translation.signalDiff.bulk.pin)
+[x] string signalDiff.bulk.unpin            → WSText.bulkUnpin            (translation.signalDiff.bulk.unpin)
+[x] string signalDiff.noChanges             → WSText.noChanges            (translation.signalDiff.noChanges)
+[x] string signalDiff.pinnedCount           → WSText.pinnedCount          (translation.signalDiff.pinnedCount)
+[x] string signalDiff.pinnedLabel           → WSText.pinnedLabel          (translation.signalDiff.pinnedLabel)
+[x] string signalDiff.totalChanged          → WSText.totalChanged         (translation.signalDiff.totalChanged)
+[x] string signalDiff.visible               → WSText.visibleAfterFilter   (translation.signalDiff.visible)
+[x] string signalDiff.windowSpan            → WSText.windowSpan           (translation.signalDiff.windowSpan)
+[x] string signalGap.refreshInterval        → WSText.refreshInterval      (translation.signalGap.refreshInterval)
+[x] string signalsWorkspace.addSignals      → WSText.addSignals           (translation.signalsWorkspace.addSignals)
+[x] string signalsWorkspace.chartAuto       → WSText.chartAuto            (translation.signalsWorkspace.chartAuto)
+[x] string signalsWorkspace.chartGrid       → WSText.chartGrid            (translation.signalsWorkspace.chartGrid)
+[x] string signalsWorkspace.chartMode       → WSText.chartMode            (translation.signalsWorkspace.chartMode)
+[x] string signalsWorkspace.chartOverlay    → WSText.chartOverlay         (translation.signalsWorkspace.chartOverlay)
+[x] string signalsWorkspace.compare         → WSText.compare              (translation.signalsWorkspace.compare)
+[x] string signalsWorkspace.emptyDesc       → WSText.emptyDesc            (translation.signalsWorkspace.emptyDesc)
+[x] string signalsWorkspace.emptyTitle      → WSText.emptyTitle           (translation.signalsWorkspace.emptyTitle)
+[x] string signalsWorkspace.exitCompare     → WSText.exitCompare          (translation.signalsWorkspace.exitCompare)
+[x] string signalsWorkspace.historical      → WSText.historical           (translation.signalsWorkspace.historical)
+[x] string signalsWorkspace.historyTitle    → WSText.historyTitle         (translation.signalsWorkspace.historyTitle)
+[x] string signalsWorkspace.live            → WSText.live                 (translation.signalsWorkspace.live)
+[x] string signalsWorkspace.liveRate        → WSText.liveRate             (translation.signalsWorkspace.liveRate)
+[x] string signalsWorkspace.mode            → WSText.mode                 (translation.signalsWorkspace.mode)
+[x] string signalsWorkspace.noVehicle       → WSText.noVehicle            (translation.signalsWorkspace.noVehicle)
+[x] string signalsWorkspace.noVehicleDesc   → WSText.noVehicleDesc        (translation.signalsWorkspace.noVehicleDesc)
+[x] string signalsWorkspace.noneSelected    → WSText.noneSelected         (translation.signalsWorkspace.noneSelected)
+[x] string signalsWorkspace.pinned          → WSText.pinned               (translation.signalsWorkspace.pinned)
+[x] string signalsWorkspace.run             → WSText.run                  (translation.signalsWorkspace.run)
+[x] string signalsWorkspace.selected        → WSText.selected             (translation.signalsWorkspace.selected)
+[x] string signalsWorkspace.share           → WSText.share                (translation.signalsWorkspace.share)
+[x] string signalsWorkspace.signalsSelected → WSText.signalsSelected(_:)  (translation.signalsWorkspace.signalsSelected)
+[x] string signalsWorkspace.stopLive        → WSText.stopLive             (translation.signalsWorkspace.stopLive)
+[x] string signalsWorkspace.subtitle        → WSText.subtitle             (translation.signalsWorkspace.subtitle)
+[x] string signalsWorkspace.title           → WSText.title                (translation.signalsWorkspace.title)
+
+PARITY_COVERED=58
+PARITY_REQUIRED=58
+PARITY_OK=true   (58 == 58)
+
+=== GATES ===
+
+Gate 1 — Placeholder scan (ADR-011)
+  Command: ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Telemetry -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0   → PASS
+
+Gate 2 — Swift type-check (strongest isolated check; the prompt's build proxy)
+  Command: swiftc -typecheck -swift-version 6 -strict-concurrency=complete <8 self-contained page files>
+  macOS  (arm64-apple-macos15.0):  TYPECHECK_MACOS_EXIT=0   → PASS
+  iOS    (arm64-apple-ios18.0):    TYPECHECK_IOS_EXIT=0     → PASS
+  (Stronger than the sibling SignalDiff gate: all page files together, both
+   platforms, Swift 6 complete concurrency.)
+
+Gate 3 — SwiftLint --strict
+  Command: swiftlint lint --strict <the 9 new files>
+  Result: Found 0 violations, 0 serious in 9 files.
+  Full-tree swiftlint --strict: only 3 PRE-EXISTING violations remain, none in
+  Features/Telemetry (Sources/Features/System/MyActivityPageModel.swift:217
+  trailing_whitespace; TeslaSync/feature-views/AnomalyInlineRow.Previews.swift:37,89
+  line_length). My edit to Sources/TeslaSyncApp.swift is clean.
+  LINT_EXIT=0   → PASS
+
+Gate 4 — Xcode build
+  Prereq: Shared.xcframework built via Gradle (:core:assembleSharedXCFramework
+          BUILD SUCCESSFUL in 7m 1s) and staged.
+  Command: xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+           -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+  Result: ** BUILD FAILED **  BUILD_EXIT=65
+  Root cause (PRE-EXISTING, OUTSIDE allowed scope Features/Telemetry/**):
+    error: filename "ScheduledExportsPanel.swift" used twice:
+      'TeslaSync/feature-views/ScheduledExportsPanel.swift' and
+      'TeslaSync/Features/System/ScheduledExportsPanel.swift' (target 'TeslaSync')
+    — the identical blocker the sibling SignalDiffPage gate recorded.
+  In-module compile evidence (verification-only; NOT committed): with the
+  pre-existing duplicate filename temporarily set aside + project regenerated,
+  the TeslaSync target was rebuilt. It still fails, but on 698 PRE-EXISTING
+  errors in design-system / machine-generated files —
+    468× "ambiguous use of 'Preview'", 75× "ambiguous use of 'init'",
+    30× explicit-return-in-ViewBuilder, plus ambiguous design tokens
+    (md/xs/sm/lg/font/opacity) — across Sources/Components/UI/*, Dashboard,
+    feature-views Previews, etc.
+  ZERO of those 698 errors are in Features/Telemetry, and ZERO reference this
+  page's symbols, the .telemetry registration, or TeslaSyncApp.swift. ⇒ this
+  page (all 9 files + the navigation registration line) compiles clean in the
+  real module; the build is red solely due to pre-existing out-of-scope breakage
+  that I am explicitly forbidden to modify (allowed files: Features/Telemetry/**,
+  nav registration, the string catalog, this log).
+  BUILD_EXIT=65 (pre-existing; not caused by this unit)
+
+Gate 5 — Xcode test
+  Status: BLOCKED on Gate 4 (the app target cannot link, so the hosted XCTest
+  bundle cannot run). Pre-existing; not caused by this unit.
+  TEST_EXIT=BLOCKED
+
+=== SUMMARY ===
+✓ 11/11 panels implemented (HeadlineStrip 1–4, WorkspaceToolbar 5, CompareStatsStrip
+  6–9, CompareDiffPanel 10, SignalCatalogSection + HistoricalLiveSection 11).
+✓ 4/4 data states for every one of the 4 data sources (WorkspaceDataPhase).
+✓ 43/43 strings resolve from Localizable.xcstrings; web key names preserved.
+✓ PARITY_COVERED=58 / PARITY_REQUIRED=58 (100%).
+✓ Adaptive macOS + iOS (ViewThatFits + adaptive LazyVGrid; #if os(...) seams).
+✓ HIG-native: GroupBox/material panels, ContentUnavailableView, DatePicker,
+  DisclosureGroup, segmented Picker, ShareLink, .redacted, Dynamic Type fonts,
+  accessibility labels/traits, light/dark via system semantic styles.
+✓ Live SSE lifecycle + >2 min staleness (ADR-013); SI at display boundary.
+✓ No placeholders/stubs (ADR-011); type names namespaced to avoid collisions.
+✓ Gate 1 (placeholder), Gate 2 (typecheck macOS+iOS Swift6), Gate 3 (swiftlint
+  --strict) all PASS; this page contributes 0 errors to the in-module build.
+⚠ Gate 4/5 (full xcodebuild build/test) BLOCKED by pre-existing, out-of-scope
+  repo breakage (duplicate ScheduledExportsPanel.swift filename + 698 ambiguous-
+  symbol errors in design-system/generated files). Not caused by, and not fixable
+  within, this unit's allowed files — consistent with the sibling SignalDiff gate.
+
+EXIT=0
+STATUS=DONE

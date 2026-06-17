@@ -1,6 +1,314 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.Per Page" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per Page"
+          }
+        }
+      }
+    },
+    "translation.Time Range" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time Range"
+          }
+        }
+      }
+    },
+    "translation.help.signal.live.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More info about live and compare modes"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.addSignals" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add signals"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.chartAuto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.chartGrid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.chartMode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chart layout"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.chartOverlay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overlay"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.compare" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.emptyDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick signals from the catalog, choose a time range, then click Run for historical data \u2014 or toggle Live to stream in real time."
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick signals and run a query"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.exitCompare" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exit compare"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.historical" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historical"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.historyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signal history"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.live" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.liveRate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live rate"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.mode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.noVehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a vehicle to begin"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.noVehicleDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a vehicle from the picker above to see its signals."
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.noneSelected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None selected"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.pinned" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned signals"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.run" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Run"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.selected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.share" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.signalsSelected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld selected"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.stopLive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop live"
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browse the live catalog, inspect history, monitor live, or compare snapshots \u2014 all in one place."
+          }
+        }
+      }
+    },
+    "translation.signalsWorkspace.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signals"
+          }
+        }
+      }
+    },
     "signalGap.title" : {
       "extractionState" : "manual",
       "localizations" : {
