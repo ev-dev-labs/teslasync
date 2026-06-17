@@ -1,0 +1,267 @@
+================================================================================
+ p4-apple · P7 · page:notifications/AlertRules — SwiftUI / HIG parity
+ Log: .github/prompts/monorepo/logs/apple-page-notifications-AlertRulesPage.log
+ Target(s): apple (iOS 18 + macOS 15, adaptive — ADR-002/006)
+ Web source: web/src/features/notifications/pages/AlertRulesPage.tsx
+================================================================================
+
+SUMMARY
+  Native SwiftUI implementation of the Alert Rules page at full panel / state /
+  string parity, bound through an @Observable model + KMP-core data seam. Every
+  region of the web page is reproduced (edit-conflict banner, bulk-action toolbar,
+  rules table with inline rename + severity/status badges, "Open Alert Studio"
+  footer); the four page data states are implemented; every visible string
+  resolves from Localizable.xcstrings via the web key names. swiftlint --strict
+  and the placeholder gate are GREEN on the unit; the unit's files type-check
+  clean (Swift 6, strict concurrency) and the full xcodebuild compiles this unit
+  with ZERO errors. The full xcodebuild is RED at BUILD_EXIT=65 due to PRE-EXISTING,
+  OUT-OF-SCOPE breakage in the parallel-generated bulk surfaces (0 errors in any
+  file of this unit) — documented honestly below, matching the sibling
+  driving/DrivingDynamics + charging/SmartCharge gate logs.
+
+--------------------------------------------------------------------------------
+FILES (allowed scope: apps/apple/TeslaSync/Features/Notifications/**, navigation
+registration, the platform string catalog, this log)
+--------------------------------------------------------------------------------
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesModels.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesStrings.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesDataSource.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesPageModel.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.Table.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.Toolbar.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.Components.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesPage.NameCell.swift
+  NEW  apps/apple/TeslaSync/Features/Notifications/AlertRulesRouteRegistration.swift
+  EDIT apps/apple/Sources/App/AppRouteParser.swift        (deep-link alias /notifications/rules -> .notifications)
+  EDIT apps/apple/Localization/Localizable.xcstrings      (+3 keys: alertRules.subtitle, alertRules.empty.body,
+                                                           alertRules.bulk.deleteConfirm.body; 23/26 pre-existed)
+  EDIT apps/parity/apple-ledger.json                      (+2 rows: apple-macos, apple-ios)
+
+  10 unit files, 1148 LOC (web source = 268 LOC; native SwiftUI parity is larger —
+  no skeletons/stubs, every web region reproduced section-by-section).
+
+--------------------------------------------------------------------------------
+ARCHITECTURE (ADR-002/004/005/006/013/014/015)
+--------------------------------------------------------------------------------
+  - AlertRulesPage (SwiftUI View) + @Observable AlertRulesPageModel. No business
+    logic in the view body; all data + selection + rename validation via the model.
+  - Data seam AlertRulesDataSource keeps the web hook names verbatim at the Swift
+    call sites: useAlertRules (GET /alerts/rules), useBulkEnableRules
+    (POST /alerts/rules/bulk/enable), useBulkDisableRules
+    (POST /alerts/rules/bulk/disable), useDeleteAlertRule (DELETE /alerts/rules/{id}),
+    useSaveAlertRule (PUT /alerts/rules/{id}). Only this file changes when the
+    generated client lands (P1/S2-S3). The Sample source is an actor so the bulk /
+    delete / rename mutations persist across the model's refetches, like the server.
+  - Panels reproduced (every web region, same data + order): the EditConflictBanner
+    (AlertRulesEditConflictBanner), the BulkActionToolbar (AlertRulesBulkToolbar:
+    pluralized count, Enable/Disable/Delete + destructive-delete confirmation, Clear),
+    the GlassPanel1 rules table (AlertRulesTable: select-all + per-row select, the
+    EditableText name cell linking to Alert Studio + inline rename, the signal, the
+    SeverityBadge + status Badge), and the "Open Alert Studio" footer.
+  - Charts/maps: none (web source has none) — N/A.
+  - Adaptive: AlertRulesTable renders a column Grid at regular width (macOS/iPad) and
+    stacked rule cards at compact width (iPhone) via @Environment(\.horizontalSizeClass).
+  - Severity reuses the module's canonical public AlertRuleSeverity (declared in
+    feature-views/AlertMessageEditor.Models.swift; web 'info'|'warn'|'critical') with
+    a feature-local tone/systemImage extension — DRY, and avoids a duplicate-type
+    collision (see VERIFY > BUILD).
+  - Units: this page carries no SI physical quantities (rule name / signal name /
+    severity / enabled) — the SI converter boundary is N/A here; previews still inject
+    .tsUnits(.metric) for consistency with the sibling pages.
+  - i18n: AlertRulesStrings (ARStrings) folds the web keys onto the catalog's
+    `translation.alertRules.*` / `translation.common.*` / `translation.bulk.*` /
+    `translation.editConflict.*` / `translation.editableText.*` entries (ADR-014);
+    23 keys pre-existed, +3 added. English fallbacks mirror the web t(key, default).
+  - Live data: the rules list is CRUD, not a live stream — no SSE / staleness chip
+    (web source has none), consistent with ADR-013 (only live sources surface staleness).
+  - a11y: accessibilityLabel on the select-all + per-row checkboxes (web
+    bulk.selectAll / alertRules.selectRule + bulk.selectRow), severity badge label,
+    .isSelected traits on selected rows, header traits via the shared typography,
+    >=44pt controls, light/dark/high-contrast tokens, Dynamic Type (ADR-015).
+  - Navigation: typed AlertRulesLink NavigationDestination + AlertRulesRouteRegistration
+    .make() factory, mirroring the sibling unrouted DrivingDynamicsRouteRegistration;
+    deep link /notifications/rules -> .notifications added to AppRouteParser (like
+    /alerts). The .notifications enum host stays owned by the alerts inbox (no
+    predecessor bypass, covenant #7).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=31
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1
+       evidence: AlertRulesPage.panelContent wrapped in TSGlassPanel { } (AlertRulesPage.swift);
+                 holds the loading/empty/error/table switch — the web single <GlassPanel>.
+[x] state  — loading data state
+       evidence: AlertRulesViewState.loading (AlertRulesPageModel.swift) -> AlertRulesPage.loadingView
+                 (.redacted(.placeholder) skeleton rows); entered by model.load() before useAlertRules resolves.
+[x] state  — empty data state
+       evidence: AlertRulesViewState.empty set in AlertRulesPageModel.fetch() when rules.isEmpty ->
+                 AlertRulesPage.emptyView (TSEmptyState + CTA). Reachable via EmptyAlertRulesDataSource.
+[x] state  — error data state
+       evidence: AlertRulesViewState.error(String) set in AlertRulesPageModel.fetch() on a thrown
+                 useAlertRules -> panelContent .error arm: TSErrorDisplay + Retry. Reachable via
+                 FailingAlertRulesDataSource.
+[x] state  — success data state
+       evidence: AlertRulesViewState.success (AlertRulesPageModel) -> AlertRulesTable(model:onOpenStudio:).
+[x] string — alertRules.bulk.delete
+       evidence: AlertRulesBulkToolbar.deleteButton -> actionLabel("alertRules.bulk.delete","Delete")
+                 (AlertRulesPage.Toolbar.swift); catalog: translation.alertRules.bulk.delete.
+[x] string — alertRules.bulk.deleteConfirm.body
+       evidence: AlertRulesBulkToolbar confirmationDialog message ARStrings.text(
+                 "alertRules.bulk.deleteConfirm.body", …) (AlertRulesPage.Toolbar.swift).
+[x] string — alertRules.bulk.deleteConfirm.title
+       evidence: AlertRulesBulkToolbar confirmationDialog title ARStrings.text(
+                 "alertRules.bulk.deleteConfirm.title", …) (AlertRulesPage.Toolbar.swift).
+[x] string — alertRules.bulk.disable
+       evidence: AlertRulesBulkToolbar.disableButton -> actionLabel("alertRules.bulk.disable","Disable").
+[x] string — alertRules.bulk.enable
+       evidence: AlertRulesBulkToolbar.enableButton -> actionLabel("alertRules.bulk.enable","Enable").
+[x] string — alertRules.col.name
+       evidence: AlertRulesTable.columnHeader("alertRules.col.name","Name") (AlertRulesPage.Table.swift)
+                 + AlertRuleRenameSheet field (AlertRulesPage.NameCell.swift).
+[x] string — alertRules.col.severity
+       evidence: AlertRulesTable.columnHeader("alertRules.col.severity","Severity") (AlertRulesPage.Table.swift).
+[x] string — alertRules.col.signal
+       evidence: AlertRulesTable.columnHeader("alertRules.col.signal","Signal") (AlertRulesPage.Table.swift).
+[x] string — alertRules.col.status
+       evidence: AlertRulesTable.columnHeader("alertRules.col.status","Status") (AlertRulesPage.Table.swift).
+[x] string — alertRules.empty.body
+       evidence: AlertRulesPage.emptyView message ARStrings.key("alertRules.empty.body") (AlertRulesPage.swift).
+[x] string — alertRules.empty.cta
+       evidence: AlertRulesPage.emptyView TSButton(ARStrings.key("alertRules.empty.cta")) (AlertRulesPage.swift).
+[x] string — alertRules.empty.title
+       evidence: AlertRulesPage.emptyView title ARStrings.key("alertRules.empty.title") (AlertRulesPage.swift).
+[x] string — alertRules.error.nameTooLong
+       evidence: AlertRulesPageModel.validateName -> ARStrings.text("alertRules.error.nameTooLong",
+                 "Max 120 characters") (AlertRulesPageModel.swift); shown in AlertRuleRenameSheet.
+[x] string — alertRules.noun.one
+       evidence: ARStrings.noun(count) (AlertRulesStrings.swift) -> AlertRulesBulkToolbar.summary
+                 (singular branch, count == 1).
+[x] string — alertRules.noun.other
+       evidence: ARStrings.noun(count) (AlertRulesStrings.swift) -> AlertRulesBulkToolbar.summary
+                 (plural branch, count != 1).
+[x] string — alertRules.openStudio
+       evidence: AlertRulesPage.footerLabel -> ARStrings.text("alertRules.openStudio","Open Alert Studio")
+                 (AlertRulesPage.swift).
+[x] string — alertRules.selectRule
+       evidence: ARStrings.selectRule(name:) (AlertRulesStrings.swift) -> AlertRulesTable.rowCheckbox
+                 .accessibilityLabel (AlertRulesPage.Table.swift); catalog "%1$@" -> name.
+[x] string — alertRules.subtitle
+       evidence: AlertRulesPage.subtitleHeader -> ARStrings.text("alertRules.subtitle", …) (AlertRulesPage.swift).
+[x] string — alertRules.title
+       evidence: AlertRulesPage.body .navigationTitle + loadingView a11y label ->
+                 ARStrings.text("alertRules.title","Alert rules") (AlertRulesPage.swift).
+[x] string — bulk.selectAll
+       evidence: AlertRulesTable.selectAllCheckbox .accessibilityLabel(ARStrings.key("bulk.selectAll"))
+                 + compactList header (AlertRulesPage.Table.swift).
+[x] string — bulk.selectRow
+       evidence: AlertRulesTable.rowCheckbox .accessibilityHint(ARStrings.key("bulk.selectRow"))
+                 (AlertRulesPage.Table.swift).
+[x] string — common.delete
+       evidence: AlertRulesBulkToolbar confirmationDialog destructive Button ->
+                 ARStrings.text("common.delete","Delete") (AlertRulesPage.Toolbar.swift).
+[x] string — common.disabled
+       evidence: AlertRuleStatusBadge (enabled == false) -> TSBadge(ARStrings.key("common.disabled"))
+                 (AlertRulesPage.Components.swift).
+[x] string — common.enabled
+       evidence: AlertRuleStatusBadge (enabled == true) -> TSBadge(ARStrings.key("common.enabled"))
+                 (AlertRulesPage.Components.swift).
+[x] string — editConflict.resource.alertRules
+       evidence: AlertRulesEditConflictBanner.resourceLabel ->
+                 ARStrings.text("editConflict.resource.alertRules","Your alert rules"), interpolated
+                 into the banner body (AlertRulesPage.Components.swift).
+[x] string — editableText.rename.alertRule
+       evidence: ARStrings.renameRule(name:) (AlertRulesStrings.swift) -> AlertRuleNameCell pencil
+                 .accessibilityLabel + AlertRuleRenameSheet .navigationTitle (AlertRulesPage.NameCell.swift).
+PARITY_COVERED=31
+PARITY_REQUIRED=31   (PARITY_COVERED == PARITY_REQUIRED ✓)
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+PLACEHOLDER (./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Notifications -Language swift):
+    PLACEHOLDER_ALLOWED=1   (one `// parity:allow` on the .redacted(.placeholder) loading shimmer)
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+LINT (swiftlint 0.63.3 --strict, TeslaSync/Features/Notifications — 10 files):
+    The repo .swiftlint.yml `included:` list scopes the default invocation to
+    Sources + the TeslaSync/{dashboard-widgets,feature-views,misc-surfaces,
+    shared-surfaces,widget-primitives} groups (TeslaSync/Features is not listed),
+    so to lint THIS unit the same rule set is applied directly to its directory:
+    Done linting! Found 0 violations, 0 serious in 10 files.
+    LINT_EXIT=0
+    (The whole-project `included:` run reports 4 PRE-EXISTING violations, all
+    OUT-OF-SCOPE: Sources/Features/System/MyActivityPageModel.swift:217 trailing
+    whitespace; TeslaSync/dashboard-widgets/WeeklyDigestWidget.{Adapter,Tests}.swift
+    line_length — 0 in TeslaSync/Features/Notifications.)
+
+VIEW_TYPECHECK (xcrun swiftc -typecheck, iphonesimulator26.5, arm64-apple-ios18.0-simulator,
+  swift 6 / strict concurrency):
+    Set = the 10 unit files + the real component library + tokens they bind to
+    (design/generated/apple/Tokens.swift, Sources/Design/TSDesign.swift +
+    TSMaterial.swift, Sources/Components/UI/{Cards,Badges,Buttons,Typography,Fields}.swift,
+    Sources/Components/Feedback/{States,Banners}.swift, Sources/Components/Motion/Motion.swift,
+    and feature-views/AlertMessageEditor.Models.swift for the canonical AlertRuleSeverity).
+    NOTIFICATIONS_FILE_TYPECHECK_ERRORS=0  (no -D DEBUG: app code path)
+    A second pass with -D DEBUG + a 3-symbol shim for the Shared-coupled UnitPreferences/
+    tsUnits/teslaSyncTheme (Shared.xcframework facade) type-checks the previews + the
+    debug-only Empty/Failing data sources clean too: DEBUG_TYPECHECK_ERRORS=0.
+
+BUILD (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync build,
+  generic/platform=iOS Simulator, CODE_SIGNING_ALLOWED=NO; Shared.xcframework built
+  fresh via the scheme's Gradle pre-action):
+    BUILD_EXIT=65
+    Errors total = 500. Errors in TeslaSync/Features/Notifications/** = 0 (arm64 AND x86_64).
+    Top signatures (PRE-EXISTING, OUT-OF-SCOPE — parallel-generated bulk surfaces):
+      411  ambiguous use of X            (TSSpacing/typography/Preview token shadowing —
+                                          duplicate decls across the bulk surfaces)
+       29  failed to produce diagnostic for expression (compiler cascade)
+       20  cannot use explicit 'return' in result builder 'ViewBuilder'
+       16  cannot infer contextual base in reference to member X
+        6  X is ambiguous for type lookup in this context
+    Top error FILES (all OUT-OF-SCOPE; 0 are this unit's):
+      22 TeslaSync/shared-surfaces/StatusHero.Previews.swift
+      14 TeslaSync/shared-surfaces/Pagination.Previews.swift
+      14 TeslaSync/shared-surfaces/HelpTooltip.Previews.swift
+      12 TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Previews.swift
+      12 Sources/Features/Diagnostics/AnomalyDashboardPage.Sections.swift
+      …  (the parallel-generated *.Previews.swift / dashboard-widgets / shared-surfaces bulk)
+    This is the SAME documented pre-existing breakage the sibling units recorded
+    (apple-page-driving-DrivingDynamicsPage.log: BUILD_EXIT=65, 0 errors in unit;
+    apple-page-charging-SmartChargePage.log: BUILD_EXIT=65, pre-existing out-of-scope).
+    A first build pass surfaced a real collision in THIS unit — a duplicate
+    `enum AlertRuleSeverity` shadowing the module's existing public
+    `AlertRuleSeverity` (feature-views/AlertMessageEditor.Models.swift). FIXED by
+    deleting the duplicate and reusing the canonical type (DRY); the rebuild shows
+    NOTIFICATIONS errors = 0.
+
+TEST (xcodebuild -scheme TeslaSync test):
+    TEST_EXIT=(not reached) — TeslaSyncTests / TeslaSync-macOSTests host on the app
+    target, which is blocked by the same pre-existing out-of-scope BUILD breakage.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE
+--------------------------------------------------------------------------------
+  [x] Every named panel (GlassPanel1) + every anonymous web region (banner, toolbar,
+      footer) reproduced as a native HIG section.
+  [x] All 31 parity items render from the bound @Observable state holder.
+  [x] loading / empty / error / success implemented for the useAlertRules source +
+      bulk/delete/rename mutations route through the model.
+  [x] All visible strings sourced from Localizable.xcstrings; web key names kept;
+      zero raw hardcoded user-facing literals (English fallbacks = web defaults);
+      +3 catalog keys added, 23 pre-existed.
+  [x] Dark mode + Dynamic Type + a11y honored; SI units N/A (no physical quantities);
+      SwiftUI-native only (no web cloning, no WKWebView).
+  [x] LINT + PLACEHOLDER green; this unit's files type-check clean (0 errors) and
+      compile in the full build with 0 errors; PARITY_COVERED==PARITY_REQUIRED (31).
+  [~] BUILD + TEST: RED at BUILD_EXIT=65 from PRE-EXISTING, OUT-OF-SCOPE breakage
+      (0 errors in this unit) — reported honestly, not as green (covenant #1), and
+      consistent with the predecessor apple page units (covenant #7).
+  [x] apple ledger rows for page:notifications/AlertRules (macos+ios) set covered 31/31.
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
