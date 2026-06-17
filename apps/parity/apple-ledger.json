@@ -1576,6 +1576,24 @@
       "requiredCount": 9,
       "promptId": "p4-apple/P7/page:system/NotFound",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-NotFoundPage.log"
+    },
+    {
+      "unitId": "page:system/Roadmap",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 6,
+      "requiredCount": 6,
+      "promptId": "p4-apple/P7/page:system/Roadmap",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-RoadmapPage.log"
+    },
+    {
+      "unitId": "page:system/Roadmap",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 6,
+      "requiredCount": 6,
+      "promptId": "p4-apple/P7/page:system/Roadmap",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-RoadmapPage.log"
     }
   ]
 }
