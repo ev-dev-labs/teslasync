@@ -7672,6 +7672,94 @@
         }
       }
     },
+    "sharing.trips.recent.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No recent trips. Drive your vehicle to populate this list."
+          }
+        }
+      }
+    },
+    "sharing.trips.recent.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent trips"
+          }
+        }
+      }
+    },
+    "sharing.trips.row.drives" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld drives"
+          }
+        }
+      }
+    },
+    "sharing.trips.row.trip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trip"
+          }
+        }
+      }
+    },
+    "sharing.trips.staticHint.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click \"Share\", and copy the public link — anyone with the link can view the static card, no AI required."
+          }
+        }
+      }
+    },
+    "sharing.trips.staticHint.heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Static share cards"
+          }
+        }
+      }
+    },
+    "sharing.trips.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a recent trip to share as a static link, postcard, or image."
+          }
+        }
+      }
+    },
+    "sharing.trips.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share a trip"
+          }
+        }
+      }
+    },
     "share.learnMore" : {
       "extractionState" : "manual",
       "localizations" : {
