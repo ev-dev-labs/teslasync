@@ -27,7 +27,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, chargingHeatmap, powershare, trips, energy, energyFlow, driving
     case efficiency, tripPlanner
-    case analytics, maps, locations, quickStats
+    case analytics, weeklyDigest, maps, locations, quickStats
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
          batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts, projectedRange, vampireDrain
     case vehicleSystems, maintenance, automations, automationsList, notifications, telemetry, diagnostics, exports
@@ -56,6 +56,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .automationsList: "automations-list"
         case .fleetCompare: "vehicle-comparison"
         case .periodCompare: "period-compare"
+        case .weeklyDigest: "weekly-digest"
         case .lifetimeStats: "lifetime-stats"
         case .yearReview: "year-review"
         case .batteryHealth: "battery"
@@ -133,6 +134,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .efficiency: "leaf.fill"
         case .tripPlanner: "signpost.right.fill"
         case .analytics: "chart.bar.fill"
+        case .weeklyDigest: "calendar"
         case .tco: "dollarsign.circle.fill"
         case .fleetCompare: "arrow.left.arrow.right.circle.fill"
         case .periodCompare: "calendar.badge.clock"
@@ -207,8 +209,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .vampireDrain: .energy
         case .energyProducts: .energy
         case .projectedRange: .energy
-        case .analytics, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage, .timeline,
-             .yearReview: .insights
+        case .analytics, .weeklyDigest, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage,
+             .timeline, .yearReview: .insights
         case .automations, .automationsList, .notifications, .notificationsAudit, .notificationsWebhooks,
              .diagnostics, .sharing, .watch, .exports: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
