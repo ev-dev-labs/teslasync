@@ -34,7 +34,7 @@ private enum WeeklyDigestFixture {
         prevEfficiency: 0
     )
 
-    static func metric(_ projection: WeeklyDigestProjection, _ kind: WeeklyDigestMetricKind) -> WeeklyDigestMetricRow {
+    static func metric(_ projection: WeeklyDigestWidgetProjection, _ kind: WeeklyDigestMetricKind) -> WeeklyDigestMetricRow {
         projection.metrics.first { $0.kind == kind }!
     }
 }
@@ -195,7 +195,7 @@ private enum WeeklyDigestFixture {
     func testNonFiniteDistanceCollapsesToZero() {
         XCTAssertEqual(convertWeeklyDigestDistanceFromSI(.nan, to: .kilometers), 0)
         XCTAssertEqual(convertWeeklyDigestDistanceFromSI(.infinity, to: .miles), 0)
-        XCTAssertEqual(WeeklyDigestFormat.number(.infinity, decimals: 1), "0.0")
+        XCTAssertEqual(WeeklyDigestWidgetFormat.number(.infinity, decimals: 1), "0.0")
     }
 
     func testCopyIsLocalizableViaInjection() {

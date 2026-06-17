@@ -40,7 +40,7 @@ func convertWeeklyDigestDistanceFromSI(_ value: Double, to unit: WeeklyDigestDis
 }
 
 /// Locale-aware number formatting mirroring the web `fmtNumber` / `fmtInt` (`Intl.NumberFormat`).
-public enum WeeklyDigestFormat {
+public enum WeeklyDigestWidgetFormat {
     /// `safeNumber` from numberFormat.ts: non-finite inputs collapse to 0.
     static func safeNumber(_ value: Double) -> Double {
         value.isFinite ? value : 0
@@ -160,7 +160,7 @@ public struct WeeklyDigestMetricRow: Identifiable, Equatable {
 
 /// The projected widget content: the four comparison rows (empty when the digest is absent, the web
 /// `!data → metrics = []` empty-state branch).
-public struct WeeklyDigestProjection: Equatable {
+public struct WeeklyDigestWidgetProjection: Equatable {
     public let metrics: [WeeklyDigestMetricRow]
 
     public init(metrics: [WeeklyDigestMetricRow]) {
@@ -179,7 +179,7 @@ public struct WeeklyDigestProjection: Equatable {
 
 // MARK: - Projector
 
-/// Pure projector: cached `WeeklyDigestDTO` + unit prefs → `WeeklyDigestProjection`. Every value uses
+/// Pure projector: cached `WeeklyDigestDTO` + unit prefs → `WeeklyDigestWidgetProjection`. Every value uses
 /// the same arithmetic + formatting as the web widget so the web and native dashboards render
 /// identical rows side by side.
 public enum WeeklyDigestProjector {
@@ -198,9 +198,9 @@ public enum WeeklyDigestProjector {
         data: WeeklyDigestDTO?,
         units: WeeklyDigestUnitPrefs,
         copy: WeeklyDigestCopy = .fallback
-    ) -> WeeklyDigestProjection {
-        guard let data else { return WeeklyDigestProjection(metrics: []) }
-        return WeeklyDigestProjection(metrics: rows(data: data, units: units, copy: copy))
+    ) -> WeeklyDigestWidgetProjection {
+        guard let data else { return WeeklyDigestWidgetProjection(metrics: []) }
+        return WeeklyDigestWidgetProjection(metrics: rows(data: data, units: units, copy: copy))
     }
 
     /// Web `toEfficiencyDisplay(whPerKm) = unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm`.
@@ -229,10 +229,10 @@ public enum WeeklyDigestProjector {
         let distSym = units.distance.symbol
         let effUnit = units.distance.isImperial ? "Wh/mi" : "Wh/km"
 
-        let distText = WeeklyDigestFormat.number(dist, decimals: 1, localeIdentifier: locale)
-        let drivesText = WeeklyDigestFormat.integer(drives, localeIdentifier: locale)
-        let energyText = WeeklyDigestFormat.number(energy, decimals: 1, localeIdentifier: locale)
-        let effText = WeeklyDigestFormat.number(eff, decimals: 0, localeIdentifier: locale)
+        let distText = WeeklyDigestWidgetFormat.number(dist, decimals: 1, localeIdentifier: locale)
+        let drivesText = WeeklyDigestWidgetFormat.integer(drives, localeIdentifier: locale)
+        let energyText = WeeklyDigestWidgetFormat.number(energy, decimals: 1, localeIdentifier: locale)
+        let effText = WeeklyDigestWidgetFormat.number(eff, decimals: 0, localeIdentifier: locale)
 
         let inputs: [MetricInput] = [
             .init(
@@ -314,7 +314,7 @@ public enum WeeklyDigestProjector {
         let direction: WeeklyDigestDeltaDirection = signed > 0 ? .up : (signed < 0 ? .down : .flat)
         let percentText: String? = previous == 0
             ? nil
-            : WeeklyDigestFormat.number(abs(signed / abs(previous)) * 100, decimals: 1, localeIdentifier: locale) + "%"
+            : WeeklyDigestWidgetFormat.number(abs(signed / abs(previous)) * 100, decimals: 1, localeIdentifier: locale) + "%"
         let tone: WeeklyDigestDeltaTone = tone(signed: signed, higherIsBetter: higherIsBetter)
         let clause = accessibilityClause(direction: direction, percentText: percentText, copy: copy)
         return WeeklyDigestDeltaResult(
@@ -353,7 +353,7 @@ public enum WeeklyDigestProjector {
 public enum WeeklyDigestAccessibility {
     /// The surface title followed by one spoken phrase per visible metric row:
     /// "This Week. Distance, 0.0 mi, trending up 25.0%. Drives, 12, …".
-    public static func summary(for projection: WeeklyDigestProjection, title: String, compact: Bool = false) -> String {
+    public static func summary(for projection: WeeklyDigestWidgetProjection, title: String, compact: Bool = false) -> String {
         var parts = [title]
         for row in projection.visibleMetrics(compact: compact) {
             parts.append(row.accessibilityLabel)

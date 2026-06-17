@@ -170,7 +170,7 @@ public protocol WeeklyDigestSource: AnyObject {
 }
 
 /// The widget's observable view-model. Subscribes to a `WeeklyDigestSource`, recomputes the
-/// `WeeklyDigestProjection` via `WeeklyDigestProjector`, and exposes a render `Phase` + freshness for
+/// `WeeklyDigestWidgetProjection` via `WeeklyDigestProjector`, and exposes a render `Phase` + freshness for
 /// SwiftUI to switch over.
 @MainActor
 @Observable
@@ -186,7 +186,7 @@ public final class WeeklyDigestModel {
     public private(set) var phase: Phase = .loading
     public private(set) var connection: WeeklyDigestConnection = .live
     public private(set) var isFetching = false
-    public private(set) var projection = WeeklyDigestProjection(metrics: [])
+    public private(set) var projection = WeeklyDigestWidgetProjection(metrics: [])
     public private(set) var units = WeeklyDigestUnitPrefs()
     public private(set) var updatedAt: Date?
 
