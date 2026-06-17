@@ -1,6 +1,366 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "dataExport.scheduled.actions.delete" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.actions.disable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disable"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.actions.edit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.actions.enable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.actions.runNow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Run now"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.deleteConfirmBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This will stop future runs of %@."
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.deleteConfirmTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete schedule?"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No schedules yet"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.emptyMessage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a schedule to receive recurring exports automatically."
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.cancel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.deliveryKind" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delivery kind"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.deliveryTarget" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delivery target"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.deliveryTargetHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email address or HTTPS URL."
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.exportType" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export type"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.format" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Format"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.name" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.namePlaceholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drives weekly"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.rangeWindow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Range window"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.rangeWindowHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Format: number + m/h/d."
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.scheduleCron" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cron expression"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.scheduleCronHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard 5-field cron, e.g. '0 9 * * 0'."
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.form.submit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save schedule"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.newSchedule" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New schedule"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.status.failed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.status.never" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Never"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.status.ok" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cron-driven recurring exports."
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.table.actions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actions"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.table.cron" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cron"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.table.delivery" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delivery"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.table.lastRun" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last run"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.table.name" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.table.nextRun" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next run"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.table.status" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.table.type" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "dataExport.scheduled.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scheduled exports"
+          }
+        }
+      }
+    },
     "diagnostic.checkCount" : {
       "localizations" : {
         "en" : {
