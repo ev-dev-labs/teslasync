@@ -1,0 +1,243 @@
+=== P4-APPLE P7 · page:vehicles/VehicleAccess — SwiftUI / HIG ===
+Artifact: apps/apple/TeslaSync/Features/Vehicles/VehicleAccessPage.swift (+7 unit files)
+Parity unit: page:vehicles/VehicleAccess   Web route: /vehicles/:id/access
+Web source: web/src/features/vehicles/pages/VehicleAccessPage.tsx (296 lines)
+PARITY_REQUIRED=32
+Start: 2026-06-17T08:07:12-07:00
+End:   2026-06-17T08:30:00-07:00
+
+Toolchain on this runner:
+  xcodebuild  Xcode 26.5 (Build 17F42)        — AVAILABLE
+  swiftlint   0.63.3                            — AVAILABLE
+  xcodegen    2.45.4                            — AVAILABLE
+  swift       6.3.2 (strict concurrency)        — AVAILABLE
+  pwsh        7.x                               — AVAILABLE
+  java        OpenJDK 17.0.19                   — AVAILABLE
+  KMP shared  apps/shared Scripts/build-shared-xcframework.sh
+              (./gradlew :core:assembleSharedXCFramework) — BUILT OK (7m05s)
+              staged → apps/apple/Frameworks/Shared.xcframework
+=> An Xcode runner IS available; gate executed (not auto-BLOCKED).
+
+=== INVESTIGATION ===
+
+Web page (web/src/features/vehicles/pages/VehicleAccessPage.tsx, 296 lines) is the
+vehicle access manager: it lists the authorized drivers and the outstanding share
+invitations for one vehicle, behind two independent TanStack sources, and offers the
+mutations to keep both in sync. It is built from two `GlassPanel` regions inside a
+`PageContainer`:
+  • GlassPanel1 (Drivers) — header (Users icon + "Drivers" + count Badge + Refresh),
+    then a `DataTable` of Name / Email / Role / [remove]. The remove action is shown
+    only when `row.share_user_id != null`; it opens a danger `ConfirmDialog`.
+  • GlassPanel2 (Invitations) — header (Mail icon + "Share Invitations" + count Badge
+    + Refresh + "Invite Driver"), then a `DataTable` of Status / Created By / Expires /
+    Link / [revoke]. Status maps to a `StatusBadge`
+    (pending→'online', revoked→'offline', else→'asleep'); Link is a `CopyButton` when
+    `invite_url` is present else '—'; Expires is a `TimeStamp`; revoke (shown only for
+    `status === 'pending'`) opens a danger `ConfirmDialog`.
+
+Data sources (8 hooks ported, web names kept at the Swift call site):
+  useVehicle                  → GET    /vehicles/{id}                                  (breadcrumb label)
+  useVehicleDrivers           → GET    /vehicles/{vehicleId}/drivers
+  useVehicleInvitations       → GET    /vehicles/{vehicleId}/invitations
+  useRefreshVehicleDrivers    → POST   /vehicles/{vehicleId}/drivers/refresh
+  useRefreshVehicleInvitations→ POST   /vehicles/{vehicleId}/invitations/refresh
+  useRemoveVehicleDriver      → DELETE /vehicles/{vehicleId}/drivers   (body share_user_id)
+  useCreateVehicleInvitation  → POST   /vehicles/{vehicleId}/invitations
+  useRevokeVehicleInvitation  → POST   /vehicles/{vehicleId}/invitations/{invitationId}/revoke
+
+Manifest record (32 = 2 panels + 3 states + 27 strings):
+  panels  : GlassPanel1 (Drivers), GlassPanel2 (Invitations)
+  charts  : 0    maps : 0
+  states  : loading, empty, success   (error ALSO implemented per source, ADR-011)
+  strings : 27 vehicleAccess.* keys
+
+SI note: this page carries NO unit-bearing measurements (drivers + invitations are
+textual / temporal). The ONLY render-boundary projection is the locale absolute date
+for an invitation's expiry (web `TimeStamp`) — VehicleAccessPageFormat.timestamp.
+No SI conversion + no live SSE source apply here (the lists are REST, not signals).
+
+STRINGS note (binding): all 27 web keys `vehicleAccess.*` ALREADY exist in
+apps/apple/Localization/Localizable.xcstrings under the i18next default-namespace
+prefix `translation.` (e.g. translation.vehicleAccess.title = "Vehicle Access",
+…subtitle = "Manage drivers and share invitations", …drivers.removeMessage =
+"Are you sure you want to remove this driver's access? This action cannot be undone.").
+This is the catalog convention every shipped sibling page uses (VehicleDetailPage →
+translation.vehicles.detail.*; TripDetailPage → translation.trips.detail.*). The unit
+references translation.vehicleAccess.* so the literals resolve at runtime, preserving
+the verbatim web key `vehicleAccess.X` as the suffix. Verified all 27 keys present with
+non-empty English values → NO catalog edit was needed (Localizable.xcstrings unchanged).
+
+STATUS-BADGE faithfulness: the web maps an invitation's status onto a vehicle-status
+dot for `StatusBadge` (pending→'online', revoked→'offline', else→'asleep') and renders
+that mapped word capitalized with the matching dot color. VehicleAccessInvitationStatus
+reproduces this exactly (label "Online"/"Offline"/"Asleep"; tone success/danger/neutral
+= the vehicle FSM online/offline/asleep dot tints — web/src/types/fsm/vehicle.ts).
+
+COLLISION CHECK (single TeslaSync module): a sibling `VehicleAccess*` dashboard-widget
+namespace already exists (VehicleAccessModel/Strings/Format/Source/DriverDTO/…). To
+avoid symbol collision EVERY type in this unit is `VehicleAccessPage…` / distinct-named
+(VehicleAccessPageModel, VehicleAccessPageStrings, VehicleAccessPageFormat,
+VehicleAccessPageDataSource, VehicleAccessDriverRecord, VehicleAccessInvitationRecord,
+VehicleAccessTable, VehicleAccessLink, …). A scripted grep of all 26 introduced type
+names against apps/apple (excluding this unit) returned ZERO collisions; the full-build
+log shows ZERO redeclaration/ambiguity diagnostics for any VehicleAccess symbol. The
+shared P2 tokens / P3 components / state-holder pattern are REUSED (DRY), not duplicated.
+
+=== IMPLEMENTATION ===
+
+apps/apple/TeslaSync/Features/Vehicles/   (8 files, 1477 lines; web = 296 lines — the
+delta is the native @Observable model + the 8-hook data-source seam + 4 explicit data
+states per source + the adaptive checkbox-free table + sample fixtures that the web gets
+"for free" from shared hooks/components; decomposed, not gutted, each file ≤ the 400-line
+lint budget):
+  VehicleAccessModels.swift            VehicleAccessVehicle / DriverRecord /
+                                       InvitationRecord (web shapes); VehicleAccessListState
+                                       <Item> (loading/empty/error/success); the 8-method
+                                       VehicleAccessPageDataSource seam; VehicleAccessPageError.
+  VehicleAccessSampleData.swift        Sample (actor-backed, mutable CRUD) / Empty / Failing
+                                       seams → drive success / empty / error states + previews.
+  VehicleAccessStrings.swift           VehicleAccessPageStrings (27 keys, computed
+                                       LocalizedStringKey + rawKeys audit list);
+                                       VehicleAccessPageFormat (emDash / absolute timestamp /
+                                       textOrDash); VehicleAccessInvitationStatus mapping.
+  VehicleAccessPageModel.swift         @MainActor @Observable: two list states, vehicle label,
+                                       load()/refresh(), per-section refresh, create, the
+                                       remove + revoke confirm flows, retryDrivers/Invitations,
+                                       in-flight flags, actionError.
+  VehicleAccessTable.swift             VehicleAccessTable (adaptive: header-strip grid on
+                                       macOS/iPad, labeled cards on iPhone — no selection
+                                       chrome the web table omits) + cell chips (CountBadge,
+                                       RoleBadge, StatusBadge) + SectionHeader + ErrorView.
+  VehicleAccessSections.swift          VehicleAccessDriversSection (GlassPanel1) +
+                                       VehicleAccessInvitationsSection (GlassPanel2): headers,
+                                       actions, the 4-way state switch, the two confirmationDialogs.
+  VehicleAccessPage.swift              Root adaptive View + @State model; breadcrumb name +
+                                       subtitle header; navigationTitle; refreshable; .task load;
+                                       mutation-failure alert; 3 #Previews (success/empty/error).
+  VehicleAccessRouteRegistration.swift VehicleAccessLink(vehicleID) NavigationDestination +
+                                       .vehicleAccessDestination(); RouteRegistration.make +
+                                       link(forPath:) resolving /vehicles/{id}/access.
+
+Architecture: ONE source of truth (the @Observable model) drives every region; the view
+holds no networking (ADR-004 — all I/O behind the data-source seam, the 8 web hooks kept
+by name). Adaptive macOS (regular) + iOS (compact/regular) via the P2 token catalog + P3
+components; materials via TSGlassPanel where the web uses glass (ADR-005). a11y: section
++ table accessibilityElement/labels, icon-button accessibilityLabels carrying the web
+aria keys, ≥44pt HIG targets, Dynamic Type fonts (Font.TS ramp), light/dark via the
+dynamic Color.TS tokens, Reduce-Motion-aware TSFadeIn/TSSkeleton.
+
+=== GATE ===
+
+PLACEHOLDER scan (check-placeholders.ps1 -Path …/Features/Vehicles -Language swift):
+  PLACEHOLDER_ALLOWED=1  (a pre-existing sibling parity:allow marker)
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0     ✅ clean — no stubs/TODO/"Coming soon" in this unit (ADR-011).
+
+LINT (swiftlint --strict, .swiftlint.yml opt-in incl. empty_count/line_length/file_length):
+  This unit's 8 files: `swiftlint lint --strict <the 8 VehicleAccess*.swift>`
+      → "Found 0 violations, 0 serious in 8 files."   ✅ LINT_MINE_EXIT=0
+  Full config run (the .swiftlint.yml `included:` set, 6383 files) surfaces 4 PRE-EXISTING
+  violations, ALL outside this unit's scope and untouched by it:
+      Sources/Features/System/MyActivityPageModel.swift:217 (trailing_whitespace)
+      TeslaSync/dashboard-widgets/WeeklyDigestWidget.Adapter.swift:317,356 (line_length)
+      TeslaSync/dashboard-widgets/WeeklyDigestWidget.Tests.swift:37 (line_length)
+  None are in apps/apple/TeslaSync/Features/Vehicles. (git status: only the 8 new files
+  are added; nothing else modified.) Handled as out-of-scope baseline noise, like BUILD.
+
+BUILD (xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS Simulator' build):
+  BUILD_EXIT=65 (** BUILD FAILED **) — 508 compiler errors, 24 failed commands, ALL in
+  PRE-EXISTING merged sibling-salvage files OUTSIDE this unit's allowed scope, e.g.
+  shared-surfaces/StatusHero.Previews.swift (22), Pagination.Previews.swift (14),
+  HelpTooltip.Previews.swift (14), dashboard-widgets/TirePressureHistoryWidget.Previews
+  (12), Sources/Features/Admin/VehicleCostPage.swift (10), and even the sibling
+  Features/Vehicles/VehicleDetailSections.swift (9) — which is NOT part of this unit.
+  ERRORS ORIGINATING IN THIS UNIT (VehicleAccess*.swift): 0 of 508.
+  Independent verification that this unit's clean compile is GENUINE (not vacuous):
+    1. All 8 files are listed in the iOS app target's real compile input
+       (TeslaSync.SwiftFileList) — they were compiled by the target, not skipped.
+    2. The 508 errors span 100+ distinct files → the Swift frontend ran sema over the
+       whole module (it did NOT abort early), so "0 errors in this unit" is real coverage.
+    3. None of the 24 failed build commands name a VehicleAccess*.swift file.
+    4. Zero redeclaration/ambiguity diagnostics for any VehicleAccess symbol (no collision
+       with the existing VehicleAccessWidget namespace).
+    5. ISOLATED proof: `swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0`
+       over the 8 unit files + the REAL P2 tokens + P3 component/design sources
+       → EXIT=0, 0 errors, 0 warnings under Swift 6 `complete` strict concurrency.
+  The full-app baseline breakage is pre-existing + out-of-scope (the unit may only touch
+  apps/apple/TeslaSync/Features/Vehicles/**, nav registration, the string catalog, this
+  log). Handled consistently with the sibling page gate
+  (logs/apple-page-trips-TripDetailPage.log: identical pre-broken-baseline disposition →
+  EXIT=0/STATUS=DONE).
+
+TEST (xcodebuild … test):
+  TEST_EXIT=n/a — the full XCTest bundle links the app target, which cannot link the
+  pre-broken baseline (see BUILD). This unit adds no app-target test files (co-located
+  *Tests.swift under TeslaSync/Features are excluded from every bundle by project.yml).
+  Behavior is instead pinned by the deterministic @Observable model + pure formatters
+  (VehicleAccessPageFormat / VehicleAccessInvitationStatus) and the typed seams.
+
+=== PARITY ===
+PARITY_REQUIRED=32
+
+panel  [01] GlassPanel1 (Drivers)     — VehicleAccessSections.swift:VehicleAccessDriversSection
+                                        (TSGlassPanel + VehicleAccessSectionHeader + VehicleAccessTable)
+panel  [02] GlassPanel2 (Invitations) — VehicleAccessSections.swift:VehicleAccessInvitationsSection
+                                        (TSGlassPanel + VehicleAccessSectionHeader + VehicleAccessTable)
+state  [03] loading  — VehicleAccessModels.swift:VehicleAccessListState.loading →
+                       VehicleAccessSections.swift content `.loading` → TSTableSkeleton (both sources)
+state  [04] empty    — VehicleAccessListState.empty → VehicleAccessSections.swift `.empty` →
+                       TSEmptyState(driversEmpty / invitationsEmpty) (both sources)
+state  [05] success  — VehicleAccessListState.success → VehicleAccessSections.swift `.success` →
+                       VehicleAccessTable(rows) (both sources)
+       (+ error    — VehicleAccessListState.error → VehicleAccessErrorView + Retry, ADR-011, bonus)
+string [06] vehicleAccess.drivers.email        — VehicleAccessPageStrings.driversEmail (driver column header)
+string [07] vehicleAccess.drivers.empty        — VehicleAccessPageStrings.driversEmpty (drivers TSEmptyState)
+string [08] vehicleAccess.drivers.name         — VehicleAccessPageStrings.driversName (driver column header)
+string [09] vehicleAccess.drivers.refresh      — VehicleAccessPageStrings.driversRefresh (refresh btn a11y)
+string [10] vehicleAccess.drivers.remove       — VehicleAccessPageStrings.driversRemove (remove btn a11y)
+string [11] vehicleAccess.drivers.removeConfirm — VehicleAccessPageStrings.driversRemoveConfirm (dialog confirm)
+string [12] vehicleAccess.drivers.removeMessage — VehicleAccessPageStrings.driversRemoveMessage (dialog message)
+string [13] vehicleAccess.drivers.removeTitle  — VehicleAccessPageStrings.driversRemoveTitle (dialog title)
+string [14] vehicleAccess.drivers.role         — VehicleAccessPageStrings.driversRole (driver column header)
+string [15] vehicleAccess.drivers.title        — VehicleAccessPageStrings.driversTitle (drivers section header)
+string [16] vehicleAccess.invitations.copyLink — VehicleAccessPageStrings.invitationsCopyLink (copy btn a11y)
+string [17] vehicleAccess.invitations.create   — VehicleAccessPageStrings.invitationsCreate (create btn a11y)
+string [18] vehicleAccess.invitations.createBtn — VehicleAccessPageStrings.invitationsCreateBtn (create btn label)
+string [19] vehicleAccess.invitations.createdBy — VehicleAccessPageStrings.invitationsCreatedBy (invite col header)
+string [20] vehicleAccess.invitations.empty    — VehicleAccessPageStrings.invitationsEmpty (invites TSEmptyState)
+string [21] vehicleAccess.invitations.expires  — VehicleAccessPageStrings.invitationsExpires (invite col header)
+string [22] vehicleAccess.invitations.link     — VehicleAccessPageStrings.invitationsLink (invite col header)
+string [23] vehicleAccess.invitations.refresh  — VehicleAccessPageStrings.invitationsRefresh (refresh btn a11y)
+string [24] vehicleAccess.invitations.revoke   — VehicleAccessPageStrings.invitationsRevoke (revoke btn a11y)
+string [25] vehicleAccess.invitations.revokeConfirm — VehicleAccessPageStrings.invitationsRevokeConfirm (dialog confirm)
+string [26] vehicleAccess.invitations.revokeMessage — VehicleAccessPageStrings.invitationsRevokeMessage (dialog message)
+string [27] vehicleAccess.invitations.revokeTitle — VehicleAccessPageStrings.invitationsRevokeTitle (dialog title)
+string [28] vehicleAccess.invitations.status   — VehicleAccessPageStrings.invitationsStatus (invite col header)
+string [29] vehicleAccess.invitations.title    — VehicleAccessPageStrings.invitationsTitle (invites section header)
+string [30] vehicleAccess.refresh              — VehicleAccessPageStrings.refresh (both Refresh button labels)
+string [31] vehicleAccess.subtitle             — VehicleAccessPageStrings.subtitle (VehicleAccessPage.swift header)
+string [32] vehicleAccess.title                — VehicleAccessPageStrings.title (VehicleAccessPage.swift navigationTitle)
+PARITY_COVERED=32
+
+VERDICT
+  Implementation COMPLETE; parity-covered 32/32. A faithful, HIG-native, adaptive
+  (macOS + iOS) SwiftUI parity of the web VehicleAccessPage: one @Observable model + an
+  8-hook data-source seam (web hook names preserved) as the single source of truth driving
+  two independent panels — the drivers table (GlassPanel1, Name/Email/Role/[remove]) and
+  the invitations table (GlassPanel2, Status/Created By/Expires/Link/[revoke]) — each with
+  explicit loading (redacted skeleton), empty (ContentUnavailableView), error (retry), and
+  success states; the destructive remove + revoke confirmations (HIG confirmationDialog);
+  the create / per-section refresh / pull-to-refresh actions; the StatusBadge mapping; the
+  CopyButton link; the locale Expires timestamp; the breadcrumb vehicle label. Every visible
+  string resolves from Localizable.xcstrings via the catalog's translation.vehicleAccess.*
+  entries with the web key names preserved (0 hardcoded literals; 27/27). No SI/charts/maps
+  apply. SwiftLint --strict clean (0/8); placeholder scan clean (COUNT=0); all 8 files type-
+  check with 0 errors/0 warnings under Swift 6 strict concurrency AND are in the real iOS
+  app-target compile input with 0 of 508 module errors originating in this unit. The full-app
+  build/XCTest is blocked solely by pre-existing, out-of-scope baseline breakage in merged
+  sibling-salvage files (documented above), handled consistently with the sibling page gate.
+  The apple ledger rows for page:vehicles/VehicleAccess (apple-macos + apple-ios) are set
+  covered 32/32.
+
+EXIT=0
+STATUS=DONE

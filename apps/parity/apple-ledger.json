@@ -2360,6 +2360,24 @@
       "requiredCount": 42,
       "promptId": "p4-apple/P7/page:vehicle-systems/MediaPlayer",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicle-systems-MediaPlayerPage.log"
+    },
+    {
+      "unitId": "page:vehicles/VehicleAccess",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 32,
+      "requiredCount": 32,
+      "promptId": "p4-apple/P7/page:vehicles/VehicleAccess",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicles-VehicleAccessPage.log"
+    },
+    {
+      "unitId": "page:vehicles/VehicleAccess",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 32,
+      "requiredCount": 32,
+      "promptId": "p4-apple/P7/page:vehicles/VehicleAccess",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicles-VehicleAccessPage.log"
     }
   ]
 }
