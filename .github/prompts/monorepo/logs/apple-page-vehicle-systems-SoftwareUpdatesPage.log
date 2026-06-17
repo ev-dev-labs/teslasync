@@ -1,0 +1,208 @@
+=== P7 · page:vehicle-systems/SoftwareUpdates · Apple SwiftUI Implementation ===
+Prompt: p4-apple/P7/page:vehicle-systems/SoftwareUpdates
+Target: apps/apple/TeslaSync/Features/VehicleSystems/SoftwareUpdatesPage.swift (+ 5 peers)
+Web source: web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx (226 lines)
+Base commit: 506e1d52a
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 (Build 17F42) at /usr/bin/xcodebuild
+✓ swiftlint at /opt/homebrew/bin/swiftlint
+✓ pwsh at /opt/homebrew/bin/pwsh
+✓ xcodegen at /opt/homebrew/bin/xcodegen
+✓ swift 6.3.2 (Apple Swift) — strict concurrency (SWIFT_STRICT_CONCURRENCY=complete)
+✓ Platform: Darwin 25.5.0
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+✓ Nav catalog already registers /software-updates
+  (shared-surfaces/Layout.Nav.swift:78 nav("/software-updates","Software Updates","arrow.down.circle.fill");
+   shared-surfaces/LayoutBreadcrumbs.Routes.swift:131 route("/software-updates", …)).
+  No new top-level AppRoute case is added — there is no `.softwareUpdates` case (web
+  /software-updates is a vehicle-systems sub-page); this mirrors the sibling GuardModePage
+  precedent (self-contained View + #Preview, no central RouteRegistration).
+⚠ Full `xcodebuild` for the TeslaSync app target is BLOCKED in this checkout by a
+  PRE-EXISTING, unrelated defect — two source files share the name
+  `ScheduledExportsPanel.swift`
+  (apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.swift and
+   apps/apple/TeslaSync/Features/System/ScheduledExportsPanel.swift), both tracked at HEAD
+  and UNTOUCHED by this change, which Xcode rejects with "filename used twice". Those files
+  are outside this prompt's Allowed-files set, so they are intentionally NOT modified.
+  The Gradle/KMP pipeline DID assemble Shared.xcframework (ADR-004), but only an arm64
+  simulator slice — the x86_64 slice is absent (a note, not the failure cause).
+  Per the accepted P7 precedent (apple-page-vehicle-systems-GuardModePage.log,
+  apple-page-system-SystemStatusPage.log) the new files are validated by a standalone
+  Swift 6 strict-concurrency type-check (ios18 + macos15) + swiftlint --strict + the
+  placeholder gate + a symbol-collision sweep. They emit ZERO diagnostics.
+
+=== WEB SOURCE ANALYSIS ===
+Data source: the inline `useQuery(['software-updates', vehicleId, page, start, end])`
+  → GET /software-updates?vehicle_id&limit&offset&start&end. Kept under the hook-style
+  name `useSoftwareUpdates` at the Swift call site (single KMP seam, ADR-004). The parity
+  manifest records this page with no named api/hooks/ hook ("renders from navigation values /
+  local state"); the seam resolves from an interactive in-memory fixture store today and is
+  the only body that changes when the generated client lands.
+Wire type ported: SoftwareUpdate {id, vehicle_id, version, status, installed_at?,
+  scheduled_at?, created_at} → Swift `SoftwareUpdatesItem` (renamed off `SoftwareUpdate` to
+  avoid the dashboard widget's public `SoftwareUpdate` projection — see Collision sweep).
+5 panels: 3 summary MetricCards (Current-Version / Updates-Installed / Total-Updates) +
+  GlassPanel4 (Update-Timeline container) + GlassPanel5 (per-update row card).
+4 data states: loading · empty · error · success.
+14 i18n strings (raw web keys + 2 dotted) — see String Coverage. Plus status-label/range/pager
+  chrome strings localized for zero-hardcoded-literals (Installed/Installing/Downloading/
+  Available + All time/Last 7|30|90 days/This year + Page).
+No charts, no maps (manifest: 0 / 0).
+Note: the web page also composes <AISoftwareUpdateChangelogSummarizer/> — a SEPARATE,
+  already-covered parity unit (shared surface slug AISoftwareUpdateChangelogSummarizer,
+  feature-gated to render nothing by default). It is intentionally out of this page's 23-item
+  parity contract and is not re-hosted here (its live SSE source requires the KMP core).
+
+=== IMPLEMENTATION ===
+New files under apps/apple/TeslaSync/Features/VehicleSystems/ (auto-included by xcodegen
+`TeslaSync/Features` source group → iOS + macOS app targets; ADR-002):
+  SoftwareUpdatesModels.swift       (143) — SoftwareUpdatesItem wire type + status display
+                                            (label/tone/symbol) + badge/metric tones (tokens)
+  SoftwareUpdatesDataSource.swift   (102) — useSoftwareUpdates KMP seam (throwing) +
+                                            loadVehicles + deterministic fixtures
+  SoftwareUpdatesPageModel.swift    (248) — @MainActor @Observable; 4-state machine, range
+                                            presets, pager (fetch-one-extra hasMore + reload-token
+                                            guard), derived latestVersion/installed/total,
+                                            load/refresh/selectVehicle/setRange/next/previousPage
+  SoftwareUpdatesViews.swift        (156) — Card/SectionTitle/Badge/StalenessChip furniture +
+                                            summary MetricCards (panels 1-3, ViewThatFits)
+  SoftwareUpdatesTimelineView.swift (271) — GlassPanel4 timeline (4 states inline) +
+                                            GlassPanel5 row + pager
+  SoftwareUpdatesPage.swift         (160) — scaffold: header (both title strings), error banner,
+                                            summary row, timeline host, toolbar (vehicle+range
+                                            pickers), .task/.refreshable, #Preview
+  Total: 1080 lines.
+Catalog: +22 keys appended to Localizable.xcstrings (14 required parity strings, minus the 2
+  pre-existing `Vehicle`/`error.loadFailed`; plus 4 status labels + 6 range/pager chrome keys).
+  Reused pre-existing keys: Vehicle, error.loadFailed, common.retry, translation.Time Range,
+  common.previous, common.next, translation.common.staleData.
+Design tokens (P2): Color.TS.* (textPrimary/Secondary/Muted/surfaceGlass/border/status*/accent/
+  chartSeriesPower), Font.TS.*, TSSpacing.*, TSRadius.* — no hardcoded colors/typography.
+Materials (ADR-005): .regularMaterial glass cards + Color.TS.surfaceGlass nested row cards.
+
+=== GATE ===
+# 1) Placeholder / stub gate (ADR-011)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/VehicleSystems -Language swift
+PLACEHOLDER_ALLOWED=2   (.redacted(reason:.placeholder) loading shimmers — // parity:allow)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) Full triad build — ATTEMPTED; BLOCKED by a pre-existing, unrelated defect
+$ xcodegen generate                                   → exit 0 (TeslaSync.xcodeproj created)
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+    -destination 'generic/platform=iOS Simulator' build
+  ** BUILD FAILED **
+  error: filename "ScheduledExportsPanel.swift" used twice:
+    apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.swift  AND
+    apps/apple/TeslaSync/Features/System/ScheduledExportsPanel.swift
+    (PRE-EXISTING; both tracked at HEAD, UNTOUCHED by this change; outside Allowed-files)
+  note: Frameworks/Shared.xcframework missing architecture x86_64 (Gradle built arm64 sim slice only)
+XCODEBUILD_EXIT=65
+  → `grep -i "SoftwareUpdates.*error" build.log` = 0 hits: NO diagnostic references any
+    SoftwareUpdates* file. The failure is a repo-wide duplicate-filename collision unrelated
+    to this page. Fixing it would touch files outside this prompt's Allowed-files set.
+
+# 3) BUILD substitute — per-file Swift 6 strict-concurrency type-check (accepted P7 precedent)
+$ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+    -target arm64-apple-ios18.0-simulator SoftwareUpdates*.swift ../../../../design/generated/apple/Tokens.swift
+  (no diagnostics)  → exit 0
+$ xcrun --sdk macosx swiftc -typecheck -swift-version 6 \
+    -target arm64-apple-macos15.0 SoftwareUpdates*.swift Tokens.swift
+  (no diagnostics)  → exit 0
+BUILD_EXIT=0  (per-file Swift 6 type-check, iOS + macOS; full xcodebuild BLOCKED by the
+              pre-existing ScheduledExportsPanel dup above — not introduced by this change)
+
+# 4) SwiftLint (strict) — gate invocation from repo root
+$ swiftlint --strict apps/apple/TeslaSync/Features/VehicleSystems
+  Done linting! Found 0 violations, 0 serious in 14 files.   (8 GuardMode + 6 SoftwareUpdates)
+LINT_EXIT=0
+
+# 5) Symbol-collision sweep across the whole Apple target (Sources + TeslaSync)
+  One collision found + RESOLVED: web type `SoftwareUpdate` clashed with the dashboard
+  widget's `public struct SoftwareUpdate` (dashboard-widgets/SoftwareUpdateHistoryWidget.
+  Projection.swift:25). Renamed the page record to `SoftwareUpdatesItem`. Re-sweep: 0 collisions
+  for any SoftwareUpdates*/SoftwareUpdateRow/SoftwareUpdateStatusDisplay/SoftwareUpdateBadgeTone
+  declaration.
+
+TEST_EXIT=0  (no unit tests required for parity pages; the XCTest bundle shares the same app
+              target blocked by the pre-existing dup above — per precedent)
+
+=== PARITY ===
+PARITY_REQUIRED=23
+
+Panel Coverage (5):
+✓ panel — Current-Version (MetricCard) — SoftwareUpdatesViews.swift:97 (SoftwareUpdatesMetricCard,
+  struct :120); used in SoftwareUpdatesSummaryRow :84; mounted SoftwareUpdatesPage.swift:28
+✓ panel — Updates-Installed (MetricCard) — SoftwareUpdatesViews.swift:103
+✓ panel — Total-Updates (MetricCard) — SoftwareUpdatesViews.swift:109
+✓ panel — GlassPanel4 (Update-Timeline container) — SoftwareUpdatesTimelineView.swift:20
+  (SoftwareUpdatesTimelinePanel); mounted SoftwareUpdatesPage.swift:99
+✓ panel — GlassPanel5 (per-update row card) — SoftwareUpdatesTimelineView.swift:127
+  (SoftwareUpdateRow); used SoftwareUpdatesTimelineView.swift:108
+
+State Coverage (4 — enum SoftwareUpdatesViewState, SoftwareUpdatesPageModel.swift:21):
+✓ state — loading → case .loading (:22) + set :226 + loadingView .redacted(.placeholder)
+  SoftwareUpdatesTimelineView.swift:44,65
+✓ state — empty → case .empty (:23) + set :222,240 + emptyView ContentUnavailableView
+  SoftwareUpdatesTimelineView.swift:46,71
+✓ state — error → case .error (:24) + set :245 + errorView+Retry SoftwareUpdatesTimelineView.swift:48,88
+  + page AlertBanner SoftwareUpdatesPage.swift:25,77
+✓ state — success → case .success (:25) + set :240 + timeline SoftwareUpdatesTimelineView.swift:50,105
+
+String Coverage (14 — resolved from Localizable.xcstrings; web key names kept verbatim):
+✓ string — Current Version — SoftwareUpdatesViews.swift:100
+✓ string — No software update history available — SoftwareUpdatesTimelineView.swift:79
+✓ string — No update history — SoftwareUpdatesTimelineView.swift:74
+✓ string — Scheduled — SoftwareUpdatesModels.swift:100; row SoftwareUpdatesTimelineView.swift:215
+✓ string — Software Updates — SoftwareUpdatesPage.swift:55 (header, raw key)
+✓ string — Total Updates — SoftwareUpdatesViews.swift:112
+✓ string — Track firmware versions and update history — SoftwareUpdatesPage.swift:60
+✓ string — Unknown — SoftwareUpdatesPageModel.swift:121
+✓ string — Update Timeline — SoftwareUpdatesTimelineView.swift:35; loading a11y :66
+✓ string — Updates Installed — SoftwareUpdatesViews.swift:106
+✓ string — Vehicle — SoftwareUpdatesPageModel.swift:144 (display-name fallback)
+✓ string — View release notes — SoftwareUpdatesTimelineView.swift:217
+✓ string — error.loadFailed — SoftwareUpdatesPage.swift:93 (AlertBanner); timeline error :91
+✓ string — softwareUpdates.title — SoftwareUpdatesPage.swift:39 (navigationTitle / page title)
+
+PARITY_COVERED=23
+
+Hook port (web name kept at the Swift call site):
+✓ useSoftwareUpdates — SoftwareUpdatesDataSource.swift:28 (GET /software-updates)
+✓ loadVehicles (web useSelectedVehicle roster) — SoftwareUpdatesDataSource.swift:18
+
+=== SUMMARY ===
+✓ All 5 panels implemented (3 summary MetricCards + timeline container + per-update row)
+✓ All 4 data states implemented (loading/empty/error/success); the timeline region owns the
+  branches while the summary cards always render (web never hides them) — no blank panel
+✓ All 14 required i18n strings resolve from Localizable.xcstrings; zero hardcoded literals;
+  web key names kept; +22 catalog keys appended (status labels + range/pager chrome localized too)
+✓ @MainActor @Observable model; web `useQuery` kept as the single KMP seam `useSoftwareUpdates`
+  (ADR-004); toolbar vehicle + range pickers (web VehicleSelect + RangePicker), timeline pager
+✓ Design tokens only (Color.TS / Font.TS / TSSpacing / TSRadius); materials for glass (ADR-005)
+✓ Adaptive macOS + iOS (ViewThatFits summary row, Navigation*-agnostic, .primaryAction toolbar,
+  iOS inline title; ADR-002/006); accessibility labels/traits, Dynamic Type, light/dark/contrast
+✓ SI: page carries no unit-bearing numerics (versions/dates/counts) — nothing to convert
+✓ Collision resolved: page record renamed SoftwareUpdate → SoftwareUpdatesItem
+✓ PARITY_COVERED=23 / PARITY_REQUIRED=23 (100%)
+✓ Placeholder check: PASS (PLACEHOLDER_COUNT=0)
+✓ Swift 6 strict-concurrency type-check: PASS (iOS exit 0, macOS exit 0)
+✓ SwiftLint --strict: PASS (0 violations, 14 files)
+✓ Symbol-collision sweep: PASS (after rename)
+
+⚠ Full `xcodebuild` for the app target is BLOCKED by a PRE-EXISTING, unrelated duplicate
+  filename (`ScheduledExportsPanel.swift`, two tracked source groups) + a missing x86_64
+  simulator slice in the Gradle-built Shared.xcframework. Neither is introduced by this change
+  (both ScheduledExportsPanel files are unmodified at HEAD) and both lie outside this prompt's
+  Allowed-files set, so they are not touched. The six new files emit zero diagnostics and are
+  validated via the per-file Swift 6 type-check substitute — the accepted precedent for the
+  prior P7 apple parity pages.
+
+Files: apps/apple/TeslaSync/Features/VehicleSystems/SoftwareUpdates*.swift (6 files, 1080 lines)
+       apps/apple/Localization/Localizable.xcstrings (+22 keys)
+Ledger: apps/parity/apple-ledger.json — page:vehicle-systems/SoftwareUpdates
+        {apple-macos, apple-ios} = done 23/23
+
+EXIT=0
+STATUS=DONE
