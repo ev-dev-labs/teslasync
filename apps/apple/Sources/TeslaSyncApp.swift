@@ -180,6 +180,7 @@ struct TeslaSyncApp: App {
         registry = ExportsRouteRegistration.registry(base: registry)
         registry = OnboardingRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
         registry = SignalsWorkspaceRouteRegistration.registry(base: registry)
+        registry = MaintenanceRouteRegistration.registry(base: registry)
         return registry
     }
 

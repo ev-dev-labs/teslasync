@@ -30,7 +30,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case analytics, maps, locations, quickStats
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
          batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts, projectedRange, vampireDrain
-    case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics, exports
+    case vehicleSystems, maintenance, automations, automationsList, notifications, telemetry, diagnostics, exports
     case notificationsAudit, notificationsWebhooks
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
@@ -142,6 +142,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .maps: "mappin.and.ellipse"
         case .locations: "mappin.circle.fill"
         case .vehicleSystems: "gearshape.2.fill"
+        case .maintenance: "wrench.and.screwdriver.fill"
         case .automations: "wand.and.stars"
         case .automationsList: "checklist"
         case .notifications: "bell.fill"
@@ -196,7 +197,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .dashboard, .glance, .quickStats, .explore, .search: .overview
         case .vehicles, .charging, .chargingHeatmap, .powershare, .trips, .driving, .efficiency, .vehicleSystems,
-             .maps, .locations, .tripPlanner: .vehicle
+             .maintenance, .maps, .locations, .tripPlanner: .vehicle
         case .energy: .energy
         case .batteryHealth, .batteryCells, .batteryDegradation: .energy
         case .energyFlow: .energy
