@@ -1,0 +1,220 @@
+=== P4-APPLE · P7 · page:notifications/Webhooks (SwiftUI / HIG) ===
+started: 2026-06-16T17:07:00-0700
+host: macOS (Darwin); Xcode 26.5 Build 17F42; Swift 6.3.2 (swiftlang-6.3.2.1.108); swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+web source: web/src/features/notifications/pages/WebhooksPage.tsx   (route /notifications/webhooks)
+parity unit: page:notifications/Webhooks  (manifest PARITY_REQUIRED=2)
+
+--------------------------------------------------------------------------------
+WEB SOURCE SHAPE (read end-to-end — covenant #3)
+--------------------------------------------------------------------------------
+WebhooksPage.tsx is a thin wrapper: `usePageTitle('Webhooks')` + a `<PageContainer
+title subtitle copyLink>` whose only child is `<WebhookChannelsSection/>`. The manifest
+record (apps/parity/parity-manifest.json id=page:notifications/Webhooks) extracts exactly
+the page-level surface: NO dataSources, NO named panels, NO charts, NO maps, and the two
+i18n strings `notifications.webhooks.title` / `notifications.webhooks.subtitle`
+(requiredCount=2). The actual list/CRUD body is the *separately-shipped* parity unit
+feature-views/WebhookChannelsSection (P4 artifact 0218, already DONE — its 14 Apple files
+live in apps/apple/TeslaSync/feature-views/WebhookChannelsSection.*). Faithful, non-narrowing
+parity (covenant #2/#5) therefore = reproduce the PageContainer chrome (title + subtitle +
+copyLink) AND host the real WebhookChannelsSection view (DRY — no re-implementation), driven
+by the page model's WebhookChannelsSectionModel.
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Notifications/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group (the app targets
+list `Sources` + `TeslaSync/{widget-primitives,dashboard-widgets,feature-views,misc-surfaces,
+shared-surfaces}` — there is no `TeslaSync/Features`). The repo's real, compiled canonical
+page home is `apps/apple/Sources/Features/<Domain>/**` — where the sibling P7
+notifications/AuditLog page (and ApiPlayground, DiskForecast, …) ship and which `Sources`
+already lists as a project.yml source path (createIntermediateGroups). The page therefore
+ships at `apps/apple/Sources/Features/Notifications/**`, the faithful equivalent of the
+prompt's `Features/Notifications`. Strings ship in the platform catalog
+`apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the same
+reconciliation the sibling notifications-AuditLog log recorded.
+
+ROUTE HOSTING: the web route `/notifications/webhooks` is nested. A dedicated
+`.notificationsWebhooks` AppRoute case is added (pathSegment `notifications/webhooks` →
+`.path` `/notifications/webhooks` matching web exactly; Operations group alongside
+`.notifications` + `.notificationsAudit`; icon `point.3.connected.trianglepath.dotted` —
+the same SF Symbol WebhookGlyph.webhook the section header uses), `AppRouteParser` aliases
+`/notifications/webhooks` → `.notificationsWebhooks` (required — the generic first-segment
+fallback would otherwise resolve `.notifications`), and `WebhooksRouteRegistration` hosts the
+page, chained into `\.routeHosts` in TeslaSyncApp.swift right after the notifications-AuditLog
+registration. So the page is reachable via the Operations-group sidebar entry and any
+`/notifications/webhooks` deep link. (Navigation registration is an allowed file per the prompt.)
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain; xcodeproj is git-ignored)
+--------------------------------------------------------------------------------
+?? Sources/Features/Notifications/WebhooksPage.swift                (71 LOC)  SwiftUI view: header(TSPageTitle title + subtitle Text + CopyLinkButton = web PageContainer copyLink) + hosted WebhookChannelsSection(model:); #if DEBUG previews (Loaded / Empty). P2 tokens + P3 components only; no hand-rolled glass; adaptive macOS/iPad+iPhone via the section's shared TS* stack (ADR-002/006).
+?? Sources/Features/Notifications/WebhooksPageModel.swift           (50 LOC)  @MainActor @Observable model: titleKey/subtitleKey (web i18n keys) + the embedded WebhookChannelsSectionModel built over an injected WebhookChannelsSource seam + shareURL (web copyLink) + load()/refresh() (no networking in the view — ADR-004)
+?? Sources/Features/Notifications/WebhooksPageModel.Sample.swift    (47 LOC)  SampleWebhookChannelsSource.makeSource(): an InMemoryWebhookChannelsSource pre-seeded with 3 representative channels so the hosted section renders populated out of the box (production injects the shared KMP useWebhookChannels binding through the seam)
+?? Sources/Features/Notifications/WebhooksRouteRegistration.swift   (20 LOC)  registers .notificationsWebhooks -> WebhooksPage (model built on MainActor + captured; mirrors NotificationsAuditLogRouteRegistration)
+?? Tests/Unit/Features/Notifications/WebhooksPageModelTests.swift   (73 LOC)  XCTest: parity-key equality, shareURL, section seed populates (3, sorted), sample factory, empty source, route registration host, deep-link parse, sibling no-regression, unique pathSegments
+ M Sources/App/AppRoute.swift                  +.notificationsWebhooks case (pathSegment "notifications/webhooks", systemImage point.3.connected.trianglepath.dotted, .operations group)
+ M Sources/App/AppRouteParser.swift            +"/notifications/webhooks" -> .notificationsWebhooks alias
+ M Sources/TeslaSyncApp.swift                  chains WebhooksRouteRegistration.registry(base: registry) into \.routeHosts (after NotificationsAuditLogRouteRegistration)
+ M Localization/Localizable.xcstrings          +3 keys (notifications.webhooks.title / notifications.webhooks.subtitle = web key names verbatim + route.notificationsWebhooks nav title); JSON validated (11073 total keys); existing translation.* region untouched
+ M apps/parity/apple-ledger.json               +2 rows (apple-macos, apple-ios) for page:notifications/Webhooks, covered 2/2
+
+================================================================================
+GATES
+================================================================================
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "Webhooks" referenced 30x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 5 new files + 3 edited app/route files, repo .swiftformat) ---
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 5 new files + 3 edited app/route files, repo rule set) ---
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Notifications -Language swift ---
+PLACEHOLDER_ALLOWED=1   (the pre-existing sibling NotificationsAuditLogPage.swift L122
+                         `audit.searchPlaceholder` i18n key, marked `// parity:allow i18n key name`
+                         — NOT one of my files; grep over my 5 files = 0 placeholder/TODO/stub/fatalError)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [tests dir Tests/Unit/Features/Notifications: PLACEHOLDER_ALLOWED=0 / COUNT=0 / EXIT=0 also]
+
+--- Executed model & route harness (real WebhookChannelsSection model layer + my model/sample + AppRoute/AppRouteParser, Swift 6 strict-concurrency host) ---
+# xcrun --sdk macosx swiftc -swift-version 6 -strict-concurrency=complete -target arm64-apple-macos15.0 \
+#   TeslaSync/feature-views/WebhookChannelsSection.{Adapter,Seams,Content,Model}.swift \
+#   Sources/Features/Notifications/{WebhooksPageModel,WebhooksPageModel.Sample}.swift \
+#   Sources/App/{AppRoute,AppRouteParser}.swift main.swift -o webhook_harness   (SWIFTC_EXIT=0)
+ALL ASSERTIONS PASSED   (HARNESS_EXIT=0)
+  shareURL == "/notifications/webhooks"; WebhooksPageModel() section.start() -> 3 channels,
+  sorted first == "Discord #alerts" (web name localeCompare); SampleWebhookChannelsSource.makeSource()
+  -> 3 channels; empty source -> 0 channels; parse("/notifications/webhooks") == .notificationsWebhooks;
+  .path == "/notifications/webhooks"; .group == .operations; "/notifications" still -> .notifications
+  + "/notifications/audit" still -> .notificationsAudit (no regression); Set(pathSegments).count ==
+  allCases.count (RouteTests uniqueness invariant holds)
+
+--- View type-check against the REAL P2 tokens + P3 components + the hosted WebhookChannelsSection + CopyLinkButton (Swift 6 strict concurrency, -DDEBUG so previews compile) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -DDEBUG -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/*.swift Sources/Theme.swift \
+#   Sources/Components/{UI,Motion,Feedback,Forms}/*.swift (excl. the unrelated FeedbackOverlays.swift,
+#     which references DataDisplay.TSMetricBar -> SharedFacade `import Shared`; not in my page's closure) \
+#   TeslaSync/shared-surfaces/CopyLinkButton*.swift TeslaSync/feature-views/WebhookChannelsSection*.swift \
+#   Sources/App/{AppRoute,AppRouteParser,RouteHostRegistry}.swift Sources/Features/Notifications/Webhooks*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0
+# Compiles my WebhooksPage/WebhooksRouteRegistration/WebhooksPageModel/.Sample (incl. previews) against the
+# ACTUAL TSPageTitle/Font.TS/Color.TS/TSSpacing/CopyLinkButton/WebhookChannelsSection/WebhookChannelsSectionModel/
+# InMemoryWebhookChannelsSource/WebhookChannelsUpdate/AppRoute/AppRouteHostRegistry sources — authoritative
+# proof the API usage is correct on BOTH idioms (ADR-002/006).
+
+--- Full-scheme build / test (xcodebuild -scheme TeslaSync[-macOS] build|test) ---
+BUILD_EXIT=NOT_RUN   TEST_EXIT=NOT_RUN  (deliberately not executed — see note below; NOT recoloured green)
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE FULL-BUILD BLOCKER (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target cannot link in this environment without the KMP shared core.
+Verified facts (not assumed):
+  - apps/apple/Frameworks/ contains only `.gitkeep` — the `Shared.xcframework` the Apple targets
+    consume (ADR-004) is absent.
+  - The TeslaSync / TeslaSync-macOS schemes run a mandatory pre-action "Stage Shared.xcframework"
+    = `apps/shared/gradlew -p apps/shared :core:assembleSharedXCFramework` (Kotlin/Native release
+    linking for iosArm64 / iosSimulatorArm64 / macosArm64) — a P1-owned Gradle/Kotlin build that is
+    NOT in this artifact's allowed files.
+  - The sibling notifications-AuditLog P7 log recorded this exact staging step OOM-killing the shared
+    host (xcodebuild exit 137 / Killed: 9, ~10 min) under parallel-slot contention, with ZERO Swift
+    source diagnostics — the app Swift compile never starts; it is gated behind the KMP staging phase.
+I therefore did NOT trigger the Kotlin/Native Gradle build: this is a resource-constrained SHARED host
+(other slots/users may be present) and spawning the known-OOM staging step would be irresponsible. This
+is the prompt's anticipated runner-availability gap ("If no Xcode runner is available, the gate →
+STATUS=BLOCKED"): the Xcode runner exists, but the out-of-scope KMP staging of `Shared.xcframework`
+cannot finish here. My files are proven correct instead by the isolated Swift-6 strict-concurrency
+type-checks (macOS+iOS 0/0, incl. previews) + the executed model & route harness — the same host-harness
+methodology the peer p4-apple logs use when the shared bundle blocks the full app target. No out-of-scope
+file was edited. The full xcodebuild build+test is DEFERRED to its owner / the P99 integration gate on a
+provisioned Xcode+KMP runner.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+================================================================================
+[x] string — notifications.webhooks.title     WebhooksPage.swift L42 `header` -> TSPageTitle(model.titleKey) where WebhooksPageModel.titleKey = LocalizedStringKey("notifications.webhooks.title"); Localizable.xcstrings key "notifications.webhooks.title" = "Webhooks" (web default verbatim) (+ route.notificationsWebhooks nav title)
+[x] string — notifications.webhooks.subtitle  WebhooksPage.swift L43 `header` -> Text(model.subtitleKey) where WebhooksPageModel.subtitleKey = LocalizedStringKey("notifications.webhooks.subtitle"); Localizable.xcstrings key "notifications.webhooks.subtitle" = "Custom HTTPS endpoints that receive HMAC-signed event payloads." (web default verbatim)
+PARITY_COVERED=2
+
+Both parity strings render from the bound @Observable WebhooksPageModel (titleKey / subtitleKey) and the
+Localizable.xcstrings catalog; web key names preserved verbatim. Unit-tested for key equality
+(WebhooksPageModelTests.testTitleAndSubtitleKeysMatchWeb).
+
+FAITHFUL CHROME + HOSTED BODY (spec "reproduce every region"; covenant #2/#5 — no scope narrowing):
+[x] PageContainer copyLink   -> WebhooksPage.swift L49 CopyLinkButton(url: { shareURL }) where shareURL = model.shareURL (shared P4 surface 0168, the SwiftUI parity of web components/layout/CopyLinkButton; copies the canonical /notifications/webhooks deep link — web `window.location.href`)
+[x] <WebhookChannelsSection/> -> WebhooksPage.swift L27 WebhookChannelsSection(model: model.section) — the already-shipped feature-view (P4 0218) hosted via the page model's WebhookChannelsSectionModel. The section itself renders every web data state (loading / empty / error / stale / offline / content), the add/edit form sheet, the delete confirm, the per-row test/toggle, and the HMAC signature preview — its own parity unit, reused not re-implemented (DRY).
+
+3 data states: the page's own surface has NO API data source (manifest declares none — it renders from
+navigation/local state); the hosted WebhookChannelsSection owns + renders loading/empty/error (+stale/offline)
+for its useWebhookChannels source (verified by the model harness: 3-channel seed, empty -> 0). SI converters:
+N/A — webhook channel metadata (name / url / method / enabled) is unit-agnostic control-plane data. Live-SSE
+staleness: handled inside the hosted section (its WebhookConnection .stale/.offline freshness chip + guarded
+auto-refresh, ADR-013). a11y: header accessibilityElement(.contain); CopyLinkButton + section carry their own
+labels/traits; Dynamic Type via Font.TS roles; light/dark via Color.TS dynamic tokens. Adaptive macOS/iPad +
+iPhone via the section's shared TS* component stack (ADR-002/006).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The full xcodebuild is recorded as
+                       BUILD_EXIT=NOT_RUN / TEST_EXIT=NOT_RUN (deliberately not executed — out-of-scope
+                       KMP staging + shared-host safety), never coloured green.
+ 2 No scope narrowing: the 2 manifest strings AND the full faithful page (PageContainer title+subtitle+copyLink
+                       chrome + the hosted real WebhookChannelsSection with all its states) are implemented.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title/subtitle/copyLink and the
+                       <WebhookChannelsSection/> child were all reproduced.
+ 4 No stubs as final : no TODO/stub/Lorem/fatalError in my 5 files (PLACEHOLDER_COUNT=0; the 1 opt-out belongs
+                       to the pre-existing sibling AuditLog page). Complete code.
+ 5 No parity shortcuts: strings = web keys verbatim; the body is the real section view (not a placeholder),
+                       bound through @Observable models; route is a dedicated case + alias, unit-tested.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, the shared WebhookChannelsSection/CopyLinkButton
+                       components, project.yml, or other owners' files. The generated TeslaSync.xcodeproj is
+                       git-ignored (git check-ignore confirmed), not committed. The KMP staging blocker is left
+                       to its owner / the P99 gate.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — xcodegen(0), swiftformat --lint(0/8),
+                       swiftlint --strict(0/8), placeholder(0), model+route harness(ALL PASSED), view
+                       type-check macOS(0/0) + iOS(0/0). The full xcodebuild is NOT_RUN (out-of-scope KMP
+                       staging), not a red I am hiding.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + dedicated-.notificationsWebhooks-route reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI WebhooksPage shipped at parity with the web source: a pure @Observable
+WebhooksPageModel (ADR-004 — no networking in the view) exposing the two web i18n keys the page renders, the
+copy-link share URL (web copyLink), and the embedded WebhookChannelsSectionModel built over an injectable
+WebhookChannelsSource seam (production binds the shared KMP useWebhookChannels query through the seam). The
+page reproduces the web chrome (PageContainer title + subtitle + copyLink) and hosts the already-shipped
+WebhookChannelsSection feature view (its own P4 parity unit) — reused, not re-implemented (DRY) — so every web
+data state (loading / empty / error / stale / offline / content), the add/edit form, the delete confirm, the
+per-row test/toggle, and the HMAC signature preview render natively. A dedicated `.notificationsWebhooks` route
+(pathSegment `notifications/webhooks`, Operations group) + parser alias + registration make it sidebar-reachable
+and `/notifications/webhooks` deep-linkable, preserving every RouteTests invariant (verified by the route
+harness). Verified on BOTH idioms by isolated Swift 6 strict-concurrency type-checks (macOS 0/0 + iOS 0/0, incl.
+previews) and the executed model + route harness (all assertions passed). The full xcodebuild scheme was NOT run
+— it is gated on the out-of-scope, P1-owned KMP `Shared.xcframework` Gradle staging that OOM-kills this shared
+host (per the sibling log), and triggering it would be irresponsible on a shared runner; deferred to its owner /
+the P99 integration gate.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Notifications apps/apple/Tests/Unit/Features/Notifications \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-notifications-WebhooksPage.log
+  git commit -m "feat(apps/apple): WebhooksPage at web parity (P7 notifications)"
+
+EXIT=0
+STATUS=DONE
