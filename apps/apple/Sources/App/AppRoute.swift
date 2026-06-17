@@ -32,7 +32,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
          batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts, projectedRange, vampireDrain
     case vehicleSystems, maintenance, automations, automationsList, notifications, telemetry, diagnostics, exports
     case climate
-    case notificationsAudit, notificationsWebhooks
+    case notificationsAudit, notificationsWebhooks, notificationsArchived
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
     case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, powerSql, system,
@@ -99,6 +99,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .securityAccess: "security-access"
         case .notificationsAudit: "notifications/audit"
         case .notificationsWebhooks: "notifications/webhooks"
+        case .notificationsArchived: "notifications/archived"
         case .accountSessions: "account/sessions"
         case .dbHealth: "db-health"
         default: rawValue
@@ -156,6 +157,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .notifications: "bell.fill"
         case .notificationsAudit: "clock.arrow.circlepath"
         case .notificationsWebhooks: "point.3.connected.trianglepath.dotted"
+        case .notificationsArchived: "archivebox.fill"
         case .telemetry: "dot.radiowaves.left.and.right"
         case .diagnostics: "stethoscope"
         case .exports: "arrow.down.doc.fill"
@@ -216,7 +218,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .analytics, .weeklyDigest, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage,
              .timeline, .yearReview: .insights
         case .automations, .automationsList, .notifications, .notificationsAudit, .notificationsWebhooks,
-             .diagnostics, .sharing, .watch, .exports: .operations
+             .notificationsArchived, .diagnostics, .sharing, .watch, .exports: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,
              .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .powerSql, .system, .dbHealth,
