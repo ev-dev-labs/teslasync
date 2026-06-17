@@ -37,7 +37,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, powerSql, system
     case backupRestore
     case securityAccess
-    case settings, onboarding, teslaOrders, gasPrice, teslaFeatures, teslaRegion, explore, search, sharing, watch
+    case settings, accountSessions, onboarding, teslaOrders, gasPrice, teslaFeatures, teslaRegion, explore, search,
+         sharing, watch
 
     public var id: String {
         rawValue
@@ -93,6 +94,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .securityAccess: "security-access"
         case .notificationsAudit: "notifications/audit"
         case .notificationsWebhooks: "notifications/webhooks"
+        case .accountSessions: "account/sessions"
         default: rawValue
         }
     }
@@ -178,6 +180,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .backupRestore: "externaldrive.fill.badge.timemachine"
         case .securityAccess: "shield.lefthalf.filled"
         case .settings: "gearshape.fill"
+        case .accountSessions: "laptopcomputer"
         case .onboarding: "sparkles"
         case .explore: "safari.fill"
         case .search: "magnifyingglass"
@@ -206,7 +209,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,
              .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .powerSql, .system, .backupRestore,
              .ingestXRay, .feedbackQueue, .securityAccess: .system
-        case .settings, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures, .teslaRegion: .account
+        case .settings, .accountSessions, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures, .teslaRegion: .account
         }
     }
 

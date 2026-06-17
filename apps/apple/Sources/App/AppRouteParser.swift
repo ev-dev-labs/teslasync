@@ -48,7 +48,8 @@ public enum AppRouteParser {
         "/admin/security-access": .securityAccess,
         "/power/sql": .powerSql,
         "/subjects": .users,
-        "/account": .settings
+        "/account": .settings,
+        "/account/sessions": .accountSessions
     ]
 
     /// Resolves a URL path (with optional IDs after the segment) to a route.
