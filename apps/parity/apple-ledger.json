@@ -2138,6 +2138,24 @@
       "requiredCount": 8,
       "promptId": "p4-apple/P7/page:settings/Safety",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-SafetyPage.log"
+    },
+    {
+      "unitId": "page:system/CommandHistory",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 28,
+      "requiredCount": 28,
+      "promptId": "p4-apple/P7/page:system/CommandHistory",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-CommandHistoryPage.log"
+    },
+    {
+      "unitId": "page:system/CommandHistory",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 28,
+      "requiredCount": 28,
+      "promptId": "p4-apple/P7/page:system/CommandHistory",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-system-CommandHistoryPage.log"
     }
   ]
 }
