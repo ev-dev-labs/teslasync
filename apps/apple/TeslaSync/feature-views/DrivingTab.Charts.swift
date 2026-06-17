@@ -88,7 +88,7 @@ private struct DistributionBarChart: View {
 
 // MARK: - 1. Speed Distribution
 
-struct SpeedDistributionChart: View {
+struct DrivingTabSpeedDistChart: View {
     let bars: [DriveBar]
 
     var body: some View {

@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum RoadmapPhase: String, CaseIterable {
+public enum RoadmapPhase: String, CaseIterable, Sendable {
     case done
     case current
     case next

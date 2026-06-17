@@ -153,7 +153,7 @@ extension DiagnosticPage {
                 Spacer(minLength: TSSpacing.sm)
                 VStack(alignment: .trailing, spacing: TSSpacing.xs) {
                     TSBadge(
-                        check.status.rawValue.uppercased(),
+                        LocalizedStringKey(check.status.rawValue.uppercased()),
                         tone: statusTone(check.status)
                     )
                     TSCaption(

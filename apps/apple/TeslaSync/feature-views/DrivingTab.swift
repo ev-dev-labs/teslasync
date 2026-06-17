@@ -88,7 +88,7 @@ private extension DrivingTab {
             VStack(alignment: .leading, spacing: TSSpacing.lg) {
                 freshnessHeader
                 connectivityBanner
-                SpeedDistributionChart(bars: model.projection.speedBars)
+                DrivingTabSpeedDistChart(bars: model.projection.speedBars)
                 TripDistanceDistributionChart(bars: model.projection.distanceBars)
                 HourlyPatternChart(points: model.projection.hourly)
                 TemperatureEfficiencyChart(points: model.projection.tempEff, labels: model.projection.labels)
