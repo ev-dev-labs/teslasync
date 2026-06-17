@@ -86,13 +86,13 @@ struct AuthStatus: Codable {
     let provider: String?
 }
 
-struct BackupConfig: Codable {
+struct SystemStatusModelsBackupConfig: Codable {
     let id: String
     let schedule: String?
     let enabled: Bool
 }
 
-struct BackupRun: Codable {
+struct SystemStatusModelsBackupRun: Codable {
     let id: String
     let startedAt: String
     let completedAt: String?
