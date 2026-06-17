@@ -102294,6 +102294,29 @@
         }
       }
     },
+    "translation.digitalTwin.windowPartial": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Partial"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partial"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Partial"
+          }
+        }
+      }
+    },
     "translation.digitalTwin.windowRD": {
       "extractionState": "manual",
       "localizations": {

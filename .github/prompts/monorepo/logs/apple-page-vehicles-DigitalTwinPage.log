@@ -1,0 +1,235 @@
+=== P4-APPLE P7 · page:vehicles/DigitalTwin — SwiftUI / HIG ===
+Artifact: apps/apple/TeslaSync/Features/Vehicles/DigitalTwinPage.swift (+ 5 peers)
+Parity unit: page:vehicles/DigitalTwin   Web route: /digital-twin
+Web source: web/src/features/vehicles/pages/DigitalTwinPage.tsx
+PARITY_REQUIRED=45
+Base commit: e0d4dfc6e
+Start: 2026-06-17T08:01:40-07:00
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 (Build 17F42) at /usr/bin/xcodebuild
+✓ Apple Swift 6.3.2 (strict concurrency) at /usr/bin/swift
+✓ swiftlint 0.63.3 at /opt/homebrew/bin/swiftlint
+✓ PowerShell 7.6.2 at /opt/homebrew/bin/pwsh
+✓ xcodegen 2.45.4 at /opt/homebrew/bin/xcodegen
+✓ Platform: Darwin (arm64)
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+⚠ apps/apple/Frameworks/Shared.xcframework (KMP core, ADR-004) is ABSENT (.gitkeep only),
+  so a full `xcodebuild` link of the whole TeslaSync target cannot run in this slot
+  (the merged parallel-eval baseline also carries pre-existing, out-of-scope breakage:
+  e.g. 4 pre-existing swiftlint violations in MyActivityPageModel.swift +
+  WeeklyDigestWidget.{Adapter,Tests}.swift, none in this unit's files).
+  Per the accepted precedent for these P7 apple parity pages
+  (apple-page-vehicles-VehicleDetailPage.log, apple-page-vehicle-systems-GuardModePage.log,
+  apple-page-system-SystemStatusPage.log) this unit is validated by a standalone Swift 6
+  strict-concurrency type-check (compiled against the REAL shared P2/P3 design system + the
+  REAL reused twin illustration + paint-picker surfaces — all KMP-free) + swiftlint --strict
+  + the placeholder gate + a module-wide symbol-collision sweep. The new files validate
+  independently clean on iOS AND macOS.
+=> An Xcode runner IS available; gate executed (not auto-BLOCKED).
+
+=== WEB SOURCE ANALYSIS ===
+The web DigitalTwinPage (181 lines) is a live, single-vehicle physical-state screen: a main
+visualization panel (the `<VehicleTwin>` illustration + `<VehiclePaintPicker>` + last-updated
+caption) beside three read-only detail panels (Doors, Windows, Security & Status), with a
+vehicle selector in the PageContainer actions slot and a 5s `REFRESH_INTERVAL` poll.
+The parity-manifest record scopes this unit to:
+  dataSources : useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest
+  panels      : GlassPanel1..GlassPanel5  (no-vehicles · visualization · doors · windows · security)
+  charts/maps : none
+  states      : loading, empty, success  (+ error for robustness)
+  strings     : 37  (8 common.* + 29 digitalTwin.*)
+  requiredCount: 45  (5 panels + 3 states + 37 strings)
+The three live feeds merge into one VehicleTwinState via `buildTwinState` (the page's
+`twinState` memo) — the doors/windows/security rows and the illustration both read from it.
+The badge resolves a single source-of-truth status (web `badgeStatus`): twin charging/driving
+win, else `deriveVehicleStatus(state)`, else a live signal collapses offline→online.
+
+The Swift port REUSES the canonical module twin domain rather than re-deriving it (ADR-004,
+predecessor reuse): `TwinStateBuilder.buildTwinState` (the verbatim port of lib/vehicleState.ts),
+`VehicleTwinState` + the window/door/turn enums + `Twin{Security,VehicleState,Charging}Input`,
+the shared Canvas illustration `VehicleTwinView`, and the `VehiclePaintPicker` shared surface
+(+ `InMemoryVehiclePaintStore`). All four web hook names are kept verbatim at the Swift call sites.
+
+=== IMPLEMENTATION ===
+New files under apps/apple/TeslaSync/Features/Vehicles/ (auto-included by xcodegen's
+`TeslaSync/Features` source group → iOS + macOS app targets; ADR-002):
+  DigitalTwinModels.swift            (214) DigitalTwinVehicleStatus (web deriveVehicleStatus +
+                                           badgeStatus, FSM dot tone), the DigitalTwinDetailRows
+                                           door/window/security KV builders (web doorItems/
+                                           windowItems/securityItems), and DigitalTwinCopy (the
+                                           i18n value facade — every common.*/digitalTwin.* value)
+  DigitalTwinDataSource.swift        (152) KMP seam: 4 hooks by web name returning the reused
+                                           Twin*Input shapes, with Sample / Signalless / Empty /
+                                           Failing doubles + DigitalTwinError
+  DigitalTwinPageModel.swift         (155) @MainActor @Observable: loading/empty/error/ready,
+                                           fleet + selection, concurrent feed merge via
+                                           TwinStateBuilder, badge derivation, paint store seed
+  DigitalTwinSections.swift          (234) the 5 GlassPanels (no-vehicles, visualization with the
+                                           reused VehicleTwinView + VehiclePaintPicker + last
+                                           updated, doors, windows, security), the status badge,
+                                           and the loading skeleton — built on shared P2/P3
+                                           (TSGlassPanel, TSKVList, TSEmptyState, TSPanelTitle …)
+  DigitalTwinPage.swift              (200) root View: scaffold, toolbar vehicle selector, the
+                                           loading/empty/error/ready switch, adaptive ViewThatFits
+                                           layout (web flex-col lg:flex-row), 5s live loop, previews
+  DigitalTwinRouteRegistration.swift  (42) DigitalTwinLink + .digitalTwinDestination() + make()
+                                           factory (web /digital-twin deep link)
+  Total: 997 lines (page + 5 peers).
+Catalog: +1 key (translation.digitalTwin.windowPartial = "Partial") — the web `windowLabel`
+  hardcodes 'Partial' with no i18n key; added page-owned (en translated, ar/he needs_review) so the
+  window value resolves from the catalog. ALL 37 required strings already existed; +0 were missing.
+
+=== GATES ===
+
+# 1) Placeholder / stub gate (ADR-011), gate command from repo root
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Vehicles -Language swift
+PLACEHOLDER_ALLOWED=2   (the one `redacted(reason:.placeholder)` skeleton line, // parity:allow)
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+# 2) Swift 6 strict-concurrency type-check (substitute for the framework-blocked full link).
+#    Compiled the 6 new files against the REAL shared design system (P2 tokens + P3 components,
+#    KMP-free: Sources/Components + Sources/Design + apps/design/generated/apple/Tokens.swift,
+#    UnitFormatters.swift excluded — it alone pulls the KMP-backed UnitPreferences; this unit needs
+#    no SI conversion) PLUS the REAL reused surfaces it composes (the canonical twin illustration +
+#    domain: TeslaSync/dashboard-widgets/DigitalTwinWidget.{Models,Builder,Palette,Twin,Model,Badges}
+#    + DigitalTwinWidget.swift + Sources/DashboardWidgets/DashboardWidgetInfra.swift; and the paint
+#    picker: TeslaSync/shared-surfaces/VehiclePaintPicker*.swift).
+$ xcrun swiftc -typecheck -swift-version 6 -sdk <iphonesimulator26.5> \
+    -target arm64-apple-ios18.0-simulator <design+reused+6 new files>
+(no diagnostics)   iOS  TYPECHECK_EXIT=0
+$ xcrun swiftc -typecheck -swift-version 6 -sdk <macosx26.5> \
+    -target arm64-apple-macos15.0 <design+reused+6 new files>
+(no diagnostics)   macOS TYPECHECK_EXIT=0
+BUILD_EXIT=0  (this unit; adaptive iOS + macOS — full xcodebuild link BLOCKED, see ENVIRONMENT CHECK)
+
+# 3) SwiftLint (strict) — the 6 new files (.swiftlint.yml line-length/opt-in rules)
+$ swiftlint --strict --no-cache TeslaSync/Features/Vehicles/DigitalTwin*.swift
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+# (A whole-target `swiftlint --strict` reports 4 pre-existing violations in MyActivityPageModel.swift
+#  + WeeklyDigestWidget.{Adapter,Tests}.swift — NONE in this unit's files; out of scope.)
+
+# 4) Symbol-collision sweep across the whole Apple target (Sources + TeslaSync + Widgets + Watch)
+COLLISIONS=0 for every new top-level declaration (DigitalTwin{Copy,VehicleStatus,DetailRows,
+  StateSnapshot,DataSource,Error,Status,PageModel,Page,Link,RouteRegistration}, the 4 data-source
+  doubles, the 6 panel/badge/skeleton views). No predecessor symbol is shadowed — the reused
+  DigitalTwinModel / DigitalTwinSource / DigitalTwinStrings / DigitalTwinAccessibility / VehicleTwinView
+  are composed, never redeclared (this unit's seam is DigitalTwinDataSource, model DigitalTwinPageModel).
+No duplicate file basenames (no pre-existing DigitalTwin*.swift under Features/).
+
+TEST_EXIT=n/a  (no unit tests required for parity pages; the full XCTest bundle cannot link the
+               framework-absent baseline — per precedent. This unit adds no app-target test files.)
+
+=== PARITY ===
+PARITY_REQUIRED=45
+
+Panel Coverage (5):
+✓ panel — GlassPanel1 (no-vehicles)   — DigitalTwinNoVehiclesPanel TSGlassPanel Sections.swift:25,27;
+          used Page.swift:101,102 (case .empty)
+✓ panel — GlassPanel2 (visualization) — DigitalTwinVisualizationPanel TSGlassPanel Sections.swift:43,51;
+          VehicleTwinView + VehiclePaintPicker + last-updated; used Page.swift:140 (visualization)
+✓ panel — GlassPanel3 (doors)         — DigitalTwinDoorsPanel Sections.swift:107 → DigitalTwinDetailPanel
+          TSGlassPanel Sections.swift:89; used Page.swift:152 (sidePanels)
+✓ panel — GlassPanel4 (windows)       — DigitalTwinWindowsPanel Sections.swift:123 → DigitalTwinDetailPanel
+          TSGlassPanel Sections.swift:89; used Page.swift:153 (sidePanels)
+✓ panel — GlassPanel5 (security)      — DigitalTwinSecurityPanel TSGlassPanel Sections.swift:141,147;
+          KVList + status badge; used Page.swift:154 (sidePanels)
+
+State Coverage (3 required + error for robustness):
+✓ state — loading  → case .loading + DigitalTwinSkeleton (redacted) — Page.swift:99,100; Sections.swift:201
+✓ state — empty    → case .empty + DigitalTwinNoVehiclesPanel (ContentUnavailableView) — Page.swift:101,102
+                     (per-source empty: doors/windows panels' noDoorData/noWindowData — Sections.swift:116,132)
+✓ state — success  → case .ready + readyBody (visualization + 3 detail panels) — Page.swift:105,106,127
+  (state — error   → case .error + TSErrorDisplay + Retry — Page.swift:104,110; extra)
+
+String Coverage (37 — all resolved from Localizable.xcstrings as translation.*):
+✓ string — common.active      — DigitalTwinModels.swift:51 (activeInactive) / :57 (activeOff)
+✓ string — common.closed      — DigitalTwinModels.swift:39 (openClosed) / :78 (windowLabel)
+✓ string — common.inactive    — DigitalTwinModels.swift:51 (activeInactive)
+✓ string — common.no          — DigitalTwinModels.swift:45 (yesNo)
+✓ string — common.off         — DigitalTwinModels.swift:57 (activeOff) / :63 (onOff)
+✓ string — common.on          — DigitalTwinModels.swift:63 (onOff)
+✓ string — common.open        — DigitalTwinModels.swift:39 (openClosed) / :77 (windowLabel)
+✓ string — common.yes         — DigitalTwinModels.swift:45 (yesNo)
+✓ string — digitalTwin.chargePort        — DigitalTwinModels.swift:202 (security row)
+✓ string — digitalTwin.charging          — DigitalTwinModels.swift:86 (chargePort value) / :200 (security row)
+✓ string — digitalTwin.doorDriverFront   — DigitalTwinModels.swift:172 (doors row)
+✓ string — digitalTwin.doorDriverRear    — DigitalTwinModels.swift:176 (doors row)
+✓ string — digitalTwin.doorPassengerFront — DigitalTwinModels.swift:174 (doors row)
+✓ string — digitalTwin.doorPassengerRear  — DigitalTwinModels.swift:178 (doors row)
+✓ string — digitalTwin.doorsTitle        — DigitalTwinSections.swift:113 (GlassPanel3 title)
+✓ string — digitalTwin.driverSeat        — DigitalTwinModels.swift:204 (security row)
+✓ string — digitalTwin.driving           — DigitalTwinModels.swift:199 (security row)
+✓ string — digitalTwin.empty             — DigitalTwinModels.swift:71 (occupiedEmpty)
+✓ string — digitalTwin.frunk             — DigitalTwinModels.swift:180 (doors row)
+✓ string — digitalTwin.hazards           — DigitalTwinModels.swift:207 (security row)
+✓ string — digitalTwin.headlights        — DigitalTwinModels.swift:206 (security row)
+✓ string — digitalTwin.lastUpdated       — DigitalTwinSections.swift:69 (visualization caption)
+✓ string — digitalTwin.locked            — DigitalTwinModels.swift:198 (security row)
+✓ string — digitalTwin.noDoorData        — DigitalTwinSections.swift:116 (GlassPanel3 empty)
+✓ string — digitalTwin.noVehicles        — DigitalTwinSections.swift:29 (GlassPanel1 empty)
+✓ string — digitalTwin.noWindowData      — DigitalTwinSections.swift:132 (GlassPanel4 empty)
+✓ string — digitalTwin.occupied          — DigitalTwinModels.swift:70 (occupiedEmpty)
+✓ string — digitalTwin.securityTitle     — DigitalTwinSections.swift:149 (GlassPanel5 title)
+✓ string — digitalTwin.sentryMode        — DigitalTwinModels.swift:201 (security row)
+✓ string — digitalTwin.subtitle          — DigitalTwinPage.swift:50 (header subtitle)
+✓ string — digitalTwin.title             — DigitalTwinPage.swift:38 (navigationTitle)
+✓ string — digitalTwin.trunk             — DigitalTwinModels.swift:181 (doors row)
+✓ string — digitalTwin.windowFD          — DigitalTwinModels.swift:188 (windows row)
+✓ string — digitalTwin.windowFP          — DigitalTwinModels.swift:189 (windows row)
+✓ string — digitalTwin.windowRD          — DigitalTwinModels.swift:190 (windows row)
+✓ string — digitalTwin.windowRP          — DigitalTwinModels.swift:191 (windows row)
+✓ string — digitalTwin.windowsTitle      — DigitalTwinSections.swift:129 (GlassPanel4 title)
+(+ digitalTwin.windowPartial — DigitalTwinModels.swift:79 — the catalog key added for the web
+   `windowLabel` 'Partial'; extra, not one of the 37 required.)
+
+PARITY_COVERED=45
+
+Hook ports (web name kept at the Swift call site, all 4):
+✓ useVehicles                — DigitalTwinDataSource.swift:42 (→ GET /vehicles); model load() PageModel.swift:78
+✓ useVehicleState            — DigitalTwinDataSource.swift:45 (→ GET /vehicles/{id}/state); loadSignals:117
+✓ useSecurityLatest          — DigitalTwinDataSource.swift:49 (→ GET /security/latest); loadSignals:118
+✓ useChargingTelemetryLatest — DigitalTwinDataSource.swift:52 (→ GET /charging-telemetry/latest); loadSignals:119
+
+=== SUMMARY ===
+✓ All 5 GlassPanels implemented: GlassPanel1 the no-vehicles empty panel; GlassPanel2 the
+  visualization (the reused canonical VehicleTwinView illustration + the reused VehiclePaintPicker
+  surface + the last-updated caption); GlassPanel3/4/5 the Doors / Windows / Security & Status detail
+  panels (TSKVList rows + the single source-of-truth status badge)
+✓ The three live feeds merge into one VehicleTwinState through the reused TwinStateBuilder
+  (verbatim port of lib/vehicleState.ts) — both the illustration and the detail rows read it; the
+  badge reproduces the web `badgeStatus` priority exactly
+✓ loading / empty / success implemented (+ error + per-source noDoorData/noWindowData empties);
+  loading=redacted skeleton, empty=ContentUnavailableView, error=TSErrorDisplay+Retry — never a
+  blank region (ADR-011)
+✓ All 37 required strings resolve from Localizable.xcstrings (8 common.* + 29 digitalTwin.*); +1
+  page-owned windowPartial key added; zero hardcoded literals; web key names kept
+✓ @MainActor @Observable model; the 4 web hook names kept verbatim as the single KMP seam (ADR-004);
+  per-feed failure degrades to the panel empty / '—' states (web independent-query resilience)
+✓ Adaptive macOS + iOS (ViewThatFits visualization|side-panels, inline title on iOS; ADR-002/006);
+  5s live poll mirrors the web REFRESH_INTERVAL
+✓ Accessibility: labels/traits/containers on panels, rows, badge, illustration; Dynamic Type;
+  semantic Color.TS tokens for light/dark + increased-contrast (ADR-015)
+✓ SI honored — physical state is boolean/enum primitives, formatted only at the render boundary
+  (no SI unit conversion needed; UnitFormatters.swift not pulled)
+✓ Navigation: DigitalTwinLink + .digitalTwinDestination() deep-links web /digital-twin (ADR-002/006)
+✓ PARITY_COVERED=45 / PARITY_REQUIRED=45 (100%)
+✓ Placeholder check: PASS (PLACEHOLDER_COUNT=0)
+✓ Swift 6 strict-concurrency type-check: PASS (iOS exit 0, macOS exit 0) against the real P2/P3
+  design system + the real reused twin illustration + paint-picker surfaces
+✓ SwiftLint --strict: PASS (0 violations / 6 files)
+✓ No symbol collisions across the Apple target; predecessors composed, never redeclared
+
+⚠ Full `xcodebuild` link/test BLOCKED in this slot — apps/apple/Frameworks/Shared.xcframework
+  (KMP core, ADR-004) is absent (.gitkeep only) and the merged baseline carries pre-existing,
+  out-of-scope breakage. The new files validate independently via the Swift 6 type-check on BOTH
+  platforms, matching the accepted precedent for the prior P7 apple parity pages.
+
+Files: apps/apple/TeslaSync/Features/Vehicles/*.swift (6 files, 997 lines)
+       apps/apple/Localization/Localizable.xcstrings (+1 windowPartial key)
+Ledger: apps/parity/apple-ledger.json — page:vehicles/DigitalTwin {apple-macos, apple-ios} = done 45/45
+
+EXIT=0
+STATUS=DONE

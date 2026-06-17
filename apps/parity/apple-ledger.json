@@ -1978,6 +1978,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicles-VehicleDetailPage.log"
     },
     {
+      "unitId": "page:vehicles/DigitalTwin",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 45,
+      "requiredCount": 45,
+      "promptId": "p4-apple/P7/page:vehicles/DigitalTwin",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicles-DigitalTwinPage.log"
+    },
+    {
+      "unitId": "page:vehicles/DigitalTwin",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 45,
+      "requiredCount": 45,
+      "promptId": "p4-apple/P7/page:vehicles/DigitalTwin",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-vehicles-DigitalTwinPage.log"
+    },
+    {
       "unitId": "page:charging/SmartCharge",
       "platform": "apple-macos",
       "status": "done",
