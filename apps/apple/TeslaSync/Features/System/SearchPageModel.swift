@@ -165,6 +165,7 @@ public final class SearchPageModel {
     }
 
     /// Toggle a type filter on/off.
+    @MainActor
     public func toggleType(_ type: SearchHitType) {
         if selectedTypes.contains(type) {
             selectedTypes.remove(type)
@@ -179,6 +180,7 @@ public final class SearchPageModel {
     }
 
     /// Clear all type filters.
+    @MainActor
     public func clearFilters() {
         selectedTypes.removeAll()
         Task {

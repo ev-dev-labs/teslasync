@@ -110,9 +110,4 @@ public enum SampleWeeklyDigestFixture {
     }
 }
 
-private extension Double {
-    func rounded(toPlaces places: Int) -> Double {
-        let factor = pow(10.0, Double(places))
-        return (self * factor).rounded() / factor
-    }
-}
+// Note: rounded(toPlaces:) removed - duplicate definition exists elsewhere

@@ -88,7 +88,7 @@ public struct DiagnosticPage: View {
 
     // MARK: - Helpers (panels and cards are in DiagnosticPage.Sections.swift)
 
-    fileprivate func overallTone(_ status: DiagnosticOverallStatus) -> TSTone {
+    func overallTone(_ status: DiagnosticOverallStatus) -> TSTone {
         switch status {
         case .ok: .success
         case .degraded: .warning
@@ -96,7 +96,7 @@ public struct DiagnosticPage: View {
         }
     }
 
-    fileprivate func overallIcon(_ status: DiagnosticOverallStatus) -> String {
+    func overallIcon(_ status: DiagnosticOverallStatus) -> String {
         switch status {
         case .ok: "checkmark.circle.fill"
         case .degraded: "exclamationmark.triangle.fill"
@@ -104,7 +104,7 @@ public struct DiagnosticPage: View {
         }
     }
 
-    fileprivate func statusTone(_ status: DiagnosticCheckStatus) -> TSTone {
+    func statusTone(_ status: DiagnosticCheckStatus) -> TSTone {
         switch status {
         case .ok: .success
         case .warn: .warning
@@ -112,7 +112,7 @@ public struct DiagnosticPage: View {
         }
     }
 
-    fileprivate func statusIcon(_ status: DiagnosticCheckStatus) -> String {
+    func statusIcon(_ status: DiagnosticCheckStatus) -> String {
         switch status {
         case .ok: "checkmark.circle.fill"
         case .warn: "exclamationmark.triangle.fill"
@@ -120,7 +120,7 @@ public struct DiagnosticPage: View {
         }
     }
 
-    fileprivate func formatDateTime(_ isoString: String) -> String {
+    func formatDateTime(_ isoString: String) -> String {
         let formatter = ISO8601DateFormatter()
         guard let date = formatter.date(from: isoString) else { return isoString }
         let display = DateFormatter()
@@ -129,7 +129,7 @@ public struct DiagnosticPage: View {
         return display.string(from: date)
     }
 
-    fileprivate func copyToClipboard(_ text: String) {
+    func copyToClipboard(_ text: String) {
         #if os(macOS)
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
@@ -138,7 +138,7 @@ public struct DiagnosticPage: View {
         #endif
     }
 
-    fileprivate func downloadReport() {
+    func downloadReport() {
         guard let report = model.report else { return }
         let filename = downloadFilename(report.generatedAt)
         let text = model.reportText

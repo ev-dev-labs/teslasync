@@ -27,7 +27,7 @@ struct BrowserNotificationsSettingsCard: View {
                 hairline
                 TabSignalsSection(model: model)
                 hairline
-                NotificationSoundsSection(model: model)
+                BrowserNotificationSoundsSection(model: model)
             }
         }
         .accessibilityElement(children: .contain)
@@ -160,7 +160,7 @@ struct TabSignalsSection: View {
 
 /// The notification-sound region (web `useNotificationSoundPrefs`): the overall gate, the
 /// autoplay hint while enabled, the per-channel rows, and the volume slider.
-struct NotificationSoundsSection: View {
+struct BrowserNotificationSoundsSection: View {
     let model: BrowserNotificationsPageModel
 
     var body: some View {
@@ -191,7 +191,7 @@ struct NotificationSoundsSection: View {
         VStack(alignment: .leading, spacing: TSSpacing.sm) {
             TSLabel("translation.notificationSounds.categoriesHeading")
             ForEach(BrowserNotificationSoundCategory.allCases) { category in
-                NotificationSoundChannelRow(model: model, category: category)
+                BrowserNotificationSoundChannelRow(model: model, category: category)
             }
         }
     }
@@ -222,7 +222,7 @@ struct NotificationSoundsSection: View {
 
 /// One sound-channel row (web per-category `Toggle` + ghost `Test` button), dimmed while
 /// the overall sound gate is off (web `opacity-60` when sounds are disabled).
-struct NotificationSoundChannelRow: View {
+struct BrowserNotificationSoundChannelRow: View {
     let model: BrowserNotificationsPageModel
     let category: BrowserNotificationSoundCategory
 

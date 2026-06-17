@@ -123,6 +123,7 @@ struct BrowserNotificationsCopyLinkButton: View {
 }
 
 #if DEBUG
+    @MainActor
     private func previewModel(
         _ permission: BrowserNotificationsPermission,
         soundOn: Bool = false
