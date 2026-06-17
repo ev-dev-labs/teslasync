@@ -1441,6 +1441,24 @@
       "requiredCount": 14,
       "promptId": "p4-apple/P7/page:power-user/SqlPlayground",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-power-user-SqlPlaygroundPage.log"
+    },
+    {
+      "unitId": "page:onboarding/Onboarding",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 28,
+      "requiredCount": 28,
+      "promptId": "p4-apple/P7/page:onboarding/Onboarding",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-onboarding-OnboardingPage.log"
+    },
+    {
+      "unitId": "page:onboarding/Onboarding",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 28,
+      "requiredCount": 28,
+      "promptId": "p4-apple/P7/page:onboarding/Onboarding",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-onboarding-OnboardingPage.log"
     }
   ]
 }

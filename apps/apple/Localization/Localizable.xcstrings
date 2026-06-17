@@ -1,6 +1,281 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "onboarding.checkAgain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check again"
+          }
+        }
+      }
+    },
+    "onboarding.continue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue to dashboard"
+          }
+        }
+      }
+    },
+    "onboarding.footer.account" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tesla account page"
+          }
+        }
+      }
+    },
+    "onboarding.footer.docs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "documentation"
+          }
+        }
+      }
+    },
+    "onboarding.footer.help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Need help? See the"
+          }
+        }
+      }
+    },
+    "onboarding.footer.or" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " or the "
+          }
+        }
+      }
+    },
+    "onboarding.intro.desc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TeslaSync runs entirely on your hardware. No data leaves your install, and you can revisit this page from Settings any time."
+          }
+        }
+      }
+    },
+    "onboarding.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup checklist"
+          }
+        }
+      }
+    },
+    "onboarding.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welcome to TeslaSync"
+          }
+        }
+      }
+    },
+    "onboarding.polling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This page refreshes automatically every 30 seconds."
+          }
+        }
+      }
+    },
+    "onboarding.ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are all set \u2014 your dashboard is ready."
+          }
+        }
+      }
+    },
+    "onboarding.skip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip for now"
+          }
+        }
+      }
+    },
+    "onboarding.skipHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Explore the app \u2014 you can finish setup later from this page."
+          }
+        }
+      }
+    },
+    "onboarding.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Three quick steps before your dashboard is ready."
+          }
+        }
+      }
+    },
+    "onboarding.telemetry.desc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Once your vehicle uploads its first signal batch (usually within 5 minutes of driving), live data will appear across the app. See the Fleet Telemetry setup guide if it does not arrive."
+          }
+        }
+      }
+    },
+    "onboarding.telemetry.docs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup guide"
+          }
+        }
+      }
+    },
+    "onboarding.telemetry.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wait for telemetry data"
+          }
+        }
+      }
+    },
+    "onboarding.tesla.cta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect Tesla account"
+          }
+        }
+      }
+    },
+    "onboarding.tesla.desc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TeslaSync needs Fleet API access to read vehicle data. Sign in with your Tesla account to authorize the connection."
+          }
+        }
+      }
+    },
+    "onboarding.tesla.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect your Tesla account"
+          }
+        }
+      }
+    },
+    "onboarding.vehicle.checking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking\u2026"
+          }
+        }
+      }
+    },
+    "onboarding.vehicle.cta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh"
+          }
+        }
+      }
+    },
+    "onboarding.vehicle.desc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicles linked to your Tesla account will sync automatically. This usually takes less than a minute after connecting."
+          }
+        }
+      }
+    },
+    "onboarding.vehicle.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wait for vehicles to appear"
+          }
+        }
+      }
+    },
+    "onboarding.welcome" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welcome to TeslaSync"
+          }
+        }
+      }
+    },
     "powerSql.title" : {
       "extractionState" : "manual",
       "localizations" : {
