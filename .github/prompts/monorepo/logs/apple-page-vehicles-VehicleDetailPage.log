@@ -1,0 +1,175 @@
+=== P4-APPLE P7 · page:vehicles/VehicleDetail — SwiftUI / HIG ===
+Artifact: apps/apple/TeslaSync/Features/Vehicles/VehicleDetailPage.swift (+ 5 peers)
+Parity unit: page:vehicles/VehicleDetail   Web route: /vehicles/:id
+Web source: web/src/features/vehicles/pages/VehicleDetailPage.tsx
+PARITY_REQUIRED=23
+Base commit: f6112d80b
+Start: 2026-06-17T00:04:04-07:00
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 (Build 17F42) at /usr/bin/xcodebuild
+✓ swift 6.3.2 (strict concurrency) at /usr/bin/swift
+✓ swiftlint 0.63.3 at /opt/homebrew/bin/swiftlint
+✓ pwsh 7.6.2 at /opt/homebrew/bin/pwsh
+✓ xcodegen 2.45.4 at /opt/homebrew/bin/xcodegen
+✓ Platform: Darwin (arm64)
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+⚠ apps/apple/Frameworks/Shared.xcframework (KMP core, ADR-004) is ABSENT (.gitkeep only),
+  so a full `xcodebuild` link of the whole TeslaSync target cannot run in this slot
+  (the merged parallel-eval baseline also carries pre-existing, out-of-scope breakage).
+  Per the accepted precedent for these P7 apple parity pages
+  (apple-page-vehicle-systems-GuardModePage.log, apple-page-system-SystemStatusPage.log,
+  apple-page-driving-DriveDetailPage.log) this unit is validated by a standalone
+  Swift 6 strict-concurrency type-check (compiled against the REAL shared P2/P3 design
+  system — KMP-free) + swiftlint --strict + the placeholder gate + a module-wide
+  symbol-collision sweep. The new files validate independently clean on iOS AND macOS.
+=> An Xcode runner IS available; gate executed (not auto-BLOCKED).
+
+=== WEB SOURCE ANALYSIS ===
+The web VehicleDetailPage (269 lines) is a sectioned detail screen: a header with a
+wake action, then every region wrapped in a `<SectionErrorBoundary fallbackTitle=…>`.
+The parity-manifest record (apps/parity/parity-manifest.json #610) scopes this unit to:
+  dataSources : findEffectiveSetting, useVehicleSettings → GET /vehicles/{id}/settings
+  panels      : GlassPanel1
+  states      : loading, error, success
+  strings     : 19 (16 vehicles.detail.section.*Failed + .title + .wakeSuccess + .wakeFailed)
+  requiredCount: 23  (1 panel + 3 states + 19 strings)
+The settings resolver (`useVehicleSettings`) returns one EffectiveSetting {key,value,source}
+per whitelisted key; `findEffectiveSetting(payload,key)` selects one row (the nickname
+override feeds the page title). Both hook names are kept verbatim at the Swift call sites.
+The 16 section.*Failed strings are the page's SectionErrorBoundary fallback titles.
+
+=== IMPLEMENTATION ===
+New files under apps/apple/TeslaSync/Features/Vehicles/ (auto-included by xcodegen's
+`TeslaSync/Features` source group → iOS + macOS app targets; ADR-002):
+  VehicleDetailModels.swift            (229) wire types (setting source/value/setting/
+                                             response) + findEffectiveSetting + the
+                                             VehicleDetailSectionKind boundary contract
+                                             (16 cases → failedTitleKey/nameKey/symbol)
+  VehicleDetailDataSource.swift        (122) KMP seam: useVehicleSettings + wakeVehicle,
+                                             with Sample / Empty / Failing implementations
+  VehicleDetailPageModel.swift         (112) @MainActor @Observable model: loading/empty/
+                                             error/success, effectiveName, wake() feedback
+  VehicleDetailSections.swift          (313) SectionErrorBoundary port, header + wake,
+                                             settings panel (GlassPanel1), section navigator,
+                                             skeleton — built on shared P2/P3 (TSGlassPanel,
+                                             TSBadge, TSButton, TSErrorDisplay, Color.TS …)
+  VehicleDetailPage.swift              (149) root View: scaffold, state switch, the 16
+                                             boundary call sites, wake banner, previews
+  VehicleDetailRouteRegistration.swift  (54) VehicleDetailLink + .vehicleDetailDestination()
+                                             + make() factory (web /vehicles/:id deep link)
+Catalog: +7 keys (translation.vehicles.detail.section.{liveState,quickStats,batteryCharts,
+  recentDrives,recentCharges,aiPaintPreview}Name + .sectionsTitle) for the section-navigator
+  row labels. ALL 19 required strings + the reused vehicleSettings.* / common.* families
+  already existed; +0 of the required 19 were missing.
+
+=== GATES ===
+
+# 1) Placeholder / stub gate (ADR-011), gate command from repo root
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Vehicles -Language swift
+PLACEHOLDER_ALLOWED=1   (one `redacted(reason:.placeholder)` skeleton line, // parity:allow)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) Swift 6 strict-concurrency type-check (substitute for the framework-blocked full link).
+#    Compiled the 6 new files against the REAL shared design system (P2 tokens + P3
+#    components, all KMP-free): apps/apple/Sources/Components + Sources/Design +
+#    apps/design/generated/apple (UnitFormatters.swift excluded — it alone pulls the
+#    KMP-backed UnitPreferences; this unit needs no SI conversion).
+$ xcrun swiftc -typecheck -swift-version 6 -sdk <iphonesimulator> \
+    -target arm64-apple-ios18.0-simulator <41 design files> <6 new files>
+(no diagnostics)   iOS  TYPECHECK_EXIT=0
+$ xcrun swiftc -typecheck -swift-version 6 -sdk <macosx> \
+    -target arm64-apple-macos14.0 <41 design files> <6 new files>
+(no diagnostics)   macOS TYPECHECK_EXIT=0
+BUILD_EXIT=0  (this unit; adaptive iOS + macOS — full xcodebuild link BLOCKED, see ENVIRONMENT CHECK)
+
+# 3) SwiftLint (strict) — gate invocation from repo root
+$ swiftlint --strict apps/apple/TeslaSync/Features/Vehicles
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+# (Linting the 6 new files explicitly under apps/apple/.swiftlint.yml also reports 0 in scope.)
+
+# 4) Symbol-collision sweep across the whole Apple target (Sources + TeslaSync + Tests)
+No collisions for any VehicleDetail* declaration; the free `findEffectiveSetting` is unique.
+No duplicate file basenames (no pre-existing VehicleDetail*.swift anywhere).
+
+TEST_EXIT=n/a  (no unit tests required for parity pages; the full XCTest bundle cannot link
+               the framework-absent baseline — per precedent. This unit adds no app-target
+               test files.)
+
+=== PARITY ===
+PARITY_REQUIRED=23
+
+Panel Coverage (1):
+✓ panel — GlassPanel1 (VehicleDetailSettingsPanel, TSGlassPanel) — VehicleDetailSections.swift:152,156;
+          used VehicleDetailPage.swift:104 (boundary .settings → settings panel)
+
+State Coverage (3 required + empty for robustness):
+✓ state — loading  → case .loading + VehicleDetailSkeleton (redacted) — VehicleDetailPage.swift:69,70
+✓ state — error    → case .error + boundary(.settings, hasError:) + Retry — VehicleDetailPage.swift:117,120
+✓ state — success  → case .success + VehicleDetailSettingsPanel — VehicleDetailPage.swift:103,105
+  (state — empty   → case .empty + ContentUnavailableView — VehicleDetailPage.swift:107; extra)
+
+String Coverage (19 — all resolved from Localizable.xcstrings as translation.vehicles.detail.*):
+✓ string — vehicles.detail.section.aiPaintPreviewFailed   — VehicleDetailModels.swift:173; boundary(.aiPaintPreview) Sections.swift:223
+✓ string — vehicles.detail.section.batteryChartsFailed    — VehicleDetailModels.swift:169; boundary(.batteryCharts) Sections.swift:223
+✓ string — vehicles.detail.section.batteryRangeFailed     — VehicleDetailModels.swift:161; boundary(.batteryRange) Sections.swift:223
+✓ string — vehicles.detail.section.chargingTelemetryFailed — VehicleDetailModels.swift:168; boundary(.chargingTelemetry) Sections.swift:223
+✓ string — vehicles.detail.section.climateFailed          — VehicleDetailModels.swift:165; boundary(.climate) Sections.swift:223
+✓ string — vehicles.detail.section.headerFailed           — VehicleDetailModels.swift:160; boundary(.header) Page.swift:84
+✓ string — vehicles.detail.section.liveStateFailed        — VehicleDetailModels.swift:162; boundary(.liveState) Sections.swift:223
+✓ string — vehicles.detail.section.motorFailed            — VehicleDetailModels.swift:164; boundary(.motor) Sections.swift:223
+✓ string — vehicles.detail.section.quickLinksFailed       — VehicleDetailModels.swift:174; boundary(.quickLinks) Sections.swift:223
+✓ string — vehicles.detail.section.quickStatsFailed       — VehicleDetailModels.swift:163; boundary(.quickStats) Sections.swift:223
+✓ string — vehicles.detail.section.recentChargesFailed    — VehicleDetailModels.swift:171; boundary(.recentCharges) Sections.swift:223
+✓ string — vehicles.detail.section.recentDrivesFailed     — VehicleDetailModels.swift:170; boundary(.recentDrives) Sections.swift:223
+✓ string — vehicles.detail.section.securityFailed         — VehicleDetailModels.swift:166; boundary(.security) Sections.swift:223
+✓ string — vehicles.detail.section.settingsFailed         — VehicleDetailModels.swift:175; boundary(.settings) Page.swift:104,108,119
+✓ string — vehicles.detail.section.tireFailed             — VehicleDetailModels.swift:167; boundary(.tire) Sections.swift:223
+✓ string — vehicles.detail.section.vehicleConfigFailed    — VehicleDetailModels.swift:172; boundary(.vehicleConfig) Sections.swift:223
+✓ string — vehicles.detail.title        — VehicleDetailPage.swift:62 navigationTitle; header Sections.swift:97; SectionKind.header.nameKey Models.swift:183
+✓ string — vehicles.detail.wakeSuccess  — VehicleDetailPageModel.swift:102 (wake() success feedback)
+✓ string — vehicles.detail.wakeFailed   — VehicleDetailPageModel.swift:107; VehicleDetailError.wakeRejected Datasource.swift:117
+
+PARITY_COVERED=23
+
+Hook ports (web name kept at the Swift call site):
+✓ useVehicleSettings  — VehicleDetailDataSource.swift:19 (→ GET /vehicles/{id}/settings); model VehicleDetailPageModel.swift:79
+✓ findEffectiveSetting — VehicleDetailModels.swift:100 (free function); model.effectiveName/setting(for:) PageModel.swift:64,71;
+                         settings panel Sections.swift (findEffectiveSetting(response,key))
+
+=== SUMMARY ===
+✓ GlassPanel1 implemented as the per-vehicle settings panel (read-only rows: label, effective
+  value, source pill, help) — bound through useVehicleSettings + findEffectiveSetting, reusing
+  the web vehicleSettings.* i18n family verbatim
+✓ Every web `<SectionErrorBoundary fallbackTitle=…>` reproduced by VehicleDetailSectionBoundary;
+  all 16 section.*Failed titles bound at boundary call sites (header + settings + 14 navigator)
+✓ loading / empty / error / success implemented; loading=redacted skeleton, empty=ContentUnavailableView,
+  error=boundary error + Retry — never a blank region (ADR-011)
+✓ All 19 required strings + the section-navigator names resolve from Localizable.xcstrings;
+  zero hardcoded literals; web key names kept
+✓ @MainActor @Observable model; useVehicleSettings + findEffectiveSetting kept by name as the
+  single KMP seam (ADR-004); wake action mirrors wakeMutation with success/failure feedback
+✓ Adaptive macOS + iOS (ViewThatFits header, scrolling layout, inline title on iOS; ADR-002/006)
+✓ Accessibility: labels/traits/containers on header, panels, rows, boundary; Dynamic Type;
+  semantic Color.TS tokens for light/dark + increased-contrast (ADR-015)
+✓ SI honored — settings are text/timestamp/select primitives, formatted only at the render boundary
+✓ Navigation: VehicleDetailLink + .vehicleDetailDestination() deep-links web /vehicles/:id (ADR-002/006)
+✓ PARITY_COVERED=23 / PARITY_REQUIRED=23 (100%)
+✓ Placeholder check: PASS (PLACEHOLDER_COUNT=0)
+✓ Swift 6 strict-concurrency type-check: PASS (iOS exit 0, macOS exit 0) against the real P2/P3 design system
+✓ SwiftLint --strict: PASS (0 violations / 6 files)
+✓ No symbol collisions across the Apple target
+
+⚠ Full `xcodebuild` link/test BLOCKED in this slot — apps/apple/Frameworks/Shared.xcframework
+  (KMP core, ADR-004) is absent (.gitkeep only) and the merged baseline carries pre-existing,
+  out-of-scope breakage. The new files validate independently via the Swift 6 type-check on
+  BOTH platforms, matching the accepted precedent for the prior P7 apple parity pages.
+
+Files: apps/apple/TeslaSync/Features/Vehicles/*.swift (6 files, 979 lines)
+       apps/apple/Localization/Localizable.xcstrings (+7 navigator-name keys)
+Ledger: apps/parity/apple-ledger.json — page:vehicles/VehicleDetail {apple-macos, apple-ios} = done 23/23
+
+EXIT=0
+STATUS=DONE

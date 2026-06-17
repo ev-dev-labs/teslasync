@@ -1,6 +1,83 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "translation.vehicles.detail.section.liveStateName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live State"
+          }
+        }
+      }
+    },
+    "translation.vehicles.detail.section.quickStatsName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick Stats"
+          }
+        }
+      }
+    },
+    "translation.vehicles.detail.section.batteryChartsName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery & Range Charts"
+          }
+        }
+      }
+    },
+    "translation.vehicles.detail.section.recentDrivesName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent Drives"
+          }
+        }
+      }
+    },
+    "translation.vehicles.detail.section.recentChargesName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent Charges"
+          }
+        }
+      }
+    },
+    "translation.vehicles.detail.section.aiPaintPreviewName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helix Paint Preview"
+          }
+        }
+      }
+    },
+    "translation.vehicles.detail.sectionsTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle Sections"
+          }
+        }
+      }
+    },
     "Current Version" : {
       "extractionState" : "manual",
       "localizations" : {
