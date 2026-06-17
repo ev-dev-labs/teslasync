@@ -40,7 +40,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case backupRestore
     case securityAccess
     case settings, settingsPage, accountSessions, onboarding, teslaOrders, gasPrice, teslaFeatures, teslaRegion,
-         explore, search, sharing, watch
+         explore, search, sharing, watch, chatbot
 
     public var id: String {
         rawValue
@@ -204,6 +204,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .search: "magnifyingglass"
         case .sharing: "square.and.arrow.up"
         case .watch: "applewatch"
+        case .chatbot: "bubble.left.and.bubble.right.fill"
         }
     }
 
@@ -228,7 +229,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
              .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .powerSql, .system, .dbHealth,
              .backupRestore, .ingestXRay, .feedbackQueue, .securityAccess, .powerDashboards: .system
         case .settings, .settingsPage, .accountSessions, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures,
-             .teslaRegion: .account
+             .teslaRegion, .chatbot: .account
         }
     }
 
