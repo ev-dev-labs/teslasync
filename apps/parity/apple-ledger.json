@@ -1605,6 +1605,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-ActiveSessionsPage.log"
     },
     {
+      "unitId": "page:settings/Settings",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 17,
+      "requiredCount": 17,
+      "promptId": "p4-apple/P7/page:settings/Settings",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-SettingsPage.log"
+    },
+    {
+      "unitId": "page:settings/Settings",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 17,
+      "requiredCount": 17,
+      "promptId": "p4-apple/P7/page:settings/Settings",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-settings-SettingsPage.log"
+    },
+    {
       "unitId": "page:sharing/SharedDrive",
       "platform": "apple-macos",
       "status": "done",

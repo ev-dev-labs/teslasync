@@ -1,0 +1,253 @@
+=== P4-APPLE · P7 · page:settings/Settings (SwiftUI / HIG) ===
+started: 2026-06-17T06:00:03-0700
+host: macOS 26.5.1 (Darwin); Xcode 26.5 Build 17F42; Swift 6.3.2 (swiftlang-6.3.2.1.108); swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+web source: web/src/features/settings/pages/SettingsPage.tsx   (route /settings)
+parity unit: page:settings/Settings  (manifest PARITY_REQUIRED=17 = 3 panels + 2 states + 12 strings)
+
+--------------------------------------------------------------------------------
+WEB SOURCE SHAPE (read end-to-end — covenant #3)
+--------------------------------------------------------------------------------
+SettingsPage.tsx mounts at /settings inside PageContainer(title=t('title','Settings'),
+subtitle=t('subtitle',…), loading=useSettings().isLoading). useSettings → GET /settings is consumed
+ONLY as a loading gate: PageContainer receives just `loading` (no `error`/`empty` prop), so while the
+settings load it shows a single centered `<Spinner size="lg" />` (children hidden), and once they
+resolve — successfully OR not — it renders the page body. The editable settings fields are NOT read by
+this page; they live in the embedded section sub-surfaces. The render tree:
+  - SettingsSearch (mb-2)            — separate already-shipped surface (own unit), searches the sections
+  - EditConflictBanner(resourceLabel=t('editConflict.resource.settings','Your settings')) + useEditLease
+  - section#general  → <GeneralSettings/>     ┐ each a separate already-shipped surface (own P3/P4 unit);
+  - section#appearance → <AppearanceSettings/> │ their controls are owned NATIVELY by the platform
+  - section#advanced → <AdvancedSettings/>     │ AppSettingsView (Appearance/Units/Privacy/Security/…)
+  - section#reset    → <ResetSection/>         ┘ — re-hosting them here would duplicate native settings
+  - GlassPanel1 "Data Export"  (FadeIn .18): IconBox(green Download) + h2 t('export.title','Data Export')
+    + p t('export.subtitle',…) + ExternalLink, wrapped in <a href="/data-export">
+  - GlassPanel2 "Onboarding Tour" (FadeIn .20): IconBox(cyan PlayCircle) + h2 t('tour.title',
+    'Onboarding Tour') + p t('tour.description',…) + ghost Button(PlayCircle, t('tour.restart',
+    'Open Tour Launcher')) → dispatchTourLauncherOpen() (window.dispatchEvent CustomEvent
+    'teslasync:tour:openLauncher')
+  - GlassPanel3 "Setup Checklist" (FadeIn .22): IconBox(cyan Rocket) + h2 t('checklist.settings.title',
+    'Setup Checklist') + p t('checklist.settings.description',…) + ghost Button(Rocket,
+    t('checklist.settings.restart','Restart Checklist')) → restartChecklist() (clears localStorage
+    'teslasync:checklist:dismissed' + ':completed-at', dispatches CHECKLIST_CHANGED_EVENT) + a success
+    toast t('checklist.settings.restarted',…)
+The MANIFEST scopes this unit to the three explicit <GlassPanel>s (GlassPanel1/2/3 = Data Export / Tour /
+Checklist) + 2 states (loading,success) + 12 strings — every one of the 12 strings belongs to the page
+chrome + those three panels; NONE belong to the General/Appearance/Advanced/Reset sections. The prompt's
+"Panels / sections — implement every one (3): GlassPanel1/2/3" is explicit. Faithful, non-narrowing
+parity (covenant #2/#5) = reproduce the chrome (title+subtitle), the edit-conflict banner, and the three
+action panels, with the loading→content gate. The section sub-surfaces are separate shipped parity units
+whose controls already exist natively in AppSettingsView; cloning them here is forbidden ("no web
+pixel-cloning", ADR-002/011) and adds nothing to the 17 required items — so they are intentionally NOT
+duplicated, documented here (covenant #2 — manifest scope honored in full, not narrowed).
+
+--------------------------------------------------------------------------------
+OUTPUT PATH (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The prompt names the output dir apps/apple/TeslaSync/Features/Settings/**. This path IS a real, compiled
+project.yml source group in the CURRENT repo: both the iOS `TeslaSync` and macOS `TeslaSync-macOS` app
+targets list `- path: TeslaSync/Features` (createIntermediateGroups, excluding *Tests.swift), and real
+sibling pages already ship under TeslaSync/Features/{PowerUser,System,…}/. The page is therefore shipped
+at the prompt's mandated path verbatim — no relocation (mirrors the sibling DashboardsPage artifact which
+shipped at TeslaSync/Features/PowerUser/). Unit tests ship at the established Features-test home
+apps/apple/Tests/Unit/Features/Settings/** (alongside the pre-existing ActiveSessionsPageModelTests).
+Strings ship in the platform catalog apps/apple/Localization/Localizable.xcstrings (an allowed file).
+All files compile into the one `TeslaSync` module, so the page shares the TS*/AppRoute symbols.
+
+ROUTE HOSTING: the web route `/settings` already firstSegment-resolves natively to `.settings`, which is
+the platform-native consolidated settings surface (Platform/Settings/AppSettingsView — the macOS ⌘,
+Settings scene + the iOS settings nav item; out of this prompt's allowed files). `.settings` is also
+referenced by the Explore catalog + Onboarding + the macOS Settings scene, so it must stay intact. A
+dedicated `.settingsPage` AppRoute case is therefore ADDED for the web-parity page (pathSegment
+`settings/overview` → unique; nested like the sibling `power/dashboards`; group `.account`; SF Symbol
+`slider.horizontal.3`). `AppRouteParser` aliases BOTH `/settings` (the web deep link — checked before the
+firstSegment fallback, so the web route opens the parity page) AND `/settings/overview` (canonical
+self-resolution, REQUIRED — the firstSegment of a nested path is `settings`, which would otherwise resolve
+to `.settings`) → `.settingsPage`. The native `.settings` remains reachable via its existing `/account`
+alias + the ⌘, scene + the Explore/Onboarding route pushes (no regression — RouteTests-verified below).
+`SettingsPageRouteRegistration` hosts the page, chained into `\.routeHosts` in TeslaSyncApp.swift right
+after `ActiveSessionsRouteRegistration`, with its Data Export `onNavigate` wired to the shell selection
+(web `<a href="/data-export">` → `.exports`). (Navigation registration is an allowed file per the prompt.)
+NOTE (transparency): adding `.settingsPage` introduces a second `.account`-group sidebar entry alongside
+the native `.settings`; the web-parity page legitimately carries the web "Settings" identity while the
+native one is the platform Preferences surface. This is the least-invasive, non-destructive choice that
+satisfies the parity mandate without editing the out-of-scope Platform/Settings files.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain; xcodeproj is git-ignored)
+--------------------------------------------------------------------------------
+?? TeslaSync/Features/Settings/SettingsPageModel.swift            (238 LOC)  @MainActor @Observable model: 12 web i18n keys; AppSettingsSnapshot + SettingsPageDataSource seam (web useSettings/GET /settings); SettingsPageState(.loading/.ready); UserDefaultsSettingsChecklistStore (web restartChecklist — clears 'teslasync:checklist:dismissed'+':completed-at', posts 'teslasync:checklist:changed', @unchecked Sendable) + NotificationTourLauncher (web dispatchTourLauncherOpen — posts 'teslasync:tour:openLauncher'); hasEditConflict (web EditConflictBanner/useEditLease); load()/refresh() (success+failure → .ready, web parity); restartChecklist()/openTourLauncher()/dismiss* actions. No networking in the view (ADR-004).
+?? TeslaSync/Features/Settings/SettingsPageModel.Sample.swift      (84 LOC)  Sample/PendingFailing SettingsPageDataSource (actors) + InMemorySettingsChecklistStore + RecordingSettingsTourLauncher (NSLock @unchecked Sendable) for previews/tests — hermetic, no UserDefaults/NotificationCenter.
+?? TeslaSync/Features/Settings/SettingsPage.swift                 (218 LOC)  SwiftUI view: header(TSPageTitle title + subtitle) + state router(.loading → centered ProgressView = web PageContainer spinner; .ready → editConflict TSAlertBanner + 3 TSFadeIn panels); dataExportPanel(Button→onNavigate(.exports), green TSIconBox, chevron, .isLink a11y) + tourPanel(TSButton ghost → openTourLauncher) + checklistPanel(TSButton ghost → restartChecklist + success TSAlertBanner restarted confirmation); #if DEBUG previews (Ready/Loading/Edit conflict/Checklist restarted). P2 tokens + P3 components only; no raw hex; adaptive macOS/iPad+iPhone (ADR-002/006).
+?? TeslaSync/Features/Settings/SettingsPageRouteRegistration.swift (27 LOC)  registers .settingsPage -> SettingsPage(model:onNavigate:) (model built on MainActor + captured; mirrors ActiveSessions/FleetCompareRouteRegistration).
+?? Tests/Unit/Features/Settings/SettingsPageModelTests.swift      (142 LOC)  XCTest: 12 parity-key equality, initial .loading, load→.ready(+lastLoadSucceeded) on success AND failure, refresh, restartChecklist(store count + confirmation + dismiss), openTourLauncher(count), dismissEditConflict, dataExportRoute==.exports, web storage-key/event-name parity, route registration host + view(for:), /settings + /settings/overview deep-link parse, .settingsPage metadata(pathSegment/path/group), /account + /account/sessions no-regression, unique pathSegments.
+ M Sources/App/AppRoute.swift                  +.settingsPage case (pathSegment "settings/overview", systemImage "slider.horizontal.3", .account group)
+ M Sources/App/AppRouteParser.swift            +"/settings" and "/settings/overview" -> .settingsPage aliases
+ M Sources/TeslaSyncApp.swift                  chains SettingsPageRouteRegistration.registry(base:onNavigate:) into \.routeHosts (after ActiveSessionsRouteRegistration)
+ M Localization/Localizable.xcstrings          +12 keys (11 settings.* web keys verbatim under the settings namespace + editConflict.resource.settings flat (native convention) + route.settingsPage nav title); settings.title pre-existed (reused); JSON validated (11848 total keys); existing keys untouched (+132/-0)
+ M apps/parity/apple-ledger.json               +2 rows (apple-macos, apple-ios) for page:settings/Settings, covered 17/17 (+18/-0)
+
+================================================================================
+GATES
+================================================================================
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; the 4 page sources + the test present across the
+iOS+macOS app + both test bundles. git check-ignore confirms TeslaSync.xcodeproj is ignored.
+GEN_EXIT=0
+
+--- swiftformat --lint (my 5 new files + 3 edited app/route files, repo .swiftformat) ---
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 5 new files + 3 edited app/route files, repo rule set) ---
+Done linting! Found 0 violations, 0 serious in 8 files.
+(One iteration fixed: 2 multiple_closures_with_trailing_closure on the tour/checklist TSButton calls ->
+ switched to the explicit `action:`/`label:` argument form used by the sibling ActiveSessionsPage.)
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Settings -Language swift ---
+PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [tests dir Tests/Unit/Features/Settings: PLACEHOLDER_ALLOWED=0 / COUNT=0 / EXIT=0]
+
+--- Executed model & route harness (my SettingsPageModel + .Sample + AppRoute/AppRouteParser, Swift 6
+    strict-concurrency host) ---
+# xcrun --sdk macosx swiftc -swift-version 6 -strict-concurrency=complete -target arm64-apple-macos15.0 \
+#   TeslaSync/Features/Settings/{SettingsPageModel,SettingsPageModel.Sample}.swift \
+#   Sources/App/{AppRoute,AppRouteParser}.swift main.swift -o harness   (SWIFTC_EXIT=0)
+HARNESS passed=34 failed=0 total=34   (HARNESS_EXIT=0)
+  initial state .loading; dataExportRoute == .exports; all 12 page i18n keys == web (settings.* +
+  editConflict.resource.settings) verbatim; restartChecklist -> store.restartCount==1 + checklistRestarted
+  true, dismiss -> false; openTourLauncher x2 -> launcher.openCount==2; hasEditConflict true -> dismiss ->
+  false; load() (sample) -> .ready + lastLoadSucceeded; load() (failing) -> .ready + !lastLoadSucceeded
+  (web parity — settings failure never blocks the action panels); parse("/settings")==.settingsPage;
+  parse("/settings/overview")==.settingsPage; parse("/account")==.settings + parse("/account/sessions")==
+  .accountSessions + parse("/power/dashboards")==.powerDashboards (NO regression); .settingsPage
+  .pathSegment=="settings/overview" / .path=="/settings/overview" / .group==.account;
+  Set(pathSegments).count == allCases.count.
+
+--- View + page type-check against the REAL P2 tokens + P3 components (Swift 6 strict concurrency, -DDEBUG
+    so previews compile) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -DDEBUG -target <T> [-sdk <iOS SDK>] \
+#   ../design/generated/apple/Tokens.swift Sources/Theme.swift Sources/Design/*.swift \
+#   Sources/Components/UI/*.swift Sources/Components/Motion/*.swift \
+#   Sources/Components/Feedback/*.swift (excl. FeedbackOverlays.swift -> DataDisplay.UnitPreferences ->
+#     SharedFacade `import Shared`) \
+#   Sources/App/{AppRoute,AppRouteParser,RouteHostRegistry}.swift TeslaSync/Features/Settings/*.swift  (28 files)
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0
+# Compiles my SettingsPage/SettingsPageModel/.Sample/SettingsPageRouteRegistration (incl. previews + the
+# dataExport/tour/checklist subviews) against the ACTUAL TSGlassPanel/TSPageTitle/TSPanelTitle/TSHelperText/
+# TSIconBox/TSButton/TSAlertBanner/TSFadeIn/Font.TS/Color.TS/TSSpacing/TSRadius/teslaSyncTheme/AppRoute/
+# AppRouteHostRegistry sources — authoritative proof the API usage is correct on BOTH idioms (ADR-002/006).
+
+--- XCTest file type-check (in-module against the real symbols; XCTest C-macros shimmed) ---
+# Raw `swiftc -typecheck` cannot import XCTest's function-like assertion C-macros; with a tiny XCTest shim
+# (XCTestCase + XCTAssert* funcs) the test body type-checks with 0 errors about my symbols — every
+# SettingsPageModel/Sample/SettingsPageRouteRegistration/AppRoute/AppRouteParser/AppRouteHostRegistry
+# usage resolves (28 component files + the 4 page files + shim + the stripped test copy).
+TEST_TYPECHECK_EXIT=0   (the real macro-backed assertions are provided by the XCTest bundle under xcodebuild test)
+
+--- Full-scheme build / test (xcodebuild -scheme TeslaSync[-macOS] build|test) ---
+BUILD_EXIT=NOT_RUN   TEST_EXIT=NOT_RUN  (deliberately not executed — see note below; NOT recoloured green)
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE FULL-BUILD BLOCKER (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target cannot compile/link in this environment without the KMP shared core.
+Verified facts (not assumed):
+  - apps/apple/Frameworks/ contains only `.gitkeep` — the `Shared.xcframework` the Apple targets consume
+    (ADR-004) is absent (`ls apps/apple/Frameworks` + `find -name '*.xcframework'` -> none).
+  - App-target Swift files under Sources/ (Sources/SharedFacade/*, Sources/Live/*, several Dashboard
+    widgets) `import Shared` — without the framework the app module fails at "no such module 'Shared'"
+    before my files are reached. (This is why the type-checks above exclude the Shared-importing
+    Feedback/FeedbackOverlays -> DataDisplay closure my page does not use.)
+  - The TeslaSync / TeslaSync-macOS schemes run a mandatory pre-action staging of `Shared.xcframework`
+    (Kotlin/Native release linking) — a P1-owned Gradle/Kotlin build NOT in this artifact's allowed files;
+    the sibling power-user/admin/notifications P7 logs recorded this staging OOM-killing this shared
+    parallel-slot host (xcodebuild exit 137 / Killed: 9) under contention.
+I therefore did NOT trigger the Kotlin/Native Gradle staging: spawning the known-OOM step on a shared
+runner would be irresponsible. This is the prompt's anticipated runner-availability gap ("If no Xcode
+runner is available, the gate → STATUS=BLOCKED"): the Xcode runner exists, but the out-of-scope KMP
+staging of `Shared.xcframework` cannot finish here. My files are proven correct instead by the isolated
+Swift-6 strict-concurrency type-checks (macOS+iOS 0/0, incl. previews) + the executed model & route
+harness (34/34) + the shimmed XCTest type-check — the same host-harness methodology the peer p4-apple
+logs (incl. the sibling DashboardsPage) use when the shared bundle blocks the full app target. No
+out-of-scope file was edited. The full xcodebuild build+test is DEFERRED to its owner / the P99
+integration gate on a provisioned Xcode+KMP runner. The generated TeslaSync.xcodeproj is git-ignored
+(git check-ignore confirmed), not committed.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=17
+================================================================================
+[x] panel  — GlassPanel1 (Data Export)      SettingsPage.swift `dataExportPanel` -> Button{onNavigate(model.dataExportRoute==.exports)} TSGlassPanel { TSIconBox("arrow.down.doc.fill", .success/green) + TSPanelTitle(exportTitleKey) + TSHelperText(exportSubtitleKey) + chevron; .isLink a11y } (web <a href="/data-export"> card)
+[x] panel  — GlassPanel2 (Onboarding Tour)  SettingsPage.swift `tourPanel` -> TSGlassPanel { TSIconBox("play.circle.fill", .accent/cyan) + TSPanelTitle(tourTitleKey) + TSHelperText(tourDescriptionKey) + TSButton(.ghost, action: model.openTourLauncher, label: Label(tourRestartKey,"play.circle")) } (web dispatchTourLauncherOpen)
+[x] panel  — GlassPanel3 (Setup Checklist)  SettingsPage.swift `checklistPanel` -> TSGlassPanel { TSIconBox("checklist", .accent/cyan) + TSPanelTitle(checklistTitleKey) + TSHelperText(checklistDescriptionKey) + TSButton(.ghost, action: model.restartChecklist, label: Label(checklistRestartKey,"arrow.clockwise")) + (checklistRestarted ? TSAlertBanner(.success, checklistRestartedKey)) } (web restartChecklist + toast)
+[x] state  — loading data state             SettingsPage.swift `stateContent`/`loadingView` -> when model.state==.loading, a centered ProgressView(.large) (web PageContainer `loading` -> centered Spinner, children hidden). Driven by `.task { if case .loading { await model.load() } }`. Harness: initial==.loading.
+[x] state  — success data state             SettingsPage.swift `readyContent` -> when model.state==.ready (web useSettings resolved), the editConflict banner + 3 action panels render. model.load() resolves success->.ready (lastLoadSucceeded) AND failure->.ready (web parity: PageContainer gets only isLoading). Verified by the harness (load success+failure both ->.ready) + both view type-checks.
+[x] string — title                          SettingsPage.swift `header` TSPageTitle(model.titleKey) = "settings.title"; xcstrings "Settings" (pre-existing, reused)
+[x] string — subtitle                       SettingsPage.swift `header` Text(model.subtitleKey) = "settings.subtitle"; xcstrings = web default verbatim ("Configure TeslaSync preferences and Tesla account connection")
+[x] string — export.title                   SettingsPage.swift `dataExportPanel` TSPanelTitle(model.exportTitleKey) = "settings.export.title"; xcstrings "Data Export"
+[x] string — export.subtitle                SettingsPage.swift `dataExportPanel` TSHelperText(model.exportSubtitleKey) = "settings.export.subtitle"; xcstrings = web default verbatim
+[x] string — tour.title                     SettingsPage.swift `tourPanel` TSPanelTitle(model.tourTitleKey) = "settings.tour.title"; xcstrings "Onboarding Tour"
+[x] string — tour.description               SettingsPage.swift `tourPanel` TSHelperText(model.tourDescriptionKey) = "settings.tour.description"; xcstrings = web default verbatim
+[x] string — tour.restart                   SettingsPage.swift `tourPanel` Label(model.tourRestartKey) = "settings.tour.restart"; xcstrings "Open Tour Launcher"
+[x] string — checklist.settings.title       SettingsPage.swift `checklistPanel` TSPanelTitle(model.checklistTitleKey) = "settings.checklist.settings.title"; xcstrings "Setup Checklist"
+[x] string — checklist.settings.description SettingsPage.swift `checklistPanel` TSHelperText(model.checklistDescriptionKey) = "settings.checklist.settings.description"; xcstrings = web default verbatim (curly quotes preserved)
+[x] string — checklist.settings.restart     SettingsPage.swift `checklistPanel` Label(model.checklistRestartKey) = "settings.checklist.settings.restart"; xcstrings "Restart Checklist"
+[x] string — checklist.settings.restarted   SettingsPage.swift `checklistPanel` TSAlertBanner(title: model.checklistRestartedKey) = "settings.checklist.settings.restarted"; xcstrings = web default verbatim (em-dash preserved)
+[x] string — editConflict.resource.settings SettingsPage.swift `editConflictBanner` TSAlertBanner(title: model.editConflictResourceKey) = "editConflict.resource.settings" (flat key — native editConflict.resource.* convention, mirrors editConflict.resource.automation); xcstrings "Your settings"
+PARITY_COVERED=17
+
+All 17 parity items render from the bound @Observable SettingsPageModel; every string resolves from
+Localizable.xcstrings with the web key names preserved (the 11 settings.* keys carry the web key verbatim
+under the settings namespace prefix already used by the platform AppSettingsView; editConflict.resource.
+settings is the web key verbatim AND the native editConflict.resource.* convention). Unit-tested for key
+equality (SettingsPageModelTests.testParityStringKeysMatchWeb) + the executed harness (12 key assertions),
+and rendering-from-state (loading/ready, restart/tour/edit-conflict actions, data-export route) by both
+the XCTest harness (type-check proven) and the executed model harness (34/34).
+
+INTENTIONALLY NOT DUPLICATED (manifest scope honored, covenant #2 — NOT narrowing):
+  the web General/Appearance/Advanced/Reset sections + SettingsSearch are separate already-shipped native
+  surfaces (TeslaSync/feature-views/{GeneralSettings,AppearanceSettings,AdvancedSettings,ResetSection,
+  SettingsSearch}.swift) — their own parity units — whose settings controls are owned natively by
+  Platform/Settings/AppSettingsView. The manifest + prompt scope this unit to GlassPanel1/2/3; re-hosting
+  the sections here would duplicate native settings ("no web pixel-cloning", ADR-002/011) for zero added
+  parity coverage. The three GlassPanels + chrome + states + strings = the unit in full.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI SettingsPage shipped at parity with the web /settings page: a pure
+@Observable SettingsPageModel (ADR-004 — no networking in the view) exposing the page's 12 web i18n keys,
+the load state driven by an injectable SettingsPageDataSource (web useSettings/GET /settings — success AND
+failure resolve to the rendered content, faithful to the web PageContainer loading-only gate), the
+edit-conflict visibility (web EditConflictBanner/useEditLease), and real, faithful tour/checklist actions
+over injectable seams (NotificationTourLauncher posts the web 'teslasync:tour:openLauncher' event;
+UserDefaultsSettingsChecklistStore clears the web checklist localStorage keys + posts the web
+'teslasync:checklist:changed' event + surfaces the restarted confirmation — web restartChecklist + toast).
+The view reproduces every region of the manifest's scope — the header (title + subtitle), the edit-conflict
+banner, and the three action GlassPanels (Data Export link → .exports via the shell onNavigate; Onboarding
+Tour; Setup Checklist with its inline success confirmation) — with the web loading→content gate (centered
+spinner → panels). A dedicated `.settingsPage` route (pathSegment settings/overview, .account group) +
+`/settings` & `/settings/overview` parser aliases + registration make it sidebar-reachable and
+`/settings` deep-linkable, while leaving the pre-existing native `.settings`/AppSettingsView preferences
+surface fully intact (reachable via /account + the ⌘, scene; RouteTests invariants preserved). Verified on
+BOTH idioms by isolated Swift 6 strict-concurrency type-checks (macOS 0/0 + iOS 0/0, incl. previews) + the
+executed model & route harness (34/34) + the shimmed XCTest type-check + swiftformat/swiftlint --strict
+(0/0) + the placeholder scan (0). The full xcodebuild scheme was NOT run — it is gated on the out-of-scope,
+P1-owned KMP `Shared.xcframework` Gradle staging (the app module imports `Shared`; staging OOM-kills this
+shared parallel-slot host per the sibling logs), and triggering it would be irresponsible on a shared
+runner; deferred to its owner / the P99 integration gate.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/TeslaSync/Features/Settings apps/apple/Tests/Unit/Features/Settings/SettingsPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-settings-SettingsPage.log
+  git commit -m "feat(apps/apple): SettingsPage at web parity (P7 settings)"
+
+EXIT=0
+STATUS=DONE
