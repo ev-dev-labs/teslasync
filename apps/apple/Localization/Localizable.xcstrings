@@ -8629,6 +8629,39 @@
         }
       }
     },
+    "notifications.inbox.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent notifications from your alert rules."
+          }
+        }
+      }
+    },
+    "notifications.inbox.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inbox"
+          }
+        }
+      }
+    },
+    "notifications.inbox.viewArchived" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View archived"
+          }
+        }
+      }
+    },
     "notifications.archived.title" : {
       "extractionState" : "manual",
       "localizations" : {

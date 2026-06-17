@@ -159,6 +159,7 @@ struct TeslaSyncApp: App {
         registry = NotificationsAuditLogRouteRegistration.registry(base: registry)
         registry = WebhooksRouteRegistration.registry(base: registry)
         registry = ArchivedRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
+        registry = InboxRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
         registry = FeatureFlagsRouteRegistration.registry(base: registry)
         registry = DLQInspectorRouteRegistration.registry(base: registry)
         registry = IngestXRayRouteRegistration.registry(base: registry)
