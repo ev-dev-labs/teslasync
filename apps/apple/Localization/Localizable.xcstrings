@@ -176428,6 +176428,149 @@
         }
       }
     },
+    "translation.range.7d": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 7 Days"
+          }
+        }
+      }
+    },
+    "translation.range.30d": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 30 Days"
+          }
+        }
+      }
+    },
+    "translation.range.90d": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 90 Days"
+          }
+        }
+      }
+    },
+    "translation.range.mtd": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Month to Date"
+          }
+        }
+      }
+    },
+    "translation.range.ytd": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Year to Date"
+          }
+        }
+      }
+    },
+    "translation.range.all": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Time"
+          }
+        }
+      }
+    },
+    "translation.common.dateRange": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date range"
+          }
+        }
+      }
+    },
+    "translation.common.sortAsc": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorted ascending"
+          }
+        }
+      }
+    },
+    "translation.common.sortDesc": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorted descending"
+          }
+        }
+      }
+    },
+    "translation.tesla_sessions.businessNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fleet charging session data is only available for Tesla business accounts. Personal accounts will receive a 403 error when syncing."
+          }
+        }
+      }
+    },
+    "translation.tesla_sessions.col.cost_decimal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cost"
+          }
+        }
+      }
+    },
+    "translation.tesla_sessions.monthlyCost.aria": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly Tesla charging cost bar chart"
+          }
+        }
+      }
+    },
+    "translation.tesla_sessions.stats.cost_decimal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total Cost"
+          }
+        }
+      }
+    },
     "translation.tesla_sessions.businessOnly": {
       "extractionState": "manual",
       "localizations": {

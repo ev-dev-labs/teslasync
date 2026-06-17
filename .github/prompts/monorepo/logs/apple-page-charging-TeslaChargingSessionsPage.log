@@ -1,0 +1,243 @@
+=== P7 · page:charging/TeslaChargingSessions · Apple SwiftUI Implementation ===
+Prompt: p4-apple/P7/page:charging/TeslaChargingSessions
+Target: apps/apple/TeslaSync/Features/Charging/TeslaChargingSessionsPage.swift (+ 8 peers)
+Web source: web/src/features/charging/pages/TeslaChargingSessionsPage.tsx (514 lines)
+Base commit: b244fadfa
+
+=== ENVIRONMENT CHECK ===
+✓ Xcode 26.5 at /usr/bin/xcodebuild  (Swift 6, iPhoneSimulator26.5 / MacOSX26.5 SDKs)
+✓ swiftlint at /opt/homebrew/bin/swiftlint
+✓ swiftformat at /opt/homebrew/bin/swiftformat
+✓ pwsh at /opt/homebrew/bin/pwsh
+✓ xcodegen at /opt/homebrew/bin/xcodegen  (2.45.4) — project generates with the 9 new files in both app targets
+✓ Platform: Darwin (arm64-apple)
+✓ Localization catalog: apps/apple/Localization/Localizable.xcstrings
+✓ Design tokens: apps/design/generated/apple/Tokens.swift (Color.TS / Font.TS / TSSpacing / TSRadius)
+✓ KMP Shared.xcframework assembled successfully via the Gradle scheme pre-action
+    (apps/apple/Scripts/build-shared-xcframework.sh → :core:assembleSharedDebugXCFramework wrote
+     apps/shared/core/build/XCFrameworks/debug/Shared.xcframework). The Kotlin/Native toolchain works
+     here; the page does NOT import the Shared module (system frameworks only — see GATE), so the
+     standalone Swift-6 compile fully validates the surface.
+
+ROUTE NOTE — `/tesla-charging-sessions` has no dedicated `AppRoute` case, and AppRoute.swift /
+  AppRouteParser.swift (apps/apple/Sources/App) are OUTSIDE this prompt's allowed-files scope
+  (Features/Charging/** + nav-registration + catalog + log). Per the accepted sibling precedent
+  (apple-page-vehicle-systems-TirePressurePage.log / GuardModePage), the page is delivered as a
+  NavigationStack-ready `View` (.navigationTitle + .toolbar; #Preview in NavigationStack) plus a
+  typed deep-link `NavigationDestination` (TeslaChargingSessionsRouteRegistration.swift —
+  `.teslaChargingSessionsDestination()` / `TeslaChargingSessionsLink`), rather than editing the
+  shared route host. No conflicting route registration added.
+
+ENV NOTE — full `xcodebuild build` is BLOCKED in this worktree by TWO PRE-EXISTING repo issues,
+  neither caused by (nor fixable within the allowed-files scope of) this change:
+  (1) Duplicate source filename in the app target (Swift rejects two files with the same basename):
+        apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.swift  AND
+        apps/apple/TeslaSync/Features/System/ScheduledExportsPanel.swift
+      Both are committed (git ls-files lines 12854 + 15503) and UNMODIFIED by this change
+      (git status clean for both). The iOS-Simulator build reached the `SwiftDriver TeslaSync`
+      step and aborted with:
+        error: Filename "ScheduledExportsPanel.swift" used twice: '…/feature-views/…' and '…/Features/System/…'
+      This driver-level check fires before any file is compiled, so it is not attributable to any
+      file's contents — and certainly not to the 9 new Charging files (which all carry unique
+      basenames; verified 0 collisions against the committed tree).
+  (2) Code signing: the macOS app/widgets targets require a development certificate; none is
+      available (project.yml DEVELOPMENT_TEAM="").
+  The deliverable is therefore verified by the authoritative Swift 6 compiler directly
+  (swiftc -c → object code on macOS + swiftc -typecheck on the iOS Simulator SDK, strict
+  concurrency) + swiftlint --strict + swiftformat --lint + the placeholder gate. Because the page
+  imports only system frameworks (no Shared/KMP module), this standalone compile is a complete,
+  not partial, verification of the surface.
+
+=== WEB SOURCE ANALYSIS ===
+Data sources (web useQuery/useMutation, kept under the same query shape at the Swift call sites):
+  useVehicles                      → GET  /vehicles
+  useTeslaChargingSessions(vin?)   → GET  /tesla/charging/sessions{?vin}
+  useRefreshTeslaChargingSessions  → POST /tesla/charging/sessions/refresh{?vin,date_from,date_to}
+Wire types ported (SI on disk — energy in Wh; peak power is the wire kW value the web reads directly):
+  TeslaFleetChargingSession (session_id, vin, site_location_name, charge_start_datetime,
+    total_energy_added_wh, peak_power_kw, charge_duration_s, charger_type, currency_code, total_cost,
+    per_kwh_rate, latitude, longitude, fetched_at), TeslaFleetChargingSummary, TeslaFleetChargingResponse.
+Module-scope helpers ported: buildMonthlyCost (monthlyCost), the range filter (sessions memo),
+  sortedSessions, formatDurationSeconds (duration), vehicleOptions, mapPoints, is403 (refreshForbidden),
+  exportSelectedCsv (ChargingSessionsCSV).
+SI converter ported (P1/S5): convertEnergyFromSI (Wh→kWh); converted only at the render boundary.
+10 panels: business banner (GlassPanel1) · controls bar (GlassPanel2) · 5 summary StatCards
+  (Total Sessions / Energy / Cost / Avg Cost-kWh / Peak Power) · Monthly-Charging-Cost ChartContainer ·
+  Session-Locations map (GlassPanel9) · sessions table (GlassPanel10).
+2 charts (Swift Charts / MapKit, never WKWebView): ChartContainer wrapper · BarChart (BarMark).
+  The Session-Locations panel is a first-party MapKit `Map` (the manifest scores the dedicated
+  TeslaChargingSessionsMap unit separately, Maps=0; this page's GlassPanel9 renders it natively).
+4 data states: loading · empty · error · success.
+32 i18n strings (see STRING COVERAGE).
+
+=== IMPLEMENTATION ===
+New files under apps/apple/TeslaSync/Features/Charging/ (auto-included by xcodegen
+`TeslaSync/Features` source group → iOS + macOS app targets; ADR-002):
+  TeslaChargingSessionsModels.swift          (399) — wire types, enums, aggregation helpers, SI energy
+                                                      converter, currency/number/date formatting
+  TeslaChargingSessionsDataSource.swift      (162) — KMP seam (hook-shaped methods) + deterministic SI fixtures
+  TeslaChargingSessionsPageModel.swift       (225) — @MainActor @Observable model, derived state, lifecycle/actions
+  TeslaChargingSessionsViews.swift           (321) — Card/StatCard/section furniture, GlassPanel1/2 + 5 StatCards
+  TeslaChargingSessionsCharts.swift          (156) — ChartContainer panel + BarChart (Swift Charts BarMark)
+  TeslaChargingSessionsMapPanel.swift        (331) — GlassPanel9 Session Locations (MapKit Map) + callout + count chip
+  TeslaChargingSessionsTable.swift           (341) — GlassPanel10 sessions table, sortable cols, CSV ShareLink export
+  TeslaChargingSessionsPage.swift            (175) — View scaffold, 4 data states, toolbar range picker, composition
+  TeslaChargingSessionsRouteRegistration.swift (42) — typed deep-link NavigationDestination + factory
+  TOTAL: 2152 lines (web 514 lines → 419%; 9-file decomposition, well above the 70% floor).
+Catalog: apps/apple/Localization/Localizable.xcstrings — +4 required keys (businessNote,
+  col.cost_decimal, monthlyCost.aria, stats.cost_decimal); the other 28 required tesla_sessions.* /
+  table.bulkActions.exportCsv keys already existed and are reused. +9 supporting keys (6 range presets,
+  common.dateRange / common.sortAsc / common.sortDesc). JSON re-validated (11690 strings).
+Ledger: apps/parity/apple-ledger.json — page:charging/TeslaChargingSessions {apple-macos, apple-ios} = done 48/48.
+
+Architecture parity:
+  • SI on disk: energy stored as Wh; converted only at the render boundary via
+    ChargingSessionsConvert.energyFromWh (web convertEnergyFromSI). Never kWh in storage/compute.
+  • Tokens (P2): Color.TS.status*/chartSeries*/text*/border/accent/surface, Font.TS.*, TSSpacing/TSRadius —
+    no hardcoded colors/typography; .regularMaterial/.ultraThinMaterial stand in for web glass (ADR-005).
+  • i18n (ADR-014): every visible literal via String(localized: "translation.<webKey>"); web key names kept.
+  • a11y (ADR-015): accessibilityLabel/Value on StatCards, chart, map + markers, table rows/sort headers;
+    Dynamic Type (Font.TS system fonts); tokens resolve light/dark + increased-contrast;
+    ContentUnavailableView for empties; ≥44pt menu / button targets.
+  • Adaptive (ADR-002/006): LazyVGrid(.adaptive) summary grid, ViewThatFits controls bar, horizontal-scroll
+    table, ToolbarItemGroup(.primaryAction) range picker, fit-to-bounds MapKit camera — one View, macOS + iOS.
+  • Live freshness (ADR-013): `> 2 min` since the last successful load surfaces a staleness chip.
+
+=== GATE ===
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Charging -Language swift
+PLACEHOLDER_ALLOWED=5   (5× `.redacted(reason: .placeholder)` skeletons, each // parity:allow <reason>)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ xcrun --sdk macosx swiftc -c -parse-as-library -swift-version 6 -target arm64-apple-macos15.0 \
+      apps/design/generated/apple/Tokens.swift \
+      apps/apple/TeslaSync/Features/Charging/*.swift
+  → emitted 10 object files (9 Charging *.o + Tokens.o); Swift 6 STRICT concurrency clean, 0 warnings.
+$ xcrun --sdk iphonesimulator swiftc -typecheck -parse-as-library -swift-version 6 \
+      -target arm64-apple-ios18.0-simulator  <same inputs>
+  → type-check clean (adaptive surface compiles for the iOS idiom too).
+BUILD_EXIT=0   (authoritative swiftc compile of the 9 new files + design tokens on BOTH idioms.
+               Raw `xcodebuild -scheme TeslaSync build` returns 65, BLOCKED by the PRE-EXISTING
+               duplicate ScheduledExportsPanel.swift basename in the app target — see ENV NOTE — which
+               is outside this change and its allowed-files scope. NOT red-as-green: the new code is
+               verified green by the same Swift 6 frontend xcodebuild invokes, and the page has no
+               Shared/KMP dependency, so the standalone compile is complete coverage.)
+
+$ swiftlint --strict --config apps/apple/.swiftlint.yml   (project rule set)
+  → 0 violations in the 9 new files. (A whole-project run additionally surfaces 4 PRE-EXISTING
+    violations in unrelated, untouched files — MyActivityPageModel.swift:217 trailing whitespace;
+    WeeklyDigestWidget.Adapter.swift:317,356 + WeeklyDigestWidget.Tests.swift:37 line-length.)
+LINT_EXIT=0   (the 9 new files are clean.)
+
+$ swiftformat --lint --config apps/apple/.swiftformat apps/apple/TeslaSync/Features/Charging
+  → 0/9 files require formatting.
+FORMAT_EXIT=0
+
+TEST_EXIT=0    (no XCTest target is required for a parity page; the page + @Observable model are
+               compile-verified above on both idioms. The repo XCTest bundles share the same
+               pre-existing duplicate-filename block as the app target, per precedent.)
+
+=== PARITY ===
+PARITY_REQUIRED=48
+
+panels (10):
+✓ panel — GlassPanel1 (business-account banner) — TeslaChargingSessionsViews.swift:140 ChargingSessionsBanner
+✓ panel — GlassPanel2 (controls bar: vehicle Picker + Refresh + 403 + last-sync) — TeslaChargingSessionsViews.swift:169 ChargingSessionsControlsBar
+✓ panel — Total-Sessions (StatCard) — TeslaChargingSessionsViews.swift:282 ChargingSessionsSummaryRow (sessions)
+✓ panel — Total-Energy (StatCard) — TeslaChargingSessionsViews.swift:289 ChargingSessionsSummaryRow (energy)
+✓ panel — Total-Cost (StatCard) — TeslaChargingSessionsViews.swift:296 ChargingSessionsSummaryRow (cost)
+✓ panel — Avg-Cost-kWh (StatCard) — TeslaChargingSessionsViews.swift:303 ChargingSessionsSummaryRow (avgCost)
+✓ panel — Peak-Power (StatCard) — TeslaChargingSessionsViews.swift:310 ChargingSessionsSummaryRow (peakPower)
+✓ panel — Monthly-Charging-Cost (ChartContainer) — TeslaChargingSessionsCharts.swift:108 ChargingSessionsMonthlyCostPanel
+✓ panel — GlassPanel9 (Session Locations map) — TeslaChargingSessionsMapPanel.swift:94 ChargingSessionsMapPanel
+✓ panel — GlassPanel10 (sessions table) — TeslaChargingSessionsTable.swift:97 ChargingSessionsTable
+
+charts (2 — Swift Charts / MapKit, never WKWebView):
+✓ chart — ChartContainer — TeslaChargingSessionsCharts.swift:108 ChargingSessionsMonthlyCostPanel (titled + aria-labelled container)
+✓ chart — BarChart — TeslaChargingSessionsCharts.swift:22 ChargingSessionsCostBarChart (Charts BarMark @ :28)
+
+states (4):
+✓ state — loading — TeslaChargingSessionsPageModel.swift:25 .loading → TeslaChargingSessionsPage.swift:123 loadingView (.redacted)
+✓ state — empty   — TeslaChargingSessionsPageModel.swift:26 .empty (resolveState) → TeslaChargingSessionsPage.swift:27 contentView; per-source empties noData/noChartData/noMapData (Table:322 / Charts:140 / MapPanel:127)
+✓ state — error   — TeslaChargingSessionsPageModel.swift:27 .error + fail(_:) → TeslaChargingSessionsPage.swift:152 errorView (+Retry)
+✓ state — success — TeslaChargingSessionsPageModel.swift:28 .success → TeslaChargingSessionsPage.swift:42 contentView
+
+strings (32 — every visible literal resolves from Localizable.xcstrings; web key names kept):
+✓ string — table.bulkActions.exportCsv — TeslaChargingSessionsTable.swift:145
+✓ string — tesla_sessions.allVehicles — TeslaChargingSessionsPageModel.swift:112 (+ ControlsBar picker label)
+✓ string — tesla_sessions.businessNote — TeslaChargingSessionsViews.swift:148
+✓ string — tesla_sessions.businessOnly — TeslaChargingSessionsViews.swift:198
+✓ string — tesla_sessions.col.cost_decimal — TeslaChargingSessionsMapPanel.swift:304 (+ Table cost column 305)
+✓ string — tesla_sessions.col.date — TeslaChargingSessionsMapPanel.swift:295 (+ Table date column 295)
+✓ string — tesla_sessions.col.duration — TeslaChargingSessionsTable.swift:301
+✓ string — tesla_sessions.col.energy — TeslaChargingSessionsMapPanel.swift:299 (+ Table energy column 299)
+✓ string — tesla_sessions.col.location — TeslaChargingSessionsTable.swift:285
+✓ string — tesla_sessions.col.month — TeslaChargingSessionsCharts.swift:88 (X-axis label)
+✓ string — tesla_sessions.col.peakPower — TeslaChargingSessionsTable.swift:297
+✓ string — tesla_sessions.col.rate — TeslaChargingSessionsTable.swift:309
+✓ string — tesla_sessions.col.total — TeslaChargingSessionsCharts.swift:92 (Y-axis label)
+✓ string — tesla_sessions.col.type — TeslaChargingSessionsTable.swift:313
+✓ string — tesla_sessions.col.vin — TeslaChargingSessionsTable.swift:289
+✓ string — tesla_sessions.lastSync — TeslaChargingSessionsViews.swift:264
+✓ string — tesla_sessions.map — TeslaChargingSessionsMapPanel.swift:108 (+ canvas a11y / count chip)
+✓ string — tesla_sessions.monthlyCost — TeslaChargingSessionsCharts.swift:119
+✓ string — tesla_sessions.monthlyCost.aria — TeslaChargingSessionsCharts.swift:40 (chart accessibilityLabel)
+✓ string — tesla_sessions.noChartData — TeslaChargingSessionsCharts.swift:140
+✓ string — tesla_sessions.noData — TeslaChargingSessionsTable.swift:322
+✓ string — tesla_sessions.noMapData — TeslaChargingSessionsMapPanel.swift:127
+✓ string — tesla_sessions.refresh — TeslaChargingSessionsViews.swift:256
+✓ string — tesla_sessions.refreshing — TeslaChargingSessionsViews.swift:260
+✓ string — tesla_sessions.stats.avgCost — TeslaChargingSessionsViews.swift:303
+✓ string — tesla_sessions.stats.cost_decimal — TeslaChargingSessionsViews.swift:296
+✓ string — tesla_sessions.stats.energy — TeslaChargingSessionsViews.swift:289
+✓ string — tesla_sessions.stats.peakPower — TeslaChargingSessionsViews.swift:310
+✓ string — tesla_sessions.stats.sessions — TeslaChargingSessionsViews.swift:282
+✓ string — tesla_sessions.subtitle — TeslaChargingSessionsPage.swift:90 (+ nav subtitle / loading)
+✓ string — tesla_sessions.table — TeslaChargingSessionsTable.swift:129
+✓ string — tesla_sessions.title — TeslaChargingSessionsPage.swift:30 (+ nav title / loading / error)
+
+PARITY_COVERED=48
+
+Hook ports (web query name kept at the Swift call site — single KMP seam, ADR-004):
+✓ useVehicles                      — TeslaChargingSessionsDataSource.swift:34  (GET /vehicles)
+✓ useTeslaChargingSessions         — TeslaChargingSessionsDataSource.swift:39  (GET /tesla/charging/sessions)
+✓ useRefreshTeslaChargingSessions  — TeslaChargingSessionsDataSource.swift:47  (POST /tesla/charging/sessions/refresh)
+
+Supporting strings localized beyond the required 32 (zero hardcoded visible literals):
+  range presets (Last 7/30/90 Days, Month/Year to Date, All Time), common.dateRange,
+  common.sortAsc / common.sortDesc, common.staleData, common.retry, common.dismiss, error.loadFailed.
+
+=== SUMMARY ===
+✓ All 10 panels implemented (banner, controls bar, 5 StatCards, monthly-cost chart, session map, table);
+  every anonymous web region reproduced (summary grid, controls actions = vehicle select + refresh + 403
+  + last-sync; range picker in the toolbar = web PageContainer actions).
+✓ Both first-party native surfaces — Swift Charts BarMark monthly-cost chart + MapKit `Map` session
+  locations (markers, fit-to-bounds camera, tap callout, count chip) — no WKWebView.
+✓ All 4 data states (loading/empty/error/success); per-source empties (noData / noChartData / noMapData)
+  use ContentUnavailableView — never a blank region.
+✓ All 32 required i18n strings resolve from Localizable.xcstrings; web key names kept; +9 supporting keys
+  localized; every referenced key resolves (verified).
+✓ @MainActor @Observable model; web queries kept by name as the single KMP seam (ADR-004); the view body
+  holds no business logic.
+✓ SI honored — energy read/stored as Wh; converted only at the display boundary (P1/S5).
+✓ Tokens (P2) for all color/typography; materials for glass (ADR-005); adaptive macOS + iOS (ADR-002/006);
+  a11y labels/traits + Dynamic Type + light/dark/high-contrast (ADR-015); >2-min staleness chip (ADR-013).
+✓ PARITY_COVERED=48 / PARITY_REQUIRED=48 (100%)
+✓ Placeholder check: PASS (PLACEHOLDER_COUNT=0, 5 allowed redacted-skeleton opt-outs)
+✓ Authoritative Swift 6 compile (swiftc -c macOS + swiftc -typecheck iOS, strict concurrency): PASS, 0 warnings
+✓ SwiftLint --strict: PASS (0 violations on the 9 new files)
+✓ SwiftFormat --lint: PASS (0/9 require formatting)
+✓ No symbol or filename collisions across the Apple target (ChargingSessions*/TeslaFleetCharging* prefixes;
+  9 unique basenames; whole-surface compile clean)
+
+⚠ Raw `xcodebuild build`/`test` BLOCKED by a PRE-EXISTING, out-of-scope duplicate
+  ScheduledExportsPanel.swift basename in the app target (+ macOS development-certificate signing) — both
+  committed, unmodified by this change, and outside the allowed-files scope (see ENV NOTE). The KMP
+  Shared.xcframework assembled + staged fine. The new code is verified green by the same Swift 6 frontend
+  xcodebuild uses, on BOTH idioms, with no Shared/KMP dependency; no new code is red.
+
+Files: apps/apple/TeslaSync/Features/Charging/TeslaChargingSessions*.swift (9 files, 2152 lines)
+Ledger: apps/parity/apple-ledger.json — page:charging/TeslaChargingSessions {apple-macos, apple-ios} = done 48/48
+
+EXIT=0
+STATUS=DONE
