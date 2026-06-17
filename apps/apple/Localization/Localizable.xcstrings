@@ -53114,6 +53114,29 @@
         }
       }
     },
+    "translation.alertRules.bulk.deleteConfirm.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "These rules will stop firing immediately. This cannot be undone."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These rules will stop firing immediately. This cannot be undone."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "These rules will stop firing immediately. This cannot be undone."
+          }
+        }
+      }
+    },
     "translation.alertRules.bulk.deleteConfirm.title": {
       "extractionState": "manual",
       "localizations": {
@@ -53275,6 +53298,29 @@
         }
       }
     },
+    "translation.alertRules.empty.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Create your first alert rule in the Alert Studio."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create your first alert rule in the Alert Studio."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Create your first alert rule in the Alert Studio."
+          }
+        }
+      }
+    },
     "translation.alertRules.empty.cta": {
       "extractionState": "manual",
       "localizations": {
@@ -53432,6 +53478,29 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Select rule %1$@"
+          }
+        }
+      }
+    },
+    "translation.alertRules.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio."
           }
         }
       }
